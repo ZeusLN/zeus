@@ -157,6 +157,7 @@ export default class CashuStore {
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
     @observable public selectedMintUrls: string[] = [];
+    @observable public multiMintSelectedUrls: string[] = [];
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     // Per-mint data fetched from CDK
@@ -911,8 +912,8 @@ export default class CashuStore {
         const selectedMints =
             mintUrls && mintUrls.length > 0
                 ? mintUrls
-                : this.selectedMintUrls.length > 0
-                ? this.selectedMintUrls
+                : this.multiMintSelectedUrls.length > 0
+                ? this.multiMintSelectedUrls
                 : this.selectedMintUrl
                 ? [this.selectedMintUrl]
                 : [];
@@ -1162,8 +1163,8 @@ export default class CashuStore {
         const mintUrls =
             this.meltQuotes.length > 0
                 ? this.meltQuotes.map(({ mintUrl }) => mintUrl)
-                : this.selectedMintUrls.length > 0
-                ? this.selectedMintUrls
+                : this.multiMintSelectedUrls.length > 0
+                ? this.multiMintSelectedUrls
                 : this.selectedMintUrl
                 ? [this.selectedMintUrl]
                 : [];
@@ -1173,7 +1174,7 @@ export default class CashuStore {
         );
 
         const selectedMintSet = new Set(
-            (this.selectedMintUrls || []).map((mintUrl) =>
+            (this.multiMintSelectedUrls || []).map((mintUrl) =>
                 this.normalizeMintUrl(mintUrl)
             )
         );
@@ -1488,6 +1489,7 @@ export default class CashuStore {
         this.mintUrls = [];
         this.selectedMintUrl = '';
         this.selectedMintUrls = [];
+        this.multiMintSelectedUrls = [];
         this.invoices = undefined;
         this.payments = undefined;
         this.receivedTokens = undefined;
@@ -2031,8 +2033,17 @@ export default class CashuStore {
     @action
     public setSelectedMint = async (mintUrl: string) => {
         this.clearInvoice();
-        const selectedMintUrls = await this.setSelectedMintUrls([mintUrl]);
-        return selectedMintUrls[0] || mintUrl;
+
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrl`,
+            mintUrl
+        );
+
+        runInAction(() => {
+            this.selectedMintUrl = mintUrl;
+        });
+
+        return mintUrl;
     };
 
     @action
@@ -2134,6 +2145,42 @@ export default class CashuStore {
             : [...currentSelection, mintUrl];
 
         await this.setSelectedMintUrls(nextSelected);
+    };
+
+    @action
+    public setMultiMintSelectedUrls = async (mintUrls: string[]) => {
+        const uniqueMintUrls = Array.from(new Set(mintUrls));
+
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-multiMintSelectedUrls`,
+            JSON.stringify(uniqueMintUrls)
+        );
+
+        runInAction(() => {
+            this.multiMintSelectedUrls = uniqueMintUrls;
+        });
+
+        return uniqueMintUrls;
+    };
+
+    @action
+    public toggleMultiMintSelection = async (
+        mintUrl: string
+    ): Promise<void> => {
+        const currentSelection = Array.isArray(this.multiMintSelectedUrls)
+            ? [...this.multiMintSelectedUrls]
+            : [];
+
+        const isSelected = currentSelection.includes(mintUrl);
+        if (isSelected && currentSelection.length === 1) {
+            return;
+        }
+
+        const nextSelected = isSelected
+            ? currentSelection.filter((url) => url !== mintUrl)
+            : [...currentSelection, mintUrl];
+
+        await this.setMultiMintSelectedUrls(nextSelected);
     };
 
     @action
@@ -2275,6 +2322,18 @@ export default class CashuStore {
         await Storage.setItem(
             `${this.getLndDir()}-cashu-selectedMintUrls`,
             JSON.stringify(this.selectedMintUrls)
+        );
+
+        // Remove from multi-mint selection
+        const filteredMultiMint = (this.multiMintSelectedUrls || []).filter(
+            (selectedMint) =>
+                this.normalizeMintUrl(selectedMint) !==
+                this.normalizeMintUrl(mintUrl)
+        );
+        this.multiMintSelectedUrls = filteredMultiMint;
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-multiMintSelectedUrls`,
+            JSON.stringify(this.multiMintSelectedUrls)
         );
 
         // Clean up any legacy local storage for this mint
@@ -2580,7 +2639,8 @@ export default class CashuStore {
             storedSeedVersion,
             storedSeedPhrase,
             storedSeed,
-            storedRandomizeMintSelection
+            storedRandomizeMintSelection,
+            storedMultiMintSelectedUrls
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
@@ -2592,7 +2652,8 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-seed-version`),
             Storage.getItem(`${lndDir}-cashu-seed-phrase`),
             Storage.getItem(`${lndDir}-cashu-seed`),
-            Storage.getItem(`${lndDir}-cashu-randomizeMintSelection`)
+            Storage.getItem(`${lndDir}-cashu-randomizeMintSelection`),
+            Storage.getItem(`${lndDir}-cashu-multiMintSelectedUrls`)
         ]);
 
         // Parse app-specific stored data
@@ -2602,6 +2663,9 @@ export default class CashuStore {
             ? JSON.parse(storedselectedMintUrls)
             : this.selectedMintUrl
             ? [this.selectedMintUrl]
+            : [];
+        this.multiMintSelectedUrls = storedMultiMintSelectedUrls
+            ? JSON.parse(storedMultiMintSelectedUrls)
             : [];
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
@@ -2965,6 +3029,16 @@ export default class CashuStore {
         await Storage.setItem(
             `${lndDir}-cashu-selectedMintUrls`,
             JSON.stringify(this.selectedMintUrls)
+        );
+
+        // Clean up multi-mint selection to only include valid mints
+        const validMultiMint = (this.multiMintSelectedUrls || []).filter(
+            (mint) => this.mintUrls.includes(mint)
+        );
+        this.multiMintSelectedUrls = validMultiMint;
+        await Storage.setItem(
+            `${lndDir}-cashu-multiMintSelectedUrls`,
+            JSON.stringify(this.multiMintSelectedUrls)
         );
 
         runInAction(() => {
@@ -3413,14 +3487,17 @@ export default class CashuStore {
             }
 
             const payReq = new Invoice(data);
+            // Set payReq early so the view can render invoice details
+            // even if melt quote preparation fails
+            this.payReq = payReq;
             const rawPaymentAmt = payReq.getRequestAmount
                 ? payReq.getRequestAmount
                 : 0;
 
             const isMultiMint =
                 !!this.settingsStore.settings?.ecash?.enableMultiMint &&
-                Array.isArray(this.selectedMintUrls) &&
-                this.selectedMintUrls.length > 1;
+                Array.isArray(this.multiMintSelectedUrls) &&
+                this.multiMintSelectedUrls.length > 1;
 
             const normalizedMultiMintPaymentAmt =
                 this.normalizeMultimintPaymentAmount(rawPaymentAmt);
@@ -3529,7 +3606,6 @@ export default class CashuStore {
             }
             const errorMsg = errorToUserFriendly(e);
             runInAction(() => {
-                this.payReq = undefined;
                 this.meltQuotes = [];
                 this.meltQuote = undefined;
                 this.getPayReqError = errorMsg;
@@ -3579,8 +3655,8 @@ export default class CashuStore {
 
             const shouldUseMultiMint =
                 !!this.settingsStore.settings?.ecash?.enableMultiMint &&
-                Array.isArray(this.selectedMintUrls) &&
-                this.selectedMintUrls.length > 1;
+                Array.isArray(this.multiMintSelectedUrls) &&
+                this.multiMintSelectedUrls.length > 1;
 
             if (shouldUseMultiMint) {
                 const paymentAmt =
@@ -4819,6 +4895,7 @@ export default class CashuStore {
             // Clean up app-specific storage
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrls`);
+            await Storage.removeItem(`${lndDir}-cashu-multiMintSelectedUrls`);
             await Storage.removeItem(`${lndDir}-cashu-invoices`);
             await Storage.removeItem(`${lndDir}-cashu-payments`);
             await Storage.removeItem(`${lndDir}-cashu-received-tokens`);

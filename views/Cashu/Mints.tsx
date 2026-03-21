@@ -33,7 +33,11 @@ interface MintsProps {
     SettingsStore: SettingsStore;
     route: Route<
         'Mints',
-        { disableRandom?: boolean; forceSingleMint?: boolean }
+        {
+            disableRandom?: boolean;
+            forceSingleMint?: boolean;
+            isMultiMintView?: boolean;
+        }
     >;
 }
 
@@ -63,8 +67,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     }
 
     handleFocus = async () => {
-        const { CashuStore, SettingsStore } = this.props;
+        const { CashuStore, SettingsStore, route } = this.props;
         const { cashuWallets, mintUrls, mintInfos, mintBalances } = CashuStore;
+        const isMultiMintView = !!route.params?.isMultiMintView;
         const mints: any = [];
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
@@ -81,7 +86,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             mints
         });
 
-        if (SettingsStore.settings?.ecash?.enableMultiMint) {
+        if (SettingsStore.settings?.ecash?.enableMultiMint && isMultiMintView) {
             this.syncMultiMintSelection(mints);
         }
     };
@@ -97,7 +102,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             return;
         }
 
-        const selectedFromStore = CashuStore.selectedMintUrls || [];
+        const selectedFromStore = CashuStore.multiMintSelectedUrls || [];
         const validSelection = selectedFromStore.filter((mintUrl) =>
             nut15MintUrls.includes(mintUrl)
         );
@@ -105,7 +110,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         const nextSelection =
             validSelection.length > 0 ? validSelection : nut15MintUrls;
 
-        await CashuStore.setSelectedMintUrls(nextSelection);
+        await CashuStore.setMultiMintSelectedUrls(nextSelection);
     };
 
     renderSeparator = () => (
@@ -123,18 +128,20 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         const disableRandom = route?.params?.disableRandom;
         const {
             selectedMintUrl,
-            selectedMintUrls,
+            multiMintSelectedUrls,
             clearInvoice,
             setSelectedMint,
             setReceiveMint,
-            toggleMintSelection,
+            toggleMultiMintSelection,
             randomizeMintSelection,
             setRandomizeMintSelection
         } = CashuStore;
         const forceSingleMint = !!route.params?.forceSingleMint;
+        const isMultiMintView = !!route.params?.isMultiMintView;
         const multiMintEnabled =
             !!SettingsStore.settings?.ecash?.enableMultiMint &&
-            !forceSingleMint;
+            !forceSingleMint &&
+            isMultiMintView;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -221,7 +228,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             const mintInfo = item._mintInfo || item;
                             const isSelectedMint = multiMintEnabled
                                 ? !!mintInfo?.mintUrl &&
-                                  selectedMintUrls.includes(mintInfo?.mintUrl)
+                                  multiMintSelectedUrls.includes(
+                                      mintInfo?.mintUrl
+                                  )
                                 : (!randomizeMintSelection || disableRandom) &&
                                   selectedMintUrl &&
                                   mintInfo?.mintUrl &&
@@ -273,7 +282,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             }
 
                                             if (multiMintEnabled) {
-                                                await toggleMintSelection(
+                                                await toggleMultiMintSelection(
                                                     mintInfo?.mintUrl
                                                 );
                                                 return;
