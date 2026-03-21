@@ -946,18 +946,22 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun meltPartial(mintUrl: String, quoteId: String, amount: Double, promise: Promise) {
+    fun meltPartial(mintUrl: String, bolt11: String, mppAmountMsat: Double, promise: Promise) {
         val wallet = getInitializedWallet(promise) ?: return
 
         scope.launch {
             try {
                 val url = MintUrl(mintUrl)
-                val targetAmount = amount.toLong().toULong()
+                val mppAmount = Amount(mppAmountMsat.toLong().toULong())
                 val normalizedUrl = mintUrl.trimEnd('/')
 
-                // Get all proofs and find those for this mint
+                // Step 1: Create melt quote via CDK with MPP options
+                val options = MeltOptions.Mpp(mppAmount)
+                val quote = wallet!!.meltQuote(url, bolt11, options)
+
+                // Step 2: Get all proofs for this mint
                 val allProofs = wallet!!.listProofs()
-                var mintProofs = mutableListOf<org.cashudevkit.Proof>()
+                val mintProofs = mutableListOf<org.cashudevkit.Proof>()
                 for ((key, proofs) in allProofs) {
                     if (key.trimEnd('/') == normalizedUrl) {
                         mintProofs.addAll(proofs)
@@ -972,31 +976,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                // Sort proofs largest first for efficient selection
-                mintProofs.sortByDescending { it.amount.value }
-
-                // Select proofs that cover the target amount
-                val selected = mutableListOf<org.cashudevkit.Proof>()
-                var total = 0UL
-                for (proof in mintProofs) {
-                    if (total >= targetAmount) break
-                    selected.add(proof)
-                    total += proof.amount.value
-                }
-
-                if (total < targetAmount) {
-                    withContext(Dispatchers.Main) {
-                        promise.reject("INSUFFICIENT_PROOFS",
-                            "Selected $total sats but need $targetAmount")
-                    }
-                    return@launch
-                }
-
-                // Execute the melt with the selected proofs
-                val melted = wallet!!.meltProofs(url, quoteId, selected)
-
-                // Restore to sync CDK's proof database after direct melt
-                try { wallet!!.restore(url) } catch (_: Exception) {}
+                // Step 3: Try CDK's meltProofs (keeps proof DB in sync)
+                val melted = wallet!!.meltProofs(url, quote.id, mintProofs)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())
