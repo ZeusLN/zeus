@@ -898,57 +898,21 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let url = MintUrl(url: mintUrl)
-                let normalizedUrl = mintUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                let mppAmount = Amount(value: mppAmountMsat.uint64Value)
 
-                // Step 1: Create melt quote directly with the mint to get actual fee
-                let quoteUrl = normalizedUrl + "/v1/melt/quote/bolt11"
-                guard let quoteRequestUrl = URL(string: quoteUrl) else {
-                    reject("INVALID_URL", "Invalid mint URL", nil)
-                    return
-                }
+                // Step 1: Create melt quote via CDK with MPP options
+                let options = MeltOptions.mpp(amount: mppAmount)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: bolt11,
+                    options: options
+                )
 
-                let quoteBody: [String: Any] = [
-                    "request": bolt11,
-                    "unit": "sat",
-                    "options": ["mpp": ["amount": mppAmountMsat.uint64Value]]
-                ]
-
-                var quoteRequest = URLRequest(url: quoteRequestUrl)
-                quoteRequest.httpMethod = "POST"
-                quoteRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                quoteRequest.httpBody = try JSONSerialization.data(withJSONObject: quoteBody)
-
-                let (quoteData, quoteResponse) = try await URLSession.shared.data(for: quoteRequest)
-
-                if let httpResp = quoteResponse as? HTTPURLResponse,
-                   !(200...299).contains(httpResp.statusCode) {
-                    let errorBody = String(data: quoteData, encoding: .utf8) ?? "Unknown"
-                    reject("QUOTE_HTTP_ERROR", "Quote failed HTTP \(httpResp.statusCode): \(errorBody)", nil)
-                    return
-                }
-
-                guard let quoteJson = try? JSONSerialization.jsonObject(with: quoteData) as? [String: Any],
-                      let actualQuoteId = quoteJson["quote"] as? String else {
-                    reject("PARSE_ERROR", "Failed to parse quote response", nil)
-                    return
-                }
-
-                // JSONSerialization returns numbers as __NSCFNumber;
-                // cast to Int first then convert to UInt64
-                let actualAmount: UInt64 = {
-                    if let n = quoteJson["amount"] as? Int { return UInt64(max(0, n)) }
-                    if let n = quoteJson["amount"] as? Double { return UInt64(max(0, n)) }
-                    return 0
-                }()
-                let actualFeeReserve: UInt64 = {
-                    if let n = quoteJson["fee_reserve"] as? Int { return UInt64(max(0, n)) }
-                    if let n = quoteJson["fee_reserve"] as? Double { return UInt64(max(0, n)) }
-                    return 0
-                }()
-                let totalNeeded = actualAmount + actualFeeReserve
-
-                // Step 2: Get all proofs for this mint
+                // Step 2: Select proofs via CDK and execute melt
+                // Try meltProofs with all proofs from this mint —
+                // the mint knows the MPP partial amount from the quote
                 let allProofs = try await wallet.listProofs()
+                let normalizedUrl = mintUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 var mintProofs: [Proof] = []
                 for (key, proofs) in allProofs {
                     let normalizedKey = key.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -963,77 +927,14 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let totalProofs = mintProofs.reduce(UInt64(0)) { $0 + $1.amount.value }
-                guard totalProofs >= totalNeeded else {
-                    reject("INSUFFICIENT_BALANCE",
-                           "Mint balance \(totalProofs) < needed \(totalNeeded) (\(actualAmount) + \(actualFeeReserve) fee)",
-                           nil)
-                    return
-                }
+                // Step 3: Try CDK's meltProofs first (keeps proof DB in sync)
+                let melted = try await wallet.meltProofs(
+                    mintUrl: url,
+                    quoteId: quote.id,
+                    proofs: mintProofs
+                )
 
-                // Step 3: Send all proofs to the mint's melt endpoint
-                var inputs: [[String: Any]] = []
-                for proof in mintProofs {
-                    var p: [String: Any] = [
-                        "amount": proof.amount.value,
-                        "secret": proof.secret,
-                        "C": proof.c,
-                        "id": proof.keysetId
-                    ]
-                    if let witness = proof.witness {
-                        p["witness"] = witness
-                    }
-                    inputs.append(p)
-                }
-
-                let meltUrl = normalizedUrl + "/v1/melt/bolt11"
-                guard let meltRequestUrl = URL(string: meltUrl) else {
-                    reject("INVALID_URL", "Invalid melt URL", nil)
-                    return
-                }
-
-                let meltBody: [String: Any] = [
-                    "quote": actualQuoteId,
-                    "inputs": inputs
-                ]
-
-                var meltRequest = URLRequest(url: meltRequestUrl)
-                meltRequest.httpMethod = "POST"
-                meltRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                meltRequest.httpBody = try JSONSerialization.data(withJSONObject: meltBody)
-
-                let (meltData, meltResponse) = try await URLSession.shared.data(for: meltRequest)
-
-                if let httpResp = meltResponse as? HTTPURLResponse,
-                   !(200...299).contains(httpResp.statusCode) {
-                    let errorBody = String(data: meltData, encoding: .utf8) ?? "Unknown"
-                    reject("MELT_HTTP_ERROR", "Mint returned HTTP \(httpResp.statusCode): \(errorBody)", nil)
-                    return
-                }
-
-                guard let json = try? JSONSerialization.jsonObject(with: meltData) as? [String: Any] else {
-                    reject("PARSE_ERROR", "Failed to parse melt response", nil)
-                    return
-                }
-
-                // Sync wallet state after direct melt — restore
-                // re-derives proofs from seed and checks with the mint
-                // which ones are still valid, updating the CDK's database
-                try? await wallet.restore(mintUrl: url)
-
-                var result: [String: Any] = [
-                    "state": (json["state"] as? String) ?? "PAID",
-                    "amount": json["amount"] ?? actualAmount,
-                    "fee_paid": json["fee_paid"] ?? json["fee_reserve"] ?? actualFeeReserve
-                ]
-                if let preimage = json["payment_preimage"] as? String {
-                    result["preimage"] = preimage
-                }
-                if let change = json["change"] as? [[String: Any]] {
-                    result["change"] = change
-                }
-
-                resolve(encodeToJson(result))
+                resolve(encodeToJson(encodeMelted(melted)))
             } catch {
                 reject("MELT_PARTIAL_ERROR", error.localizedDescription, error)
             }
