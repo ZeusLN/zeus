@@ -244,12 +244,12 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             const hasName = !!mintInfo?.name;
 
                             let subTitle = hasName
-                                ? isSelectedMint
+                                ? isSelectedMint && !multiMintEnabled
                                     ? `${localeString('general.selected')} | ${
                                           item.mintUrl
                                       }`
                                     : item.mintUrl
-                                : isSelectedMint
+                                : isSelectedMint && !multiMintEnabled
                                 ? localeString('general.selected')
                                 : '';
 
