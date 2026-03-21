@@ -893,7 +893,10 @@ export default class CashuStore {
         const url = this.normalizeMintUrl(mintUrl);
         const mintInfo = this.mintInfos[url] || this.mintInfos[mintUrl];
 
-        const methods = mintInfo?.nuts?.['15']?.methods || [];
+        const nut15 = mintInfo?.nuts?.['15'] || mintInfo?.nuts?.[15];
+        // NUT-15 in mint info is an array of supported methods directly,
+        // not an object with a `methods` key
+        const methods = Array.isArray(nut15) ? nut15 : nut15?.methods || [];
 
         return methods.some((m: any) => {
             return (
@@ -952,6 +955,15 @@ export default class CashuStore {
             this.mintSupportsMpp(mintUrl)
         );
 
+        console.log(
+            'prepareMultiMintMeltQuotesCDK: selected=',
+            uniqueSelectedMints.length,
+            'mppSupported=',
+            supportedMints.length,
+            'amountToPay=',
+            amountToPay
+        );
+
         const balances = await CashuDevKit.getBalances();
         const normalizedBalances = Object.entries(balances).reduce(
             (acc, [mintUrl, balance]) => {
@@ -961,15 +973,25 @@ export default class CashuStore {
             {} as Record<string, number>
         );
 
-        const mintsBySmallestBalance = supportedMints
+        // Sort largest balance first so mints with more capacity
+        // handle the bulk of the payment, avoiding fee issues
+        // on small-balance mints
+        const mintsByLargestBalance = supportedMints
             .map((mintUrl) => ({
                 mintUrl,
                 balance: normalizedBalances[mintUrl] || 0
             }))
             .filter(({ balance }) => balance > 0)
-            .sort((a, b) => a.balance - b.balance);
+            .sort((a, b) => b.balance - a.balance);
 
-        if (mintsBySmallestBalance.length === 0 || amountToPay <= 0) {
+        console.log(
+            'prepareMultiMintMeltQuotesCDK: balances=',
+            JSON.stringify(normalizedBalances),
+            'mintsWithBalance=',
+            mintsByLargestBalance.length
+        );
+
+        if (mintsByLargestBalance.length === 0 || amountToPay <= 0) {
             this.meltQuotes = [];
             return [];
         }
@@ -978,7 +1000,7 @@ export default class CashuStore {
             [];
         let remainingAmount = amountToPay;
 
-        for (const { mintUrl } of mintsBySmallestBalance) {
+        for (const { mintUrl } of mintsByLargestBalance) {
             if (remainingAmount <= 0) {
                 break;
             }
@@ -989,54 +1011,164 @@ export default class CashuStore {
             }
 
             const initialAllocation = Math.min(remainingAmount, mintBalance);
+            console.log(
+                `prepareMultiMintMeltQuotesCDK: [START] mint=${mintUrl} balance=${mintBalance} remaining=${remainingAmount} initialAllocation=${initialAllocation}`
+            );
             if (initialAllocation <= 0) {
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} initialAllocation<=0`
+                );
                 continue;
             }
 
             try {
                 await this.ensureMintAdded(mintUrl);
 
-                let quote = await this.createMeltQuoteCDK(mintUrl, invoice, {
-                    mpp: { amount: initialAllocation * 1000 }
-                });
+                // Query the mint directly for the actual fee for this
+                // partial amount — the CDK returns the full invoice fee
+                // which doesn't reflect per-mint MPP fees
+                const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
+                const mppAmountMsat = initialAllocation * 1000;
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: [QUOTE] mint=${mintUrl} requesting mpp amount=${initialAllocation} sats (${mppAmountMsat} msats)`
+                );
+                const quoteResponse = await fetch(
+                    `${normalizedMintUrl}/v1/melt/quote/bolt11`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            request: invoice,
+                            unit: 'sat',
+                            options: {
+                                mpp: {
+                                    amount: mppAmountMsat
+                                }
+                            }
+                        })
+                    }
+                );
 
-                let totalNeeded =
-                    Number(quote.amount) + Number(quote.fee_reserve);
+                if (!quoteResponse.ok) {
+                    const errBody = await quoteResponse.text().catch(() => '');
+                    console.log(
+                        `prepareMultiMintMeltQuotesCDK: [QUOTE FAILED] mint=${mintUrl} HTTP ${quoteResponse.status}: ${errBody}`
+                    );
+                    continue;
+                }
+
+                const quote = await quoteResponse.json();
+                const quoteAmount = Number(quote.amount) || 0;
+                const actualFee = Number(quote.fee_reserve) || 0;
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: [QUOTE OK] mint=${mintUrl} quote.amount=${quoteAmount} quote.fee_reserve=${actualFee} quote.quote=${quote.quote}`
+                );
+
+                let allocationAmount = initialAllocation;
+                let totalNeeded = allocationAmount + actualFee;
+
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: [CHECK] mint=${mintUrl} allocationAmount=${allocationAmount} + actualFee=${actualFee} = totalNeeded=${totalNeeded} vs balance=${mintBalance}`
+                );
 
                 if (totalNeeded > mintBalance) {
-                    const maxPayable = mintBalance - Number(quote.fee_reserve);
-
-                    if (maxPayable <= 0) {
-                        continue;
-                    }
-
-                    const amount = Math.min(remainingAmount, maxPayable);
-
-                    quote = await this.createMeltQuoteCDK(mintUrl, invoice, {
-                        mpp: { amount: amount * 1000 }
-                    });
-
-                    totalNeeded =
-                        Number(quote.amount) + Number(quote.fee_reserve);
-
-                    if (totalNeeded > mintBalance) {
-                        continue;
-                    }
-                }
-
-                nextMeltQuotes.push({ mintUrl, meltQuote: quote });
-                remainingAmount = Math.max(0, remainingAmount - quote.amount);
-            } catch (error) {
-                if (__DEV__) {
+                    // Reduce allocation to fit within balance, then
+                    // re-query the mint for the actual fee at the
+                    // reduced amount
+                    let reducedAllocation = mintBalance - actualFee;
                     console.log(
-                        `prepareMultiMintMeltQuotesCDK: skipping mint ${mintUrl}`,
-                        error
+                        `prepareMultiMintMeltQuotesCDK: [REDUCE] mint=${mintUrl} totalNeeded=${totalNeeded} > balance=${mintBalance}, reducing to ${reducedAllocation}`
                     );
+
+                    if (reducedAllocation <= 0) {
+                        console.log(
+                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} allocation <= 0 after fee`
+                        );
+                        continue;
+                    }
+
+                    reducedAllocation = Math.min(
+                        remainingAmount,
+                        reducedAllocation
+                    );
+
+                    // Re-query fee for the reduced amount
+                    const reQuoteResponse = await fetch(
+                        `${normalizedMintUrl}/v1/melt/quote/bolt11`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                request: invoice,
+                                unit: 'sat',
+                                options: {
+                                    mpp: {
+                                        amount: reducedAllocation * 1000
+                                    }
+                                }
+                            })
+                        }
+                    );
+
+                    if (!reQuoteResponse.ok) {
+                        console.log(
+                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} re-quote failed`
+                        );
+                        continue;
+                    }
+
+                    const reQuote = await reQuoteResponse.json();
+                    const reFee = Number(reQuote.fee_reserve) || 0;
+                    const reNeeded = reducedAllocation + reFee;
+                    console.log(
+                        `prepareMultiMintMeltQuotesCDK: [RE-QUOTE] mint=${mintUrl} reducedAlloc=${reducedAllocation} reFee=${reFee} reNeeded=${reNeeded} balance=${mintBalance}`
+                    );
+
+                    if (reNeeded > mintBalance) {
+                        // Still doesn't fit, skip this mint
+                        console.log(
+                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} still exceeds balance after re-quote`
+                        );
+                        continue;
+                    }
+
+                    allocationAmount = reducedAllocation;
+                    // Use the re-quoted values
+                    Object.assign(quote, reQuote);
                 }
+
+                const finalFee = Number(quote.fee_reserve) || 0;
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: [RESULT] mint=${mintUrl} finalAllocation=${allocationAmount} fee=${finalFee} totalNeeded=${
+                        allocationAmount + finalFee
+                    } balance=${mintBalance}`
+                );
+
+                const adjustedQuote = {
+                    ...quote,
+                    amount: allocationAmount,
+                    fee_reserve: finalFee
+                };
+
+                nextMeltQuotes.push({
+                    mintUrl,
+                    meltQuote: adjustedQuote
+                });
+                remainingAmount = Math.max(
+                    0,
+                    remainingAmount - allocationAmount
+                );
+            } catch (error: any) {
+                console.log(
+                    `prepareMultiMintMeltQuotesCDK: error for mint ${mintUrl}: ${
+                        error?.message || error
+                    }`
+                );
                 continue;
             }
         }
-        console.log(JSON.stringify(this.meltQuotes));
         this.meltQuotes = nextMeltQuotes;
         return nextMeltQuotes;
     };
@@ -3859,13 +3991,11 @@ export default class CashuStore {
             isProcessing: true
         });
 
-        console.log('before promise');
         const meltResults = await Promise.all(
             plannedMeltQuotes.map(async ({ mintUrl, meltQuote }, index) => {
                 try {
                     mintProgressInfo[index].status =
                         MintPaymentStatus.REQUESTING;
-                    mintProgressInfo[index].error = undefined;
 
                     onProgress?.({
                         step: MultinutPaymentStep.PROCESSING,
@@ -3884,12 +4014,16 @@ export default class CashuStore {
                         totalSelectedBalance,
                         isProcessing: true
                     });
-                    console.log('before melt');
-                    const meltResult = await CashuDevKit.melt(
+
+                    // meltPartial: creates its own quote with the mint
+                    // API to get actual fees, then sends all proofs
+                    const partialAmount = Number(meltQuote.amount) || 0;
+                    const meltResult = await CashuDevKit.meltPartial(
                         mintUrl,
-                        meltQuote.id
+                        paymentRequest,
+                        partialAmount * 1000
                     );
-                    console.log('melt result', meltResult);
+
                     const meltState = (
                         meltResult.state ||
                         meltQuote.state ||
@@ -3909,7 +4043,7 @@ export default class CashuStore {
 
                     const payment = new CashuPayment({
                         ...this.payReq,
-                        bolt11: this.paymentRequest,
+                        bolt11: paymentRequest,
                         meltResponse: {
                             quote: {
                                 quote: meltQuote.id,
@@ -3925,10 +4059,7 @@ export default class CashuStore {
                             fee_paid: meltResult.fee_paid,
                             preimage: paymentPreimage
                         },
-                        amount:
-                            Number(meltResult.amount) ||
-                            Number(meltQuote.amount) ||
-                            0,
+                        amount: Number(meltResult.amount) || partialAmount,
                         fee: meltResult.fee_paid,
                         payment_preimage: paymentPreimage,
                         mintUrl
@@ -3970,14 +4101,11 @@ export default class CashuStore {
         );
 
         const segmentPayments = meltResults
-            .filter((result) => result.ok)
-            .map((result) => result.payment);
+            .filter((r) => r.ok)
+            .map((r) => r.payment);
         const failedMints = meltResults
-            .filter((result) => !result.ok)
-            .map((result) => ({
-                mintUrl: result.mintUrl,
-                reason: result.reason
-            }));
+            .filter((r) => !r.ok)
+            .map((r) => ({ mintUrl: r.mintUrl, reason: r.reason }));
 
         if (segmentPayments.length === 0) {
             const firstFailure = failedMints[0]?.reason;
@@ -4009,13 +4137,12 @@ export default class CashuStore {
         await this.syncCDKBalances(true);
 
         const totalFeePaid = segmentPayments.reduce(
-            (sum, payment) => sum + (Number(payment.fee) || 0),
+            (sum, p) => sum + (Number(p.fee) || 0),
             0
         );
-
         const firstPreimage = segmentPayments
-            .map((payment) => payment?.payment_preimage)
-            .find((value) => !!value);
+            .map((p) => p?.payment_preimage)
+            .find((v) => !!v);
 
         runInAction(() => {
             if (!isDonationPayment) {
