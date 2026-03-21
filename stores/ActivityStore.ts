@@ -319,7 +319,7 @@ export default class ActivityStore {
         ) {
             // CDK transaction history (completed)
             additions = additions.concat(this.cashuStore.cdkInvoices);
-            additions = additions.concat(this.cashuStore.cdkPayments);
+            additions = additions.concat(this.cashuStore.payments || []);
 
             // Include pending/unpaid Cashu invoices (from local storage)
             const pendingCashuInvoices = this.cashuStore.invoices?.filter(

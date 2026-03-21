@@ -94,7 +94,7 @@ interface ActivityListItemProps {
     swapStore: SwapStore;
 }
 
-const ActivityListItem = React.memo(
+const ActivityListItem = observer(
     ({
         item,
         selectedPaymentForOrder,

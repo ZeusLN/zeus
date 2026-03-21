@@ -33,63 +33,19 @@ export default class CashuPayment extends Payment {
     public mintUrl: string;
     public proofs: Proof[];
 
-    // CDK transaction fields (for completed transactions from history)
-    public fromCDK?: boolean;
-    public cdkTimestamp?: number;
-    public cdkAmount?: number;
-    public cdkMemo?: string;
-    public cdkState?: string;
-
     constructor(data?: any) {
         super(data);
-    }
-
-    /**
-     * Create CashuPayment from CDK transaction (outgoing)
-     */
-    static fromCDKTransaction(tx: {
-        id: string;
-        amount: number;
-        fee?: number;
-        mint_url: string;
-        timestamp: number;
-        memo?: string;
-        state: string;
-    }): CashuPayment {
-        const payment = new CashuPayment({
-            payment_hash: tx.id,
-            creation_date: tx.timestamp.toString(),
-            value_sat: tx.amount,
-            fee_sat: (tx.fee || 0).toString(),
-            status:
-                tx.state === 'Pending'
-                    ? 'IN_FLIGHT'
-                    : tx.state === 'Failed'
-                    ? 'FAILED'
-                    : 'SUCCEEDED',
-            fromCDK: true,
-            cdkTimestamp: tx.timestamp,
-            cdkAmount: tx.amount,
-            cdkMemo: tx.memo,
-            cdkState: tx.state,
-            mintUrl: tx.mint_url,
-            fee: tx.fee || 0
-        });
-        return payment;
     }
 
     @computed public get model(): string {
         return localeString('views.Cashu.CashuPayment.title');
     }
 
-    // Override for CDK transactions
     @computed public get getTimestamp(): number {
-        if (this.fromCDK) return this.cdkTimestamp || 0;
         return Number(this.creation_date) || Number(this.timestamp) || 0;
     }
 
     @computed public get getAmount(): number {
-        if (this.fromCDK) return this.cdkAmount || 0;
         return (
             Number(this.value_sat) ||
             Number(this.value) ||
@@ -99,10 +55,6 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getFee(): string {
-        if (this.fromCDK) {
-            if (this.fee === 0) return '';
-            return this.fee.toString();
-        }
         const feeMsat = Number(this.fee_msat);
         if (!Number.isNaN(feeMsat) && feeMsat !== 0) {
             return (feeMsat / 1000).toString();
@@ -127,7 +79,6 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getMemo(): string | undefined {
-        if (this.fromCDK) return this.cdkMemo;
         const payReq = this.payment_request || this.bolt11;
         if (payReq) {
             try {
@@ -146,22 +97,22 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get isFailed(): boolean {
-        if (this.fromCDK) return this.cdkState === 'Failed';
         return this.status === 'FAILED';
     }
 
     @computed public get isInTransit(): boolean {
-        if (this.fromCDK) return this.cdkState === 'Pending';
         return this.status === 'IN_FLIGHT';
     }
 
     @computed public get getDisplayTime(): string {
-        const ts = this.fromCDK ? this.cdkTimestamp || 0 : this.getTimestamp;
-        return DateTimeUtils.listFormattedDate(ts);
+        return DateTimeUtils.listFormattedDate(this.getTimestamp);
     }
 
     @computed public get getDisplayTimeShort(): string {
-        const ts = this.fromCDK ? this.cdkTimestamp || 0 : this.getTimestamp;
-        return DateTimeUtils.listFormattedDateShort(ts);
+        return DateTimeUtils.listFormattedDateShort(this.getTimestamp);
+    }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.paymentHash || this.getPreimage || ''}`;
     }
 }
