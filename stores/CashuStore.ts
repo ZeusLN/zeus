@@ -1062,8 +1062,10 @@ export default class CashuStore {
             }
 
             // Split proportionally to each mint's share of total
-            // balance, instead of maxing out each mint sequentially
-            const proportionalShare = Math.floor(
+            // balance, instead of maxing out each mint sequentially.
+            // Use ceil to avoid losing sats to rounding — the
+            // Math.min with remainingAmount prevents over-allocation
+            const proportionalShare = Math.ceil(
                 amountToPay * (mintBalance / totalUsableBalance)
             );
             const initialAllocation = Math.min(
@@ -2970,6 +2972,8 @@ export default class CashuStore {
             : [];
         this.multiMintSelectedUrls = storedMultiMintSelectedUrls
             ? JSON.parse(storedMultiMintSelectedUrls)
+            : this.selectedMintUrls.length > 0
+            ? [...this.selectedMintUrls]
             : [];
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
@@ -3834,6 +3838,7 @@ export default class CashuStore {
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
+        this.getPayReqError = undefined;
 
         try {
             if (__DEV__) {
@@ -3910,21 +3915,15 @@ export default class CashuStore {
                             amountToPay: paymentAmt
                         });
 
-                    if (!preparedQuotes.length) {
-                        throw new Error(
-                            localeString('stores.CashuStore.notEnoughFunds')
-                        );
-                    }
-
                     const totalAllocated = preparedQuotes.reduce(
                         (sum, { meltQuote }) =>
                             sum + (Number(meltQuote.amount) || 0),
                         0
                     );
 
-                    if (totalAllocated < paymentAmt) {
-                        throw new Error(
-                            localeString('stores.CashuStore.notEnoughFunds')
+                    if (!preparedQuotes.length || totalAllocated < paymentAmt) {
+                        this.getPayReqError = localeString(
+                            'stores.CashuStore.notEnoughFunds'
                         );
                     }
 
@@ -3969,7 +3968,6 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.payReq = payReq;
-                this.getPayReqError = undefined;
                 this.meltQuote = singleMeltQuote;
                 this.feeEstimate = totalFeeEstimate;
             });
