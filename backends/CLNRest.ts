@@ -587,6 +587,18 @@ export default class CLNRest {
 
         return this.postRequest('/v1/waitsendpay', params, 120000);
     };
+    devSplice = async (
+        script: string,
+        dryrun: boolean = true,
+        forceFeerate: boolean = false
+    ) => {
+        return await this.postRequest('/v1/dev-splice', {
+            script_or_json: script,
+            dryrun,
+            force_feerate: forceFeerate,
+            debug_log: false
+        });
+    };
 
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
@@ -635,4 +647,5 @@ export default class CLNRest {
     supportsCashuWallet = () => false;
     supportsSettingInvoiceExpiration = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsSplicing = () => this.supports('v24.11');
 }
