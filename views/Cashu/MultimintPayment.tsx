@@ -345,11 +345,13 @@ export default class MultimintPayment extends React.Component<
                                 paddingTop: windowSize.height * 0.05
                             }}
                         >
-                            <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
-                                fill={themeColor('highlight')}
-                            />
+                            {step === MultinutPaymentStep.COMPLETE && (
+                                <Wordmark
+                                    height={windowSize.width * 0.25}
+                                    width={windowSize.width}
+                                    fill={themeColor('highlight')}
+                                />
+                            )}
 
                             {step === MultinutPaymentStep.COMPLETE && (
                                 <>
