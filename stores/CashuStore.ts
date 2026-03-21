@@ -3944,6 +3944,8 @@ export default class CashuStore {
 
                     mintProgressInfo[index].status = MintPaymentStatus.SUCCESS;
                     mintProgressInfo[index].error = undefined;
+                    mintProgressInfo[index].feePaid =
+                        Number(meltResult.fee_paid) || 0;
 
                     onProgress?.({
                         step: MultinutPaymentStep.PROCESSING,

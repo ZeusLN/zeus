@@ -24,6 +24,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 
+import MintAvatar from './MintAvatar';
+
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import CloseSvg from '../assets/images/SVG/Close.svg';
@@ -41,6 +43,13 @@ interface PaymentDetailsSheetProps {
     paymentHash?: string;
     paymentPreimage?: string;
     enhancedPath?: any;
+    mintPayments?: Array<{
+        mintUrl: string;
+        mintName?: string;
+        iconUrl?: string;
+        amount: number;
+        fee?: number;
+    }>;
     navigation: any;
 }
 
@@ -102,6 +111,75 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                     </Row>
                 }
             />
+        );
+    };
+
+    renderMintPayments = () => {
+        const { mintPayments } = this.props;
+        if (!mintPayments || mintPayments.length === 0) return null;
+
+        return (
+            <View style={{ marginTop: 10 }}>
+                <Text
+                    style={{
+                        fontFamily: 'PPNeueMontreal-Book',
+                        color: themeColor('secondaryText'),
+                        fontSize: 14,
+                        marginBottom: 8
+                    }}
+                >
+                    {localeString('cashu.mints')}
+                </Text>
+                {mintPayments.map((mint) => (
+                    <Row
+                        key={mint.mintUrl}
+                        justify="space-between"
+                        style={{
+                            alignItems: 'center',
+                            paddingVertical: 6
+                        }}
+                    >
+                        <Row style={{ alignItems: 'center', flex: 1 }}>
+                            <MintAvatar
+                                iconUrl={mint.iconUrl}
+                                name={mint.mintName}
+                                mintUrl={mint.mintUrl}
+                                size="small"
+                                style={{ marginRight: 8 }}
+                            />
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 14,
+                                    flexShrink: 1
+                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {mint.mintName || mint.mintUrl}
+                            </Text>
+                        </Row>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Amount sats={mint.amount} sensitive />
+                            {mint.fee != null && mint.fee > 0 && (
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 11
+                                    }}
+                                >
+                                    +{mint.fee}{' '}
+                                    {localeString(
+                                        'views.Payment.fee'
+                                    ).toLowerCase()}
+                                </Text>
+                            )}
+                        </View>
+                    </Row>
+                ))}
+            </View>
         );
     };
 
@@ -354,6 +432,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                         ) : null}
 
                                         {this.renderPathRow()}
+                                        {this.renderMintPayments()}
                                     </ScrollView>
                                 </View>
                             </TouchableWithoutFeedback>
