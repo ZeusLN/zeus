@@ -176,7 +176,7 @@ android {
         pickFirst "lib/x86_64/libuniffi_zeus_cashu_restore.so"
 
         jniLibs {
-            useLegacyPackaging true
+            useLegacyPackaging false
         }
     }
 
@@ -206,7 +206,7 @@ dependencies {
     // Zeus Cashu Restore - standalone NUT-13 restore for v1 legacy seeds
     implementation files("../zeus-restore/zeus-cashu-restore.aar")
     // CDK dependencies
-    implementation "net.java.dev.jna:jna:5.14.0@aar"
+    implementation "net.java.dev.jna:jna:5.18.1@aar"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 
@@ -218,6 +218,7 @@ dependencies {
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
     // gif
     implementation 'com.facebook.fresco:animated-gif:3.6.0'
+    implementation 'com.facebook.fresco:fresco:3.6.0'
 
     // Pegasus
     // implementation(name:"Lndmobile", ext:"aar")
