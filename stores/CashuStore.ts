@@ -4358,18 +4358,6 @@ export default class CashuStore {
             this.payments
         );
 
-        // Restore each mint that participated to ensure CDK's
-        // proof database reflects spent proofs and change
-        for (const { mintUrl } of plannedMeltQuotes) {
-            try {
-                await CashuDevKit.restore(mintUrl);
-            } catch (e) {
-                // restore may fail if CDK already handled it
-            }
-        }
-
-        await this.syncCDKBalances(true);
-
         const totalFeePaid = segmentPayments.reduce(
             (sum, p) => sum + (Number(p.fee) || 0),
             0
@@ -4399,6 +4387,18 @@ export default class CashuStore {
             totalSelectedBalance,
             isProcessing: false
         });
+
+        // Restore and sync balances in background after showing success
+        (async () => {
+            for (const { mintUrl } of plannedMeltQuotes) {
+                try {
+                    await CashuDevKit.restore(mintUrl);
+                } catch (e) {
+                    // restore may fail if CDK already handled it
+                }
+            }
+            await this.syncCDKBalances(true);
+        })();
 
         return segmentPayments[0];
     };
