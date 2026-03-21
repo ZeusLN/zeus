@@ -1000,6 +1000,12 @@ export default class CashuStore {
             [];
         let remainingAmount = amountToPay;
 
+        // Calculate total usable balance for proportional splitting
+        const totalUsableBalance = mintsByLargestBalance.reduce(
+            (sum, { balance }) => sum + balance,
+            0
+        );
+
         for (const { mintUrl } of mintsByLargestBalance) {
             if (remainingAmount <= 0) {
                 break;
@@ -1010,9 +1016,18 @@ export default class CashuStore {
                 continue;
             }
 
-            const initialAllocation = Math.min(remainingAmount, mintBalance);
+            // Split proportionally to each mint's share of total
+            // balance, instead of maxing out each mint sequentially
+            const proportionalShare = Math.floor(
+                amountToPay * (mintBalance / totalUsableBalance)
+            );
+            const initialAllocation = Math.min(
+                remainingAmount,
+                proportionalShare > 0 ? proportionalShare : remainingAmount,
+                mintBalance
+            );
             console.log(
-                `prepareMultiMintMeltQuotesCDK: [START] mint=${mintUrl} balance=${mintBalance} remaining=${remainingAmount} initialAllocation=${initialAllocation}`
+                `prepareMultiMintMeltQuotesCDK: [START] mint=${mintUrl} balance=${mintBalance} remaining=${remainingAmount} proportionalShare=${proportionalShare} initialAllocation=${initialAllocation}`
             );
             if (initialAllocation <= 0) {
                 console.log(
@@ -4133,6 +4148,16 @@ export default class CashuStore {
             `${this.getLndDir()}-cashu-payments`,
             this.payments
         );
+
+        // Restore each mint that participated to ensure CDK's
+        // proof database reflects spent proofs and change
+        for (const { mintUrl } of plannedMeltQuotes) {
+            try {
+                await CashuDevKit.restore(mintUrl);
+            } catch (e) {
+                // restore may fail if CDK already handled it
+            }
+        }
 
         await this.syncCDKBalances(true);
 
