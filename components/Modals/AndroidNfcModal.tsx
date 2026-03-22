@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import NfcManager from 'react-native-nfc-manager';
 
 import Button from '../Button';
 import ModalBox from '../ModalBox';
@@ -24,7 +25,11 @@ export default class AndroidNfcModal extends React.Component<
 > {
     render() {
         const { ModalStore } = this.props;
-        const { showAndroidNfcModal, toggleAndroidNfcModal } = ModalStore;
+        const {
+            showAndroidNfcModal,
+            toggleAndroidNfcModal,
+            androidNfcModalIsNfcEnabled
+        } = ModalStore;
 
         return (
             <ModalBox
@@ -67,9 +72,15 @@ export default class AndroidNfcModal extends React.Component<
                                 marginBottom: 30
                             }}
                         >
-                            {localeString('components.AndroidNfcModal.ready')}
+                            {androidNfcModalIsNfcEnabled
+                                ? localeString(
+                                      'components.AndroidNfcModal.ready'
+                                  )
+                                : localeString(
+                                      'components.AndroidNfcModal.nfcDisabled'
+                                  )}
                         </Text>
-                        <NFC />
+                        {androidNfcModalIsNfcEnabled && <NFC />}
                         <Text
                             style={{
                                 fontSize: 18,
@@ -79,14 +90,33 @@ export default class AndroidNfcModal extends React.Component<
                                 textAlign: 'center'
                             }}
                         >
-                            {localeString('components.AndroidNfcModal.hold')}
+                            {androidNfcModalIsNfcEnabled
+                                ? localeString(
+                                      'components.AndroidNfcModal.hold'
+                                  )
+                                : localeString(
+                                      'components.AndroidNfcModal.enableInstructions'
+                                  )}
                         </Text>
                         <View style={styles.buttons}>
+                            {!androidNfcModalIsNfcEnabled && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'general.openNfcSettings'
+                                        )}
+                                        onPress={() => {
+                                            toggleAndroidNfcModal(false);
+                                            NfcManager.goToNfcSetting();
+                                        }}
+                                        quaternary
+                                    ></Button>
+                                </View>
+                            )}
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.cancel')}
                                     onPress={() => toggleAndroidNfcModal(false)}
-                                    quaternary
                                 ></Button>
                             </View>
                         </View>

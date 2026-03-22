@@ -56,7 +56,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import CashuInvoice from '../../models/CashuInvoice';
 
 import { localeString } from '../../utils/LocaleUtils';
-import NFCUtils from '../../utils/NFCUtils';
+import NFCUtils, { checkNfcEnabled } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getAmountFromSats } from '../../utils/AmountUtils';
 
@@ -269,6 +269,9 @@ export default class ReceiveEcash extends React.Component<
 
     enableNfc = async () => {
         const { ModalStore } = this.props;
+
+        if (!(await checkNfcEnabled(ModalStore))) return;
+
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
