@@ -648,7 +648,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         }
 
                         // Handle LND start failed after max retries - restart app
-                        if (isLndError(error, LndErrorCode.LND_START_FAILED)) {
+                        if (
+                            isLndError(error, LndErrorCode.LND_START_FAILED) ||
+                            isLndError(error, LndErrorCode.LND_READY_TIMEOUT)
+                        ) {
                             restartNeeded(true);
                             return;
                         }
