@@ -28,6 +28,7 @@ import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoad
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SyncStore from '../../stores/SyncStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 import {
     SWAPS_KEY,
@@ -53,6 +54,7 @@ interface SeedProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     SyncStore: SyncStore;
+    ChannelsStore: ChannelsStore;
     route: Route<
         'Seed',
         {
@@ -118,7 +120,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
@@ -262,7 +264,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     render() {
-        const { navigation, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore, ChannelsStore, route } = this.props;
         const {
             understood,
             showModal,
@@ -281,6 +283,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         }
         const isRefundRescueKey = !!route.params?.seedPhrase;
         const isTwelveWords = seedPhrase?.length === 12;
+        const hasChannels =
+            ChannelsStore.channels.length > 0 ||
+            ChannelsStore.pendingChannels.length > 0 ||
+            ChannelsStore.closedChannels.length > 0;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -666,7 +672,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 })()}
                                 containerStyle={{ marginBottom: 10 }}
                             />
-                            {!isRefundRescueKey && (
+                            {!isRefundRescueKey && hasChannels && (
                                 <Button
                                     onPress={this.handleExportChannels}
                                     title={localeString(
