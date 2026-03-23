@@ -88,7 +88,6 @@ interface OpenChannelState {
     account: string;
     additionalChannels: Array<AdditionalChannel>;
     isNodePubkeyValid: boolean;
-    isNodeHostValid: boolean;
 }
 
 @inject(
@@ -129,8 +128,7 @@ export default class OpenChannel extends React.Component<
             advancedSettingsToggle: false,
             account: 'default',
             additionalChannels: [],
-            isNodePubkeyValid: true,
-            isNodeHostValid: true
+            isNodePubkeyValid: true
         };
     }
 
@@ -337,8 +335,7 @@ export default class OpenChannel extends React.Component<
             connectPeerOnly,
             advancedSettingsToggle,
             additionalChannels,
-            isNodePubkeyValid,
-            isNodeHostValid
+            isNodePubkeyValid
         } = this.state;
         const { implementation } = SettingsStore;
 
@@ -356,6 +353,8 @@ export default class OpenChannel extends React.Component<
 
         const loading = connectingToPeer || openingChannel;
 
+        const isNodeHostValid =
+            host === '' || ValidationUtils.validateNodeHost(host);
         const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
         const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
 
@@ -504,28 +503,24 @@ export default class OpenChannel extends React.Component<
                             ]}
                             onValueChange={(value: string) => {
                                 if (value === 'Olympus by ZEUS') {
-                                    if (NodeInfoStore.nodeInfo.isTestNet) {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-                                            host: '139.144.22.237:9735'
-                                        });
-                                    } else {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
-                                            host: '45.79.192.236:9735'
-                                        });
-                                    }
+                                    const isTestNet =
+                                        NodeInfoStore.nodeInfo.isTestNet;
+                                    this.setState({
+                                        channelDestination: 'Olympus by ZEUS',
+                                        node_pubkey_string: isTestNet
+                                            ? '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df'
+                                            : '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
+                                        host: isTestNet
+                                            ? '139.144.22.237:9735'
+                                            : '45.79.192.236:9735',
+                                        isNodePubkeyValid: true
+                                    });
                                 } else {
                                     this.setState({
                                         channelDestination: 'Custom',
                                         node_pubkey_string: '',
-                                        host: ''
+                                        host: '',
+                                        isNodePubkeyValid: false
                                     });
                                 }
                             }}
@@ -587,11 +582,7 @@ export default class OpenChannel extends React.Component<
                                         value={host}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                host: text,
-                                                isNodeHostValid:
-                                                    ValidationUtils.validateNodeHost(
-                                                        text
-                                                    )
+                                                host: text
                                             })
                                         }
                                         autoCapitalize="none"
@@ -658,7 +649,8 @@ export default class OpenChannel extends React.Component<
                                                             implementation ===
                                                                 'cln-rest'
                                                                 ? 'all'
-                                                                : ''
+                                                                : '',
+                                                        satAmount: '0'
                                                     });
                                                 }}
                                             />
@@ -1116,11 +1108,14 @@ export default class OpenChannel extends React.Component<
                                         },
                                         false,
                                         connectPeerOnly
-                                    );
+                                    ).catch(() => {});
                                 }}
                                 disabled={
                                     loading ||
                                     (!connectPeerOnly && isInvalidFeeRate) ||
+                                    (!connectPeerOnly &&
+                                        !fundMax &&
+                                        !Number(satAmount)) ||
                                     isInvalidPeer
                                 }
                             />
