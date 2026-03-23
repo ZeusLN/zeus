@@ -1093,7 +1093,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             this.setState({ pendingShareIntent: undefined });
 
-            navigation.navigate('ShareIntentProcessing', shareIntentData);
+            if (navigation.canGoBack()) {
+                navigation.popToTop();
+            }
+            navigation.push('ShareIntentProcessing', shareIntentData);
         }
     };
 

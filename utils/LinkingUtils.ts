@@ -126,7 +126,10 @@ class LinkingUtils {
                 const pendingData = getPendingShareIntent();
 
                 if (pendingData) {
-                    navigation.navigate('ShareIntentProcessing', pendingData);
+                    if (navigation.canGoBack()) {
+                        navigation.popToTop();
+                    }
+                    navigation.push('ShareIntentProcessing', pendingData);
                     return true;
                 }
             }
