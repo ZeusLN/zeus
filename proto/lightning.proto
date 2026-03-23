@@ -274,12 +274,14 @@ service Lightning {
     }
 
     /*
-    SendPaymentSync is the synchronous non-streaming version of SendPayment.
-    This RPC is intended to be consumed by clients of the REST proxy.
-    Additionally, this RPC expects the destination's public key and the payment
-    hash (if any) to be encoded as hex strings.
+    Deprecated, use routerrpc.SendPaymentV2. SendPaymentSync is the synchronous
+    non-streaming version of SendPayment. This RPC is intended to be consumed by
+    clients of the REST proxy. Additionally, this RPC expects the destination's
+    public key and the payment hash (if any) to be encoded as hex strings.
     */
-    rpc SendPaymentSync (SendRequest) returns (SendResponse);
+    rpc SendPaymentSync (SendRequest) returns (SendResponse) {
+        option deprecated = true;
+    }
 
     /* lncli: `sendtoroute`
     Deprecated, use routerrpc.SendToRouteV2. SendToRoute is a bi-directional
@@ -293,10 +295,13 @@ service Lightning {
     }
 
     /*
-    SendToRouteSync is a synchronous version of SendToRoute. It Will block
-    until the payment either fails or succeeds.
+    Deprecated, use routerrpc.SendToRouteV2. SendToRouteSync is a synchronous
+    version of SendToRoute. It Will block until the payment either fails or
+    succeeds.
     */
-    rpc SendToRouteSync (SendToRouteRequest) returns (SendResponse);
+    rpc SendToRouteSync (SendToRouteRequest) returns (SendResponse) {
+        option deprecated = true;
+    }
 
     /* lncli: `addinvoice`
     AddInvoice attempts to add a new invoice to the invoice database. Any
@@ -335,6 +340,13 @@ service Lightning {
     the latest add/settle events.
     */
     rpc SubscribeInvoices (InvoiceSubscription) returns (stream Invoice);
+
+    /* lncli: `deletecanceledinvoice`
+    DeleteCanceledInvoice removes a canceled invoice from the database. If the
+    invoice is not in the canceled state, an error will be returned.
+    */
+    rpc DeleteCanceledInvoice (DelCanceledInvoiceReq)
+        returns (DelCanceledInvoiceResp);
 
     /* lncli: `decodepayreq`
     DecodePayReq takes an encoded payment request string and attempts to decode
@@ -543,9 +555,10 @@ service Lightning {
         returns (ListPermissionsResponse);
 
     /*
-    CheckMacaroonPermissions checks whether a request follows the constraints
-    imposed on the macaroon and that the macaroon is authorized to follow the
-    provided permissions.
+    CheckMacaroonPermissions checks whether the provided macaroon contains all
+    the provided permissions. If the macaroon is valid (e.g. all caveats are
+    satisfied), and all permissions provided in the request are met, then
+    this RPC returns true.
     */
     rpc CheckMacaroonPermissions (CheckMacPermRequest)
         returns (CheckMacPermResponse);
@@ -643,6 +656,8 @@ message SendCustomMessageRequest {
 }
 
 message SendCustomMessageResponse {
+    // The status of the send operation.
+    string status = 1;
 }
 
 message Utxo {
@@ -755,11 +770,35 @@ message GetTransactionsRequest {
 
     // An optional filter to only include transactions relevant to an account.
     string account = 3;
+
+    /*
+    The index of a transaction that will be used in a query to determine which
+    transaction should be returned in the response.
+    */
+    uint32 index_offset = 4;
+
+    /*
+    The maximal number of transactions returned in the response to this query.
+    This value should be set to 0 to return all transactions.
+    */
+    uint32 max_transactions = 5;
 }
 
 message TransactionDetails {
     // The list of transactions relevant to the wallet.
     repeated Transaction transactions = 1;
+
+    /*
+    The index of the last item in the set of returned transactions. This can be
+    used to seek further, pagination style.
+    */
+    uint64 last_index = 2;
+
+    /*
+    The index of the last item in the set of returned transactions. This can be
+    used to seek backwards, pagination style.
+    */
+    uint64 first_index = 3;
 }
 
 message FeeLimit {
@@ -1317,6 +1356,8 @@ message ConnectPeerRequest {
     uint64 timeout = 3;
 }
 message ConnectPeerResponse {
+    // The status of the connect operation.
+    string status = 1;
 }
 
 message DisconnectPeerRequest {
@@ -1324,6 +1365,8 @@ message DisconnectPeerRequest {
     string pub_key = 1;
 }
 message DisconnectPeerResponse {
+    // The status of the disconnect operation.
+    string status = 1;
 }
 
 message HTLC {
@@ -1346,6 +1389,13 @@ message HTLC {
 
     // Index identifying the htlc on the forwarding channel.
     uint64 forwarding_htlc_index = 7;
+
+    /*
+    Whether the HTLC is locked in. An HTLC is considered locked in when the
+    remote party has sent us the `revoke_and_ack` to irrevocably commit this
+    HTLC.
+    */
+    bool locked_in = 8;
 }
 
 enum CommitmentType {
@@ -1716,6 +1766,10 @@ message ChannelCloseSummary {
 
     //  The confirmed SCID for a zero-conf channel.
     uint64 zero_conf_confirmed_scid = 15 [jstype = JS_STRING];
+
+    // The TLV encoded custom channel data records for this output, which might
+    // be set for custom channels.
+    bytes custom_channel_data = 16;
 }
 
 enum ResolutionType {
@@ -1865,6 +1919,7 @@ message Peer {
     repeated TimestampedError errors = 12;
 
     /*
+    This field is populated when the peer has at least one channel with us.
     The number of times we have recorded this peer going offline or coming
     online, recorded across restarts. Note that this value is decreased over
     time if the peer has not recently flapped, so that we can forgive peers
@@ -1873,6 +1928,7 @@ message Peer {
     int32 flap_count = 13;
 
     /*
+    This field is populated when the peer has at least one channel with us.
     The timestamp of the last flap we observed for this peer. If this value is
     zero, we have not observed any flaps for this peer.
     */
@@ -1966,8 +2022,8 @@ message GetInfoResponse {
     bool synced_to_graph = 18;
 
     /*
-    Whether the current node is connected to testnet. This field is
-    deprecated and the network field should be used instead
+    Whether the current node is connected to testnet or testnet4. This field is
+    deprecated and the network field should be used instead.
     */
     bool testnet = 10 [deprecated = true];
 
@@ -2026,13 +2082,6 @@ message Chain {
 
     // The network the node is on (eg regtest, testnet, mainnet)
     string network = 2;
-}
-
-message ConfirmationUpdate {
-    bytes block_sha = 1;
-    int32 block_height = 2;
-
-    uint32 num_confs_left = 3;
 }
 
 message ChannelOpenUpdate {
@@ -2111,9 +2160,13 @@ message CloseChannelRequest {
     // NOTE: This field is only respected if we're the initiator of the channel.
     uint64 max_fee_per_vbyte = 7;
 
-    // If true, then the rpc call will not block while it awaits a closing txid.
-    // Consequently this RPC call will not return a closing txid if this value
-    // is set.
+    // If true, then the rpc call will not block while it awaits a closing txid
+    // to be broadcasted to the mempool. To obtain the closing tx one has to
+    // listen to the stream for the particular updates. Moreover if a coop close
+    // is specified and this flag is set to true the coop closing flow will be
+    // initiated even if HTLCs are active on the channel. The channel will wait
+    // until all HTLCs are resolved and then start the coop closing process. The
+    // channel will be disabled in the meantime and will disallow any new HTLCs.
     bool no_wait = 8;
 }
 
@@ -2128,9 +2181,15 @@ message CloseStatusUpdate {
 message PendingUpdate {
     bytes txid = 1;
     uint32 output_index = 2;
+    int64 fee_per_vbyte = 3;
+    bool local_close_tx = 4;
 }
 
 message InstantUpdate {
+    // The number of pending HTLCs that are currently active on the channel.
+    // These HTLCs need to be resolved before the channel can be closed
+    // cooperatively.
+    int32 num_pending_htlcs = 1;
 }
 
 message ReadyForPsbtFunding {
@@ -2791,6 +2850,25 @@ message PendingChannelsResponse {
         // very likely canceled the funding and the channel will never become
         // fully operational.
         int32 funding_expiry_blocks = 3;
+
+        // The number of blocks remaining until the channel status changes from
+        // pending to active. A value of 0 indicates that the channel is now
+        // active.
+        //
+        // "Active" here means both channel peers have the channel marked OPEN
+        // and can immediately start using it. For public channels, this does
+        // not imply a channel_announcement has been gossiped. It only becomes
+        // public on the network after 6 on‐chain confirmations.
+        // See BOLT07 "Routing Gossip":
+        // https://github.com/lightning/bolts/blob/master/07-routing-gossip.md
+        //
+        // ZeroConf channels bypass the pending state entirely: they are marked
+        // active immediately upon creation, so they never show up as "pending".
+        uint32 confirmations_until_active = 7;
+
+        // The confirmation height records the block height at which the funding
+        // transaction was first confirmed.
+        uint32 confirmation_height = 8;
     }
 
     message WaitingCloseChannel {
@@ -2924,6 +3002,7 @@ message ChannelEventUpdate {
         ChannelPoint inactive_channel = 4;
         PendingUpdate pending_open_channel = 6;
         ChannelPoint fully_resolved_channel = 7;
+        ChannelPoint channel_funding_timeout = 8;
     }
 
     enum UpdateType {
@@ -2933,6 +3012,7 @@ message ChannelEventUpdate {
         INACTIVE_CHANNEL = 3;
         PENDING_OPEN_CHANNEL = 4;
         FULLY_RESOLVED_CHANNEL = 5;
+        CHANNEL_FUNDING_TIMEOUT = 6;
     }
 
     UpdateType type = 5;
@@ -3107,10 +3187,10 @@ message QueryRoutesRequest {
     map<uint64, bytes> dest_custom_records = 13;
 
     /*
-    The channel id of the channel that must be taken to the first hop. If zero,
-    any channel may be used.
+    Deprecated, use outgoing_chan_ids. The channel id of the channel that must
+    be taken to the first hop. If zero, any channel may be used.
     */
-    uint64 outgoing_chan_id = 14 [jstype = JS_STRING];
+    uint64 outgoing_chan_id = 14 [jstype = JS_STRING, deprecated = true];
 
     /*
     The pubkey of the last hop of the route. If empty, any hop may be used.
@@ -3145,6 +3225,12 @@ message QueryRoutesRequest {
     only, to 1 to optimize for reliability only or a value inbetween for a mix.
     */
     double time_pref = 18;
+
+    /*
+    The channel ids of the channels allowed for the first hop. If empty, any
+    channel may be used.
+    */
+    repeated uint64 outgoing_chan_ids = 20;
 }
 
 message NodePair {
@@ -3365,6 +3451,10 @@ message NodeInfoRequest {
 
     // If true, will include all known channels associated with the node.
     bool include_channels = 2;
+
+    // If true, will include announcements' signatures into ChannelEdge.
+    // Depends on include_channels.
+    bool include_auth_proof = 3;
 }
 
 message NodeInfo {
@@ -3418,11 +3508,37 @@ message RoutingPolicy {
     uint64 max_htlc_msat = 6;
     uint32 last_update = 7;
 
-    // Custom channel update tlv records.
+    // Custom channel update tlv records. These are customized fields that are
+    // not defined by LND and cannot be extracted.
     map<uint64, bytes> custom_records = 8;
 
     int32 inbound_fee_base_msat = 9;
     int32 inbound_fee_rate_milli_msat = 10;
+}
+
+/*
+ChannelAuthProof is the authentication proof (the signature portion) for a
+channel. Using the four signatures contained in the struct, and some
+auxiliary knowledge (the funding script, node identities, and outpoint) nodes
+on the network are able to validate the authenticity and existence of a
+channel.
+*/
+message ChannelAuthProof {
+    // node_sig1 are the raw bytes of the first node signature encoded
+    // in DER format.
+    bytes node_sig1 = 1;
+
+    // bitcoin_sig1 are the raw bytes of the first bitcoin signature of the
+    // MultiSigKey key of the channel encoded in DER format.
+    bytes bitcoin_sig1 = 2;
+
+    // node_sig2 are the raw bytes of the second node signature encoded
+    // in DER format.
+    bytes node_sig2 = 3;
+
+    // bitcoin_sig2 are the raw bytes of the second bitcoin signature of the
+    // MultiSigKey key of the channel encoded in DER format.
+    bytes bitcoin_sig2 = 4;
 }
 
 /*
@@ -3453,6 +3569,13 @@ message ChannelEdge {
 
     // Custom channel announcement tlv records.
     map<uint64, bytes> custom_records = 9;
+
+    // Authentication proof for this channel. This proof contains a set of
+    // signatures binding four identities, which attests to the legitimacy of
+    // the advertised channel. This only is available for advertised channels.
+    // This field is not filled by default. Pass include_auth_proof flag to
+    // DescribeGraph, GetNodeInfo or GetChanInfo to get this data.
+    ChannelAuthProof auth_proof = 10;
 }
 
 message ChannelGraphRequest {
@@ -3462,6 +3585,9 @@ message ChannelGraphRequest {
     channels, and public channels that are not yet announced to the network.
     */
     bool include_unannounced = 1;
+
+    // If true, will include announcements' signatures into ChannelEdge.
+    bool include_auth_proof = 2;
 }
 
 // Returns a new instance of the directed channel graph.
@@ -3513,6 +3639,9 @@ message ChanInfoRequest {
     // The channel point of the channel in format funding_txid:output_index. If
     // chan_id is specified, this field is ignored.
     string chan_point = 2;
+
+    // If true, will include announcements' signatures into ChannelEdge.
+    bool include_auth_proof = 3;
 }
 
 message NetworkInfoRequest {
@@ -3542,6 +3671,8 @@ message NetworkInfo {
 message StopRequest {
 }
 message StopResponse {
+    // The status of the stop operation.
+    string status = 1;
 }
 
 message GraphTopologySubscription {
@@ -3949,6 +4080,12 @@ message BlindedPathConfig {
     blinded paths.
     */
     repeated bytes node_omission_list = 4;
+
+    /*
+    The chained channels list specified via channel id (separated by commas),
+    starting from a channel owned by the receiver node.
+    */
+    repeated uint64 incoming_channel_list = 5;
 }
 
 enum InvoiceHTLCState {
@@ -4128,6 +4265,16 @@ message InvoiceSubscription {
     they weren't connected to the streaming RPC.
     */
     uint64 settle_index = 2;
+}
+
+message DelCanceledInvoiceReq {
+    // Invoice payment hash to delete.
+    string invoice_hash = 1;
+}
+
+message DelCanceledInvoiceResp {
+    // The status of the delete operation.
+    string status = 1;
 }
 
 enum PaymentFailureReason {
@@ -4371,9 +4518,13 @@ message DeleteAllPaymentsRequest {
 }
 
 message DeletePaymentResponse {
+    // The status of the delete operation.
+    string status = 1;
 }
 
 message DeleteAllPaymentsResponse {
+    // The status of the delete operation.
+    string status = 1;
 }
 
 message AbandonChannelRequest {
@@ -4390,6 +4541,8 @@ message AbandonChannelRequest {
 }
 
 message AbandonChannelResponse {
+    // The status of the abandon operation.
+    string status = 1;
 }
 
 message DebugLevelRequest {
@@ -4549,6 +4702,15 @@ message PolicyUpdateRequest {
     // Optional inbound fee. If unset, the previously set value will be
     // retained [EXPERIMENTAL].
     InboundFee inbound_fee = 10;
+
+    // Under unknown circumstances a channel can exist with a missing edge in
+    // the graph database. This can cause an 'edge not found' error when calling
+    // `getchaninfo` and/or cause the default channel policy to be used during
+    // forwards. Setting this flag will recreate the edge if not found, allowing
+    // updating this channel policy and fixing the missing edge problem for this
+    // channel permanently. For fields not set in this command, the default
+    // policy will be created.
+    bool create_missing_edge = 11;
 }
 
 enum UpdateFailure {
@@ -4598,11 +4760,13 @@ message ForwardingHistoryRequest {
     // forwarding event.
     bool peer_alias_lookup = 5;
 
-    // List of incoming channel ids to filter htlcs received from a particular channel.
-    repeated uint64 incoming_chan_ids = 6 [jstype = JS_STRING];
+    // List of incoming channel ids to filter htlcs received from a
+    // particular channel
+    repeated uint64 incoming_chan_ids = 6;
 
-    // List of outgoing channel ids to filter htlcs being forwarded to a particular channel.
-    repeated uint64 outgoing_chan_ids = 7 [jstype = JS_STRING];
+    // List of outgoing channel ids to filter htlcs being forwarded to a
+    // particular channel
+    repeated uint64 outgoing_chan_ids = 7;
 }
 message ForwardingEvent {
     // Timestamp is the time (unix epoch offset) that this circuit was
@@ -4647,6 +4811,14 @@ message ForwardingEvent {
 
     // The peer alias of the outgoing channel.
     string peer_alias_out = 13;
+
+    // The ID of the incoming HTLC in the payment circuit. This field is
+    // optional and is unset for forwarding events happened before v0.20.
+    optional uint64 incoming_htlc_id = 14;
+
+    // The ID of the outgoing HTLC in the payment circuit. This field is
+    // optional and may be unset for legacy forwarding events.
+    optional uint64 outgoing_htlc_id = 15;
 
     // TODO(roasbeef): add settlement latency?
     //  * use FPE on the chan id?
@@ -4735,12 +4907,15 @@ message RestoreChanBackupRequest {
     }
 }
 message RestoreBackupResponse {
+    // The number of channels successfully restored.
+    uint32 num_restored = 1;
 }
 
 message ChannelBackupSubscription {
 }
 
 message VerifyChanBackupResponse {
+    repeated string chan_points = 1;
 }
 
 message MacaroonPermission {
@@ -4976,9 +5151,37 @@ message Op {
 }
 
 message CheckMacPermRequest {
+    // The macaroon to check permissions for, serialized in binary format. For
+    // a macaroon to be valid, it must have been issued by lnd, must succeed all
+    // caveat conditions, and must contain all of the permissions specified in
+    // the permissions field.
     bytes macaroon = 1;
+
+    // The list of permissions the macaroon should be checked against. Only if
+    // the macaroon contains all of these permissions, it is considered valid.
+    // If the list of permissions given is empty, then the macaroon is
+    // considered valid only based on issuance authority and caveat validity.
+    // An empty list of permissions is therefore equivalent to saying "skip
+    // checking permissions" (unless check_default_perms_from_full_method is
+    // specified).
     repeated MacaroonPermission permissions = 2;
+
+    // The RPC method to check the macaroon against. This is only used if there
+    // are custom `uri:<rpcpackage>.<ServiceName>/<MethodName>` permissions in
+    // the permission list above. To check a macaroon against the list of
+    // permissions of a certain RPC method, query the `ListPermissions` RPC
+    // first, extract the permissions for the method, and then pass them in the
+    // `permissions` field above.
     string fullMethod = 3;
+
+    // If this field is set to true, then the permissions list above MUST be
+    // empty. The default permissions for the provided fullMethod will be used
+    // to check the macaroon. This is equivalent to looking up the permissions
+    // for a method in the `ListPermissions` RPC and then calling this RPC with
+    // the permission list returned from that call. Without this flag, the list
+    // of permissions must be non-empty for the check to actually perform a
+    // permission check.
+    bool check_default_perms_from_full_method = 4;
 }
 
 message CheckMacPermResponse {
@@ -5063,6 +5266,22 @@ message RPCMiddlewareRequest {
     intercept message.
     */
     uint64 msg_id = 7;
+
+    /*
+    The metadata pairs that were sent along with the original gRPC request via
+    the golang context.Context using explicit [gRPC
+    metadata](https://grpc.io/docs/guides/metadata/). Context values are not
+    propagated via gRPC and so we send any pairs along explicitly here so that
+    the interceptor can access them.
+    */
+    map<string, MetadataValues> metadata_pairs = 9;
+}
+
+message MetadataValues {
+    /*
+    The set of metadata values that correspond to the metadata key.
+    */
+    repeated string values = 1;
 }
 
 message StreamAuth {
