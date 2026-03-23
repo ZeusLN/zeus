@@ -23,8 +23,11 @@ import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
+import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoadingModal';
 
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SyncStore from '../../stores/SyncStore';
 
 import {
     SWAPS_KEY,
@@ -35,6 +38,10 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import {
+    exportChannelDb,
+    uploadChannelBackupToOlympus
+} from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -44,10 +51,13 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface SeedProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
+    SyncStore: SyncStore;
     route: Route<
         'Seed',
         {
             seedPhrase?: string[];
+            skipWarning?: boolean;
         }
     >;
 }
@@ -56,6 +66,8 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    isChannelExporting: boolean;
+    channelExportMessage: string;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -106,13 +118,15 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
-        understood: false,
+        understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
-        isDeleteModalVisible: false
+        isDeleteModalVisible: false,
+        isChannelExporting: false,
+        channelExportMessage: ''
     };
 
     componentDidMount() {
@@ -188,9 +202,77 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         );
     };
 
+    handleExportChannels = () => {
+        const { SettingsStore, NodeInfoStore, SyncStore } = this.props;
+        const { isSyncing } = SyncStore;
+
+        if (isSyncing) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.syncInProgress')
+            );
+            return;
+        }
+        const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
+        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+        const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
+        const seedPhrase = SettingsStore.seedPhrase.join(' ');
+
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+
+            `${localeString('views.Tools.migration.export.text1')}\n\n` +
+                `⚠️ ${localeString('views.Tools.migration.export.text2')}`,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.migration.export.olympus'),
+                    style: 'default',
+                    onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.uploading'
+                            )
+                        });
+                        await uploadChannelBackupToOlympus(
+                            lndDir(),
+                            isTestnet,
+                            pubkey,
+                            seedPhrase,
+                            (loading) =>
+                                this.setState({ isChannelExporting: loading })
+                        );
+                    }
+                },
+                {
+                    text: localeString('views.Tools.migration.export.local'),
+                    style: 'default',
+                    onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.exporting'
+                            )
+                        });
+                        await exportChannelDb(lndDir(), isTestnet, (loading) =>
+                            this.setState({ isChannelExporting: loading })
+                        );
+                    }
+                }
+            ]
+        );
+    };
+
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { understood, showModal } = this.state;
+        const {
+            understood,
+            showModal,
+            isChannelExporting,
+            channelExportMessage
+        } = this.state;
         const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
         const isRefundRescueKey = !!route.params?.seedPhrase;
 
@@ -260,6 +342,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         return (
             <Screen>
                 {this.renderDeleteModal()}
+                <ChannelBackupLoadingModal
+                    isOpen={isChannelExporting}
+                    message={channelExportMessage}
+                />
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -282,6 +368,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     <></>
                                 )}
                                 <DangerouslyCopySeed />
+
                                 {isRefundRescueKey ? <></> : <QRExport />}
                             </Row>
                         ) : undefined
@@ -499,13 +586,42 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    if (isRefundRescueKey) navigation.goBack();
-                                    else {
-                                        await Storage.setItem(
-                                            IS_BACKED_UP_KEY,
-                                            true
+                                    if (isRefundRescueKey) {
+                                        navigation.goBack();
+                                    } else {
+                                        Alert.alert(
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.title'
+                                            ),
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.message'
+                                            ),
+                                            [
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                                                    ),
+                                                    onPress: () => {
+                                                        this.handleExportChannels();
+                                                    }
+                                                },
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.Seed.channelBackupReminder.later'
+                                                    ),
+                                                    style: 'cancel',
+                                                    onPress: async () => {
+                                                        await Storage.setItem(
+                                                            IS_BACKED_UP_KEY,
+                                                            true
+                                                        );
+                                                        navigation.popTo(
+                                                            'Wallet'
+                                                        );
+                                                    }
+                                                }
+                                            ]
                                         );
-                                        navigation.popTo('Wallet');
                                     }
                                 }}
                                 title={
@@ -519,6 +635,16 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 }
                                 containerStyle={{ marginBottom: 10 }}
                             />
+                            {!isRefundRescueKey && (
+                                <Button
+                                    onPress={this.handleExportChannels}
+                                    title={localeString(
+                                        'views.Tools.migration.export'
+                                    )}
+                                    secondary
+                                    containerStyle={{ marginBottom: 15 }}
+                                />
+                            )}
                             {isRefundRescueKey && (
                                 <Button
                                     onPress={() =>

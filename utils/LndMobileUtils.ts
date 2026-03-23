@@ -1,4 +1,5 @@
 import {
+    Alert,
     DeviceEventEmitter,
     NativeEventEmitter,
     NativeModules,
@@ -15,7 +16,9 @@ import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
+import { localeString } from './LocaleUtils';
 import { retry, sleep } from './SleepUtils';
+import { importChannelDb } from './ChannelMigrationUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -387,9 +390,23 @@ export async function stopLnd(
         } else {
             log.d('Force stop: skipping status check (Go state mismatch)');
         }
-        // Initiate graceful shutdown - both can throw; continue even if one fails
+        // Initiate graceful shutdown - proceed to killLnd even if stopLnd fails
         log.d('Stopping LND...');
-        await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        try {
+            await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        } catch (stopError) {
+            const stopMsg = getErrorMessage(stopError);
+            if (
+                matchesLndErrorCode(
+                    stopMsg,
+                    LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                )
+            ) {
+                log.d('Wallet recovery in progress - proceeding to force kill');
+            } else {
+                throw stopError;
+            }
+        }
         const killResult = await runWithExpectedErrorHandling(
             () => NativeModules.LndMobileTools.killLnd(),
             'killLnd'
@@ -554,7 +571,40 @@ async function startLndWithRetry({
             matchesLndErrorCode(errorMessage, LndErrorCode.LND_ALREADY_RUNNING)
         ) {
             log.d('LND already started - force stop (Go thinks running)');
-            await stopLnd(STOP_LND_MAX_RETRIES, STOP_LND_POLL_DELAY_MS, true);
+            const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    await stopLnd(
+                        STOP_LND_MAX_RETRIES,
+                        STOP_LND_POLL_DELAY_MS,
+                        true
+                    );
+                    break;
+                } catch (stopError: unknown) {
+                    const stopMsg = getErrorMessage(stopError);
+                    if (
+                        matchesLndErrorCode(
+                            stopMsg,
+                            LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                        )
+                    ) {
+                        if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
+                            log.e(
+                                `Wallet recovery still in progress after ${attempt} attempts, giving up`
+                            );
+                            throw createLndError(
+                                LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                            );
+                        }
+                        log.d(
+                            `Wallet recovery in progress, waiting 5s before retry (attempt ${attempt}/${MAX_RECOVERY_WAIT_ATTEMPTS})...`
+                        );
+                        await sleep(5000);
+                        continue;
+                    }
+                    throw stopError;
+                }
+            }
             const delayMs =
                 Platform.OS === 'android'
                     ? ANDROID_PROCESS_CLEANUP_DELAY_MS
@@ -1080,13 +1130,17 @@ export async function createLndWallet({
     seedMnemonic,
     walletPassphrase,
     isTestnet,
-    channelBackupsBase64
+    channelBackupsBase64,
+    channelDbUri,
+    channelDbFileName
 }: {
     lndDir: string;
     seedMnemonic?: string;
     walletPassphrase?: string;
     isTestnet?: boolean;
     channelBackupsBase64?: string;
+    channelDbUri?: string;
+    channelDbFileName?: string;
 }) {
     const {
         initialize,
@@ -1124,13 +1178,49 @@ export async function createLndWallet({
     const randomBase64 = Base64Utils.bytesToBase64(random);
 
     const isRestore = walletPassphrase || seedMnemonic;
+    const hasChannelDb = channelDbUri && channelDbFileName;
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
-        isRestore ? 500 : undefined,
+        isRestore && !hasChannelDb ? 500 : undefined,
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
+
+    if (hasChannelDb) {
+        console.log('Stopping LND to import graph data');
+        try {
+            await stopLnd();
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
+                throw e;
+            }
+        }
+
+        console.log('Importing graph data');
+        await importChannelDb(
+            channelDbUri,
+            channelDbFileName,
+            lndDir,
+            isTestnet || false
+        );
+
+        console.log('Restarting LND with imported graph data');
+        await startLnd({
+            lndDir,
+            walletPassword: randomBase64,
+            isTorEnabled: false,
+            isTestnet: isTestnet || false
+        });
+    }
 
     // Mark that LND is already running from wallet creation,
     // so Wallet.tsx skips the stop→init→start cycle
@@ -1143,6 +1233,7 @@ export async function createLndWallet({
 /**
  * Waits for LND RPC to become ready by polling getInfo
  * @param timeoutMs - Maximum time to wait in milliseconds (default: 30000)
+ * @returns The getInfo response once RPC is ready
  * @throws Error if RPC doesn't become ready within timeout or encounters a fatal error
  */
 export async function waitForRpcReady(timeoutMs = 30000) {
@@ -1152,7 +1243,7 @@ export async function waitForRpcReady(timeoutMs = 30000) {
         try {
             const info = await lndMobile.index.getInfo();
             log.d(`RPC ready - Node pubkey: ${info.identity_pubkey}`);
-            return;
+            return info;
         } catch (error: any) {
             const errorMessage = error?.message ?? '';
             log.d(`RPC not ready yet: ${errorMessage}`);
