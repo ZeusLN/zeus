@@ -23,6 +23,9 @@ export default class AlertStore {
     @observable public zombieError: boolean = false;
     @observable public neutrinoPeerError: boolean = false;
     @observable public problematicNeutrinoPeers: Array<Peer> = [];
+    @observable public vssError: string | null = null;
+    @observable public esploraError: string | null = null;
+    @observable public rgsError: string | null = null;
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
 
@@ -51,6 +54,27 @@ export default class AlertStore {
         this.zombieError = false;
         this.neutrinoPeerError = false;
         this.problematicNeutrinoPeers = [];
+        this.vssError = null;
+        this.esploraError = null;
+        this.rgsError = null;
+    };
+
+    @action
+    public setVssError = (error: string) => {
+        this.vssError = error;
+        this.hasError = true;
+    };
+
+    @action
+    public setEsploraError = (error: string) => {
+        this.esploraError = error;
+        this.hasError = true;
+    };
+
+    @action
+    public setRgsError = (error: string) => {
+        this.rgsError = error;
+        this.hasError = true;
     };
 
     @action

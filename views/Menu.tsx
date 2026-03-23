@@ -13,7 +13,6 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AddIcon from '../assets/images/SVG/Add.svg';
-import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
 import CoinsIcon from '../assets/images/SVG/Coins.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
@@ -109,7 +108,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             SettingsStore
         } = this.props;
         const { showHiddenItems, easterEggCount } = this.state;
-        const { implementation, settings, seedPhrase } = SettingsStore;
+        const { settings, seedPhrase, ldkMnemonic } = SettingsStore;
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -123,7 +122,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             null;
 
         const implementationDisplayValue: ImplementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
@@ -148,6 +147,17 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 }
                 if (!selectedNode.isSqlite) {
                     nodeSubtitle += ' [Bolt]';
+                }
+            }
+
+            if (selectedNode.implementation === 'embedded-ldk-node') {
+                if (selectedNode.embeddedLdkNetwork) {
+                    nodeSubtitle += ` (${
+                        selectedNode.embeddedLdkNetwork
+                            .charAt(0)
+                            .toUpperCase() +
+                        selectedNode.embeddedLdkNetwork.slice(1)
+                    })`;
                 }
             }
         }
@@ -385,71 +395,46 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </TouchableOpacity>
                     </View>
 
-                    {implementation === 'embedded-lnd' && seedPhrase && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Seed')}
+                    {BackendUtils.isLocalWallet() &&
+                        (seedPhrase || ldkMnemonic) && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <KeyIcon
-                                        fill={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() => navigation.navigate('Seed')}
                                 >
-                                    {localeString('views.Settings.Seed.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.separationLine} />
-
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('EmbeddedNodeSettings')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <BlockIcon
-                                        color={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <KeyIcon
+                                            fill={themeColor('text')}
+                                            width={27}
+                                            height={27}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Seed.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode && BackendUtils.supportsNodeInfo() && (
                         <View
@@ -530,7 +515,8 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         )}
 
                     {selectedNode &&
-                        BackendUtils.supportsCustomPreimages() &&
+                        (BackendUtils.supportsCustomPreimages() ||
+                            BackendUtils.supportsCashuWallet()) &&
                         !NodeInfoStore.testnet && (
                             <View
                                 style={{
@@ -663,7 +649,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {selectedNode && BackendUtils.supportsBolt12Address() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -705,7 +691,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {selectedNode && NodeInfoStore.supportsListingOffers && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -742,6 +728,50 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {selectedNode &&
+                        NodeInfoStore.supportsOffers &&
+                        !NodeInfoStore.supportsListingOffers && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('CreatePayCode')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View>
+                                            <ReceiveIcon
+                                                fill={themeColor('text')}
+                                                width={48}
+                                                height={30}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PayCode.createOffer'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode && BackendUtils.supportsRouting() && (
                         <View

@@ -106,6 +106,7 @@ export default function DonationInfoModal({
                                                     debit
                                                     sensitive
                                                     toggleable
+                                                    forceMsats
                                                 />
                                                 <Text
                                                     style={{

@@ -42,7 +42,7 @@ import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { getLspConfigForNetwork } from '../stores/SettingsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import { AdditionalChannel } from '../models/OpenChannelRequest';
@@ -232,21 +232,17 @@ export default class OpenChannel extends React.Component<
     }
 
     initFromProps(props: OpenChannelProps) {
-        const { route, NodeInfoStore } = props;
+        const { route, NodeInfoStore, SettingsStore } = props;
 
         const node_pubkey_string = route.params?.node_pubkey_string ?? '';
         const host = route.params?.host ?? '';
 
-        let olympusPubkey, olympusHost;
-        if (NodeInfoStore.nodeInfo.isTestNet) {
-            olympusPubkey =
-                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df';
-            olympusHost = '139.144.22.237:9735';
-        } else {
-            olympusPubkey =
-                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
-            olympusHost = '45.79.192.236:9735';
-        }
+        const lspConfig = getLspConfigForNetwork(
+            SettingsStore.settings,
+            NodeInfoStore.nodeInfo
+        );
+        const olympusPubkey = lspConfig.lsps1Pubkey;
+        const olympusHost = lspConfig.lsps1Host;
 
         this.setState({
             channelDestination: node_pubkey_string
@@ -504,23 +500,15 @@ export default class OpenChannel extends React.Component<
                             ]}
                             onValueChange={(value: string) => {
                                 if (value === 'Olympus by ZEUS') {
-                                    if (NodeInfoStore.nodeInfo.isTestNet) {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-                                            host: '139.144.22.237:9735'
-                                        });
-                                    } else {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
-                                            host: '45.79.192.236:9735'
-                                        });
-                                    }
+                                    const config = getLspConfigForNetwork(
+                                        SettingsStore.settings,
+                                        NodeInfoStore.nodeInfo
+                                    );
+                                    this.setState({
+                                        channelDestination: 'Olympus by ZEUS',
+                                        node_pubkey_string: config.lsps1Pubkey,
+                                        host: config.lsps1Host
+                                    });
                                 } else {
                                     this.setState({
                                         channelDestination: 'Custom',
@@ -990,30 +978,35 @@ export default class OpenChannel extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                        <>
-                                            <Text
-                                                style={{
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.announceChannel'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={!privateChannel}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        privateChannel:
-                                                            !privateChannel
-                                                    })
-                                                }
-                                                disabled={simpleTaprootChannel}
-                                            />
-                                        </>
+                                        {implementation !==
+                                            'embedded-ldk-node' && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.announceChannel'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={!privateChannel}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            privateChannel:
+                                                                !privateChannel
+                                                        })
+                                                    }
+                                                    disabled={
+                                                        simpleTaprootChannel
+                                                    }
+                                                />
+                                            </>
+                                        )}
 
                                         {BackendUtils.isLNDBased() && (
                                             <>

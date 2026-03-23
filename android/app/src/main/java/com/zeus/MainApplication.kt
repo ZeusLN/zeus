@@ -31,6 +31,7 @@ class MainApplication : Application(), ReactApplication {
                     add(NostrConnectPackage())
                     add(StealthModePackage())
                     add(CashuDevKitPackage())
+                    add(LdkNodePackage())
                 },
         )
     }

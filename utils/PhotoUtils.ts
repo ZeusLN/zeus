@@ -24,6 +24,7 @@ const CLN = require('..//assets/images/CLN.jpg');
 const LND = require('..//assets/images/LND.jpg');
 const Nostr = require('..//assets/images/Nostr.jpg');
 const NostrWalletConnect = require('..//assets/images/NostrWalletConnect.jpg');
+const LDK = require('..//assets/images/ldk.png');
 
 const getPhoto = (photo: string | undefined): string => {
     if (typeof photo === 'string' && photo.includes('rnfs://')) {
@@ -57,6 +58,7 @@ const getPhoto = (photo: string | undefined): string => {
         if (fileName === 'lnd') file = LND;
         if (fileName === 'nostr') file = Nostr;
         if (fileName === 'nostrwalletconnect') file = NostrWalletConnect;
+        if (fileName === 'ldk') file = LDK;
 
         return Image.resolveAssetSource(file)?.uri || '';
     }

@@ -82,7 +82,7 @@ export default class FeeLimit extends React.Component<
                         },
                         () => {
                             onFeeLimitSatChange(
-                                BackendUtils.isLNDBased() &&
+                                BackendUtils.supportsCustomFeeLimit() &&
                                     this.state.feeOption === 'percent'
                                     ? percentAmount
                                     : feeLimitSat
@@ -91,7 +91,7 @@ export default class FeeLimit extends React.Component<
                     );
                 } else {
                     onFeeLimitSatChange(
-                        BackendUtils.isLNDBased() &&
+                        BackendUtils.supportsCustomFeeLimit() &&
                             this.state.feeOption === 'percent'
                             ? percentAmount
                             : feeLimitSat
@@ -126,7 +126,8 @@ export default class FeeLimit extends React.Component<
 
             if (percentUpdated || satAmountUpdated) {
                 onFeeLimitSatChange(
-                    BackendUtils.isLNDBased() && feeOption === 'percent'
+                    BackendUtils.supportsCustomFeeLimit() &&
+                        feeOption === 'percent'
                         ? percentAmount
                         : feeLimitSat
                 );
@@ -189,14 +190,15 @@ export default class FeeLimit extends React.Component<
             this.state;
         const { implementation } = SettingsStore;
 
-        const isLnd: boolean = BackendUtils.isLNDBased();
+        const supportsCustomFeeLimit: boolean =
+            BackendUtils.supportsCustomFeeLimit();
         const isCLightning: boolean = implementation === 'cln-rest';
 
         if (hide) return;
 
         return (
             <React.Fragment>
-                {isLnd && (
+                {supportsCustomFeeLimit && (
                     <>
                         <Row justify="space-between">
                             <Text

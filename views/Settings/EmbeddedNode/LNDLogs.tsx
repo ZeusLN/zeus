@@ -54,6 +54,9 @@ export default class LNDLogs extends React.Component<
                 'lndlog',
                 (data: string) => {
                     log = log + data.slice(11);
+                    if (log.length > 100000) {
+                        log = log.slice(-100000);
+                    }
                     this.setState({
                         log
                     });

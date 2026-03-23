@@ -19,6 +19,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LinearGradient from '../../components/LinearGradient';
 import BigNumber from 'bignumber.js';
+import { duration } from 'moment';
 
 import Channel from '../../models/Channel';
 import ClosedChannel from '../../models/ClosedChannel';
@@ -111,7 +112,7 @@ export default class ChannelView extends React.Component<
 
         const currentBlockHeight = NodeInfoStore.nodeInfo.currentBlockHeight;
 
-        const renewalInfo = LSPStore.getExtendableOrdersData?.filter(
+        const renewalInfo = LSPStore.getExtendableChannelsData?.filter(
             (extendableChannel: any) => {
                 return (
                     extendableChannel.short_channel_id ===
@@ -425,9 +426,7 @@ export default class ChannelView extends React.Component<
                         ChannelsStore.clearCloseChannelErr();
                     }}
                     rightComponent={
-                        editableFees &&
-                        this.props.SettingsStore.implementation !==
-                            'embedded-lnd' ? (
+                        editableFees && !BackendUtils.isLocalWallet() ? (
                             <EditFees />
                         ) : (
                             <></>
@@ -936,6 +935,20 @@ export default class ChannelView extends React.Component<
                         </ListItem>
                     )}
 
+                    {blocks_til_maturity > 0 && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.blocksTilMaturity'
+                            )}
+                            value={`${blocks_til_maturity} ${localeString(
+                                'general.blocks'
+                            )} (~${duration(
+                                blocks_til_maturity * 10,
+                                'minutes'
+                            ).humanize()})`}
+                        />
+                    )}
+
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
                     <KeyValue
@@ -1218,7 +1231,7 @@ export default class ChannelView extends React.Component<
                             {!closingChannel && closeChannelErr && (
                                 <ErrorMessage message={closeChannelErr} />
                             )}
-                            {BackendUtils.isLNDBased() && (
+                            {BackendUtils.supportsForceClose() && (
                                 <>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
@@ -1250,66 +1263,74 @@ export default class ChannelView extends React.Component<
                                             }
                                         />
                                     </View>
-                                    {!forceCloseChannel && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Channel.closingRate'
-                                                )}
-                                            </Text>
-                                            <OnchainFeeInput
-                                                fee={satPerByte}
-                                                onChangeFee={(text: string) => {
-                                                    this.setState({
-                                                        satPerByte: text
-                                                    });
-                                                }}
-                                                navigation={navigation}
-                                            />
+                                    {BackendUtils.isLNDBased() &&
+                                        !forceCloseChannel && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Channel.closingRate'
+                                                    )}
+                                                </Text>
+                                                <OnchainFeeInput
+                                                    fee={satPerByte}
+                                                    onChangeFee={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            satPerByte: text
+                                                        });
+                                                    }}
+                                                    navigation={navigation}
+                                                />
 
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                                infoModalText={
-                                                    closeAddress
-                                                        ? localeString(
-                                                              'views.Channel.externalAddress.info2'
-                                                          )
-                                                        : localeString(
-                                                              'views.Channel.externalAddress.info1'
-                                                          )
-                                                }
-                                            >
-                                                {localeString(
-                                                    'views.Channel.externalAddress'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={'bc1...'}
-                                                value={deliveryAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        deliveryAddress: text
-                                                    });
-                                                }}
-                                                locked={
-                                                    closingChannel ||
-                                                    (closeAddress !==
-                                                        undefined &&
-                                                        closeAddress !== '')
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                    infoModalText={
+                                                        closeAddress
+                                                            ? localeString(
+                                                                  'views.Channel.externalAddress.info2'
+                                                              )
+                                                            : localeString(
+                                                                  'views.Channel.externalAddress.info1'
+                                                              )
+                                                    }
+                                                >
+                                                    {localeString(
+                                                        'views.Channel.externalAddress'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={'bc1...'}
+                                                    value={deliveryAddress}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            deliveryAddress:
+                                                                text
+                                                        });
+                                                    }}
+                                                    locked={
+                                                        closingChannel ||
+                                                        (closeAddress !==
+                                                            undefined &&
+                                                            closeAddress !== '')
+                                                    }
+                                                />
+                                            </>
+                                        )}
                                 </>
                             )}
                             <View style={styles.button}>

@@ -4,6 +4,7 @@ android/local.properties
 # OSX
 #
 .DS_Store
+__MACOSX/
 
 # Xcode
 #
@@ -90,3 +91,8 @@ android/app/src/main/java/uniffi/zeus_cashu_restore/
 ios/ZeusRestore/zeusRestoreFFI.xcframework
 ios/ZeusRestoreLibZipFile
 ios/CashuDevKit/zeus_cashu_restore.swift
+
+# LDK Node binaries
+ios/LdkNodeMobile/LDKNodeFFI.xcframework
+ios/LdkNodeLibZipFile
+ios/LdkNodeMobile/__MACOSX/
