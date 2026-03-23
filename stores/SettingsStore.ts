@@ -1556,6 +1556,18 @@ export default class SettingsStore {
     // Favorite currencies
     @observable public favoriteCurrencies: string[] = [];
 
+    /**
+     * Synchronously applies a new theme value in-memory so the UI re-renders
+     * before the async storage write completes. This lets animation libraries
+     * capture a before/after screenshot pair in the same JS frame.
+     */
+    @action public setThemeImmediate = (theme: string) => {
+        this.settings = {
+            ...this.settings,
+            display: { ...this.settings.display, theme }
+        };
+    };
+
     @action
     public loadFavoriteCurrencies = async () => {
         try {

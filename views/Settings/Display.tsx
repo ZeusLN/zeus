@@ -4,6 +4,8 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 
+import switchTheme from 'react-native-theme-switch-animation';
+
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
@@ -122,23 +124,35 @@ export default class Display extends React.Component<
                         title={localeString('views.Settings.Theme.title')}
                         selectedValue={theme}
                         disabled={SettingsStore.settingsUpdateInProgress}
-                        onValueChange={async (value: string) => {
-                            this.setState({
-                                theme: value
+                        onValueChange={(value: string) => {
+                            this.setState({ theme: value });
+                            switchTheme({
+                                switchThemeFunction: () => {
+                                    SettingsStore.setThemeImmediate(value);
+                                },
+                                animationConfig: {
+                                    type: 'circular',
+                                    duration: 600,
+                                    startingPoint: {
+                                        cxRatio: 0.5,
+                                        cyRatio: 0.5
+                                    }
+                                }
                             });
-                            await updateSettings({
+                            updateSettings({
                                 display: {
                                     ...settings.display,
                                     theme: value
                                 }
+                            }).then(() => {
+                                SystemNavigationBar.setNavigationColor(
+                                    themeColor('background'),
+                                    isLightTheme() ? 'dark' : 'light'
+                                );
+                                SystemNavigationBar.setNavigationBarDividerColor(
+                                    themeColor('secondary')
+                                );
                             });
-                            SystemNavigationBar.setNavigationColor(
-                                themeColor('background'),
-                                isLightTheme() ? 'dark' : 'light'
-                            );
-                            SystemNavigationBar.setNavigationBarDividerColor(
-                                themeColor('secondary')
-                            );
                         }}
                         values={THEME_KEYS}
                     />
