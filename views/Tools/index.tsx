@@ -40,6 +40,7 @@ import {
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SyncStore from '../../stores/SyncStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 import { Icon } from '@rneui/themed';
 import Feather from '@react-native-vector-icons/feather';
@@ -50,6 +51,7 @@ interface ToolsProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     SyncStore: SyncStore;
+    ChannelsStore: ChannelsStore;
 }
 
 interface ToolsState {
@@ -57,7 +59,7 @@ interface ToolsState {
     channelExportMessage: string;
 }
 
-@inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Tools extends React.Component<ToolsProps, ToolsState> {
     focusListener: any = null;
@@ -179,8 +181,12 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, ChannelsStore } = this.props;
         const { settings, isChannelMigrating, implementation } = SettingsStore;
+        const hasChannels =
+            ChannelsStore.channels.length > 0 ||
+            ChannelsStore.pendingChannels.length > 0 ||
+            ChannelsStore.closedChannels.length > 0;
 
         const selectedNode: any =
             (settings &&
@@ -713,43 +719,47 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         </TouchableOpacity>
                     </View>
-                    {implementation === 'embedded-lnd' && !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => this.handleExportChannels()}
+                    {implementation === 'embedded-lnd' &&
+                        !isChannelMigrating &&
+                        hasChannels && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <Feather
-                                        name="upload"
-                                        size={24}
-                                        color={themeColor('text')}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() => this.handleExportChannels()}
                                 >
-                                    {localeString(
-                                        'views.Tools.migration.export'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <Feather
+                                            name="upload"
+                                            size={24}
+                                            color={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Tools.migration.export'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {BackendUtils.supportsWithdrawalRequests() &&
                         !isChannelMigrating && (
