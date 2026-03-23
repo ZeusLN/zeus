@@ -7,6 +7,7 @@ import { ButtonGroup } from '@rneui/themed';
 
 import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import ModalStore from '../../stores/ModalStore';
 import { activityStore, settingsStore } from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
@@ -31,11 +32,13 @@ import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 interface CashuTokenProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
+    ModalStore?: ModalStore;
     route: Route<
         'CashuToken',
         {
@@ -58,7 +61,7 @@ interface CashuTokenState {
 
 const MAX_TOKEN_LENGTH = 1000;
 
-@inject('CashuStore', 'ChannelsStore')
+@inject('CashuStore', 'ChannelsStore', 'ModalStore')
 @observer
 export default class CashuTokenView extends React.Component<
     CashuTokenProps,
@@ -154,6 +157,24 @@ export default class CashuTokenView extends React.Component<
         } catch (error) {
             console.log('Error sharing gift link:', error);
         }
+    };
+
+    handlePendingPress = () => {
+        this.props.ModalStore!.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: localeString(
+                'views.Wallet.pendingBalanceIcon.explainerCashu'
+            ),
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
     };
 
     render() {
@@ -301,6 +322,7 @@ export default class CashuTokenView extends React.Component<
                                 credit={received && !pendingClaim && !isSpent}
                                 pending={pendingClaim && !isSpent}
                                 debit={sent && isSpent && !pendingClaim}
+                                onPendingPress={this.handlePendingPress}
                             />
                         </View>
                     )}

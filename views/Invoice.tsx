@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ChannelsStore from '../stores/ChannelsStore';
+import ModalStore from '../stores/ModalStore';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -29,6 +30,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import BackendUtils from '../utils/BackendUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
@@ -38,6 +40,7 @@ interface InvoiceProps {
     SettingsStore?: SettingsStore;
     InvoicesStore?: InvoicesStore;
     ChannelsStore?: ChannelsStore;
+    ModalStore?: ModalStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
@@ -47,7 +50,7 @@ interface InvoiceState {
     loading: boolean;
 }
 
-@inject('SettingsStore', 'InvoicesStore', 'ChannelsStore')
+@inject('SettingsStore', 'InvoicesStore', 'ChannelsStore', 'ModalStore')
 @observer
 export default class InvoiceView extends React.Component<
     InvoiceProps,
@@ -179,6 +182,24 @@ export default class InvoiceView extends React.Component<
         }
     }
 
+    handlePendingPress = () => {
+        this.props.ModalStore!.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: localeString(
+                'views.Wallet.pendingBalanceIcon.explainerLightning'
+            ),
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
+    };
+
     render() {
         const { navigation, SettingsStore, route } = this.props;
         const { storedNote, loading } = this.state;
@@ -282,6 +303,7 @@ export default class InvoiceView extends React.Component<
                             toggleable
                             pending={!invoice.isExpired && !invoice.isPaid}
                             credit={invoice.isPaid}
+                            onPendingPress={this.handlePendingPress}
                         />
                     </View>
 

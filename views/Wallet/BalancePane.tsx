@@ -23,6 +23,7 @@ import RescanStatus from '../../components/RescanStatus';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import Storage from '../../storage';
 
@@ -112,7 +113,15 @@ export default class BalancePane extends React.PureComponent<
         ModalStore.toggleInfoModal({
             title: localeString('views.Wallet.pendingBalanceIcon.title'),
             text: modalText,
-            link: 'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
         });
     };
 
@@ -140,17 +149,6 @@ export default class BalancePane extends React.PureComponent<
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
         const { implementation, settings, lndFolderMissing } = SettingsStore;
-
-        const unspentSentTokens =
-            CashuStore.sentTokens?.filter((token) => !token.spent) || [];
-        const pendingCashuBalance = new BigNumber(
-            unspentSentTokens.reduce(
-                (sum, token) => sum + (token.getAmount || 0),
-                0
-            )
-        )
-            .toNumber()
-            .toFixed(3);
 
         const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
             .plus(unconfirmedBlockchainBalance)
@@ -199,15 +197,12 @@ export default class BalancePane extends React.PureComponent<
             </View>
         );
         const BalanceViewCombined = () => {
-            const hasOnchainPending =
-                unconfirmedBlockchainBalance || pendingOpenBalance;
-            const hasCashuPending =
-                settings?.ecash?.enableCashu && Number(pendingCashuBalance) > 0;
-            const hasAnyPending = hasOnchainPending || hasCashuPending;
-            const renderPendingBalance = (
-                sats: string | number,
-                context: 'onchain' | 'cashu'
-            ) => (
+            const hasOnchainPending = Boolean(
+                Number(unconfirmedBlockchainBalance ?? 0) ||
+                    Number(pendingOpenBalance ?? 0)
+            );
+            const hasAnyPending = hasOnchainPending;
+            const renderPendingBalance = (sats: string | number) => (
                 <>
                     <Amount
                         sats={sats}
@@ -215,7 +210,9 @@ export default class BalancePane extends React.PureComponent<
                         jumboText
                         toggleable
                         pending
-                        onPendingPress={() => this.handlePendingPress(context)}
+                        onPendingPress={() =>
+                            this.handlePendingPress('onchain')
+                        }
                     />
                     <View style={styles.conversionSecondary}>
                         <Conversion
@@ -241,12 +238,7 @@ export default class BalancePane extends React.PureComponent<
                         </View>
                     )}
                     {hasOnchainPending &&
-                        renderPendingBalance(
-                            pendingUnconfirmedBalance,
-                            'onchain'
-                        )}
-                    {hasCashuPending &&
-                        renderPendingBalance(pendingCashuBalance, 'cashu')}
+                        renderPendingBalance(pendingUnconfirmedBalance)}
                     {cashuOfflinePendingBalance > 0 && (
                         <Amount
                             sats={cashuOfflinePendingBalance}
