@@ -38,6 +38,7 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
+    onConfirm?: () => void;
 }
 
 interface AmountInputState {
@@ -158,10 +159,13 @@ export default class AmountInput extends React.Component<
                 hideUnitChangeButton,
                 forceUnit: this.props.forceUnit,
                 onConfirm: (newAmount: string) => {
-                    const { onAmountChange, forceUnit } = this.props;
+                    const { onAmountChange, forceUnit, onConfirm } = this.props;
                     const satAmount = getSatAmount(newAmount, forceUnit);
                     onAmountChange(newAmount, satAmount);
                     this.setState({ satAmount });
+                    if (onConfirm) {
+                        onConfirm();
+                    }
                 }
             });
         }
