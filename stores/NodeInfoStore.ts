@@ -1,4 +1,4 @@
-import { action, observable, reaction, runInAction } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import NetworkInfo from '../models/NetworkInfo';
 import NodeInfo from '../models/NodeInfo';
 import ChannelsStore from './ChannelsStore';
@@ -23,15 +23,6 @@ export default class NodeInfoStore {
     constructor(channelsStore: ChannelsStore, settingsStore: SettingsStore) {
         this.channelsStore = channelsStore;
         this.settingsStore = settingsStore;
-
-        reaction(
-            () => this.channelsStore.channels,
-            () => {
-                if (this.channelsStore.channels.length !== 0) {
-                    this.getNodeInfo();
-                }
-            }
-        );
     }
 
     @action
