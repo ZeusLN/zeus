@@ -149,18 +149,16 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.migration.export.olympus'),
                     style: 'default',
                     onPress: async () => {
-                        this.setState({
-                            channelExportMessage: localeString(
-                                'views.Tools.migration.export.uploading'
-                            )
-                        });
                         await uploadChannelBackupToOlympus(
                             lndDir(),
                             isTestnet,
                             pubkey,
                             seedPhrase,
-                            (loading) =>
-                                this.setState({ isChannelExporting: loading })
+                            (msg) =>
+                                this.setState({
+                                    isChannelExporting: msg !== null,
+                                    channelExportMessage: msg ?? ''
+                                })
                         );
                     }
                 },
@@ -168,13 +166,11 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.migration.export.local'),
                     style: 'default',
                     onPress: async () => {
-                        this.setState({
-                            channelExportMessage: localeString(
-                                'views.Tools.migration.export.exporting'
-                            )
-                        });
-                        await exportChannelDb(lndDir(), isTestnet, (loading) =>
-                            this.setState({ isChannelExporting: loading })
+                        await exportChannelDb(lndDir(), isTestnet, (msg) =>
+                            this.setState({
+                                isChannelExporting: msg !== null,
+                                channelExportMessage: msg ?? ''
+                            })
                         );
                     }
                 }

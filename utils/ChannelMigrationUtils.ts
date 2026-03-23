@@ -10,17 +10,13 @@ import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
+import { sleep } from './SleepUtils';
+
+import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
 
 import Storage from '../storage';
 
-import { sleep } from './SleepUtils';
-
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
-
-const BACKUPS_HOST =
-    Platform.OS === 'android'
-        ? 'http://10.0.2.2:1337'
-        : 'http://localhost:1337';
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zeusbackup'];
 
@@ -89,10 +85,13 @@ export const uploadChannelBackupToOlympus = async (
     isTestnet: boolean,
     pubkey: string,
     seedArray: string,
-    setLoading?: (loading: boolean) => void
+    setStatus?: (message: string | null) => void
 ) => {
     try {
-        if (setLoading) setLoading(true);
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.export.authenticating')
+            );
 
         const network = isTestnet ? 'testnet' : 'mainnet';
         const rootPath = Platform.select({
@@ -106,7 +105,7 @@ export const uploadChannelBackupToOlympus = async (
                 localeString('general.error'),
                 localeString('views.Tools.migration.export.dbNotFound')
             );
-            if (setLoading) setLoading(false);
+            if (setStatus) setStatus(null);
             return;
         }
 
@@ -134,6 +133,10 @@ export const uploadChannelBackupToOlympus = async (
         const statusSignature =
             statusSignData.zbase || statusSignData.signature;
 
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.export.checkingStatus')
+            );
         console.log('Checking backup status...');
         const statusResponse = await ReactNativeBlobUtil.fetch(
             'POST',
@@ -158,7 +161,13 @@ export const uploadChannelBackupToOlympus = async (
 
         const proceedToUpload = async () => {
             try {
-                console.log('Authenticatication for uploading backup...');
+                if (setStatus)
+                    setStatus(
+                        localeString(
+                            'views.Tools.migration.export.authenticating'
+                        )
+                    );
+                console.log('Authenticating for uploading backup...');
                 const uploadAuthResponse = await ReactNativeBlobUtil.fetch(
                     'POST',
                     `${BACKUPS_HOST}/api/auth`,
@@ -182,6 +191,12 @@ export const uploadChannelBackupToOlympus = async (
                     uploadSignData.zbase || uploadSignData.signature;
 
                 try {
+                    if (setStatus)
+                        setStatus(
+                            localeString(
+                                'views.Tools.migration.export.stoppingLnd'
+                            )
+                        );
                     console.log('Stopping LND for backup...');
                     await stopLnd();
                     await sleep(5000);
@@ -190,7 +205,7 @@ export const uploadChannelBackupToOlympus = async (
                         console.log('LND stopped successfully.');
                     } else {
                         console.error('Failed to stop LND:', e.message);
-                        if (setLoading) setLoading(false);
+                        if (setStatus) setStatus(null);
                         Alert.alert(
                             localeString('general.error'),
                             localeString(
@@ -201,6 +216,12 @@ export const uploadChannelBackupToOlympus = async (
                     }
                 }
 
+                if (setStatus)
+                    setStatus(
+                        localeString(
+                            'views.Tools.migration.export.buildingBundle'
+                        )
+                    );
                 const bundle: ChannelBackupBundle = {
                     version: 2,
                     files: {}
@@ -218,6 +239,10 @@ export const uploadChannelBackupToOlympus = async (
                 }
 
                 // Encrypt the JSON bundle using seed
+                if (setStatus)
+                    setStatus(
+                        localeString('views.Tools.migration.export.encrypting')
+                    );
                 console.log('Encrypting backup...');
                 const bundleJson = JSON.stringify(bundle);
                 const encryptedBackup = CryptoJS.AES.encrypt(
@@ -226,6 +251,10 @@ export const uploadChannelBackupToOlympus = async (
                 ).toString();
 
                 // upload to the server
+                if (setStatus)
+                    setStatus(
+                        localeString('views.Tools.migration.export.uploading')
+                    );
                 console.log('Uploading encrypted backup...');
                 const backupResponse = await ReactNativeBlobUtil.fetch(
                     'POST',
@@ -254,7 +283,7 @@ export const uploadChannelBackupToOlympus = async (
                 }
                 console.log('Upload response:', json);
 
-                if (setLoading) setLoading(false);
+                if (setStatus) setStatus(null);
 
                 if (status === 200 && json.success) {
                     await Storage.setItem(
@@ -293,7 +322,7 @@ export const uploadChannelBackupToOlympus = async (
                 }
             } catch (e) {
                 console.error('Upload failed:', e);
-                if (setLoading) setLoading(false);
+                if (setStatus) setStatus(null);
                 Alert.alert(
                     localeString('general.error'),
                     localeString('views.Tools.migration.export.failedToUpload'),
@@ -323,7 +352,7 @@ export const uploadChannelBackupToOlympus = async (
                         text: localeString('general.cancel'),
                         style: 'cancel',
                         onPress: () => {
-                            if (setLoading) setLoading(false);
+                            if (setStatus) setStatus(null);
                         }
                     },
                     {
@@ -340,7 +369,7 @@ export const uploadChannelBackupToOlympus = async (
         }
     } catch (error) {
         console.error(error);
-        if (setLoading) setLoading(false);
+        if (setStatus) setStatus(null);
         Alert.alert(
             localeString('general.error'),
             localeString('views.Tools.migration.export.failedToUpload')
@@ -609,10 +638,11 @@ export const restoreChannelBackupFromOlympus = async (
 export const exportChannelDb = async (
     lndDir: string,
     isTestnet: boolean,
-    setLoading?: (loading: boolean) => void
+    setStatus?: (message: string | null) => void
 ) => {
     try {
-        if (setLoading) setLoading(true);
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
 
         const network = isTestnet ? 'testnet' : 'mainnet';
         const rootPath = Platform.select({
@@ -626,7 +656,7 @@ export const exportChannelDb = async (
                 localeString('general.error'),
                 localeString('views.Tools.migration.databaseNotFound')
             );
-            if (setLoading) setLoading(false);
+            if (setStatus) setStatus(null);
             return;
         }
 
@@ -639,7 +669,7 @@ export const exportChannelDb = async (
                 console.log('LND stopped successfully.');
             } else {
                 console.error('Failed to stop LND:', e.message);
-                if (setLoading) setLoading(false);
+                if (setStatus) setStatus(null);
                 Alert.alert(
                     localeString('general.error'),
                     localeString('views.Tools.migration.export.failedToStopLnd')
@@ -660,6 +690,10 @@ export const exportChannelDb = async (
             await RNFS.unlink(stagingPath);
         }
 
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.export.buildingBundle')
+            );
         const bundle: ChannelBackupBundle = { version: 2, files: {} };
         const items = await RNFS.readDir(graphDir);
         for (const item of items) {
@@ -673,9 +707,11 @@ export const exportChannelDb = async (
 
         await RNFS.writeFile(stagingPath, JSON.stringify(bundle), 'utf8');
 
-        if (setLoading) setLoading(false);
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.savingFile'));
 
         const finishExport = async () => {
+            if (setStatus) setStatus(null);
             await Storage.setItem(
                 CHANNEL_MIGRATION_ACTIVE,
                 JSON.stringify({ migrationStatus: true, lndDir })
@@ -763,7 +799,7 @@ export const exportChannelDb = async (
         }
     } catch (error) {
         console.error('Export Failed:', error);
-        if (setLoading) setLoading(false);
+        if (setStatus) setStatus(null);
         Alert.alert(
             localeString('general.error'),
             undefined,
