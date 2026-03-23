@@ -1085,6 +1085,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     processPendingShareIntent = () => {
         if (this.state.pendingShareIntent) {
+            if (this.props.SettingsStore.connecting) {
+                return;
+            }
             const { navigation } = this.props;
             const shareIntentData = this.state.pendingShareIntent;
 
