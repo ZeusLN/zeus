@@ -235,6 +235,7 @@ import CashuInvoice from './views/Cashu/CashuInvoice';
 import CashuPayment from './views/Cashu/CashuPayment';
 import CashuPaymentRequest from './views/Cashu/CashuPaymentRequest';
 import CashuSendingLightning from './views/Cashu/CashuSendingLightning';
+import MultimintPayment from './views/Cashu/MultimintPayment';
 import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
 import AddMint from './views/Cashu/AddMint';
@@ -1424,6 +1425,12 @@ export default class App extends React.PureComponent {
                                                             name="CashuSendingLightning" // @ts-ignore:next-line
                                                             component={
                                                                 CashuSendingLightning
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="MultimintPayment" // @ts-ignore:next-line
+                                                            component={
+                                                                MultimintPayment
                                                             }
                                                         />
                                                         <Stack.Screen
