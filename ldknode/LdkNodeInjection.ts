@@ -749,7 +749,8 @@ const initializeNode = async ({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssConfig
+    vssConfig,
+    vssKey
 }: {
     network: Network;
     storagePath: string;
@@ -768,6 +769,7 @@ const initializeNode = async ({
         url: string;
         storeId: string;
     };
+    vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
 }): Promise<{ vssError?: string }> => {
     console.log('LDK Node: Initializing...');
     await createBuilder();
@@ -840,9 +842,11 @@ const initializeNode = async ({
     if (vssConfig && vssConfig.url && vssConfig.storeId) {
         let vssHeaders: Record<string, string> | undefined;
         try {
+            // Pass pre-derived keypair to avoid a second PBKDF2 (~3.4s)
             vssHeaders = generateVssAuthHeaders(
                 mnemonic,
-                passphrase ?? undefined
+                passphrase ?? undefined,
+                vssKey
             );
             console.log('LDK Node: VSS auth header generated');
         } catch (e) {
@@ -1098,6 +1102,10 @@ export interface ILdkNodeInjections {
             vssConfig?: {
                 url: string;
                 storeId: string;
+            };
+            vssKey?: {
+                privateKey: Uint8Array;
+                publicKey: Uint8Array;
             };
         }) => Promise<{ vssError?: string }>;
     };

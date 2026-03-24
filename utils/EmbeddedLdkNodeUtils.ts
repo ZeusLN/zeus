@@ -165,9 +165,11 @@ async function initNode({
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
     const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-    const vssStoreId = Buffer.from(
-        deriveVssSigningKey(mnemonic, passphrase).publicKey
-    ).toString('hex');
+
+    // Derive VSS signing keypair once — reused for both storeId and auth headers,
+    // avoiding a redundant PBKDF2 call (~3.4s each in JS).
+    const vssKey = deriveVssSigningKey(mnemonic, passphrase);
+    const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
 
     return await LdkNode.utils.initializeNode({
         network: networkType,
@@ -182,7 +184,8 @@ async function initNode({
         vssConfig: {
             url: vssUrl,
             storeId: vssStoreId
-        }
+        },
+        vssKey
     });
 }
 

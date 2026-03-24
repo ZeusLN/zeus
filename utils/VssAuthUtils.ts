@@ -58,9 +58,11 @@ export function deriveVssSigningKey(
  */
 export function generateVssAuthHeaders(
     mnemonic: string,
-    passphrase?: string
+    passphrase?: string,
+    precomputedKey?: { privateKey: Uint8Array; publicKey: Uint8Array }
 ): { authorization: string } {
-    const { privateKey, publicKey } = deriveVssSigningKey(mnemonic, passphrase);
+    const { privateKey, publicKey } =
+        precomputedKey ?? deriveVssSigningKey(mnemonic, passphrase);
 
     // Current UNIX timestamp as decimal string
     const timestamp = Math.floor(Date.now() / 1000).toString();
