@@ -39,7 +39,7 @@ export default class RapidGossipSync extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { rgsServer } = this.state;
-        const { embeddedLdkNetwork, updateSettings }: any = SettingsStore;
+        const { embeddedLdkNetwork, updateSettings } = SettingsStore;
 
         const defaultServer = getDefaultRgsServer(
             (embeddedLdkNetwork?.toLowerCase() as

@@ -39,7 +39,7 @@ export default class EsploraServer extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { esploraServer } = this.state;
-        const { embeddedLdkNetwork, updateSettings }: any = SettingsStore;
+        const { embeddedLdkNetwork, updateSettings } = SettingsStore;
 
         const defaultServer = getDefaultEsploraServer(
             (embeddedLdkNetwork?.toLowerCase() as
