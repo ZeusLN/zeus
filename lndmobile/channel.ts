@@ -8,6 +8,7 @@ import {
 import { lnrpc } from './../proto/lightning';
 import Long from 'long';
 import Base64Utils from '../utils/Base64Utils';
+import { scbStringToBytes } from '../utils/ScbUtils';
 
 /**
  * @throws
@@ -384,7 +385,7 @@ export const restoreChannelBackups = async (
         response: lnrpc.RestoreBackupResponse,
         method: 'RestoreChannelBackups',
         options: {
-            multi_chan_backup: Base64Utils.base64ToBytes(channels_backup_base64)
+            multi_chan_backup: scbStringToBytes(channels_backup_base64)
         }
     });
     return response;
@@ -406,9 +407,7 @@ export const verifyChanBackup = async (
         method: 'VerifyChanBackup',
         options: {
             multi_chan_backup: {
-                multi_chan_backup: Base64Utils.base64ToBytes(
-                    channels_backup_base64
-                )
+                multi_chan_backup: scbStringToBytes(channels_backup_base64)
             }
         }
     });

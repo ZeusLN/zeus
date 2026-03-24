@@ -375,7 +375,7 @@
     "views.Settings.AddEditNode.localKey": "Local key",
     "views.Settings.AddEditNode.remoteKey": "Remote key",
     "views.Settings.AddEditNode.recoveryCipherSeed": "Recovery Cipher Seed (aezeed)",
-    "views.Settings.AddEditNode.disasterRecoveryBase64": "Disaster recovery data (SCB, Base64)",
+    "views.Settings.AddEditNode.disasterRecoveryBase64": "Disaster recovery data (SCB, Base64 or Hex)",
     "views.Settings.CertInstallInstructions.title": "Certificate Installation Instructions",
     "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to your device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate should have the extension .crt",
     "views.Settings.CertInstallInstructions.graph2": "To install a certificate on iOS, transfer the file to your device. Once you select the file on your device you will be prompted to install it as a profile. You must enable your certificate in General > About > Certificate trust settings. The certificate should have the extension .crt",
