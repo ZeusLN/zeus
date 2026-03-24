@@ -220,7 +220,7 @@ export default class NodeInfo extends React.Component<
             <React.Fragment>
                 {this.networkInfoFields.map(({ key, labelKey, format }) => {
                     const value = networkInfo[key as keyof typeof networkInfo];
-                    if (value != null && value !== 0) {
+                    if (value != null) {
                         return (
                             <KeyValue
                                 key={key}

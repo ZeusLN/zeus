@@ -67,6 +67,9 @@ class Bolt11Utils {
             case this.REGTESTNETWORK.bech32:
                 coinNetwork = this.REGTESTNETWORK;
                 break;
+            case this.SIGNETWORK.bech32:
+                coinNetwork = this.SIGNETWORK;
+                break;
             case this.SIMNETWORK.bech32:
                 coinNetwork = this.SIMNETWORK;
                 break;
@@ -153,6 +156,12 @@ class Bolt11Utils {
     };
     private REGTESTNETWORK = {
         bech32: 'bcrt',
+        pubKeyHash: 0x6f,
+        scriptHash: 0xc4,
+        validWitnessVersions: [0]
+    };
+    private SIGNETWORK = {
+        bech32: 'tbs',
         pubKeyHash: 0x6f,
         scriptHash: 0xc4,
         validWitnessVersions: [0]
