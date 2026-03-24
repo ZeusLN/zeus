@@ -85,7 +85,6 @@ import DonateToZEUS from './views/DonateToZEUS';
 import ChangeDonationSettings from './views/ChangeDonationSettings';
 
 import NodeInfo from './views/NodeInfo';
-import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 import NostrContacts from './views/NostrContacts';
 import MultiQR from './views/MultiQR';
@@ -743,12 +742,6 @@ export default class App extends React.PureComponent {
                                                             name="SendingLightning" // @ts-ignore:next-line
                                                             component={
                                                                 SendingLightning
-                                                            }
-                                                        />
-                                                        <Stack.Screen
-                                                            name="NetworkInfo" // @ts-ignore:next-line
-                                                            component={
-                                                                NetworkInfo
                                                             }
                                                         />
                                                         <Stack.Screen
