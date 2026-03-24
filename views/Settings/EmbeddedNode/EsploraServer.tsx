@@ -13,7 +13,10 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import { getDefaultEsploraServer } from '../../../utils/EmbeddedLdkNodeUtils';
+import {
+    getDefaultEsploraServer,
+    SupportedNetwork
+} from '../../../utils/EmbeddedLdkNodeUtils';
 
 interface EsploraServerProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -42,11 +45,7 @@ export default class EsploraServer extends React.Component<
         const { embeddedLdkNetwork, updateSettings } = SettingsStore;
 
         const defaultServer = getDefaultEsploraServer(
-            (embeddedLdkNetwork?.toLowerCase() as
-                | 'mainnet'
-                | 'testnet'
-                | 'signet'
-                | 'regtest') || 'mainnet'
+            (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
         );
 
         const showReset =

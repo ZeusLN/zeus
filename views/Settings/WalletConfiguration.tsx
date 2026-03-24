@@ -77,7 +77,8 @@ import {
     deleteLdkNodeWallet,
     getDefaultEsploraServer,
     getDefaultRgsServer,
-    DEFAULT_VSS_SERVER
+    DEFAULT_VSS_SERVER,
+    SupportedNetwork
 } from '../../utils/EmbeddedLdkNodeUtils';
 
 interface WalletConfigurationProps {
@@ -1028,11 +1029,9 @@ export default class WalletConfiguration extends React.Component<
             ldkMnemonic: mnemonic,
             ldkPassphrase,
             ldkEsploraServer: getDefaultEsploraServer(
-                network as 'mainnet' | 'testnet' | 'signet' | 'regtest'
+                network as SupportedNetwork
             ),
-            ldkRgsServer: getDefaultRgsServer(
-                network as 'mainnet' | 'testnet' | 'signet' | 'regtest'
-            ),
+            ldkRgsServer: getDefaultRgsServer(network as SupportedNetwork),
             ldkVssServer: DEFAULT_VSS_SERVER
         };
 

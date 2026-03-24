@@ -7,6 +7,13 @@
 import RNFS from 'react-native-fs';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
+
+export type SupportedNetwork =
+    | 'mainnet'
+    | 'testnet'
+    | 'signet'
+    | 'regtest'
+    | 'mutinynet';
 import { localeString } from './LocaleUtils';
 import { deriveVssSigningKey } from './VssAuthUtils';
 
@@ -62,9 +69,7 @@ export async function createLdkNodeDirectory(nodeDir: string): Promise<string> {
 /**
  * Convert network string to LDK Node network type
  */
-export function getNetworkType(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
-): Network {
+export function getNetworkType(network: SupportedNetwork): Network {
     switch (network) {
         case 'mainnet':
             return 'bitcoin';
@@ -84,9 +89,7 @@ export function getNetworkType(
 /**
  * Get default Esplora server for network
  */
-export function getDefaultEsploraServer(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
-): string {
+export function getDefaultEsploraServer(network: SupportedNetwork): string {
     switch (network) {
         case 'mainnet':
             return ESPLORA_SERVERS_MAINNET[0];
@@ -107,7 +110,7 @@ export function getDefaultEsploraServer(
  * Get default RGS server for network
  */
 export function getDefaultRgsServer(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
+    network: SupportedNetwork
 ): string | undefined {
     switch (network) {
         case 'mainnet':
@@ -146,7 +149,7 @@ export async function createLdkNodeWallet({
     nodeDir: string;
     seedMnemonic?: string;
     passphrase?: string;
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet';
+    network: SupportedNetwork;
     esploraServerUrl?: string;
     rgsServerUrl?: string;
     listeningAddresses?: string[];
@@ -224,7 +227,7 @@ export async function startLdkNodeWallet({
     nodeDir: string;
     seedMnemonic: string;
     passphrase?: string;
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet';
+    network: SupportedNetwork;
     esploraServerUrl?: string;
     rgsServerUrl?: string;
     listeningAddresses?: string[];

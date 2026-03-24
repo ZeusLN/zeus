@@ -13,7 +13,10 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import { getDefaultRgsServer } from '../../../utils/EmbeddedLdkNodeUtils';
+import {
+    getDefaultRgsServer,
+    SupportedNetwork
+} from '../../../utils/EmbeddedLdkNodeUtils';
 
 interface RapidGossipSyncProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -42,11 +45,7 @@ export default class RapidGossipSync extends React.Component<
         const { embeddedLdkNetwork, updateSettings } = SettingsStore;
 
         const defaultServer = getDefaultRgsServer(
-            (embeddedLdkNetwork?.toLowerCase() as
-                | 'mainnet'
-                | 'testnet'
-                | 'signet'
-                | 'regtest') || 'mainnet'
+            (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
         );
 
         const showReset = rgsServer !== '' && rgsServer !== defaultServer;
