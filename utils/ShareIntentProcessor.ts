@@ -12,11 +12,6 @@ export interface ShareIntentResult {
     error?: string;
 }
 
-let pendingShareIntentData: {
-    base64Image?: string;
-    qrData?: string;
-} | null = null;
-
 /**
  * Processes a shared QR code image from Android share intent
  * @returns Navigation result with success status, route/params or error message
@@ -94,24 +89,4 @@ export const hasSharedImage = async (): Promise<boolean> => {
         console.error('Error checking for shared image:', error);
         return false;
     }
-};
-
-export const setPendingShareIntent = (data: {
-    base64Image?: string;
-    qrData?: string;
-}) => {
-    pendingShareIntentData = data;
-};
-
-export const getPendingShareIntent = (): {
-    base64Image?: string;
-    qrData?: string;
-} | null => {
-    const data = pendingShareIntentData;
-    pendingShareIntentData = null;
-    return data;
-};
-
-export const hasPendingShareIntent = (): boolean => {
-    return pendingShareIntentData !== null;
 };
