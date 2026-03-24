@@ -417,6 +417,7 @@ export default class Sweepremoteclosed extends React.Component<
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start'
                                     )}
+                                    disabled={!sweepAddr}
                                     onPress={async () => {
                                         this.setState({
                                             error: '',
