@@ -258,11 +258,11 @@ export default class SeedRecovery extends React.PureComponent<
 
         const invalidWordIndices: number[] = showValidation
             ? seedArray.reduce((acc: number[], word, i) => {
-                  if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
-                      acc.push(i);
-                  }
-                  return acc;
-              }, [])
+                if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+                    acc.push(i);
+                }
+                return acc;
+            }, [])
             : [];
 
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
@@ -345,9 +345,9 @@ export default class SeedRecovery extends React.PureComponent<
                         ...(!showSuggestions &&
                             index != null &&
                             invalidWordIndices.includes(index) && {
-                                borderWidth: 1,
-                                borderColor: themeColor('warning')
-                            })
+                            borderWidth: 1,
+                            borderColor: themeColor('warning')
+                        })
                     }}
                 >
                     {!showSuggestions && index != null && (
@@ -357,7 +357,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     fontFamily: 'PPNeueMontreal-Book',
                                     color:
                                         selectedInputType === 'word' &&
-                                        selectedWordIndex === index
+                                            selectedWordIndex === index
                                             ? themeColor('highlight')
                                             : themeColor('secondaryText'),
                                     fontSize: 18,
@@ -401,11 +401,11 @@ export default class SeedRecovery extends React.PureComponent<
                         }}
                     >
                         {index != null &&
-                        text &&
-                        !(
-                            selectedInputType === 'word' &&
-                            selectedWordIndex === index
-                        )
+                            text &&
+                            !(
+                                selectedInputType === 'word' &&
+                                selectedWordIndex === index
+                            )
                             ? '********'
                             : text}
                     </Text>
@@ -495,11 +495,11 @@ export default class SeedRecovery extends React.PureComponent<
                     centerComponent={{
                         text: restoreSwaps
                             ? localeString(
-                                  'views.Swaps.SwapsPane.swapsRecovery'
-                              )
+                                'views.Swaps.SwapsPane.swapsRecovery'
+                            )
                             : restoreRescueKey
-                            ? localeString('views.Swaps.rescueKey.recovery')
-                            : localeString('views.Settings.SeedRecovery.title'),
+                                ? localeString('views.Swaps.rescueKey.recovery')
+                                : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -576,7 +576,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 filteredData: filtered,
                                                 invalidInput:
                                                     selectedInputType ===
-                                                        'word' &&
+                                                    'word' &&
                                                     filtered.length === 0
                                             });
                                         } else {
@@ -621,6 +621,26 @@ export default class SeedRecovery extends React.PureComponent<
                                         )}
                                     </Text>
                                 )}
+                            {selectedInputType === 'scb' && (
+                                <Button
+                                    title={localeString('general.confirm')}
+                                    onPress={() => {
+                                        this.textInput?.current?.blur();
+                                        Keyboard.dismiss();
+                                        this.setState({
+                                            selectedInputType: null,
+                                            selectedWordIndex: null,
+                                            selectedText: '',
+                                            showSuggestions: false
+                                        });
+                                    }}
+                                    buttonStyle={{
+                                        marginHorizontal: 20,
+                                        marginTop: 10
+                                    }}
+                                    disabled={!channelBackupsBase64}
+                                />
+                            )}
                         </View>
                         {!showSuggestions && (
                             <>
@@ -672,7 +692,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                             text={
                                                                 this.state
                                                                     .seedArray[
-                                                                    i
+                                                                i
                                                                 ]
                                                             }
                                                         />
@@ -904,7 +924,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 if (
                                                     isErrorWithCode(err) &&
                                                     err.code ===
-                                                        errorCodes.OPERATION_CANCELED
+                                                    errorCodes.OPERATION_CANCELED
                                                 ) {
                                                     this.setState({
                                                         loading: false
@@ -950,7 +970,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                                 seedArray,
                                                                 host:
                                                                     rescueHost ===
-                                                                    'Custom'
+                                                                        'Custom'
                                                                         ? customRescueHost
                                                                         : rescueHost
                                                             }
@@ -997,42 +1017,42 @@ export default class SeedRecovery extends React.PureComponent<
                                     title={
                                         restoreSwaps
                                             ? localeString(
-                                                  'views.Swaps.SwapsPane.restoreSwaps'
-                                              )
+                                                'views.Swaps.SwapsPane.restoreSwaps'
+                                            )
                                             : restoreRescueKey
-                                            ? localeString(
-                                                  'views.Swaps.rescueKey.restore'
-                                              )
-                                            : network === 'mainnet'
-                                            ? localeString(
-                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                              )
-                                            : localeString(
-                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                              )
+                                                ? localeString(
+                                                    'views.Swaps.rescueKey.restore'
+                                                )
+                                                : network === 'mainnet'
+                                                    ? localeString(
+                                                        'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                    )
+                                                    : localeString(
+                                                        'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                    )
                                     }
                                     disabled={
                                         restoreSwaps || restoreRescueKey
                                             ? (rescueHost === 'Custom' &&
-                                                  !customRescueHost) ||
-                                              seedArray.length !== 12 ||
-                                              seedArray.some(
-                                                  (seed) =>
-                                                      !BIP39_WORD_LIST.includes(
-                                                          seed
-                                                              ?.toLowerCase()
-                                                              ?.trim()
-                                                      )
-                                              )
+                                                !customRescueHost) ||
+                                            seedArray.length !== 12 ||
+                                            seedArray.some(
+                                                (seed) =>
+                                                    !BIP39_WORD_LIST.includes(
+                                                        seed
+                                                            ?.toLowerCase()
+                                                            ?.trim()
+                                                    )
+                                            )
                                             : seedArray.length !== 24 ||
-                                              seedArray.some(
-                                                  (seed) =>
-                                                      !BIP39_WORD_LIST.includes(
-                                                          seed
-                                                              ?.toLowerCase()
-                                                              ?.trim()
-                                                      )
-                                              )
+                                            seedArray.some(
+                                                (seed) =>
+                                                    !BIP39_WORD_LIST.includes(
+                                                        seed
+                                                            ?.toLowerCase()
+                                                            ?.trim()
+                                                    )
+                                            )
                                     }
                                 />
                             </View>
