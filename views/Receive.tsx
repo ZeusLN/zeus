@@ -512,26 +512,28 @@ export default class Receive extends React.Component<
         }
     }
 
-    clearListeners = () => {
-        if (this.listener && this.listener.stop) this.listener.stop();
-        if (this.listenerSecondary && this.listenerSecondary.stop)
-            this.listenerSecondary.stop();
-    };
+    componentWillUnmount() {
+        this.cleanup();
+    }
 
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
         if (this.onChainInterval) clearInterval(this.onChainInterval);
     };
 
-    onBack = () => {
-        const { InvoicesStore } = this.props;
-        const { reset } = InvoicesStore;
-        // kill all listeners and pollers before navigating back
-        this.clearListeners();
+    cleanup = () => {
+        // kill all listeners and pollers
+        if (this.listener && this.listener.stop) this.listener.stop();
+        if (this.listenerSecondary && this.listenerSecondary.stop)
+            this.listenerSecondary.stop();
         this.clearIntervals();
 
         // clear invoice
-        reset();
+        this.props.InvoicesStore.reset();
+    };
+
+    onBack = () => {
+        this.cleanup();
     };
 
     autoGenerateInvoice = (
@@ -1400,7 +1402,7 @@ export default class Receive extends React.Component<
                         });
                     }
 
-                    InvoicesStore.clearUnified();
+                    this.cleanup();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
