@@ -1771,7 +1771,6 @@
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.title": "Sweep remote closed",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.ldkDescription": "Scan for funds from counterparty force-closed channels and create a sweep transaction.",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.noUtxosFound": "No recoverable funds found.",
-    "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.scanning": "Scanning for recoverable funds...",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seedType": "Seed type",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.currentWalletsSeed": "Current wallet's seed",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.externalWalletSeed": "External wallet seed",
