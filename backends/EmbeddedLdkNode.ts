@@ -1181,7 +1181,9 @@ export default class EmbeddedLdkNode {
             return this.formatPaymentAsInvoice(payment);
         }
 
-        throw new Error('Invoice not found');
+        throw new Error(
+            localeString('stores.NostrWalletConnectStore.error.invoiceNotFound')
+        );
     };
 
     // ========================================================================
