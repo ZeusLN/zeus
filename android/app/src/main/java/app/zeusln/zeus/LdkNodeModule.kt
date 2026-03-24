@@ -244,6 +244,41 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Crypto Methods
+
+    /**
+     * Native PBKDF2-SHA512 for BIP39 seed derivation.
+     * JS PBKDF2 takes ~3.4s; native javax.crypto does it in ~5ms.
+     */
+    @ReactMethod
+    fun mnemonicToSeed(mnemonic: String, passphrase: String?, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val normalizedMnemonic = java.text.Normalizer.normalize(mnemonic, java.text.Normalizer.Form.NFKD)
+                val normalizedSalt = java.text.Normalizer.normalize("mnemonic" + (passphrase ?: ""), java.text.Normalizer.Form.NFKD)
+
+                val spec = javax.crypto.spec.PBEKeySpec(
+                    normalizedMnemonic.toCharArray(),
+                    normalizedSalt.toByteArray(Charsets.UTF_8),
+                    2048,
+                    512
+                )
+                val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512")
+                val seed = factory.generateSecret(spec).encoded
+                spec.clearPassword()
+
+                val hexSeed = seed.joinToString("") { "%02x".format(it) }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(hexSeed)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
     // Mnemonic Methods
 
     @ReactMethod

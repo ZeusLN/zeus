@@ -123,6 +123,18 @@ const generateMnemonic = async (wordCount: number = 12): Promise<string> => {
     return result.mnemonic;
 };
 
+/**
+ * Native PBKDF2-SHA512 for BIP39 seed derivation.
+ * Returns the 64-byte seed as a hex string.
+ * Native implementation is ~500x faster than JS (~5ms vs ~3.4s).
+ */
+const mnemonicToSeed = async (
+    mnemonic: string,
+    passphrase?: string | null
+): Promise<string> => {
+    return await LdkNodeModule.mnemonicToSeed(mnemonic, passphrase ?? null);
+};
+
 // ============================================================================
 // Node Build Functions
 // ============================================================================
@@ -898,6 +910,12 @@ export interface ILdkNodeInjections {
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
     };
+    crypto: {
+        mnemonicToSeed: (
+            mnemonic: string,
+            passphrase?: string | null
+        ) => Promise<string>;
+    };
     node: {
         buildNode: (
             mnemonic: string,
@@ -1131,6 +1149,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
     },
     mnemonic: {
         generateMnemonic
+    },
+    crypto: {
+        mnemonicToSeed
     },
     node: {
         buildNode,

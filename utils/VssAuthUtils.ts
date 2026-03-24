@@ -30,12 +30,25 @@ const VSS_DERIVATION_PATH = "m/130'/0'";
 
 /**
  * Derive a secp256k1 keypair from a BIP39 mnemonic for VSS authentication.
+ * Note: uses JS PBKDF2 (~3.4s). Prefer deriveVssSigningKeyFromSeed() with
+ * native PBKDF2 when available.
  */
 export function deriveVssSigningKey(
     mnemonic: string,
     passphrase?: string
 ): { privateKey: Uint8Array; publicKey: Uint8Array } {
     const seed = bip39.mnemonicToSeedSync(mnemonic, passphrase || '');
+    return deriveVssSigningKeyFromSeed(seed);
+}
+
+/**
+ * Derive a secp256k1 keypair from a pre-computed BIP39 seed.
+ * Use this with native PBKDF2 to avoid the slow JS seed derivation.
+ */
+export function deriveVssSigningKeyFromSeed(seed: Buffer): {
+    privateKey: Uint8Array;
+    publicKey: Uint8Array;
+} {
     const master = HDKey.fromMasterSeed(seed);
     const child = master.derive(VSS_DERIVATION_PATH);
 

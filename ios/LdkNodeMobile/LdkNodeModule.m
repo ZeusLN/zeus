@@ -16,6 +16,9 @@ RCT_EXTERN_METHOD(setLiquiditySourceLsps2:(NSString *)nodeId address:(NSString *
 RCT_EXTERN_METHOD(setTrustedPeers0conf:(NSArray *)peers resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(setVssServer:(NSString *)vssUrl storeId:(NSString *)storeId headers:(NSDictionary *)headers resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// Crypto Methods
+RCT_EXTERN_METHOD(mnemonicToSeed:(NSString *)mnemonic passphrase:(NSString *)passphrase resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // Mnemonic Methods
 RCT_EXTERN_METHOD(generateMnemonic:(nonnull NSNumber *)wordCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 

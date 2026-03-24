@@ -1,4 +1,5 @@
 import Foundation
+import CommonCrypto
 import LDKNodeFFI
 
 @objc(LdkNodeModule)
@@ -261,6 +262,42 @@ class LdkNodeModule: RCTEventEmitter {
         self.storedLsps7Address = address
         self.storedLsps7Token = token
         resolve(["status": "ok"])
+    }
+
+    // MARK: - Crypto Methods
+
+    /// Native PBKDF2-SHA512 for BIP39 seed derivation.
+    /// JS PBKDF2 takes ~3.4s; native CommonCrypto does it in ~5ms.
+    @objc(mnemonicToSeed:passphrase:resolver:rejecter:)
+    func mnemonicToSeed(_ mnemonic: String, passphrase: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let password = mnemonic.decomposedStringWithCompatibilityMapping
+            let salt = ("mnemonic" + (passphrase ?? "")).decomposedStringWithCompatibilityMapping
+
+            guard let passwordData = password.data(using: .utf8),
+                  let saltData = salt.data(using: .utf8) else {
+                reject("error", "Failed to encode mnemonic/passphrase", nil)
+                return
+            }
+
+            var seed = [UInt8](repeating: 0, count: 64)
+            let status = CCKeyDerivationPBKDF(
+                CCPBKDFAlgorithm(kCCPBKDF2),
+                password, passwordData.count,
+                salt, saltData.count,
+                CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA512),
+                2048,
+                &seed, 64
+            )
+
+            guard status == kCCSuccess else {
+                reject("error", "PBKDF2 failed with status \(status)", nil)
+                return
+            }
+
+            let hexSeed = seed.map { String(format: "%02x", $0) }.joined()
+            resolve(hexSeed)
+        }
     }
 
     // MARK: - Mnemonic Methods

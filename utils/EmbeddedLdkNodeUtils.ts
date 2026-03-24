@@ -15,7 +15,7 @@ export type SupportedNetwork =
     | 'regtest'
     | 'mutinynet';
 import { localeString } from './LocaleUtils';
-import { deriveVssSigningKey } from './VssAuthUtils';
+import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
 
 // Default Esplora servers
 export const ESPLORA_SERVERS_MAINNET = [
@@ -166,9 +166,10 @@ async function initNode({
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
     const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
 
-    // Derive VSS signing keypair once — reused for both storeId and auth headers,
-    // avoiding a redundant PBKDF2 call (~3.4s each in JS).
-    const vssKey = deriveVssSigningKey(mnemonic, passphrase);
+    // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
+    // The seed is derived once and reused for both storeId and auth headers.
+    const seedHex = await LdkNode.crypto.mnemonicToSeed(mnemonic, passphrase);
+    const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
     const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
 
     return await LdkNode.utils.initializeNode({

@@ -452,6 +452,12 @@ export interface ILdkNodeModule {
         headers?: Record<string, string> | null
     ): Promise<void>;
 
+    // Crypto Methods
+    mnemonicToSeed(
+        mnemonic: string,
+        passphrase?: string | null
+    ): Promise<string>;
+
     // Mnemonic Methods
     generateMnemonic(wordCount: number): Promise<string>;
 
