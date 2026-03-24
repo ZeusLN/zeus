@@ -1,0 +1,106 @@
+# Zeus
+
+ZEUS is a mobile Bitcoin and Lightning Network wallet and remote node manager, built with TypeScript and React Native for Android and iOS.
+
+## Repository Structure
+
+- `App.tsx` — Application entry point
+- `NavigationService.ts` — Navigation configuration
+- `views/` — Screen components (64 screens: Activity, Channels, Invoice, AddContact, LnurlAuth, LightningAddress, Cashu, LSPS1, LSPS7, etc.)
+- `components/` — Reusable UI components (80+ components: Amount, Button, AmountInput, QR display, etc.)
+- `stores/` — MobX state management stores (31 stores: BalanceStore, ChannelsStore, ActivityStore, InvoicesStore, FeeStore, FiatStore, etc.)
+- `utils/` — Utility functions (97 files: AmountUtils, Bolt11Utils, AddressUtils, CashuUtils, Bip39Utils, Base64Utils, etc.)
+- `backends/` — Lightning node backend implementations (LND, CLN, LNC, EmbeddedLND, LndHub, NostrWalletConnect)
+- `locales/` — Internationalization files (`en.json` is the source file for all translations)
+- `android/` — Android native project
+- `ios/` — iOS native project
+- `proto/` — gRPC/protobuf definitions for Lightning APIs
+
+## Key Backend Implementations
+
+- `backends/LND.ts` — LND (Lightning Network Daemon) remote connection
+- `backends/CLNRest.ts` — Core Lightning (CLN) REST connection
+- `backends/LNC.ts` — Lightning Node Connect (LNC) via macaroon auth
+- `backends/EmbeddedLND.ts` — Embedded LND node (mobile-native)
+- `backends/LndHub.ts` — LNDHub connection (e.g., BlueWallet)
+- `backends/NostrWalletConnect.ts` — Nostr Wallet Connect (NWC) protocol
+
+## Technology Stack
+
+- TypeScript with React Native
+- MobX for state management
+- React Navigation for routing
+- Jest for testing
+- ESLint + Prettier for code quality
+- Protocol Buffers (protobuf) for Lightning API communication
+
+## Build and Development Commands
+
+```bash
+# Install dependencies
+yarn install
+
+# Start development server
+yarn start
+
+# Run on Android
+yarn android
+
+# Run on iOS
+cd ios && pod install && cd .. && yarn ios
+
+# Run all checks (required before PR)
+yarn verify
+
+# Run tests
+yarn test
+
+# Type checking
+yarn tsc
+
+# Code formatting
+yarn prettier          # check
+yarn prettier-write    # fix
+
+# Linting
+yarn lint              # check
+yarn lint-fix          # fix
+
+# Generate protobuf types
+yarn gen-proto
+```
+
+## Code Style
+
+- TypeScript for all code; avoid `any` types
+- Prettier for formatting, ESLint for linting
+- Component files: PascalCase (e.g., `PaymentRequest.tsx`)
+- Utility files: camelCase (e.g., `formatBalance.ts`)
+- Stores: PascalCase with `Store` suffix (e.g., `ChannelsStore.ts`)
+- Constants: UPPER_SNAKE_CASE
+- Tests placed alongside code (e.g., `utils/foo.ts` and `utils/foo.test.ts`)
+
+## Commit Message Format
+
+```
+component: Short summary (50 chars max)
+```
+
+Prefixes: `views:`, `components:`, `stores:`, `backends:`, `utils:`, `build:`, `docs:`, `tests:`
+
+## Contribution Guidelines
+
+- Open an issue before significant changes; work-in-progress PRs are welcome
+- All PRs require `yarn verify` to pass (tests + prettier + tsc + lint)
+- Only modify `locales/en.json` for translations; other locales managed via Transifex
+- PR template includes platform testing checklist (iOS/Android) — do not delete it
+- Security-sensitive changes (crypto operations, key management) require extra care
+- License: AGPLv3
+
+## Important Constraints
+
+- Financial software: bugs can result in fund loss — code quality and testing are critical
+- Never log sensitive data (private keys, macaroons, seeds)
+- Validate all payment-related inputs
+- Test UI changes on both Android and iOS
+- Avoid trivial changes (typo fixes, whitespace) as first contributions; focus on substantive improvements
