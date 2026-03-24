@@ -274,6 +274,8 @@ export default class Lockscreen extends React.Component<
             error: false
         });
 
+        const shareIntentData = route.params?.shareIntentData;
+
         if (
             (passphraseAttempt && passphraseAttempt === passphrase) ||
             (pinAttempt && pinAttempt === pin)
@@ -312,6 +314,14 @@ export default class Lockscreen extends React.Component<
                     navigation.replace('Wallets', { fromStartup: true });
                 }
                 return;
+            } else if (
+                !(
+                    SettingsStore.settings.selectNodeOnStartup &&
+                    SettingsStore.initialStart
+                ) &&
+                !shareIntentData
+            ) {
+                LinkingUtils.handleInitialUrl(navigation);
             }
             if (!SettingsStore.settings.selectNodeOnStartup) {
                 if (
