@@ -815,20 +815,170 @@ export const exportChannelDb = async (
 };
 
 /**
- * Imports a graph data bundle from a local .zeusbackup file
- * Validates the file, cleans the destination directory, and writes all files
+ * Exports channel.db directly as a raw binary file for bolt DB wallets.
  */
-export const importChannelDb = async (
+export const exportChannelDbBolt = async (
+    lndDir: string,
+    isTestnet: boolean,
+    setStatus?: (message: string | null) => void
+) => {
+    try {
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
+
+        const network = isTestnet ? 'testnet' : 'mainnet';
+        const rootPath = Platform.select({
+            android: RNFS.DocumentDirectoryPath,
+            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+        });
+        const channelDbPath = `${rootPath}/${lndDir}/data/graph/${network}/channel.db`;
+
+        if (!(await RNFS.exists(channelDbPath))) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.databaseNotFound')
+            );
+            if (setStatus) setStatus(null);
+            return;
+        }
+
+        try {
+            console.log('Stopping LND for export...');
+            await stopLnd();
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                if (setStatus) setStatus(null);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
+                return;
+            }
+        }
+
+        const backupFileName = `zeus-lnd-bolt-${network}-${Date.now()}.zeusbackup`;
+
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.savingFile'));
+
+        const finishExport = async () => {
+            if (setStatus) setStatus(null);
+            await Storage.setItem(
+                CHANNEL_MIGRATION_ACTIVE,
+                JSON.stringify({ migrationStatus: true, lndDir })
+            );
+            Alert.alert(
+                localeString('views.Tools.migration.export.success'),
+                localeString(
+                    Platform.OS === 'android'
+                        ? 'views.Tools.migration.export.success.text.android'
+                        : 'views.Tools.migration.export.success.text'
+                ),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+        };
+
+        if (Platform.OS === 'android') {
+            const downloadPath = `${RNFS.DownloadDirectoryPath}/${backupFileName}`;
+            await RNFS.copyFile(channelDbPath, downloadPath);
+            await finishExport();
+            return;
+        }
+
+        const stagingPath = `${RNFS.DocumentDirectoryPath}/${backupFileName}`;
+        await RNFS.copyFile(channelDbPath, stagingPath);
+
+        try {
+            const shareResult = await Share.open({
+                title: localeString('views.Tools.migration.export.title'),
+                url: `file://${stagingPath}`,
+                type: 'application/octet-stream',
+                filename: backupFileName,
+                failOnCancel: false
+            });
+
+            const isDismissed =
+                shareResult.dismissedAction || shareResult.success === false;
+
+            if (isDismissed) {
+                await RNFS.unlink(stagingPath);
+                Alert.alert(
+                    localeString('views.Tools.migration.export.cancelled'),
+                    localeString('views.Tools.migration.export.cancelled.text'),
+                    [
+                        {
+                            text: localeString('views.Wallet.restart'),
+                            onPress: () => RNRestart.Restart()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                return;
+            }
+
+            await RNFS.unlink(stagingPath);
+            await finishExport();
+        } catch (err: any) {
+            if (await RNFS.exists(stagingPath)) {
+                await RNFS.unlink(stagingPath);
+            }
+
+            const errorMsg = err?.message || String(err);
+            if (
+                errorMsg.includes('User did not share') ||
+                errorMsg.includes('cancel')
+            ) {
+                Alert.alert(
+                    localeString('views.Tools.migration.export.cancelled'),
+                    localeString('views.Tools.migration.export.cancelled.text'),
+                    [
+                        {
+                            text: localeString('views.Wallet.restart'),
+                            onPress: () => RNRestart.Restart()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                return;
+            }
+
+            throw err;
+        }
+    } catch (error) {
+        console.error('Bolt DB Export Failed:', error);
+        if (setStatus) setStatus(null);
+        Alert.alert(
+            localeString('general.error'),
+            undefined,
+            [
+                {
+                    text: localeString('views.Wallet.restart'),
+                    onPress: () => RNRestart.Restart()
+                }
+            ],
+            { cancelable: false }
+        );
+    }
+};
+
+/**
+ * Imports a raw bolt DB channel.db from a backup file.
+ */
+export const importChannelDbBolt = async (
     sourceUri: string,
-    fileName: string,
     lndDir: string,
     isTestnet: boolean
 ) => {
-    const validation = await validateChannelBackupFile(sourceUri, fileName);
-    if (!validation.valid) {
-        throw new Error(validation.error);
-    }
-
     const rootPath = Platform.select({
         android: RNFS.DocumentDirectoryPath,
         ios: `${RNFS.LibraryDirectoryPath}/Application Support`
@@ -843,11 +993,61 @@ export const importChannelDb = async (
     }
 
     const localPath = await resolveToLocalPath(sourceUri);
+    const destPath = `${destFolder}/channel.db`;
+
+    // Remove existing channel.db if present
+    if (await RNFS.exists(destPath)) {
+        await RNFS.unlink(destPath);
+    }
+
+    await RNFS.copyFile(localPath, destPath);
+};
+
+/**
+ * Imports a .zeusbackup file. Checks whether it's a JSON bundle
+ * (SQLite) or a raw channel.db (bolt DB) and handles accordingly.
+ */
+export const importChannelDb = async (
+    sourceUri: string,
+    fileName: string,
+    lndDir: string,
+    isTestnet: boolean
+) => {
+    const validation = await validateChannelBackupFile(sourceUri, fileName);
+    if (!validation.valid) {
+        throw new Error(validation.error);
+    }
+
+    const localPath = await resolveToLocalPath(sourceUri);
+
+    // Detect format by reading just the first byte.
+    // JSON bundles (SQLite) start with '{', raw bolt DB files don't.
+    const firstByte = await RNFS.read(localPath, 1, 0, 'utf8');
+    const isJsonBundle = firstByte === '{';
+
+    if (!isJsonBundle) {
+        await importChannelDbBolt(localPath, lndDir, isTestnet);
+        return;
+    }
+
     const content = await RNFS.readFile(localPath, 'utf8');
     const bundle: ChannelBackupBundle = JSON.parse(content);
 
     if (!bundle.files) {
         throw new Error('Invalid backup bundle format');
+    }
+
+    const rootPath = Platform.select({
+        android: RNFS.DocumentDirectoryPath,
+        ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+    });
+
+    const destFolder = `${rootPath}/${lndDir}/data/graph/${
+        isTestnet ? 'testnet' : 'mainnet'
+    }`;
+
+    if (!(await RNFS.exists(destFolder))) {
+        await RNFS.mkdir(destFolder);
     }
 
     try {
