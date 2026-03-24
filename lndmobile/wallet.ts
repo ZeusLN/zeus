@@ -4,6 +4,7 @@ import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, signrpc, walletrpc } from './../proto/lightning';
 
 import Base64Utils from '../utils/Base64Utils';
+import { scbStringToBytes } from '../utils/ScbUtils';
 
 // WalletKit
 
@@ -317,7 +318,7 @@ export const initWallet = async (
     seed: string[],
     password: string,
     recoveryWindow?: number,
-    channelBackupsBase64?: string,
+    channelBackupsString?: string,
     aezeedPassphrase?: string
 ): Promise<lnrpc.InitWalletResponse> => {
     // await NativeModules.LndMobile.initWallet(seed, password, recoveryWindow ?? 0, channelBackupsBase64 ?? null);
@@ -331,11 +332,10 @@ export const initWallet = async (
     if (recoveryWindow) {
         options.recovery_window = recoveryWindow;
     }
-    if (channelBackupsBase64) {
+    if (channelBackupsString) {
         options.channel_backups = {
             multi_chan_backup: {
-                multi_chan_backup:
-                    Base64Utils.base64ToBytes(channelBackupsBase64)
+                multi_chan_backup: scbStringToBytes(channelBackupsString)
             }
         };
     }
