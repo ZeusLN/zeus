@@ -132,6 +132,61 @@ export async function generateMnemonic(
 }
 
 /**
+ * Shared node initialization: resolves defaults, derives VSS config, and calls initializeNode.
+ */
+async function initNode({
+    storagePath,
+    mnemonic,
+    passphrase,
+    network,
+    esploraServerUrl,
+    rgsServerUrl,
+    listeningAddresses,
+    lsps1Config,
+    trustedPeers0conf,
+    vssServerUrl
+}: {
+    storagePath: string;
+    mnemonic: string;
+    passphrase?: string;
+    network: SupportedNetwork;
+    esploraServerUrl?: string;
+    rgsServerUrl?: string;
+    listeningAddresses?: string[];
+    lsps1Config?: {
+        nodeId: string;
+        address: string;
+        token?: string | null;
+    };
+    trustedPeers0conf?: string[];
+    vssServerUrl?: string;
+}): Promise<{ vssError?: string }> {
+    const networkType = getNetworkType(network);
+    const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
+    const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
+    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
+    const vssStoreId = Buffer.from(
+        deriveVssSigningKey(mnemonic, passphrase).publicKey
+    ).toString('hex');
+
+    return await LdkNode.utils.initializeNode({
+        network: networkType,
+        storagePath,
+        esploraServerUrl: esploraUrl,
+        mnemonic,
+        passphrase: passphrase || null,
+        rgsServerUrl: rgsUrl,
+        listeningAddresses,
+        lsps1Config,
+        trustedPeers0conf,
+        vssConfig: {
+            url: vssUrl,
+            storeId: vssStoreId
+        }
+    });
+}
+
+/**
  * Create a new LDK Node wallet
  */
 export async function createLdkNodeWallet({
@@ -174,30 +229,17 @@ export async function createLdkNodeWallet({
         mnemonic = await generateMnemonic(12);
     }
 
-    // Get network-specific defaults
-    const networkType = getNetworkType(network);
-    const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
-    const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
-
-    // Initialize the node
-    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-    const vssStoreId = Buffer.from(
-        deriveVssSigningKey(mnemonic, passphrase).publicKey
-    ).toString('hex');
-    const { vssError } = await LdkNode.utils.initializeNode({
-        network: networkType,
+    const { vssError } = await initNode({
         storagePath,
-        esploraServerUrl: esploraUrl,
         mnemonic,
-        passphrase: passphrase || null,
-        rgsServerUrl: rgsUrl,
+        passphrase,
+        network,
+        esploraServerUrl,
+        rgsServerUrl,
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
-        vssConfig: {
-            url: vssUrl,
-            storeId: vssStoreId
-        }
+        vssServerUrl
     });
 
     return {
@@ -245,29 +287,17 @@ export async function startLdkNodeWallet({
 
     if (!skipInit) {
         const storagePath = getLdkNodeStoragePath(nodeDir);
-        const networkType = getNetworkType(network);
-        const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
-        const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
-
-        // Initialize the node with existing mnemonic
-        const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-        const vssStoreId = Buffer.from(
-            deriveVssSigningKey(seedMnemonic, passphrase).publicKey
-        ).toString('hex');
-        const result = await LdkNode.utils.initializeNode({
-            network: networkType,
+        const result = await initNode({
             storagePath,
-            esploraServerUrl: esploraUrl,
             mnemonic: seedMnemonic,
-            passphrase: passphrase || null,
-            rgsServerUrl: rgsUrl,
+            passphrase,
+            network,
+            esploraServerUrl,
+            rgsServerUrl,
             listeningAddresses,
             lsps1Config,
             trustedPeers0conf,
-            vssConfig: {
-                url: vssUrl,
-                storeId: vssStoreId
-            }
+            vssServerUrl
         });
         vssError = result.vssError;
     }
