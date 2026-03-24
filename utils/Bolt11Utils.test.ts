@@ -12,6 +12,17 @@ describe('decode', () => {
         expect(decoded.paymentRequest).toBe(paymentRequest);
     });
 
+    it('correctly decodes a signet payment request', () => {
+        const paymentRequest =
+            'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
+
+        const decoded = Bolt11Utils.decode(paymentRequest);
+
+        expect(decoded.expiry).toBeDefined();
+        expect(decoded.timestamp).toBeDefined();
+        expect(decoded.paymentRequest).toBe(paymentRequest);
+    });
+
     it('throws an error if an invalid payment request is given', () => {
         const paymentRequest =
             'bcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
