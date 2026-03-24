@@ -11,16 +11,19 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { font } from '../../utils/FontUtils';
 
 import ModalStore from '../../stores/ModalStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface ChannelBackupModalProps {
     ModalStore?: ModalStore;
+    SettingsStore?: SettingsStore;
 }
 
-@inject('ModalStore')
+@inject('ModalStore', 'SettingsStore')
 @observer
 export default class ChannelBackupModal extends React.Component<ChannelBackupModalProps> {
     render() {
-        const { ModalStore } = this.props;
+        const { ModalStore, SettingsStore } = this.props;
+        const isSqlite = SettingsStore!.isSqlite;
         const {
             showRestoreChannelModal,
             toggleRestoreChannelModal,
@@ -71,16 +74,18 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                         )}`}
                     </Text>
 
-                    <Button
-                        title={localeString(
-                            'views.Tools.migration.import.olympus'
-                        )}
-                        onPress={() => {
-                            if (onCheckOlympus) onCheckOlympus();
-                            toggleRestoreChannelModal({ show: false });
-                        }}
-                        containerStyle={{ marginBottom: 16 }}
-                    />
+                    {isSqlite && (
+                        <Button
+                            title={localeString(
+                                'views.Tools.migration.import.olympus'
+                            )}
+                            onPress={() => {
+                                if (onCheckOlympus) onCheckOlympus();
+                                toggleRestoreChannelModal({ show: false });
+                            }}
+                            containerStyle={{ marginBottom: 16 }}
+                        />
+                    )}
 
                     <Button
                         title={localeString(
