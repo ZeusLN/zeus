@@ -219,48 +219,80 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
         const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
         const seedPhrase = SettingsStore.seedPhrase.join(' ');
+        const isSqlite = SettingsStore.isSqlite;
 
-        Alert.alert(
-            localeString('views.Tools.migration.export.title'),
+        const setStatus = (msg: string | null) =>
+            this.setState({
+                isChannelExporting: msg !== null,
+                channelExportMessage: msg ?? ''
+            });
 
+        const warningText =
             `${localeString('views.Tools.migration.export.text1')}\n\n` +
-                `⚠️ ${localeString('views.Tools.migration.export.text2')}`,
-            [
-                {
-                    text: localeString('general.cancel'),
-                    style: 'cancel'
-                },
-                {
-                    text: localeString('views.Tools.migration.export.olympus'),
-                    style: 'default',
-                    onPress: async () => {
-                        await uploadChannelBackupToOlympus(
-                            lndDir(),
-                            isTestnet,
-                            pubkey,
-                            seedPhrase,
-                            (msg) =>
-                                this.setState({
-                                    isChannelExporting: msg !== null,
-                                    channelExportMessage: msg ?? ''
-                                })
-                        );
+            `⚠️ ${localeString('views.Tools.migration.export.text2')}`;
+
+        if (isSqlite) {
+            Alert.alert(
+                localeString('views.Tools.migration.export.title'),
+                warningText,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel'
+                    },
+                    {
+                        text: localeString(
+                            'views.Tools.migration.export.olympus'
+                        ),
+                        style: 'default',
+                        onPress: async () => {
+                            await uploadChannelBackupToOlympus(
+                                lndDir(),
+                                isTestnet,
+                                pubkey,
+                                seedPhrase,
+                                setStatus
+                            );
+                        }
+                    },
+                    {
+                        text: localeString(
+                            'views.Tools.migration.export.local'
+                        ),
+                        style: 'default',
+                        onPress: async () => {
+                            await exportChannelDb(
+                                lndDir(),
+                                isTestnet,
+                                setStatus
+                            );
+                        }
                     }
-                },
-                {
-                    text: localeString('views.Tools.migration.export.local'),
-                    style: 'default',
-                    onPress: async () => {
-                        await exportChannelDb(lndDir(), isTestnet, (msg) =>
-                            this.setState({
-                                isChannelExporting: msg !== null,
-                                channelExportMessage: msg ?? ''
-                            })
-                        );
+                ]
+            );
+        } else {
+            Alert.alert(
+                localeString('views.Tools.migration.export.title'),
+                warningText,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel'
+                    },
+                    {
+                        text: localeString('general.ok'),
+                        style: 'default',
+                        onPress: async () => {
+                            await exportChannelDb(
+                                lndDir(),
+                                isTestnet,
+                                setStatus
+                            );
+                        }
                     }
-                }
-            ]
-        );
+                ]
+            );
+        }
     };
 
     render() {
