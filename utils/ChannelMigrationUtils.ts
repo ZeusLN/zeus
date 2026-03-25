@@ -18,7 +18,7 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
-const VALID_CHANNEL_DB_EXTENSIONS = ['.zeusbackup'];
+const VALID_CHANNEL_DB_EXTENSIONS = ['.zeusbackup', '.db'];
 
 interface ChannelBackupBundle {
     version: number;
@@ -30,12 +30,30 @@ interface ChannelBackupBundle {
  * read directly. Copy the file to a temp path and return that path instead.
  */
 const resolveToLocalPath = async (uri: string): Promise<string> => {
-    if (Platform.OS !== 'android' || !uri.startsWith('content://')) {
-        return uri;
+    const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zeusbackup';
+    const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp${ext}`;
+
+    if (Platform.OS === 'android' && uri.startsWith('content://')) {
+        await RNFS.copyFile(uri, tempPath);
+        return tempPath;
     }
-    const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp.zeusbackup`;
-    await RNFS.copyFile(uri, tempPath);
-    return tempPath;
+
+    if (Platform.OS === 'ios') {
+        let filePath = uri;
+        if (filePath.startsWith('file://')) {
+            filePath = decodeURIComponent(filePath.replace('file://', ''));
+        }
+        if (await RNFS.exists(filePath)) {
+            await RNFS.copyFile(filePath, tempPath);
+            return tempPath;
+        }
+
+        if (await RNFS.exists(tempPath)) {
+            return tempPath;
+        }
+    }
+
+    return uri;
 };
 
 /**
@@ -860,7 +878,7 @@ export const exportChannelDbBolt = async (
             }
         }
 
-        const backupFileName = `zeus-lnd-bolt-${network}-${Date.now()}.zeusbackup`;
+        const backupFileName = 'channel.db';
 
         if (setStatus)
             setStatus(localeString('views.Tools.migration.export.savingFile'));
@@ -1004,8 +1022,8 @@ export const importChannelDbBolt = async (
 };
 
 /**
- * Imports a .zeusbackup file. Checks whether it's a JSON bundle
- * (SQLite) or a raw channel.db (bolt DB) and handles accordingly.
+ * Imports a channel backup file. Routes by extension:
+ * .db files are bolt DB, .zeusbackup files are SQLite JSON bundles.
  */
 export const importChannelDb = async (
     sourceUri: string,
@@ -1020,12 +1038,9 @@ export const importChannelDb = async (
 
     const localPath = await resolveToLocalPath(sourceUri);
 
-    // Detect format by reading just the first byte.
-    // JSON bundles (SQLite) start with '{', raw bolt DB files don't.
-    const firstByte = await RNFS.read(localPath, 1, 0, 'utf8');
-    const isJsonBundle = firstByte === '{';
+    const isBoltDb = fileName.toLowerCase().endsWith('.db');
 
-    if (!isJsonBundle) {
+    if (isBoltDb) {
         await importChannelDbBolt(localPath, lndDir, isTestnet);
         return;
     }
