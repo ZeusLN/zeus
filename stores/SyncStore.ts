@@ -1,4 +1,4 @@
-import { action, observable, when, runInAction } from 'mobx';
+import { action, observable, when, runInAction, computed } from 'mobx';
 import { EmitterSubscription, NativeModules } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -64,6 +64,11 @@ export default class SyncStore {
         this.numBlocksUntilSynced = 1;
         this.stopRescanTracking();
     };
+
+    @computed
+    get isBusy() {
+        return this.isSyncing || this.isRecovering || this.isRescanning;
+    }
 
     public setExpressGraphSyncStatus = (syncing: boolean) =>
         (this.isInExpressGraphSync = syncing);
