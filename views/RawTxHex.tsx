@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -68,7 +68,6 @@ export default class RawTxHex extends React.PureComponent<
             broadcast_err,
             loading
         } = TransactionsStore;
-
         return (
             <Screen>
                 <Header
@@ -85,12 +84,9 @@ export default class RawTxHex extends React.PureComponent<
                     }}
                     navigation={navigation}
                 />
-                <View
-                    style={{
-                        top: 5,
-                        padding: 15,
-                        alignItems: 'center'
-                    }}
+                <ScrollView
+                    style={{ padding: 15 }}
+                    contentContainerStyle={{ alignItems: 'center' }}
                 >
                     <CollapsedQR
                         value={value}
@@ -104,7 +100,11 @@ export default class RawTxHex extends React.PureComponent<
                         )}
                         onPress={() => broadcastRawTxToMempoolSpace(value)}
                     />
-                    {loading && <LoadingIndicator />}
+                    {loading && (
+                        <View style={{ marginTop: 20 }}>
+                            <LoadingIndicator />
+                        </View>
+                    )}
                     {broadcast_txid && (
                         <SuccessMessage
                             message={broadcast_txid}
@@ -117,7 +117,7 @@ export default class RawTxHex extends React.PureComponent<
                         />
                     )}
                     {broadcast_err && <ErrorMessage message={broadcast_err} />}
-                </View>
+                </ScrollView>
             </Screen>
         );
     }
