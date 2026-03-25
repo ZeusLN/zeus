@@ -91,6 +91,7 @@ interface SeedRecoveryState {
     lndDir: string;
     recoveryCipherSeed: string;
     channelBackupsBase64: string;
+    aezeedPassphrase: string;
     errorCreatingWallet: boolean;
     errorMsg: string;
     restoreSwaps?: boolean;
@@ -133,6 +134,7 @@ export default class SeedRecovery extends React.PureComponent<
             lndDir: '',
             recoveryCipherSeed: '',
             channelBackupsBase64: '',
+            aezeedPassphrase: '',
             errorCreatingWallet: false,
             errorMsg: '',
             rescueHost: isTestnet
@@ -246,6 +248,7 @@ export default class SeedRecovery extends React.PureComponent<
             selectedText,
             seedArray,
             channelBackupsBase64,
+            aezeedPassphrase,
             showSuggestions,
             filteredData,
             errorMsg,
@@ -258,11 +261,11 @@ export default class SeedRecovery extends React.PureComponent<
 
         const invalidWordIndices: number[] = showValidation
             ? seedArray.reduce((acc: number[], word, i) => {
-                if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
-                    acc.push(i);
-                }
-                return acc;
-            }, [])
+                  if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+                      acc.push(i);
+                  }
+                  return acc;
+              }, [])
             : [];
 
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
@@ -320,7 +323,10 @@ export default class SeedRecovery extends React.PureComponent<
                                     selectedWordIndex: index
                                 });
                             } else {
-                                this.setState({ selectedInputType: 'scb' });
+                                this.setState({
+                                    selectedInputType: 'scb',
+                                    selectedWordIndex: null
+                                });
                             }
                         }
 
@@ -345,9 +351,9 @@ export default class SeedRecovery extends React.PureComponent<
                         ...(!showSuggestions &&
                             index != null &&
                             invalidWordIndices.includes(index) && {
-                            borderWidth: 1,
-                            borderColor: themeColor('warning')
-                        })
+                                borderWidth: 1,
+                                borderColor: themeColor('warning')
+                            })
                     }}
                 >
                     {!showSuggestions && index != null && (
@@ -357,7 +363,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     fontFamily: 'PPNeueMontreal-Book',
                                     color:
                                         selectedInputType === 'word' &&
-                                            selectedWordIndex === index
+                                        selectedWordIndex === index
                                             ? themeColor('highlight')
                                             : themeColor('secondaryText'),
                                     fontSize: 18,
@@ -401,11 +407,11 @@ export default class SeedRecovery extends React.PureComponent<
                         }}
                     >
                         {index != null &&
-                            text &&
-                            !(
-                                selectedInputType === 'word' &&
-                                selectedWordIndex === index
-                            )
+                        text &&
+                        !(
+                            selectedInputType === 'word' &&
+                            selectedWordIndex === index
+                        )
                             ? '********'
                             : text}
                     </Text>
@@ -451,6 +457,7 @@ export default class SeedRecovery extends React.PureComponent<
                 const response = await createLndWallet({
                     lndDir,
                     seedMnemonic: recoveryCipherSeed,
+                    walletPassphrase: aezeedPassphrase || undefined,
                     isTestnet: network === 'testnet',
                     channelBackupsBase64
                 });
@@ -495,11 +502,11 @@ export default class SeedRecovery extends React.PureComponent<
                     centerComponent={{
                         text: restoreSwaps
                             ? localeString(
-                                'views.Swaps.SwapsPane.swapsRecovery'
-                            )
+                                  'views.Swaps.SwapsPane.swapsRecovery'
+                              )
                             : restoreRescueKey
-                                ? localeString('views.Swaps.rescueKey.recovery')
-                                : localeString('views.Settings.SeedRecovery.title'),
+                            ? localeString('views.Swaps.rescueKey.recovery')
+                            : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -576,7 +583,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 filteredData: filtered,
                                                 invalidInput:
                                                     selectedInputType ===
-                                                    'word' &&
+                                                        'word' &&
                                                     filtered.length === 0
                                             });
                                         } else {
@@ -590,8 +597,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             this.setState({
                                                 channelBackupsBase64: text
                                             });
-                                        }
-                                        if (
+                                        } else if (
                                             (restoreSwaps ||
                                                 restoreRescueKey) &&
                                             (selectedWordIndex == null ||
@@ -692,7 +698,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                             text={
                                                                 this.state
                                                                     .seedArray[
-                                                                i
+                                                                    i
                                                                 ]
                                                             }
                                                         />
@@ -757,19 +763,70 @@ export default class SeedRecovery extends React.PureComponent<
                                 </ScrollView>
 
                                 {!(restoreSwaps || restoreRescueKey) && (
-                                    <View
-                                        style={{
-                                            flexGrow: 1,
-                                            flexDirection: 'row'
-                                        }}
-                                    >
-                                        <View style={styles.scb}>
-                                            <RecoveryLabel
-                                                type="scb"
-                                                text={channelBackupsBase64}
+                                    <>
+                                        <View
+                                            style={{
+                                                paddingHorizontal: 20,
+                                                marginTop: 10
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    fontSize: 14,
+                                                    marginBottom: 5
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.SeedRecovery.aezeedPassphrase'
+                                                )}
+                                            </Text>
+                                            <TextInputRN
+                                                value={aezeedPassphrase}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        aezeedPassphrase: text
+                                                    })
+                                                }
+                                                placeholder={localeString(
+                                                    'views.Settings.SeedRecovery.aezeedPassphrasePlaceholder'
+                                                )}
+                                                placeholderTextColor={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                secureTextEntry
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    fontSize: 16,
+                                                    padding: 10,
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 5
+                                                }}
                                             />
                                         </View>
-                                    </View>
+                                        <View
+                                            style={{
+                                                flexGrow: 1,
+                                                flexDirection: 'row'
+                                            }}
+                                        >
+                                            <View style={styles.scb}>
+                                                <RecoveryLabel
+                                                    type="scb"
+                                                    text={channelBackupsBase64}
+                                                />
+                                            </View>
+                                        </View>
+                                    </>
                                 )}
                             </>
                         )}
@@ -924,7 +981,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 if (
                                                     isErrorWithCode(err) &&
                                                     err.code ===
-                                                    errorCodes.OPERATION_CANCELED
+                                                        errorCodes.OPERATION_CANCELED
                                                 ) {
                                                     this.setState({
                                                         loading: false
@@ -970,7 +1027,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                                 seedArray,
                                                                 host:
                                                                     rescueHost ===
-                                                                        'Custom'
+                                                                    'Custom'
                                                                         ? customRescueHost
                                                                         : rescueHost
                                                             }
@@ -1017,42 +1074,42 @@ export default class SeedRecovery extends React.PureComponent<
                                     title={
                                         restoreSwaps
                                             ? localeString(
-                                                'views.Swaps.SwapsPane.restoreSwaps'
-                                            )
+                                                  'views.Swaps.SwapsPane.restoreSwaps'
+                                              )
                                             : restoreRescueKey
-                                                ? localeString(
-                                                    'views.Swaps.rescueKey.restore'
-                                                )
-                                                : network === 'mainnet'
-                                                    ? localeString(
-                                                        'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                    )
-                                                    : localeString(
-                                                        'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                                    )
+                                            ? localeString(
+                                                  'views.Swaps.rescueKey.restore'
+                                              )
+                                            : network === 'mainnet'
+                                            ? localeString(
+                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                              )
+                                            : localeString(
+                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                              )
                                     }
                                     disabled={
                                         restoreSwaps || restoreRescueKey
                                             ? (rescueHost === 'Custom' &&
-                                                !customRescueHost) ||
-                                            seedArray.length !== 12 ||
-                                            seedArray.some(
-                                                (seed) =>
-                                                    !BIP39_WORD_LIST.includes(
-                                                        seed
-                                                            ?.toLowerCase()
-                                                            ?.trim()
-                                                    )
-                                            )
+                                                  !customRescueHost) ||
+                                              seedArray.length !== 12 ||
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                             : seedArray.length !== 24 ||
-                                            seedArray.some(
-                                                (seed) =>
-                                                    !BIP39_WORD_LIST.includes(
-                                                        seed
-                                                            ?.toLowerCase()
-                                                            ?.trim()
-                                                    )
-                                            )
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                     }
                                 />
                             </View>
