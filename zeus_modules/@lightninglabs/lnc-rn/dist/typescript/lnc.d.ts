@@ -1,13 +1,9 @@
-import { FaradayApi, LitApi, LndApi, LoopApi, PoolApi } from '@lightninglabs/lnc-core';
+import { LndApi } from '@lightninglabs/lnc-core';
 import { CredentialStore, LncConfig } from './types/lnc';
 export default class LNC {
     _namespace: string;
     credentials: CredentialStore;
     lnd: LndApi;
-    loop: LoopApi;
-    pool: PoolApi;
-    faraday: FaradayApi;
-    lit: LitApi;
     constructor(lncConfig?: LncConfig);
     onLocalPrivCreate: (keyHex: string) => void;
     onRemoteKeyReceive: (keyHex: string) => void;

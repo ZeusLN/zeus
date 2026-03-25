@@ -4,35 +4,20 @@
 // the RPC services. If anything gets renamed in the protos, it'll
 // produce a compiler error
 export const serviceNames = {
-    frdrpc: { FaradayServer: 'frdrpc.FaradayServer' },
-    litrpc: {
-        Firewall: 'litrpc.Firewall',
-        Autopilot: 'litrpc.Autopilot',
-        Sessions: 'litrpc.Sessions',
-        Status: 'litrpc.Status'
-    },
     autopilotrpc: { Autopilot: 'autopilotrpc.Autopilot' },
     chainrpc: { ChainNotifier: 'chainrpc.ChainNotifier' },
     invoicesrpc: { Invoices: 'invoicesrpc.Invoices' },
     lnrpc: {
         Lightning: 'lnrpc.Lightning',
+        State: 'lnrpc.State',
         WalletUnlocker: 'lnrpc.WalletUnlocker'
     },
+    peersrpc: { Peers: 'peersrpc.Peers' },
     routerrpc: { Router: 'routerrpc.Router' },
     signrpc: { Signer: 'signrpc.Signer' },
     walletrpc: { WalletKit: 'walletrpc.WalletKit' },
     watchtowerrpc: { Watchtower: 'watchtowerrpc.Watchtower' },
-    wtclientrpc: { WatchtowerClient: 'wtclientrpc.WatchtowerClient' },
-    looprpc: { SwapClient: 'looprpc.SwapClient', Debug: 'looprpc.Debug' },
-    poolrpc: {
-        ChannelAuctioneer: 'poolrpc.ChannelAuctioneer',
-        HashMail: 'poolrpc.HashMail',
-        Trader: 'poolrpc.Trader'
-    },
-    assetwalletrpc: { AssetWallet: 'assetwalletrpc.AssetWallet' },
-    mintrpc: { Mint: 'mintrpc.Mint' },
-    taprpc: { TaprootAssets: 'taprpc.TaprootAssets' },
-    universerpc: { Universe: 'universerpc.Universe' }
+    wtclientrpc: { WatchtowerClient: 'wtclientrpc.WatchtowerClient' }
 };
 
 // This array contains the list of methods that are server streaming. It is
@@ -67,11 +52,5 @@ export const subscriptionMethods = [
     'routerrpc.Router.SendPayment',
     'routerrpc.Router.TrackPayment',
     'routerrpc.Router.HtlcInterceptor',
-    'looprpc.SwapClient.Monitor',
-    'poolrpc.ChannelAuctioneer.SubscribeBatchAuction',
-    'poolrpc.ChannelAuctioneer.SubscribeSidecar',
-    'poolrpc.HashMail.RecvStream',
-    'mintrpc.Mint.SubscribeMintEvents',
-    'taprpc.TaprootAssets.SubscribeReceiveEvents',
-    'taprpc.TaprootAssets.SubscribeSendEvents'
+    'lnrpc.State.SubscribeState'
 ];

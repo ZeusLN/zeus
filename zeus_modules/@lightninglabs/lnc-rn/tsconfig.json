@@ -13,7 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
-    "suppressImplicitAnyIndexErrors": true
+    "skipLibCheck": true
   },
   "include": [
     "lib"
