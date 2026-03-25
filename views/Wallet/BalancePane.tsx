@@ -990,7 +990,15 @@ export default class BalancePane extends React.PureComponent<
                                 <LightningBalance />
                             </View>
                         ) : (
-                            <View style={styles.balanceContainer}>
+                            <View
+                                style={[
+                                    styles.balanceContainer,
+                                    SyncStore.isBusy && {
+                                        marginTop: 30,
+                                        marginBottom: 15
+                                    }
+                                ]}
+                            >
                                 <BalanceViewCombined />
                             </View>
                         )}
