@@ -5,6 +5,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CashuStore from '../../stores/CashuStore';
+import ModalStore from '../../stores/ModalStore';
 import SettingsStore from '../../stores/SettingsStore';
 import { activityStore, settingsStore } from '../../stores/Stores';
 
@@ -19,6 +20,7 @@ import CashuInvoice from '../../models/CashuInvoice';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import EditNotes from '../../assets/images/SVG/Pen.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -26,6 +28,7 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface CashuInvoiceProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore?: CashuStore;
+    ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
     route: Route<'CashuInvoice', { invoice: CashuInvoice }>;
 }
@@ -34,7 +37,7 @@ interface CashuInvoiceState {
     updatedInvoice?: any;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore', 'SettingsStore', 'ModalStore')
 @observer
 export default class CashuInvoiceView extends React.Component<
     CashuInvoiceProps,
@@ -95,6 +98,24 @@ export default class CashuInvoiceView extends React.Component<
     componentWillUnmount() {
         this.stopCheckingInterval();
     }
+
+    handlePendingPress = () => {
+        this.props.ModalStore!.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: localeString(
+                'views.Wallet.pendingBalanceIcon.explainerLightning'
+            ),
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
+    };
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
@@ -172,6 +193,7 @@ export default class CashuInvoiceView extends React.Component<
                             toggleable
                             pending={!invoice.isExpired && !invoice.isPaid}
                             credit={invoice.isPaid}
+                            onPendingPress={this.handlePendingPress}
                         />
                     </View>
 

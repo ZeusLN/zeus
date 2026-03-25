@@ -25,6 +25,7 @@ import UrlUtils from '../../utils/UrlUtils';
 import CashuPaymentModel from '../../models/CashuPayment';
 
 import LnurlPayStore, { LnurlPayTransaction } from '../../stores/LnurlPayStore';
+import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -36,6 +37,7 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface CashuPaymentProps {
     navigation: NativeStackNavigationProp<any, any>;
     LnurlPayStore?: LnurlPayStore;
+    ModalStore?: ModalStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
     route: Route<'Payment', { payment: CashuPaymentModel }>;
@@ -46,7 +48,7 @@ interface CashuPaymentState {
     storedNote: string;
 }
 
-@inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore')
+@inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore', 'ModalStore')
 @observer
 export default class CashuPayment extends React.Component<
     CashuPaymentProps,
@@ -77,6 +79,24 @@ export default class CashuPayment extends React.Component<
         const payment = route.params?.payment;
         const note = payment.getNote;
         this.setState({ storedNote: note });
+    };
+
+    handlePendingPress = () => {
+        this.props.ModalStore!.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: localeString(
+                'views.Wallet.pendingBalanceIcon.explainerLightning'
+            ),
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
     };
 
     render() {
@@ -172,6 +192,7 @@ export default class CashuPayment extends React.Component<
                             sensitive
                             toggleable
                             pending={isInTransit}
+                            onPendingPress={this.handlePendingPress}
                         />
                     </View>
 

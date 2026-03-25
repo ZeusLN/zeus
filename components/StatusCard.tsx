@@ -38,7 +38,8 @@ export default function StatusCard({
                     backgroundColor,
                     borderRadius: 10,
                     padding: 15,
-                    margin: 20
+                    marginHorizontal: 20,
+                    marginVertical: 8
                 }}
             >
                 <Text
