@@ -44,6 +44,9 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
             filePath = decodeURIComponent(filePath.replace('file://', ''));
         }
         if (await RNFS.exists(filePath)) {
+            if (await RNFS.exists(tempPath)) {
+                await RNFS.unlink(tempPath);
+            }
             await RNFS.copyFile(filePath, tempPath);
             return tempPath;
         }
@@ -51,6 +54,8 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
         if (await RNFS.exists(tempPath)) {
             return tempPath;
         }
+
+        return filePath;
     }
 
     return uri;
