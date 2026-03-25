@@ -23,6 +23,7 @@ import RescanStatus from '../../components/RescanStatus';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import Storage from '../../storage';
 
@@ -31,12 +32,22 @@ import CashuStore from '../../stores/CashuStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
+import ModalStore from '../../stores/ModalStore';
 
 import AlertIcon from '../../assets/images/SVG/Alert.svg';
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
 import LockIcon from '../../assets/images/SVG/Lock.svg';
 
 const ErrorZeus = require('../../assets/images/errorZeus.png');
+
+type PendingBalanceContext = 'onchain' | 'lightning' | 'cashu';
+
+const PENDING_BALANCE_EXPLAINER_KEY_MAP: Record<PendingBalanceContext, string> =
+    {
+        onchain: 'views.Wallet.pendingBalanceIcon.explainerOnchain',
+        lightning: 'views.Wallet.pendingBalanceIcon.explainerLightning',
+        cashu: 'views.Wallet.pendingBalanceIcon.explainerCashu'
+    };
 
 interface BalancePaneProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -45,6 +56,7 @@ interface BalancePaneProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
+    ModalStore: ModalStore;
     loading: boolean;
 }
 
@@ -59,7 +71,8 @@ interface BalancePaneState {
     'CashuStore',
     'NodeInfoStore',
     'SettingsStore',
-    'SyncStore'
+    'SyncStore',
+    'ModalStore'
 )
 @observer
 export default class BalancePane extends React.PureComponent<
@@ -80,6 +93,37 @@ export default class BalancePane extends React.PureComponent<
             });
         }
     }
+
+    handlePendingPress = (context: PendingBalanceContext = 'onchain') => {
+        const { ModalStore } = this.props;
+
+        let modalText: string | Array<string> = localeString(
+            PENDING_BALANCE_EXPLAINER_KEY_MAP[context]
+        );
+
+        if (context === 'onchain') {
+            modalText = [
+                modalText,
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchainLine2'
+                )
+            ];
+        }
+
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: modalText,
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
+    };
 
     render() {
         const {
@@ -137,6 +181,9 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
+                            onPendingPress={() =>
+                                this.handlePendingPress('lightning')
+                            }
                         />
                         <View style={styles.conversion}>
                             <Conversion
@@ -149,48 +196,66 @@ export default class BalancePane extends React.PureComponent<
                 ) : null}
             </View>
         );
-        const BalanceViewCombined = () => (
-            <View style={styles.balance}>
-                <Amount
-                    sats={combinedBalanceValue}
-                    sensitive
-                    jumboText
-                    toggleable
-                />
-                {!(unconfirmedBlockchainBalance || pendingOpenBalance) && (
-                    <View style={styles.conversion}>
-                        <Conversion sats={combinedBalanceValue} sensitive />
-                    </View>
-                )}
-                {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <>
-                        <Amount
-                            sats={pendingUnconfirmedBalance}
-                            sensitive
-                            jumboText
-                            toggleable
-                            pending
-                        />
-                        <View style={styles.conversionSecondary}>
-                            <Conversion
-                                sats={combinedBalanceValue}
-                                satsPending={pendingUnconfirmedBalance}
-                                sensitive
-                            />
-                        </View>
-                    </>
-                ) : null}
-                {cashuOfflinePendingBalance > 0 && (
+        const BalanceViewCombined = () => {
+            const hasOnchainPending = Boolean(
+                Number(unconfirmedBlockchainBalance ?? 0) ||
+                    Number(pendingOpenBalance ?? 0)
+            );
+            const hasAnyPending = hasOnchainPending;
+            const renderPendingBalance = (sats: string | number) => (
+                <>
                     <Amount
-                        sats={cashuOfflinePendingBalance}
+                        sats={sats}
                         sensitive
                         jumboText
                         toggleable
                         pending
+                        onPendingPress={() =>
+                            this.handlePendingPress('onchain')
+                        }
                     />
-                )}
-            </View>
-        );
+                    <View style={styles.conversionSecondary}>
+                        <Conversion
+                            sats={combinedBalanceValue}
+                            satsPending={sats}
+                            sensitive
+                        />
+                    </View>
+                </>
+            );
+
+            return (
+                <View style={styles.balance}>
+                    <Amount
+                        sats={combinedBalanceValue}
+                        sensitive
+                        jumboText
+                        toggleable
+                    />
+                    {!hasAnyPending && (
+                        <View style={styles.conversion}>
+                            <Conversion sats={combinedBalanceValue} sensitive />
+                        </View>
+                    )}
+                    {hasOnchainPending &&
+                        renderPendingBalance(pendingUnconfirmedBalance)}
+                    {cashuOfflinePendingBalance > 0 && (
+                        <Amount
+                            sats={cashuOfflinePendingBalance}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                            onPendingPress={() =>
+                                this.setState({
+                                    showOfflinePendingModal: true
+                                })
+                            }
+                        />
+                    )}
+                </View>
+            );
+        };
 
         let balancePane;
         const error =

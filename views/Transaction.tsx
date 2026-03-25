@@ -25,6 +25,7 @@ import Transaction from '../models/Transaction';
 import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
+import ModalStore from '../stores/ModalStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -36,6 +37,7 @@ import EditNotes from '../assets/images/SVG/Pen.svg';
 interface TransactionProps {
     navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
+    ModalStore: ModalStore;
     TransactionsStore: TransactionsStore;
     route: Route<'Transaction', { transaction: Transaction }>;
 }
@@ -44,7 +46,7 @@ interface TransactionState {
     storedNote: string;
 }
 
-@inject('NodeInfoStore', 'TransactionsStore')
+@inject('NodeInfoStore', 'TransactionsStore', 'ModalStore')
 @observer
 export default class TransactionView extends React.Component<
     TransactionProps,
@@ -62,6 +64,30 @@ export default class TransactionView extends React.Component<
             this.setState({ storedNote: note });
         });
     }
+
+    handlePendingPress = () => {
+        this.props.ModalStore.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: [
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchain'
+                ),
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchainLine2'
+                )
+            ],
+            buttons: [
+                {
+                    title: localeString('general.learnMore'),
+                    callback: () =>
+                        UrlUtils.goToUrl(
+                            'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
+                        )
+                }
+            ]
+        });
+    };
+
     render() {
         const { NodeInfoStore, navigation, route } = this.props;
         const transaction = route.params?.transaction;
@@ -166,6 +192,8 @@ export default class TransactionView extends React.Component<
                         sensitive
                         jumboText
                         toggleable
+                        pending={!isConfirmed}
+                        onPendingPress={this.handlePendingPress}
                     />
                 </View>
 
