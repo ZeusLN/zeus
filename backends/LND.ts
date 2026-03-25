@@ -247,9 +247,9 @@ export default class LND {
 
     getTransactions = (data: any) =>
         this.getRequest(
-            data && data.start_height
-                ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
-                : '/v1/transactions?end_height=-1'
+            `/v1/transactions?end_height=-1${
+                data?.start_height ? `&start_height=${data.start_height}` : ''
+            }&max_transactions=${data?.max_transactions || 500}`
         ).then((data: any) => ({
             transactions: data.transactions
         }));
