@@ -591,6 +591,7 @@ export default class CLNRest {
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsMessageVerification = () => true;
+    requiresVerifyPubkey = () => false;
     supportsAddressMessageSigning = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;

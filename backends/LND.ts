@@ -872,6 +872,7 @@ export default class LND {
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsMessageVerification = () => true;
+    requiresVerifyPubkey = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;

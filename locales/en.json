@@ -1026,6 +1026,8 @@
     "views.Settings.SignMessage.noAddressForVerification": "No address provided for on-chain verification",
     "views.Settings.SignMessage.noDataReceived": "No data received from sign operation",
     "views.Settings.SignMessage.signOperationFailed": "Sign operation not supported",
+    "views.Settings.SignMessage.pubkeyToVerify": "Pubkey of signer",
+    "views.Settings.SignMessage.pleaseEnterPubkey": "Please enter the pubkey of the signer",
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "Language",
     "views.Settings.Currency.title": "Currency",

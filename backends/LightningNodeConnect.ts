@@ -709,6 +709,7 @@ export default class LightningNodeConnect {
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsMessageVerification = () => true;
+    requiresVerifyPubkey = () => false;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;

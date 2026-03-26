@@ -1702,10 +1702,12 @@ export default class EmbeddedLdkNode {
         return { signature };
     };
 
-    verifyMessage = async (data: { msg: string; signature: string }) => {
-        const { msg, signature } = data;
-        // Get the node's public key to verify against
-        const pubkey = await LdkNode.node.nodeId();
+    verifyMessage = async (data: {
+        msg: string;
+        signature: string;
+        pubkey: string;
+    }) => {
+        const { msg, signature, pubkey } = data;
         const valid = await LdkNode.signing.verifySignature({
             message: msg,
             signature,
@@ -1948,7 +1950,8 @@ export default class EmbeddedLdkNode {
     // ========================================================================
 
     supportsMessageSigning = () => true;
-    supportsMessageVerification = () => false;
+    supportsMessageVerification = () => true;
+    requiresVerifyPubkey = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;

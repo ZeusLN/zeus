@@ -191,6 +191,7 @@ class BackendUtils {
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsMessageVerification = () =>
         this.call('supportsMessageVerification');
+    requiresVerifyPubkey = () => this.call('requiresVerifyPubkey');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
