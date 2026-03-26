@@ -2176,6 +2176,7 @@
     "views.Swaps.rescueKey.incorrectHost": "지정된 호스트에 연결할 수 없습니다. 호스트를 확인하고 다시 시도해주세요.",
     "views.Swaps.rescueKey.delete": "복구 키 삭제",
     "views.Swaps.intro.description": "스왑 서비스를 사용하면 채널을 열거나 닫지 않고도 온체인과 라이트닝 간에 자금을 이동할 수 있습니다.",
+    "views.Swaps.fetchFeesFailed": "Failed to fetch swap fees. Please check your connection and try again.",
     "views.Swaps.intro.continue": "계속",
     "views.Swaps.rescueKey.deleteConfirmation": "복구 키를 삭제하시겠습니까? 스왑 기록에서 모든 스왑도 함께 삭제됩니다. 진행하기 전에 반드시 키를 백업하세요. 해당 키를 나중에 사용해 스왑을 복구할 수 있습니다.",
     "views.SwapDetails.title": "스왑 상세 정보",

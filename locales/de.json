@@ -2176,6 +2176,7 @@
     "views.Swaps.rescueKey.incorrectHost": "Verbindung zum angegebenen Host nicht möglich. Bitte prüfe den Host und versuche es noch mal.",
     "views.Swaps.rescueKey.delete": "Rettungsschlüssel löschen",
     "views.Swaps.intro.description": "Mit dem Swap-Dienst kannst du Guthaben zwischen On-Chain und Lightning verschieben, ohne Kanäle zu öffnen oder zu schließen.",
+    "views.Swaps.fetchFeesFailed": "Failed to fetch swap fees. Please check your connection and try again.",
     "views.Swaps.intro.continue": "Weiter",
     "views.Swaps.rescueKey.deleteConfirmation": "Bist du sicher, dass du den Rettungsschlüssel löschen willst? Es werden auch alle Swaps aus deiner Swap-Historie gelöscht.​ Bitte sichere den Schlüssel, bevor du fortfährst, da er für eine Wiederherstellen dieser Swaps benötigt wird.",
     "views.SwapDetails.title": "Swap-Details",

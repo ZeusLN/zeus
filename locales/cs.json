@@ -2176,6 +2176,7 @@
     "views.Swaps.rescueKey.incorrectHost": "Nelze se připojit k danému hostiteli. Zkontrolujte prosím hostitele a zkuste to znovu.",
     "views.Swaps.rescueKey.delete": "Odstranit záchranný klíč",
     "views.Swaps.intro.description": "Pomocí služby Swap můžete přesouvat prostředky z on-chain na Lightning a naopak, aniž byste museli otevírat nebo uzavírat kanál.",
+    "views.Swaps.fetchFeesFailed": "Failed to fetch swap fees. Please check your connection and try again.",
     "views.Swaps.intro.continue": "Pokračovat",
     "views.Swaps.rescueKey.deleteConfirmation": "Opravdu chcete odstranit záchranný klíč? Budou odstraněny i všechny swapy z vaší swapové historie. Předtím, než budete pokračovat, si prosím zazálohujte své klíče, abyste tyto swapy mohli později obnovit.",
     "views.SwapDetails.title": "Podrobnosti swapu",

@@ -2176,6 +2176,7 @@
     "views.Swaps.rescueKey.incorrectHost": "无法连接到指定主机。请检查主机地址并重试。",
     "views.Swaps.rescueKey.delete": "删除救援密钥",
     "views.Swaps.intro.description": "使用兑换服务，您无需开通或关闭通道即可将资金从链上转移到闪电网络，反之亦然。",
+    "views.Swaps.fetchFeesFailed": "Failed to fetch swap fees. Please check your connection and try again.",
     "views.Swaps.intro.continue": "继续",
     "views.Swaps.rescueKey.deleteConfirmation": "确定要删除救援密钥吗？所有兑换记录也将从您的兑换历史中删除。请先备份密钥，因为您可以稍后使用它们来恢复这些兑换记录。",
     "views.SwapDetails.title": "兑换详情",
