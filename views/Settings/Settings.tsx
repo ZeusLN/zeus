@@ -331,49 +331,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             </View>
                         )}
 
-                    {selectedNode &&
-                        !BackendUtils.isLNDBased() &&
-                        implementation !== 'lndhub' && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('InvoicesSettings')
-                                    }
-                                >
-                                    <View style={styles.icon}>
-                                        <ReceiveIcon
-                                            fill={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.invoices'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
