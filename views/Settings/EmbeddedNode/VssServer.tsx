@@ -36,12 +36,29 @@ export default class VssServer extends React.Component<
         savedVssServer: this.props.SettingsStore.ldkVssServer || ''
     };
 
+    saveSettings = async (server: string) => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const nodes = [...(settings.nodes || [])];
+        if (nodes[selectedNode]) {
+            nodes[selectedNode] = {
+                ...nodes[selectedNode],
+                ldkVssServer: server
+            };
+            await updateSettings({ nodes });
+            this.setState({ savedVssServer: server });
+            restartNeeded();
+        }
+    };
+
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { vssServer } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { navigation } = this.props;
+        const { vssServer, savedVssServer } = this.state;
 
         const showReset = vssServer !== '' && vssServer !== DEFAULT_VSS_SERVER;
+
+        const hasUnsavedChanges = vssServer !== savedVssServer;
 
         return (
             <Screen>
@@ -92,17 +109,6 @@ export default class VssServer extends React.Component<
                                     vssServer: text
                                 });
                             }}
-                            onBlur={async () => {
-                                if (vssServer !== this.state.savedVssServer) {
-                                    await updateSettings({
-                                        ldkVssServer: vssServer
-                                    });
-                                    this.setState({
-                                        savedVssServer: vssServer
-                                    });
-                                    restartNeeded();
-                                }
-                            }}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
@@ -121,6 +127,18 @@ export default class VssServer extends React.Component<
                             </Text>
                         </View>
 
+                        {hasUnsavedChanges && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('general.save')}
+                                    accessibilityLabel={localeString(
+                                        'general.save'
+                                    )}
+                                    onPress={() => this.saveSettings(vssServer)}
+                                />
+                            </View>
+                        )}
+
                         {showReset && (
                             <View style={{ marginTop: 20 }}>
                                 <Button
@@ -128,14 +146,14 @@ export default class VssServer extends React.Component<
                                     accessibilityLabel={localeString(
                                         'general.reset'
                                     )}
+                                    secondary
                                     onPress={async () => {
                                         this.setState({
                                             vssServer: DEFAULT_VSS_SERVER
                                         });
-                                        await updateSettings({
-                                            ldkVssServer: DEFAULT_VSS_SERVER
-                                        });
-                                        restartNeeded();
+                                        await this.saveSettings(
+                                            DEFAULT_VSS_SERVER
+                                        );
                                     }}
                                 />
                             </View>

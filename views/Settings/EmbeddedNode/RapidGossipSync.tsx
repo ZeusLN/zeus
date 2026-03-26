@@ -39,16 +39,34 @@ export default class RapidGossipSync extends React.Component<
         savedRgsServer: this.props.SettingsStore.ldkRgsServer || ''
     };
 
+    saveSettings = async (server: string) => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const nodes = [...(settings.nodes || [])];
+        if (nodes[selectedNode]) {
+            nodes[selectedNode] = {
+                ...nodes[selectedNode],
+                ldkRgsServer: server
+            };
+            await updateSettings({ nodes });
+            this.setState({ savedRgsServer: server });
+            restartNeeded();
+        }
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { rgsServer } = this.state;
-        const { embeddedLdkNetwork, updateSettings } = SettingsStore;
+        const { rgsServer, savedRgsServer } = this.state;
+        const { embeddedLdkNetwork } = SettingsStore;
 
         const defaultServer = getDefaultRgsServer(
             (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
         );
 
         const showReset = rgsServer !== '' && rgsServer !== defaultServer;
+
+        const hasUnsavedChanges = rgsServer !== savedRgsServer;
 
         return (
             <Screen>
@@ -99,17 +117,6 @@ export default class RapidGossipSync extends React.Component<
                                     rgsServer: text
                                 });
                             }}
-                            onBlur={async () => {
-                                if (rgsServer !== this.state.savedRgsServer) {
-                                    await updateSettings({
-                                        ldkRgsServer: rgsServer
-                                    });
-                                    this.setState({
-                                        savedRgsServer: rgsServer
-                                    });
-                                    restartNeeded();
-                                }
-                            }}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
@@ -129,6 +136,18 @@ export default class RapidGossipSync extends React.Component<
                             </Text>
                         </View>
 
+                        {hasUnsavedChanges && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('general.save')}
+                                    accessibilityLabel={localeString(
+                                        'general.save'
+                                    )}
+                                    onPress={() => this.saveSettings(rgsServer)}
+                                />
+                            </View>
+                        )}
+
                         {showReset && (
                             <View style={{ marginTop: 20 }}>
                                 <Button
@@ -136,14 +155,14 @@ export default class RapidGossipSync extends React.Component<
                                     accessibilityLabel={localeString(
                                         'general.reset'
                                     )}
+                                    secondary
                                     onPress={async () => {
                                         this.setState({
                                             rgsServer: defaultServer || ''
                                         });
-                                        await updateSettings({
-                                            ldkRgsServer: defaultServer || ''
-                                        });
-                                        restartNeeded();
+                                        await this.saveSettings(
+                                            defaultServer || ''
+                                        );
                                     }}
                                 />
                             </View>

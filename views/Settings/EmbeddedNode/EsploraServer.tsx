@@ -39,10 +39,26 @@ export default class EsploraServer extends React.Component<
         savedEsploraServer: this.props.SettingsStore.ldkEsploraServer || ''
     };
 
+    saveSettings = async (server: string) => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const nodes = [...(settings.nodes || [])];
+        if (nodes[selectedNode]) {
+            nodes[selectedNode] = {
+                ...nodes[selectedNode],
+                ldkEsploraServer: server
+            };
+            await updateSettings({ nodes });
+            this.setState({ savedEsploraServer: server });
+            restartNeeded();
+        }
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { esploraServer } = this.state;
-        const { embeddedLdkNetwork, updateSettings } = SettingsStore;
+        const { esploraServer, savedEsploraServer } = this.state;
+        const { embeddedLdkNetwork } = SettingsStore;
 
         const defaultServer = getDefaultEsploraServer(
             (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
@@ -50,6 +66,8 @@ export default class EsploraServer extends React.Component<
 
         const showReset =
             esploraServer !== '' && esploraServer !== defaultServer;
+
+        const hasUnsavedChanges = esploraServer !== savedEsploraServer;
 
         return (
             <Screen>
@@ -100,20 +118,6 @@ export default class EsploraServer extends React.Component<
                                     esploraServer: text
                                 });
                             }}
-                            onBlur={async () => {
-                                if (
-                                    esploraServer !==
-                                    this.state.savedEsploraServer
-                                ) {
-                                    await updateSettings({
-                                        ldkEsploraServer: esploraServer
-                                    });
-                                    this.setState({
-                                        savedEsploraServer: esploraServer
-                                    });
-                                    restartNeeded();
-                                }
-                            }}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
@@ -133,6 +137,20 @@ export default class EsploraServer extends React.Component<
                             </Text>
                         </View>
 
+                        {hasUnsavedChanges && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('general.save')}
+                                    accessibilityLabel={localeString(
+                                        'general.save'
+                                    )}
+                                    onPress={() =>
+                                        this.saveSettings(esploraServer)
+                                    }
+                                />
+                            </View>
+                        )}
+
                         {showReset && (
                             <View style={{ marginTop: 20 }}>
                                 <Button
@@ -140,14 +158,12 @@ export default class EsploraServer extends React.Component<
                                     accessibilityLabel={localeString(
                                         'general.reset'
                                     )}
+                                    secondary
                                     onPress={async () => {
                                         this.setState({
                                             esploraServer: defaultServer
                                         });
-                                        await updateSettings({
-                                            ldkEsploraServer: defaultServer
-                                        });
-                                        restartNeeded();
+                                        await this.saveSettings(defaultServer);
                                     }}
                                 />
                             </View>
