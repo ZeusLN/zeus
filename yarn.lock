@@ -8709,6 +8709,11 @@ react-native-tcp-socket@6.2.0:
     buffer "^5.4.3"
     eventemitter3 "^4.0.7"
 
+react-native-theme-switch-animation@0.8.0:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/react-native-theme-switch-animation/-/react-native-theme-switch-animation-0.8.0.tgz#d9f69d5e41a00697d368897216d318d9430aff0d"
+  integrity sha512-z4f3QGSuUP4tagycls2mekng/7uxAbr75Gn0GGm7JRkrviyao++V2CtJ8VUDx+hSOsgfjEhD9D5JubsGbbHB5w==
+
 "react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.1.9-zeus":
   version "0.1.9-zeus"
   resolved "https://github.com/ZeusLN/react-native-tor.git#4279f398c0834a3792d317cb8b75d81f36f0ca81"
