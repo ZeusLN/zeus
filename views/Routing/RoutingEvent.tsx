@@ -176,6 +176,7 @@ export default class RoutingEvent extends React.Component<
 
         const {
             fee,
+            feeSat,
             getTime,
             inChannelId,
             outChannelId,
@@ -325,11 +326,7 @@ export default class RoutingEvent extends React.Component<
                         <>
                             <View style={styles.amount}>
                                 <Amount
-                                    sats={
-                                        fee ||
-                                        (parseInt(inAmt) - parseInt(outAmt)) /
-                                            1000
-                                    }
+                                    sats={feeSat}
                                     jumboText
                                     toggleable
                                     credit
