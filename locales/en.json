@@ -1044,7 +1044,7 @@
     "views.Tools.migration.export.authenticating": "Authenticating...",
     "views.Tools.migration.export.checkingStatus": "Checking backup status...",
     "views.Tools.migration.export.stoppingLnd": "Stopping LND...",
-    "views.Tools.migration.export.buildingBundle": "Building backup bundle...",
+    "views.Tools.migration.export.zippingBackup": "Zipping backup files...",
     "views.Tools.migration.export.encrypting": "Encrypting backup...",
     "views.Tools.migration.export.uploading": "Uploading to Olympus...",
     "views.Tools.migration.export.savingFile": "Saving backup file...",
