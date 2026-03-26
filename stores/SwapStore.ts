@@ -151,6 +151,7 @@ export default class SwapStore {
     @action
     public getSwapFees = async () => {
         this.loading = true;
+        this.apiError = '';
         console.log(`Fetching fees from: ${this.getHost}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
@@ -160,15 +161,28 @@ export default class SwapStore {
             );
             const status = response.info().status;
             if (status == 200) {
-                this.subInfo = response.json().BTC.BTC;
-                console.log('submarine swap fees', this.subInfo);
+                const data = response.json();
+                const subInfo = data?.BTC?.BTC;
+                if (subInfo) {
+                    this.subInfo = subInfo;
+                    console.log('Submarine rates', this.subInfo);
+                } else {
+                    console.warn(
+                        'Unexpected submarine swap fee response:',
+                        JSON.stringify(data)
+                    );
+                    this.apiError = localeString('views.Swaps.fetchFeesFailed');
+                }
             } else if (status == 403) {
                 const data = response.json();
                 this.apiError = data?.error || data?.message;
                 this.loading = false;
                 return;
             }
-        } catch {}
+        } catch (e) {
+            console.error('Error fetching submarine swap fees:', e);
+            this.apiError = localeString('views.Swaps.fetchFeesFailed');
+        }
 
         try {
             const response = await ReactNativeBlobUtil.fetch(
@@ -178,15 +192,28 @@ export default class SwapStore {
             );
             const status = response.info().status;
             if (status == 200) {
-                this.reverseInfo = response.json().BTC.BTC;
-                console.log('reverse swap fees', this.reverseInfo);
+                const data = response.json();
+                const reverseInfo = data?.BTC?.BTC;
+                if (reverseInfo) {
+                    this.reverseInfo = reverseInfo;
+                    console.log('Reverse rates', this.reverseInfo);
+                } else {
+                    console.warn(
+                        'Unexpected reverse swap fee response:',
+                        JSON.stringify(data)
+                    );
+                    this.apiError = localeString('views.Swaps.fetchFeesFailed');
+                }
             } else if (status == 403) {
                 const data = response.json();
                 this.apiError = data?.error || data?.message;
                 this.loading = false;
                 return;
             }
-        } catch {}
+        } catch (e) {
+            console.error('Error fetching reverse swap fees:', e);
+            this.apiError = localeString('views.Swaps.fetchFeesFailed');
+        }
         this.loading = false;
     };
 
