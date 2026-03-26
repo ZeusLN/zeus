@@ -240,7 +240,7 @@ export default bolt11Utils;
  *
  * See: https://github.com/ZeusLN/zeus/issues/2163
  */
-export const SIGNET_NETWORK = {
+const SIGNET_NETWORK = {
     bech32: 'tbs' as const,
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
