@@ -1,8 +1,11 @@
 package app.zeusln.zeus
 
+import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil
+import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier
 import kotlinx.coroutines.*
 
 import org.lightningdevkit.ldknode.*
@@ -471,6 +474,22 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         )
     }
 
+    // Persistent Service Helpers
+
+    private fun getPersistentServicesEnabled(): Boolean {
+        try {
+            val dbSupplier = ReactDatabaseSupplier.getInstance(reactApplicationContext)
+            val db: SQLiteDatabase = dbSupplier.get()
+            val value = AsyncLocalStorageUtil.getItemImpl(db, "persistentLdkNodeServicesEnabled")
+            if (value != null) {
+                return value == "true"
+            }
+        } catch (e: Exception) {
+            Log.w("LdkNodeModule", "getPersistentServicesEnabled: ${e.message}")
+        }
+        return false
+    }
+
     // Node Lifecycle Methods
 
     @ReactMethod
@@ -479,6 +498,10 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 node.start()
+                // Start foreground service if persistent mode is enabled
+                if (getPersistentServicesEnabled()) {
+                    LdkNodeService.startService(reactApplicationContext)
+                }
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
                 }
@@ -506,6 +529,9 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
         this@LdkNodeModule.logFileObserver?.stopObserving()
         this@LdkNodeModule.logFileObserver = null
+
+        // Stop the foreground service
+        LdkNodeService.stopService(reactApplicationContext)
 
         // Stop the node on a dedicated (non-Tokio) thread and resolve
         // after it completes. This ensures callers can safely delete wallet

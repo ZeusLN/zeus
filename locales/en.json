@@ -1281,6 +1281,8 @@
     "views.Settings.EmbeddedNode.persistentModeTor": "Persistent LND + Tor",
     "views.Settings.EmbeddedNode.persistentMode.subtitle": "Continue to run LND in the background even when the app is closed.",
     "views.Settings.EmbeddedNode.persistentMode.subtitleTor": "Continue to run LND and Tor in the background even when the app is closed.",
+    "views.Settings.EmbeddedNode.persistentModeLdk": "Persistent LDK Node",
+    "views.Settings.EmbeddedNode.persistentModeLdk.subtitle": "Continue to run LDK Node in the background even when the app is closed.",
     "views.Settings.EmbeddedNode.resetMissionControl": "Reset payment routing profile",
     "views.Settings.EmbeddedNode.resetMissionControl.subtitle": "This will reset the mission control state. Can be helpful if you are having issues finding routes while making payments.",
     "views.Settings.EmbeddedNode.syncWallets": "Sync wallets",
@@ -2295,5 +2297,6 @@
     "androidNotification.shutdown": "Shutdown",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
-    "androidNotification.nwcShutdown": "Stop Service"
+    "androidNotification.nwcShutdown": "Stop Service",
+    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
 }

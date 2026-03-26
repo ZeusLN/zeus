@@ -1,28 +1,48 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
 
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+
+const PERSISTENT_LDK_KEY = 'persistentLdkNodeServicesEnabled';
 
 interface EmbeddedNodeProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
+interface EmbeddedNodeState {
+    persistentMode: boolean;
+}
+
 @inject('SettingsStore')
 @observer
 export default class EmbeddedNode extends React.Component<
     EmbeddedNodeProps,
-    {}
+    EmbeddedNodeState
 > {
+    state = {
+        persistentMode: false
+    };
+
+    async componentDidMount() {
+        const stored = await AsyncStorage.getItem(PERSISTENT_LDK_KEY);
+        if (stored === 'true') {
+            this.setState({ persistentMode: true });
+        }
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
         const { embeddedLndNetwork, implementation, settings }: any =
@@ -354,6 +374,65 @@ export default class EmbeddedNode extends React.Component<
                                     color={themeColor('secondaryText')}
                                 />
                             </ListItem>
+                        )}
+
+                        {/* Persistent Mode (LDK Node, Android only) */}
+                        {isEmbeddedLdk && Platform.OS === 'android' && (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.persistentModeLdk'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={this.state.persistentMode}
+                                            onValueChange={async () => {
+                                                const newValue =
+                                                    !this.state.persistentMode;
+                                                this.setState({
+                                                    persistentMode: newValue
+                                                });
+                                                await AsyncStorage.setItem(
+                                                    PERSISTENT_LDK_KEY,
+                                                    newValue.toString()
+                                                );
+                                                restartNeeded();
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                                <View style={{ margin: 10 }}>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.EmbeddedNode.persistentModeLdk.subtitle'
+                                        )} ${localeString(
+                                            'views.Settings.EmbeddedNode.restart'
+                                        )}`}
+                                    </Text>
+                                </View>
+                            </>
                         )}
 
                         {/* Troubleshooting */}
