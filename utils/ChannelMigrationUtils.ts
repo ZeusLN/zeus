@@ -11,6 +11,7 @@ import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
 import { sleep } from './SleepUtils';
+import { zipFolder, unzipFile } from './ZipUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
 
@@ -18,19 +19,29 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
-const VALID_CHANNEL_DB_EXTENSIONS = ['.zeusbackup', '.db'];
+const VALID_CHANNEL_DB_EXTENSIONS = ['.zip', '.db'];
 
-interface ChannelBackupBundle {
-    version: number;
-    files: Record<string, string>;
-}
+const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
+    const network = isTestnet ? 'testnet' : 'mainnet';
+    const rootPath = Platform.select({
+        android: RNFS.DocumentDirectoryPath,
+        ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+    });
+    return `${rootPath}/${lndDir}/data/graph/${network}`;
+};
 
-/**
- * On Android, DocumentPicker returns content:// URIs which RNFS cannot
- * read directly. Copy the file to a temp path and return that path instead.
- */
+const stopLndSafely = async (): Promise<void> => {
+    try {
+        await stopLnd();
+        await sleep(5000);
+    } catch (e: any) {
+        if (e?.message?.includes?.('closed')) return;
+        throw e;
+    }
+};
+
 const resolveToLocalPath = async (uri: string): Promise<string> => {
-    const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zeusbackup';
+    const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zip';
     const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp${ext}`;
 
     if (Platform.OS === 'android' && uri.startsWith('content://')) {
@@ -101,7 +112,7 @@ export const validateChannelBackupFile = async (
 };
 
 /**
- * Uploads the graph data bundle to Olympus
+ * Uploads the graph data to Olympus
  */
 export const uploadChannelBackupToOlympus = async (
     lndDir: string,
@@ -116,12 +127,7 @@ export const uploadChannelBackupToOlympus = async (
                 localeString('views.Tools.migration.export.authenticating')
             );
 
-        const network = isTestnet ? 'testnet' : 'mainnet';
-        const rootPath = Platform.select({
-            android: RNFS.DocumentDirectoryPath,
-            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-        });
-        const graphDir = `${rootPath}/${lndDir}/data/graph/${network}`;
+        const graphDir = getGraphDir(lndDir, isTestnet);
 
         if (!(await RNFS.exists(graphDir))) {
             Alert.alert(
@@ -213,63 +219,46 @@ export const uploadChannelBackupToOlympus = async (
                 const uploadSignature =
                     uploadSignData.zbase || uploadSignData.signature;
 
+                if (setStatus)
+                    setStatus(
+                        localeString('views.Tools.migration.export.stoppingLnd')
+                    );
                 try {
-                    if (setStatus)
-                        setStatus(
-                            localeString(
-                                'views.Tools.migration.export.stoppingLnd'
-                            )
-                        );
-                    console.log('Stopping LND for backup...');
-                    await stopLnd();
-                    await sleep(5000);
+                    await stopLndSafely();
                 } catch (e: any) {
-                    if (e?.message?.includes?.('closed')) {
-                        console.log('LND stopped successfully.');
-                    } else {
-                        console.error('Failed to stop LND:', e.message);
-                        if (setStatus) setStatus(null);
-                        Alert.alert(
-                            localeString('general.error'),
-                            localeString(
-                                'views.Tools.migration.export.failedToStopLnd'
-                            )
-                        );
-                        return;
-                    }
+                    console.error('Failed to stop LND:', e.message);
+                    if (setStatus) setStatus(null);
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString(
+                            'views.Tools.migration.export.failedToStopLnd'
+                        )
+                    );
+                    return;
                 }
 
                 if (setStatus)
                     setStatus(
                         localeString(
-                            'views.Tools.migration.export.buildingBundle'
+                            'views.Tools.migration.export.zippingBackup'
                         )
                     );
-                const bundle: ChannelBackupBundle = {
-                    version: 2,
-                    files: {}
-                };
-                const items = await RNFS.readDir(graphDir);
-                for (const item of items) {
-                    if (!item.isFile()) continue;
-                    const name = item.path.substring(
-                        item.path.lastIndexOf('/') + 1
-                    );
-                    bundle.files[name] = await ReactNativeBlobUtil.fs.readFile(
-                        item.path,
-                        'base64'
-                    );
-                }
+                const tempZipPath = `${
+                    RNFS.CachesDirectoryPath
+                }/zeus-olympus-backup-${Date.now()}.zip`;
+                await zipFolder(graphDir, tempZipPath);
+                const zipBase64 = await ReactNativeBlobUtil.fs.readFile(
+                    tempZipPath,
+                    'base64'
+                );
+                await RNFS.unlink(tempZipPath);
 
-                // Encrypt the JSON bundle using seed
                 if (setStatus)
                     setStatus(
                         localeString('views.Tools.migration.export.encrypting')
                     );
-                console.log('Encrypting backup...');
-                const bundleJson = JSON.stringify(bundle);
                 const encryptedBackup = CryptoJS.AES.encrypt(
-                    bundleJson,
+                    zipBase64,
                     seedArray
                 ).toString();
 
@@ -401,7 +390,7 @@ export const uploadChannelBackupToOlympus = async (
 };
 
 /**
- * Downloads and restores the graph data bundle from Olympus
+ * Downloads and restores the graph data from Olympus
  */
 export const restoreChannelBackupFromOlympus = async (
     lndDir: string,
@@ -567,38 +556,24 @@ export const restoreChannelBackupFromOlympus = async (
             encryptedBackupString,
             seedArray
         );
-        const bundleJson = decryptedBytes.toString(CryptoJS.enc.Utf8);
+        const decryptedStr = decryptedBytes.toString(CryptoJS.enc.Utf8);
 
-        if (!bundleJson) {
+        if (!decryptedStr) {
             throw new Error(
                 'Decryption failed. Incorrect seed or corrupted file.'
             );
         }
 
-        const bundle: ChannelBackupBundle = JSON.parse(bundleJson);
-
-        if (!bundle.files) {
-            throw new Error('Invalid backup bundle format');
-        }
-
-        // 5. Stop LND before overwriting the active database
-        const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
+        const MAX_RECOVERY_WAIT_ATTEMPTS = 60;
         for (let attempt = 1; ; attempt++) {
             try {
-                console.log('Stopping LND for restore...');
                 await stopLnd();
                 await sleep(5000);
                 break;
             } catch (e: any) {
-                if (e?.message?.includes?.('closed')) {
-                    console.log('LND stopped successfully.');
-                    break;
-                }
+                if (e?.message?.includes?.('closed')) break;
                 if (e?.message?.includes?.('wallet recovery in progress')) {
                     if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
-                        console.error(
-                            `Wallet recovery still in progress after ${attempt} attempts`
-                        );
                         throw new Error(
                             localeString(
                                 'views.Tools.migration.export.failedToStopLnd'
@@ -611,22 +586,14 @@ export const restoreChannelBackupFromOlympus = async (
                     await sleep(5000);
                     continue;
                 }
-                console.error('Failed to stop LND:', e.message);
                 throw new Error(
                     localeString('views.Tools.migration.export.failedToStopLnd')
                 );
             }
         }
 
-        // 6. Build the destination path
-        const network = isTestnet ? 'testnet' : 'mainnet';
-        const rootPath = Platform.select({
-            android: RNFS.DocumentDirectoryPath,
-            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-        });
-        const destFolder = `${rootPath}/${lndDir}/data/graph/${network}`;
+        const destFolder = getGraphDir(lndDir, isTestnet);
 
-        // 7. Clean existing files and restore from bundle
         if (!(await RNFS.exists(destFolder))) {
             await RNFS.mkdir(destFolder);
         }
@@ -634,20 +601,20 @@ export const restoreChannelBackupFromOlympus = async (
         try {
             const existing = await RNFS.readDir(destFolder);
             for (const item of existing) {
-                if (item.isFile()) {
-                    await RNFS.unlink(item.path);
-                }
+                if (item.isFile()) await RNFS.unlink(item.path);
             }
         } catch (e) {}
 
-        for (const [name, base64Data] of Object.entries(bundle.files)) {
-            const destPath = `${destFolder}/${name}`;
-            await ReactNativeBlobUtil.fs.writeFile(
-                destPath,
-                base64Data,
-                'base64'
-            );
-        }
+        const tempZipPath = `${
+            RNFS.CachesDirectoryPath
+        }/zeus-olympus-restore-${Date.now()}.zip`;
+        await ReactNativeBlobUtil.fs.writeFile(
+            tempZipPath,
+            decryptedStr,
+            'base64'
+        );
+        await unzipFile(tempZipPath, destFolder);
+        await RNFS.unlink(tempZipPath);
     } catch (error: any) {
         console.error('Restore Flow Failed', error);
         throw error;
@@ -655,7 +622,7 @@ export const restoreChannelBackupFromOlympus = async (
 };
 
 /**
- * Exports the graph data bundle to a local .zeusbackup file
+ * Exports the graph data as a .zip file
  * On Android, saves directly to Downloads; on iOS, opens share sheet
  */
 export const exportChannelDb = async (
@@ -664,15 +631,7 @@ export const exportChannelDb = async (
     setStatus?: (message: string | null) => void
 ) => {
     try {
-        if (setStatus)
-            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
-
-        const network = isTestnet ? 'testnet' : 'mainnet';
-        const rootPath = Platform.select({
-            android: RNFS.DocumentDirectoryPath,
-            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-        });
-        const graphDir = `${rootPath}/${lndDir}/data/graph/${network}`;
+        const graphDir = getGraphDir(lndDir, isTestnet);
 
         if (!(await RNFS.exists(graphDir))) {
             Alert.alert(
@@ -683,25 +642,22 @@ export const exportChannelDb = async (
             return;
         }
 
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
         try {
-            console.log('Stopping LND for export...');
-            await stopLnd();
-            await sleep(5000);
+            await stopLndSafely();
         } catch (e: any) {
-            if (e?.message?.includes?.('closed')) {
-                console.log('LND stopped successfully.');
-            } else {
-                console.error('Failed to stop LND:', e.message);
-                if (setStatus) setStatus(null);
-                Alert.alert(
-                    localeString('general.error'),
-                    localeString('views.Tools.migration.export.failedToStopLnd')
-                );
-                return;
-            }
+            console.error('Failed to stop LND:', e.message);
+            if (setStatus) setStatus(null);
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.failedToStopLnd')
+            );
+            return;
         }
 
-        const backupFileName = `zeus-lnd-${network}-${Date.now()}.zeusbackup`;
+        const network = isTestnet ? 'testnet' : 'mainnet';
+        const backupFileName = `zeus-lnd-${network}-${Date.now()}.zip`;
 
         const stagingDir =
             Platform.OS === 'android'
@@ -715,20 +671,9 @@ export const exportChannelDb = async (
 
         if (setStatus)
             setStatus(
-                localeString('views.Tools.migration.export.buildingBundle')
+                localeString('views.Tools.migration.export.zippingBackup')
             );
-        const bundle: ChannelBackupBundle = { version: 2, files: {} };
-        const items = await RNFS.readDir(graphDir);
-        for (const item of items) {
-            if (!item.isFile()) continue;
-            const name = item.path.substring(item.path.lastIndexOf('/') + 1);
-            bundle.files[name] = await ReactNativeBlobUtil.fs.readFile(
-                item.path,
-                'base64'
-            );
-        }
-
-        await RNFS.writeFile(stagingPath, JSON.stringify(bundle), 'utf8');
+        await zipFolder(graphDir, stagingPath);
 
         if (setStatus)
             setStatus(localeString('views.Tools.migration.export.savingFile'));
@@ -846,15 +791,7 @@ export const exportChannelDbBolt = async (
     setStatus?: (message: string | null) => void
 ) => {
     try {
-        if (setStatus)
-            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
-
-        const network = isTestnet ? 'testnet' : 'mainnet';
-        const rootPath = Platform.select({
-            android: RNFS.DocumentDirectoryPath,
-            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-        });
-        const channelDbPath = `${rootPath}/${lndDir}/data/graph/${network}/channel.db`;
+        const channelDbPath = `${getGraphDir(lndDir, isTestnet)}/channel.db`;
 
         if (!(await RNFS.exists(channelDbPath))) {
             Alert.alert(
@@ -865,22 +802,18 @@ export const exportChannelDbBolt = async (
             return;
         }
 
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
         try {
-            console.log('Stopping LND for export...');
-            await stopLnd();
-            await sleep(5000);
+            await stopLndSafely();
         } catch (e: any) {
-            if (e?.message?.includes?.('closed')) {
-                console.log('LND stopped successfully.');
-            } else {
-                console.error('Failed to stop LND:', e.message);
-                if (setStatus) setStatus(null);
-                Alert.alert(
-                    localeString('general.error'),
-                    localeString('views.Tools.migration.export.failedToStopLnd')
-                );
-                return;
-            }
+            console.error('Failed to stop LND:', e.message);
+            if (setStatus) setStatus(null);
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.failedToStopLnd')
+            );
+            return;
         }
 
         const backupFileName = 'channel.db';
@@ -997,28 +930,18 @@ export const exportChannelDbBolt = async (
 /**
  * Imports a raw bolt DB channel.db from a backup file.
  */
-export const importChannelDbBolt = async (
-    sourceUri: string,
+const importChannelDbBolt = async (
+    localPath: string,
     lndDir: string,
     isTestnet: boolean
 ) => {
-    const rootPath = Platform.select({
-        android: RNFS.DocumentDirectoryPath,
-        ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-    });
-
-    const destFolder = `${rootPath}/${lndDir}/data/graph/${
-        isTestnet ? 'testnet' : 'mainnet'
-    }`;
+    const destFolder = getGraphDir(lndDir, isTestnet);
 
     if (!(await RNFS.exists(destFolder))) {
         await RNFS.mkdir(destFolder);
     }
 
-    const localPath = await resolveToLocalPath(sourceUri);
     const destPath = `${destFolder}/channel.db`;
-
-    // Remove existing channel.db if present
     if (await RNFS.exists(destPath)) {
         await RNFS.unlink(destPath);
     }
@@ -1028,7 +951,7 @@ export const importChannelDbBolt = async (
 
 /**
  * Imports a channel backup file. Routes by extension:
- * .db files are bolt DB, .zeusbackup files are SQLite JSON bundles.
+ * .db files are bolt DB, .zip files are SQLite backups.
  */
 export const importChannelDb = async (
     sourceUri: string,
@@ -1043,28 +966,12 @@ export const importChannelDb = async (
 
     const localPath = await resolveToLocalPath(sourceUri);
 
-    const isBoltDb = fileName.toLowerCase().endsWith('.db');
-
-    if (isBoltDb) {
+    if (fileName.toLowerCase().endsWith('.db')) {
         await importChannelDbBolt(localPath, lndDir, isTestnet);
         return;
     }
 
-    const content = await RNFS.readFile(localPath, 'utf8');
-    const bundle: ChannelBackupBundle = JSON.parse(content);
-
-    if (!bundle.files) {
-        throw new Error('Invalid backup bundle format');
-    }
-
-    const rootPath = Platform.select({
-        android: RNFS.DocumentDirectoryPath,
-        ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-    });
-
-    const destFolder = `${rootPath}/${lndDir}/data/graph/${
-        isTestnet ? 'testnet' : 'mainnet'
-    }`;
+    const destFolder = getGraphDir(lndDir, isTestnet);
 
     if (!(await RNFS.exists(destFolder))) {
         await RNFS.mkdir(destFolder);
@@ -1079,8 +986,5 @@ export const importChannelDb = async (
         }
     } catch (e) {}
 
-    for (const [name, base64Data] of Object.entries(bundle.files)) {
-        const destPath = `${destFolder}/${name}`;
-        await ReactNativeBlobUtil.fs.writeFile(destPath, base64Data, 'base64');
-    }
+    await unzipFile(localPath, destFolder);
 };
