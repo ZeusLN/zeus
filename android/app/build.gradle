@@ -102,6 +102,9 @@ android {
         versionCode 120
         versionName "0.13.0-prealpha"
         multiDexEnabled true
+        ndk {
+            abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+        }
     }
     signingConfigs {
         release {
@@ -176,7 +179,7 @@ android {
         pickFirst "lib/x86_64/libuniffi_zeus_cashu_restore.so"
 
         jniLibs {
-            useLegacyPackaging false
+            useLegacyPackaging true
         }
     }
 
