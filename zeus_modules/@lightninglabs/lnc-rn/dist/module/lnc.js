@@ -1,8 +1,7 @@
-function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : String(i); }
-function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+"use strict";
+
 import { NativeModules } from 'react-native';
-import { FaradayApi, LitApi, LndApi, LoopApi, PoolApi, snakeKeysToCamel } from '@lightninglabs/lnc-core';
+import { LndApi, snakeKeysToCamel } from '@lightninglabs/lnc-core';
 import { createRpc } from './api/createRpc';
 import LncCredentialStore from './util/credentialStore';
 import { log } from './util/log';
@@ -14,24 +13,6 @@ const DEFAULT_CONFIG = {
 };
 export default class LNC {
   constructor(lncConfig) {
-    _defineProperty(this, "_namespace", void 0);
-    _defineProperty(this, "credentials", void 0);
-    _defineProperty(this, "lnd", void 0);
-    _defineProperty(this, "loop", void 0);
-    _defineProperty(this, "pool", void 0);
-    _defineProperty(this, "faraday", void 0);
-    _defineProperty(this, "lit", void 0);
-    _defineProperty(this, "onLocalPrivCreate", keyHex => {
-      log.debug('local private key created: ' + keyHex);
-      this.credentials.localKey = keyHex;
-    });
-    _defineProperty(this, "onRemoteKeyReceive", keyHex => {
-      log.debug('remote key received: ' + keyHex);
-      this.credentials.remoteKey = keyHex;
-    });
-    _defineProperty(this, "onAuthData", keyHex => {
-      log.debug('auth data received: ' + keyHex);
-    });
     // merge the passed in config with the defaults
     const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
     this._namespace = config.namespace;
@@ -44,12 +25,19 @@ export default class LNC {
       if (config.pairingPhrase) this.credentials.pairingPhrase = config.pairingPhrase;
     }
     this.lnd = new LndApi(createRpc, this);
-    this.loop = new LoopApi(createRpc, this);
-    this.pool = new PoolApi(createRpc, this);
-    this.faraday = new FaradayApi(createRpc, this);
-    this.lit = new LitApi(createRpc, this);
     NativeModules.LncModule.initLNC(this._namespace);
   }
+  onLocalPrivCreate = keyHex => {
+    log.debug('local private key created: ' + keyHex);
+    this.credentials.localKey = keyHex;
+  };
+  onRemoteKeyReceive = keyHex => {
+    log.debug('remote key received: ' + keyHex);
+    this.credentials.remoteKey = keyHex;
+  };
+  onAuthData = keyHex => {
+    log.debug('auth data received: ' + keyHex);
+  };
   async isConnected() {
     return await NativeModules.LncModule.isConnected(this._namespace);
   }

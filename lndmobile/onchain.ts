@@ -5,7 +5,9 @@ import Long from 'long';
 /**
  * @throws
  */
-export const getTransactions = async (): Promise<lnrpc.TransactionDetails> => {
+export const getTransactions = async (
+    data?: any
+): Promise<lnrpc.TransactionDetails> => {
     const response = await sendCommand<
         lnrpc.IGetTransactionsRequest,
         lnrpc.GetTransactionsRequest,
@@ -14,7 +16,9 @@ export const getTransactions = async (): Promise<lnrpc.TransactionDetails> => {
         request: lnrpc.GetTransactionsRequest,
         response: lnrpc.TransactionDetails,
         method: 'GetTransactions',
-        options: {}
+        options: {
+            max_transactions: data?.max_transactions || 500
+        }
     });
     return response;
 };

@@ -1,6 +1,5 @@
-function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : String(i); }
-function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+"use strict";
+
 import debug from 'debug';
 export let LogLevel = /*#__PURE__*/function (LogLevel) {
   LogLevel[LogLevel["debug"] = 1] = "debug";
@@ -16,24 +15,6 @@ export let LogLevel = /*#__PURE__*/function (LogLevel) {
  */
 export class Logger {
   constructor(levelToOutput, namespace) {
-    _defineProperty(this, "_levelToOutput", void 0);
-    _defineProperty(this, "_logger", void 0);
-    /**
-     * log a debug message
-     */
-    _defineProperty(this, "debug", (message, ...args) => this._log(LogLevel.debug, message, args));
-    /**
-     * log an info message
-     */
-    _defineProperty(this, "info", (message, ...args) => this._log(LogLevel.info, message, args));
-    /**
-     * log a warn message
-     */
-    _defineProperty(this, "warn", (message, ...args) => this._log(LogLevel.warn, message, args));
-    /**
-     * log an error message
-     */
-    _defineProperty(this, "error", (message, ...args) => this._log(LogLevel.error, message, args));
     this._levelToOutput = levelToOutput;
     this._logger = debug(namespace);
   }
@@ -46,6 +27,27 @@ export class Logger {
     const level = LogLevel.none;
     return new Logger(level, namespace);
   }
+
+  /**
+   * log a debug message
+   */
+  debug = (message, ...args) => this._log(LogLevel.debug, message, args);
+
+  /**
+   * log an info message
+   */
+  info = (message, ...args) => this._log(LogLevel.info, message, args);
+
+  /**
+   * log a warn message
+   */
+  warn = (message, ...args) => this._log(LogLevel.warn, message, args);
+
+  /**
+   * log an error message
+   */
+  error = (message, ...args) => this._log(LogLevel.error, message, args);
+
   /**
    * A shared logging function which will only output logs based on the level of this Logger instance
    * @param level the level of the message being logged

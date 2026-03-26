@@ -1,3 +1,5 @@
+"use strict";
+
 import { subscriptionMethods } from '@lightninglabs/lnc-core';
 
 // capitalize the first letter in the string

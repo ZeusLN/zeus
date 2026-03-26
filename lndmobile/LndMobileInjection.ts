@@ -364,7 +364,7 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.AbandonChannelResponse>;
     };
     onchain: {
-        getTransactions: () => Promise<lnrpc.TransactionDetails>;
+        getTransactions: (data?: any) => Promise<lnrpc.TransactionDetails>;
         newAddress: (
             type: lnrpc.AddressType,
             account?: string

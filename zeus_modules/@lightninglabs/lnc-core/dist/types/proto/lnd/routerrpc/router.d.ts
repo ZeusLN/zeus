@@ -96,10 +96,11 @@ export interface SendPaymentRequest {
      */
     paymentRequest: string;
     /**
-     * An upper limit on the amount of time we should spend when attempting to
-     * fulfill the payment. This is expressed in seconds. If we cannot make a
-     * successful payment within this time frame, an error will be returned.
-     * This field must be non-zero.
+     * An optional limit, expressed in seconds, on the time to wait before
+     * attempting the first HTLC. Once HTLCs are in flight, the payment will
+     * not be aborted until the HTLCs are either settled or failed. If the field
+     * is not set or is explicitly set to zero, the default value of 60 seconds
+     * will be applied.
      */
     timeoutSeconds: number;
     /**
@@ -767,6 +768,10 @@ export interface ForwardHtlcInterceptResponse {
      * Any custom records that should be set on the p2p wire message message of
      * the resumed HTLC. This field is ignored if the action is not
      * RESUME_MODIFIED.
+     *
+     * This map will merge with the existing set of custom records (if any),
+     * replacing any conflicting types. Note that there currently is no support
+     * for deleting existing custom records (they can only be replaced).
      */
     outWireCustomRecords: {
         [key: string]: Uint8Array | string;
@@ -793,6 +798,14 @@ export interface DeleteAliasesRequest {
 }
 export interface DeleteAliasesResponse {
     aliasMaps: AliasMap[];
+}
+export interface FindBaseAliasRequest {
+    /** The alias we want to look up the base scid for. */
+    alias: string;
+}
+export interface FindBaseAliasResponse {
+    /** The base scid that resulted from the base scid look up. */
+    base: string;
 }
 /**
  * Router is a service that offers advanced interaction with the router
@@ -947,6 +960,11 @@ export interface Router {
      * peer via any message.
      */
     xDeleteLocalChanAliases(request?: DeepPartial<DeleteAliasesRequest>): Promise<DeleteAliasesResponse>;
+    /**
+     * XFindBaseLocalChanAlias is an experimental API that looks up the base scid
+     * for a local chan alias that was registered during the current runtime.
+     */
+    xFindBaseLocalChanAlias(request?: DeepPartial<FindBaseAliasRequest>): Promise<FindBaseAliasResponse>;
 }
 declare type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 declare type DeepPartial<T> = T extends Builtin ? T : T extends Array<infer U> ? Array<DeepPartial<U>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>> : T extends {} ? {

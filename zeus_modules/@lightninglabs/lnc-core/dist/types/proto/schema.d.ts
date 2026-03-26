@@ -1,13 +1,4 @@
 export declare const serviceNames: {
-    frdrpc: {
-        FaradayServer: string;
-    };
-    litrpc: {
-        Firewall: string;
-        Autopilot: string;
-        Sessions: string;
-        Status: string;
-    };
     autopilotrpc: {
         Autopilot: string;
     };
@@ -19,7 +10,11 @@ export declare const serviceNames: {
     };
     lnrpc: {
         Lightning: string;
+        State: string;
         WalletUnlocker: string;
+    };
+    peersrpc: {
+        Peers: string;
     };
     routerrpc: {
         Router: string;
@@ -35,27 +30,6 @@ export declare const serviceNames: {
     };
     wtclientrpc: {
         WatchtowerClient: string;
-    };
-    looprpc: {
-        SwapClient: string;
-        Debug: string;
-    };
-    poolrpc: {
-        ChannelAuctioneer: string;
-        HashMail: string;
-        Trader: string;
-    };
-    assetwalletrpc: {
-        AssetWallet: string;
-    };
-    mintrpc: {
-        Mint: string;
-    };
-    taprpc: {
-        TaprootAssets: string;
-    };
-    universerpc: {
-        Universe: string;
     };
 };
 export declare const subscriptionMethods: string[];

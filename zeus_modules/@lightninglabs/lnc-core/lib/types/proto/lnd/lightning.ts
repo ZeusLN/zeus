@@ -255,7 +255,10 @@ export interface SendCustomMessageRequest {
     data: Uint8Array | string;
 }
 
-export interface SendCustomMessageResponse {}
+export interface SendCustomMessageResponse {
+    /** The status of the send operation. */
+    status: string;
+}
 
 export interface Utxo {
     /** The type of address */
@@ -335,11 +338,31 @@ export interface GetTransactionsRequest {
     endHeight: number;
     /** An optional filter to only include transactions relevant to an account. */
     account: string;
+    /**
+     * The index of a transaction that will be used in a query to determine which
+     * transaction should be returned in the response.
+     */
+    indexOffset: number;
+    /**
+     * The maximal number of transactions returned in the response to this query.
+     * This value should be set to 0 to return all transactions.
+     */
+    maxTransactions: number;
 }
 
 export interface TransactionDetails {
     /** The list of transactions relevant to the wallet. */
     transactions: Transaction[];
+    /**
+     * The index of the last item in the set of returned transactions. This can be
+     * used to seek further, pagination style.
+     */
+    lastIndex: string;
+    /**
+     * The index of the last item in the set of returned transactions. This can be
+     * used to seek backwards, pagination style.
+     */
+    firstIndex: string;
 }
 
 export interface FeeLimit {
@@ -843,14 +866,20 @@ export interface ConnectPeerRequest {
     timeout: string;
 }
 
-export interface ConnectPeerResponse {}
+export interface ConnectPeerResponse {
+    /** The status of the connect operation. */
+    status: string;
+}
 
 export interface DisconnectPeerRequest {
     /** The pubkey of the node to disconnect from */
     pubKey: string;
 }
 
-export interface DisconnectPeerResponse {}
+export interface DisconnectPeerResponse {
+    /** The status of the disconnect operation. */
+    status: string;
+}
 
 export interface HTLC {
     incoming: boolean;
@@ -871,6 +900,12 @@ export interface HTLC {
     forwardingChannel: string;
     /** Index identifying the htlc on the forwarding channel. */
     forwardingHtlcIndex: string;
+    /**
+     * Whether the HTLC is locked in. An HTLC is considered locked in when the
+     * remote party has sent us the `revoke_and_ack` to irrevocably commit this
+     * HTLC.
+     */
+    lockedIn: boolean;
 }
 
 export interface ChannelConstraints {
@@ -1125,6 +1160,11 @@ export interface ChannelCloseSummary {
     aliasScids: string[];
     /** The confirmed SCID for a zero-conf channel. */
     zeroConfConfirmedScid: string;
+    /**
+     * The TLV encoded custom channel data records for this output, which might
+     * be set for custom channels.
+     */
+    customChannelData: Uint8Array | string;
 }
 
 export enum ChannelCloseSummary_ClosureType {
@@ -1196,6 +1236,7 @@ export interface Peer {
      */
     errors: TimestampedError[];
     /**
+     * This field is populated when the peer has at least one channel with us.
      * The number of times we have recorded this peer going offline or coming
      * online, recorded across restarts. Note that this value is decreased over
      * time if the peer has not recently flapped, so that we can forgive peers
@@ -1203,6 +1244,7 @@ export interface Peer {
      */
     flapCount: number;
     /**
+     * This field is populated when the peer has at least one channel with us.
      * The timestamp of the last flap we observed for this peer. If this value is
      * zero, we have not observed any flaps for this peer.
      */
@@ -1295,8 +1337,8 @@ export interface GetInfoResponse {
     /** Whether we consider ourselves synced with the public channel graph. */
     syncedToGraph: boolean;
     /**
-     * Whether the current node is connected to testnet. This field is
-     * deprecated and the network field should be used instead
+     * Whether the current node is connected to testnet or testnet4. This field is
+     * deprecated and the network field should be used instead.
      *
      * @deprecated
      */
@@ -1358,12 +1400,6 @@ export interface Chain {
     chain: string;
     /** The network the node is on (eg regtest, testnet, mainnet) */
     network: string;
-}
-
-export interface ConfirmationUpdate {
-    blockSha: Uint8Array | string;
-    blockHeight: number;
-    numConfsLeft: number;
 }
 
 export interface ChannelOpenUpdate {
@@ -1449,9 +1485,13 @@ export interface CloseChannelRequest {
      */
     maxFeePerVbyte: string;
     /**
-     * If true, then the rpc call will not block while it awaits a closing txid.
-     * Consequently this RPC call will not return a closing txid if this value
-     * is set.
+     * If true, then the rpc call will not block while it awaits a closing txid
+     * to be broadcasted to the mempool. To obtain the closing tx one has to
+     * listen to the stream for the particular updates. Moreover if a coop close
+     * is specified and this flag is set to true the coop closing flow will be
+     * initiated even if HTLCs are active on the channel. The channel will wait
+     * until all HTLCs are resolved and then start the coop closing process. The
+     * channel will be disabled in the meantime and will disallow any new HTLCs.
      */
     noWait: boolean;
 }
@@ -1465,9 +1505,18 @@ export interface CloseStatusUpdate {
 export interface PendingUpdate {
     txid: Uint8Array | string;
     outputIndex: number;
+    feePerVbyte: string;
+    localCloseTx: boolean;
 }
 
-export interface InstantUpdate {}
+export interface InstantUpdate {
+    /**
+     * The number of pending HTLCs that are currently active on the channel.
+     * These HTLCs need to be resolved before the channel can be closed
+     * cooperatively.
+     */
+    numPendingHtlcs: number;
+}
 
 export interface ReadyForPsbtFunding {
     /**
@@ -2070,6 +2119,27 @@ export interface PendingChannelsResponse_PendingOpenChannel {
      * fully operational.
      */
     fundingExpiryBlocks: number;
+    /**
+     * The number of blocks remaining until the channel status changes from
+     * pending to active. A value of 0 indicates that the channel is now
+     * active.
+     *
+     * "Active" here means both channel peers have the channel marked OPEN
+     * and can immediately start using it. For public channels, this does
+     * not imply a channel_announcement has been gossiped. It only becomes
+     * public on the network after 6 on‐chain confirmations.
+     * See BOLT07 "Routing Gossip":
+     * https://github.com/lightning/bolts/blob/master/07-routing-gossip.md
+     *
+     * ZeroConf channels bypass the pending state entirely: they are marked
+     * active immediately upon creation, so they never show up as "pending".
+     */
+    confirmationsUntilActive: number;
+    /**
+     * The confirmation height records the block height at which the funding
+     * transaction was first confirmed.
+     */
+    confirmationHeight: number;
 }
 
 export interface PendingChannelsResponse_WaitingCloseChannel {
@@ -2167,6 +2237,7 @@ export interface ChannelEventUpdate {
     inactiveChannel: ChannelPoint | undefined;
     pendingOpenChannel: PendingUpdate | undefined;
     fullyResolvedChannel: ChannelPoint | undefined;
+    channelFundingTimeout: ChannelPoint | undefined;
     type: ChannelEventUpdate_UpdateType;
 }
 
@@ -2177,6 +2248,7 @@ export enum ChannelEventUpdate_UpdateType {
     INACTIVE_CHANNEL = 'INACTIVE_CHANNEL',
     PENDING_OPEN_CHANNEL = 'PENDING_OPEN_CHANNEL',
     FULLY_RESOLVED_CHANNEL = 'FULLY_RESOLVED_CHANNEL',
+    CHANNEL_FUNDING_TIMEOUT = 'CHANNEL_FUNDING_TIMEOUT',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -2338,8 +2410,10 @@ export interface QueryRoutesRequest {
      */
     destCustomRecords: { [key: string]: Uint8Array | string };
     /**
-     * The channel id of the channel that must be taken to the first hop. If zero,
-     * any channel may be used.
+     * Deprecated, use outgoing_chan_ids. The channel id of the channel that must
+     * be taken to the first hop. If zero, any channel may be used.
+     *
+     * @deprecated
      */
     outgoingChanId: string;
     /** The pubkey of the last hop of the route. If empty, any hop may be used. */
@@ -2367,6 +2441,11 @@ export interface QueryRoutesRequest {
      * only, to 1 to optimize for reliability only or a value inbetween for a mix.
      */
     timePref: number;
+    /**
+     * The channel ids of the channels allowed for the first hop. If empty, any
+     * channel may be used.
+     */
+    outgoingChanIds: string[];
 }
 
 export interface QueryRoutesRequest_DestCustomRecordsEntry {
@@ -2575,6 +2654,11 @@ export interface NodeInfoRequest {
     pubKey: string;
     /** If true, will include all known channels associated with the node. */
     includeChannels: boolean;
+    /**
+     * If true, will include announcements' signatures into ChannelEdge.
+     * Depends on include_channels.
+     */
+    includeAuthProof: boolean;
 }
 
 export interface NodeInfo {
@@ -2633,7 +2717,10 @@ export interface RoutingPolicy {
     disabled: boolean;
     maxHtlcMsat: string;
     lastUpdate: number;
-    /** Custom channel update tlv records. */
+    /**
+     * Custom channel update tlv records. These are customized fields that are
+     * not defined by LND and cannot be extracted.
+     */
     customRecords: { [key: string]: Uint8Array | string };
     inboundFeeBaseMsat: number;
     inboundFeeRateMilliMsat: number;
@@ -2642,6 +2729,36 @@ export interface RoutingPolicy {
 export interface RoutingPolicy_CustomRecordsEntry {
     key: string;
     value: Uint8Array | string;
+}
+
+/**
+ * ChannelAuthProof is the authentication proof (the signature portion) for a
+ * channel. Using the four signatures contained in the struct, and some
+ * auxiliary knowledge (the funding script, node identities, and outpoint) nodes
+ * on the network are able to validate the authenticity and existence of a
+ * channel.
+ */
+export interface ChannelAuthProof {
+    /**
+     * node_sig1 are the raw bytes of the first node signature encoded
+     * in DER format.
+     */
+    nodeSig1: Uint8Array | string;
+    /**
+     * bitcoin_sig1 are the raw bytes of the first bitcoin signature of the
+     * MultiSigKey key of the channel encoded in DER format.
+     */
+    bitcoinSig1: Uint8Array | string;
+    /**
+     * node_sig2 are the raw bytes of the second node signature encoded
+     * in DER format.
+     */
+    nodeSig2: Uint8Array | string;
+    /**
+     * bitcoin_sig2 are the raw bytes of the second bitcoin signature of the
+     * MultiSigKey key of the channel encoded in DER format.
+     */
+    bitcoinSig2: Uint8Array | string;
 }
 
 /**
@@ -2668,6 +2785,14 @@ export interface ChannelEdge {
     node2Policy: RoutingPolicy | undefined;
     /** Custom channel announcement tlv records. */
     customRecords: { [key: string]: Uint8Array | string };
+    /**
+     * Authentication proof for this channel. This proof contains a set of
+     * signatures binding four identities, which attests to the legitimacy of
+     * the advertised channel. This only is available for advertised channels.
+     * This field is not filled by default. Pass include_auth_proof flag to
+     * DescribeGraph, GetNodeInfo or GetChanInfo to get this data.
+     */
+    authProof: ChannelAuthProof | undefined;
 }
 
 export interface ChannelEdge_CustomRecordsEntry {
@@ -2682,6 +2807,8 @@ export interface ChannelGraphRequest {
      * channels, and public channels that are not yet announced to the network.
      */
     includeUnannounced: boolean;
+    /** If true, will include announcements' signatures into ChannelEdge. */
+    includeAuthProof: boolean;
 }
 
 /** Returns a new instance of the directed channel graph. */
@@ -2732,6 +2859,8 @@ export interface ChanInfoRequest {
      * chan_id is specified, this field is ignored.
      */
     chanPoint: string;
+    /** If true, will include announcements' signatures into ChannelEdge. */
+    includeAuthProof: boolean;
 }
 
 export interface NetworkInfoRequest {}
@@ -2753,7 +2882,10 @@ export interface NetworkInfo {
 
 export interface StopRequest {}
 
-export interface StopResponse {}
+export interface StopResponse {
+    /** The status of the stop operation. */
+    status: string;
+}
 
 export interface GraphTopologySubscription {}
 
@@ -3125,6 +3257,11 @@ export interface BlindedPathConfig {
      * blinded paths.
      */
     nodeOmissionList: Uint8Array | string[];
+    /**
+     * The chained channels list specified via channel id (separated by commas),
+     * starting from a channel owned by the receiver node.
+     */
+    incomingChannelList: string[];
 }
 
 /** Details of an HTLC that paid to an invoice */
@@ -3287,6 +3424,16 @@ export interface InvoiceSubscription {
      * they weren't connected to the streaming RPC.
      */
     settleIndex: string;
+}
+
+export interface DelCanceledInvoiceReq {
+    /** Invoice payment hash to delete. */
+    invoiceHash: string;
+}
+
+export interface DelCanceledInvoiceResp {
+    /** The status of the delete operation. */
+    status: string;
 }
 
 export interface Payment {
@@ -3476,9 +3623,15 @@ export interface DeleteAllPaymentsRequest {
     allPayments: boolean;
 }
 
-export interface DeletePaymentResponse {}
+export interface DeletePaymentResponse {
+    /** The status of the delete operation. */
+    status: string;
+}
 
-export interface DeleteAllPaymentsResponse {}
+export interface DeleteAllPaymentsResponse {
+    /** The status of the delete operation. */
+    status: string;
+}
 
 export interface AbandonChannelRequest {
     channelPoint: ChannelPoint | undefined;
@@ -3491,7 +3644,10 @@ export interface AbandonChannelRequest {
     iKnowWhatIAmDoing: boolean;
 }
 
-export interface AbandonChannelResponse {}
+export interface AbandonChannelResponse {
+    /** The status of the abandon operation. */
+    status: string;
+}
 
 export interface DebugLevelRequest {
     show: boolean;
@@ -3632,6 +3788,16 @@ export interface PolicyUpdateRequest {
      * retained [EXPERIMENTAL].
      */
     inboundFee: InboundFee | undefined;
+    /**
+     * Under unknown circumstances a channel can exist with a missing edge in
+     * the graph database. This can cause an 'edge not found' error when calling
+     * `getchaninfo` and/or cause the default channel policy to be used during
+     * forwards. Setting this flag will recreate the edge if not found, allowing
+     * updating this channel policy and fixing the missing edge problem for this
+     * channel permanently. For fields not set in this command, the default
+     * policy will be created.
+     */
+    createMissingEdge: boolean;
 }
 
 export interface FailedUpdate {
@@ -3674,6 +3840,16 @@ export interface ForwardingHistoryRequest {
      * forwarding event.
      */
     peerAliasLookup: boolean;
+    /**
+     * List of incoming channel ids to filter htlcs received from a
+     * particular channel
+     */
+    incomingChanIds: string[];
+    /**
+     * List of outgoing channel ids to filter htlcs being forwarded to a
+     * particular channel
+     */
+    outgoingChanIds: string[];
 }
 
 export interface ForwardingEvent {
@@ -3724,6 +3900,16 @@ export interface ForwardingEvent {
     peerAliasIn: string;
     /** The peer alias of the outgoing channel. */
     peerAliasOut: string;
+    /**
+     * The ID of the incoming HTLC in the payment circuit. This field is
+     * optional and is unset for forwarding events happened before v0.20.
+     */
+    incomingHtlcId?: string | undefined;
+    /**
+     * The ID of the outgoing HTLC in the payment circuit. This field is
+     * optional and may be unset for legacy forwarding events.
+     */
+    outgoingHtlcId?: string | undefined;
 }
 
 export interface ForwardingHistoryResponse {
@@ -3798,11 +3984,16 @@ export interface RestoreChanBackupRequest {
     multiChanBackup: Uint8Array | string | undefined;
 }
 
-export interface RestoreBackupResponse {}
+export interface RestoreBackupResponse {
+    /** The number of channels successfully restored. */
+    numRestored: number;
+}
 
 export interface ChannelBackupSubscription {}
 
-export interface VerifyChanBackupResponse {}
+export interface VerifyChanBackupResponse {
+    chanPoints: string[];
+}
 
 export interface MacaroonPermission {
     /** The entity a permission grants access to. */
@@ -4007,9 +4198,42 @@ export interface Op {
 }
 
 export interface CheckMacPermRequest {
+    /**
+     * The macaroon to check permissions for, serialized in binary format. For
+     * a macaroon to be valid, it must have been issued by lnd, must succeed all
+     * caveat conditions, and must contain all of the permissions specified in
+     * the permissions field.
+     */
     macaroon: Uint8Array | string;
+    /**
+     * The list of permissions the macaroon should be checked against. Only if
+     * the macaroon contains all of these permissions, it is considered valid.
+     * If the list of permissions given is empty, then the macaroon is
+     * considered valid only based on issuance authority and caveat validity.
+     * An empty list of permissions is therefore equivalent to saying "skip
+     * checking permissions" (unless check_default_perms_from_full_method is
+     * specified).
+     */
     permissions: MacaroonPermission[];
+    /**
+     * The RPC method to check the macaroon against. This is only used if there
+     * are custom `uri:<rpcpackage>.<ServiceName>/<MethodName>` permissions in
+     * the permission list above. To check a macaroon against the list of
+     * permissions of a certain RPC method, query the `ListPermissions` RPC
+     * first, extract the permissions for the method, and then pass them in the
+     * `permissions` field above.
+     */
     fullMethod: string;
+    /**
+     * If this field is set to true, then the permissions list above MUST be
+     * empty. The default permissions for the provided fullMethod will be used
+     * to check the macaroon. This is equivalent to looking up the permissions
+     * for a method in the `ListPermissions` RPC and then calling this RPC with
+     * the permission list returned from that call. Without this flag, the list
+     * of permissions must be non-empty for the check to actually perform a
+     * permission check.
+     */
+    checkDefaultPermsFromFullMethod: boolean;
 }
 
 export interface CheckMacPermResponse {
@@ -4078,6 +4302,24 @@ export interface RPCMiddlewareRequest {
      * intercept message.
      */
     msgId: string;
+    /**
+     * The metadata pairs that were sent along with the original gRPC request via
+     * the golang context.Context using explicit [gRPC
+     * metadata](https://grpc.io/docs/guides/metadata/). Context values are not
+     * propagated via gRPC and so we send any pairs along explicitly here so that
+     * the interceptor can access them.
+     */
+    metadataPairs: { [key: string]: MetadataValues };
+}
+
+export interface RPCMiddlewareRequest_MetadataPairsEntry {
+    key: string;
+    value: MetadataValues | undefined;
+}
+
+export interface MetadataValues {
+    /** The set of metadata values that correspond to the metadata key. */
+    values: string[];
 }
 
 export interface StreamAuth {
@@ -4501,10 +4743,12 @@ export interface Lightning {
         onError?: (err: Error) => void
     ): void;
     /**
-     * SendPaymentSync is the synchronous non-streaming version of SendPayment.
-     * This RPC is intended to be consumed by clients of the REST proxy.
-     * Additionally, this RPC expects the destination's public key and the payment
-     * hash (if any) to be encoded as hex strings.
+     * Deprecated, use routerrpc.SendPaymentV2. SendPaymentSync is the synchronous
+     * non-streaming version of SendPayment. This RPC is intended to be consumed by
+     * clients of the REST proxy. Additionally, this RPC expects the destination's
+     * public key and the payment hash (if any) to be encoded as hex strings.
+     *
+     * @deprecated
      */
     sendPaymentSync(request?: DeepPartial<SendRequest>): Promise<SendResponse>;
     /**
@@ -4523,8 +4767,11 @@ export interface Lightning {
         onError?: (err: Error) => void
     ): void;
     /**
-     * SendToRouteSync is a synchronous version of SendToRoute. It Will block
-     * until the payment either fails or succeeds.
+     * Deprecated, use routerrpc.SendToRouteV2. SendToRouteSync is a synchronous
+     * version of SendToRoute. It Will block until the payment either fails or
+     * succeeds.
+     *
+     * @deprecated
      */
     sendToRouteSync(
         request?: DeepPartial<SendToRouteRequest>
@@ -4572,6 +4819,14 @@ export interface Lightning {
         onMessage?: (msg: Invoice) => void,
         onError?: (err: Error) => void
     ): void;
+    /**
+     * lncli: `deletecanceledinvoice`
+     * DeleteCanceledInvoice removes a canceled invoice from the database. If the
+     * invoice is not in the canceled state, an error will be returned.
+     */
+    deleteCanceledInvoice(
+        request?: DeepPartial<DelCanceledInvoiceReq>
+    ): Promise<DelCanceledInvoiceResp>;
     /**
      * lncli: `decodepayreq`
      * DecodePayReq takes an encoded payment request string and attempts to decode
@@ -4810,9 +5065,10 @@ export interface Lightning {
         request?: DeepPartial<ListPermissionsRequest>
     ): Promise<ListPermissionsResponse>;
     /**
-     * CheckMacaroonPermissions checks whether a request follows the constraints
-     * imposed on the macaroon and that the macaroon is authorized to follow the
-     * provided permissions.
+     * CheckMacaroonPermissions checks whether the provided macaroon contains all
+     * the provided permissions. If the macaroon is valid (e.g. all caveats are
+     * satisfied), and all permissions provided in the request are met, then
+     * this RPC returns true.
      */
     checkMacaroonPermissions(
         request?: DeepPartial<CheckMacPermRequest>

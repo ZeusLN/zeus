@@ -1,12 +1,5 @@
 import { NativeModules } from 'react-native';
-import {
-    FaradayApi,
-    LitApi,
-    LndApi,
-    LoopApi,
-    PoolApi,
-    snakeKeysToCamel
-} from '@lightninglabs/lnc-core';
+import { LndApi, snakeKeysToCamel } from '@lightninglabs/lnc-core';
 import { createRpc } from './api/createRpc';
 import { CredentialStore, LncConfig } from './types/lnc';
 import LncCredentialStore from './util/credentialStore';
@@ -23,10 +16,6 @@ export default class LNC {
     credentials: CredentialStore;
 
     lnd: LndApi;
-    loop: LoopApi;
-    pool: PoolApi;
-    faraday: FaradayApi;
-    lit: LitApi;
 
     constructor(lncConfig?: LncConfig) {
         // merge the passed in config with the defaults
@@ -46,10 +35,6 @@ export default class LNC {
         }
 
         this.lnd = new LndApi(createRpc, this);
-        this.loop = new LoopApi(createRpc, this);
-        this.pool = new PoolApi(createRpc, this);
-        this.faraday = new FaradayApi(createRpc, this);
-        this.lit = new LitApi(createRpc, this);
         NativeModules.LncModule.initLNC(this._namespace);
     }
 

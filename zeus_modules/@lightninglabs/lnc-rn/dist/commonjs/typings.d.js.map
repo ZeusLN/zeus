@@ -1,1 +1,1 @@
-{"version":3,"names":[],"sources":["typings.d.ts"],"sourcesContent":["declare var global: any;\n"],"mappings":""}
+{"version":3,"names":[],"sourceRoot":"../../lib","sources":["typings.d.ts"],"mappings":"","ignoreList":[]}

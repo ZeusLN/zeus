@@ -83,7 +83,7 @@ import {
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
-    getTransactions = async () => await getTransactions();
+    getTransactions = async (data?: any) => await getTransactions(data);
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
