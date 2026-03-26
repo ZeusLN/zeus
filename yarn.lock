@@ -8709,9 +8709,9 @@ react-native-tcp-socket@6.2.0:
     buffer "^5.4.3"
     eventemitter3 "^4.0.7"
 
-"react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.1.9-zeus":
-  version "0.1.9-zeus"
-  resolved "https://github.com/ZeusLN/react-native-tor.git#4279f398c0834a3792d317cb8b75d81f36f0ca81"
+"react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.2.0-zeus":
+  version "0.2.0-zeus"
+  resolved "https://github.com/ZeusLN/react-native-tor.git#12aba25a01b4ee2fc0ca141508648d26866791a3"
   dependencies:
     "@types/async" "^3.2.6"
     async "^3.2.0"
