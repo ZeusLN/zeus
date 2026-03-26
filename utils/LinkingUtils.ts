@@ -3,11 +3,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
-import {
-    processSharedQRImageFast,
-    getPendingShareIntent,
-    hasPendingShareIntent
-} from './ShareIntentProcessor';
+import { processSharedQRImageFast } from './ShareIntentProcessor';
 import { settingsStore } from '../stores/Stores';
 
 class LinkingUtils {
@@ -116,32 +112,6 @@ class LinkingUtils {
 
     resetShareIntentFlag = () => {
         this.shareIntentProcessed = false;
-    };
-
-    processPendingShareIntent = (
-        navigation: NativeStackNavigationProp<any, any>
-    ): boolean => {
-        try {
-            if (hasPendingShareIntent()) {
-                const pendingData = getPendingShareIntent();
-
-                if (pendingData) {
-                    if (navigation.canGoBack()) {
-                        navigation.popToTop();
-                    }
-                    navigation.push('ShareIntentProcessing', pendingData);
-                    return true;
-                }
-            }
-
-            return false;
-        } catch (error) {
-            console.error(
-                'LinkingUtils: Error processing pending share intent:',
-                error
-            );
-            return false;
-        }
     };
 }
 

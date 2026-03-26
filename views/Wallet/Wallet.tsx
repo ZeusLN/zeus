@@ -1028,12 +1028,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 clearTimeout(this.startupTimeoutId);
                 this.startupTimeoutId = undefined;
             }
-
-            try {
-                LinkingUtils.processPendingShareIntent(this.props.navigation);
-            } catch (error) {
-                console.error('Error processing pending share intent:', error);
-            }
         }
 
         if (BackendUtils.supportsFlowLSP()) {

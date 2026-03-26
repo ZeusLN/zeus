@@ -115,13 +115,7 @@ export default class Lockscreen extends React.Component<
             navigation.replace('Wallets', { fromStartup: true });
         } else {
             SettingsStore.triggerSettingsRefresh = true;
-
-            const shareIntentProcessed =
-                LinkingUtils.processPendingShareIntent(navigation);
-
-            if (!shareIntentProcessed) {
-                navigation.pop();
-            }
+            navigation.pop();
         }
     };
 
