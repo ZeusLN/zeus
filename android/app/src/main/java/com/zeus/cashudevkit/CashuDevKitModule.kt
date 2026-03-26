@@ -172,10 +172,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private fun encodeMeltQuote(quote: MeltQuote): JSONObject {
         return JSONObject().apply {
             put("id", quote.id)
-            put("amount", quote.amount.value)
+            put("amount", quote.amount.value.toLong())
             put("unit", currencyUnitToString(quote.unit))
             put("request", quote.request)
-            put("fee_reserve", quote.feeReserve.value)
+            put("fee_reserve", quote.feeReserve.value.toLong())
             put("state", quoteStateToString(quote.state))
             put("expiry", quote.expiry)
             quote.paymentPreimage?.let { put("payment_preimage", it) }
@@ -185,8 +185,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private fun encodeMelted(melted: Melted): JSONObject {
         return JSONObject().apply {
             put("state", quoteStateToString(melted.state))
-            put("amount", melted.amount.value)
-            put("fee_paid", melted.feePaid.value)
+            put("amount", melted.amount.value.toLong())
+            put("fee_paid", melted.feePaid.value.toLong())
             melted.preimage?.let { put("preimage", it) }
             melted.change?.let { change ->
                 put("change", JSONArray().apply {
@@ -198,7 +198,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     private fun encodeProof(proof: Proof): JSONObject {
         return JSONObject().apply {
-            put("amount", proof.amount.value)
+            put("amount", proof.amount.value.toLong())
             put("secret", proof.secret)
             put("c", proof.c)
             put("keyset_id", proof.keysetId)
@@ -218,7 +218,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
         return JSONObject().apply {
             put("encoded", token.encode())
-            put("value", token.value().value)
+            put("value", token.value().value.toLong())
             put("mint_url", token.mintUrl().url)
             put("memo", token.memo() ?: "")
             put("unit", token.unit()?.let { currencyUnitToString(it) } ?: "sat")
@@ -424,7 +424,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val balances = wallet.getBalances() ?: emptyMap()
                 val result = JSONObject()
                 balances.forEach { (mintUrl, amount) ->
-                    result.put(mintUrl, amount.value)
+                    result.put(mintUrl, amount.value.toLong())
                 }
 
                 withContext(Dispatchers.Main) {
@@ -945,8 +945,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val prepared = wallet!!.prepareSend(url, amt, sendOptions)
 
                 val preparedId = prepared.id()
-                val preparedAmount = prepared.amount().value
-                val preparedFee = prepared.fee().value
+                val preparedAmount = prepared.amount().value.toLong()
+                val preparedFee = prepared.fee().value.toLong()
 
                 preparedSends[preparedId] = prepared
 
@@ -1401,10 +1401,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     val txJson = JSONObject().apply {
                         put("id", tx.id.toString())
                         put("direction", if (tx.direction == TransactionDirection.INCOMING) "incoming" else "outgoing")
-                        put("amount", tx.amount.value)
+                        put("amount", tx.amount.value.toLong())
                         put("mint_url", tx.mintUrl.toString())
                         put("timestamp", tx.timestamp)
-                        tx.fee?.let { put("fee", it.value) }
+                        tx.fee?.let { put("fee", it.value.toLong()) }
                         tx.memo?.let { put("memo", it) }
                     }
                     result.put(txJson)
@@ -1452,7 +1452,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val result = JSONArray()
                 proofInfos.forEach { info ->
                     result.put(JSONObject().apply {
-                        put("amount", info.proof.amount.value)
+                        put("amount", info.proof.amount.value.toLong())
                         put("secret", info.proof.secret)
                         put("c", info.proof.c)
                         put("keyset_id", info.proof.keysetId)
