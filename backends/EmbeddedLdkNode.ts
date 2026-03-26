@@ -8,6 +8,7 @@ import BigNumber from 'bignumber.js';
 import bolt11 from 'bolt11';
 import { Hash as sha256Hash } from 'fast-sha256';
 
+import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
@@ -217,7 +218,7 @@ export default class EmbeddedLdkNode {
             synced_to_chain:
                 status.isRunning && !!status.latestOnchainWalletSyncTimestamp,
             synced_to_graph: !!status.latestRgsSnapshotTimestamp,
-            version: 'ldk-node v0.7.0-zeus-lsps7-rgs-troubleshoot-logobserver',
+            version: `ldk-node ${libraryVersions['ldk-node'].version}`,
             testnet: network === 'testnet',
             regtest: network === 'regtest',
             signet: network === 'signet' || network === 'mutinynet',
