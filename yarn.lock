@@ -8711,7 +8711,7 @@ react-native-tcp-socket@6.2.0:
 
 "react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.2.0-zeus":
   version "0.2.0-zeus"
-  resolved "https://github.com/ZeusLN/react-native-tor.git#5b1edd95693b2e1621309b2712986877071cb1a1"
+  resolved "https://github.com/ZeusLN/react-native-tor.git#12aba25a01b4ee2fc0ca141508648d26866791a3"
   dependencies:
     "@types/async" "^3.2.6"
     async "^3.2.0"
