@@ -207,11 +207,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     private suspend fun encodeToken(token: Token): JSONObject {
         val mintUrl = token.mintUrl();
-        val keysets = wallet!!.getMintKeysets(mintUrl) ?: emptyList()
-        val proofs = token.proofs(keysets)
         val proofsArray = JSONArray()
-        proofs.forEach { proof ->
-            proofsArray.put(encodeProof(proof))
+        val w = wallet
+        if (w != null) {
+            val keysets = w.getMintKeysets(mintUrl) ?: emptyList()
+            val proofs = token.proofs(keysets)
+            proofs.forEach { proof ->
+                proofsArray.put(encodeProof(proof))
+            }
         }
         return JSONObject().apply {
             put("encoded", token.encode())
@@ -1078,7 +1081,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 }
 
                 val receiveOptions = MultiMintReceiveOptions(
-                    allowUntrusted = false,
+                    allowUntrusted = true,
                     transferToMint = null,
                     receiveOptions = innerReceiveOptions
                 )

@@ -335,8 +335,7 @@ export default class CashuStore {
             await CashuDevKit.addMint(normalizedUrl);
             this.addedMintsCache.add(normalizedUrl);
         } catch (e) {
-            // Mint might already be added (from previous session), cache it anyway
-            this.addedMintsCache.add(normalizedUrl);
+            // Don't cache failures - allow retries on subsequent calls
         }
     };
 
@@ -1061,10 +1060,16 @@ export default class CashuStore {
      */
     public receiveTokenCDK = async (
         encodedToken: string,
-        signingKey?: string
+        signingKey?: string,
+        mintUrl?: string
     ): Promise<number> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
+        }
+
+        // Ensure the token's mint is added so CDK knows its keysets
+        if (mintUrl) {
+            await this.ensureMintAdded(mintUrl);
         }
 
         // p2pk_signing_keys when the token is P2PK-locked.
@@ -3355,7 +3360,11 @@ export default class CashuStore {
                     const signingKey = isLocked
                         ? this.deriveCashuSecretKey() ?? undefined
                         : undefined;
-                    await this.receiveTokenCDK(token.encodedToken, signingKey);
+                    await this.receiveTokenCDK(
+                        token.encodedToken,
+                        signingKey,
+                        token.mint
+                    );
 
                     // Move to confirmed received tokens
                     const confirmedToken = new CashuToken({
@@ -3488,6 +3497,7 @@ export default class CashuStore {
                     errorMessage: localeString('stores.CashuStore.invalidToken')
                 };
             }
+
             const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
             const signingKey = isLocked
                 ? this.deriveCashuSecretKey() ?? undefined
@@ -3509,7 +3519,7 @@ export default class CashuStore {
 
                 // Pass signing key only when token is P2PK-locked (decoded has proofs)
 
-                await this.receiveTokenCDK(encodedToken, signingKey);
+                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
                 await this.syncCDKBalances();
 
                 // Create invoice for sweeping
@@ -3553,7 +3563,7 @@ export default class CashuStore {
                 await this.syncCDKBalances(true); // Include transactions for activity
             } else {
                 // Regular receive via CDK
-                await this.receiveTokenCDK(encodedToken, signingKey);
+                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
 
                 // Record received token activity
                 this.receivedTokens?.push(
