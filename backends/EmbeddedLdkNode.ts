@@ -284,16 +284,28 @@ export default class EmbeddedLdkNode {
 
         for (const channel of channels) {
             if (channel.isChannelReady) {
-                // Convert msat to sat, include local reserve in lightning balance
+                const outSats = new BigNumber(
+                    channel.outboundCapacityMsat
+                ).dividedBy(1000);
+                const inSats = new BigNumber(
+                    channel.inboundCapacityMsat
+                ).dividedBy(1000);
                 const localReserve = channel.unspendablePunishmentReserve || 0;
-                localBalance = localBalance.plus(
-                    new BigNumber(channel.outboundCapacityMsat)
-                        .dividedBy(1000)
-                        .plus(localReserve)
-                );
-                remoteBalance = remoteBalance.plus(
-                    new BigNumber(channel.inboundCapacityMsat).dividedBy(1000)
-                );
+                const remoteReserve =
+                    channel.counterpartyUnspendablePunishmentReserve || 0;
+
+                let channelLocal: BigNumber;
+                if (outSats.gt(0)) {
+                    channelLocal = outSats.plus(localReserve);
+                } else {
+                    channelLocal = new BigNumber(channel.channelValueSats)
+                        .minus(inSats)
+                        .minus(remoteReserve)
+                        .minus(660);
+                    if (channelLocal.lt(0)) channelLocal = new BigNumber(0);
+                }
+                localBalance = localBalance.plus(channelLocal);
+                remoteBalance = remoteBalance.plus(inSats);
             } else {
                 // Only count our side: if we opened the channel, our
                 // pending balance is the capacity minus the remote reserve.
@@ -1769,18 +1781,35 @@ export default class EmbeddedLdkNode {
      * Format a channel for Zeus compatibility
      */
     private formatChannel(channel: ChannelDetails): any {
-        // Calculate actual balances (capacity + reserve)
-        // outboundCapacityMsat is spendable, so add our reserve for total local balance
         const localReserveSats = channel.unspendablePunishmentReserve || 0;
         const remoteReserveSats =
             channel.counterpartyUnspendablePunishmentReserve || 0;
 
-        const localBalanceSats = new BigNumber(channel.outboundCapacityMsat)
-            .dividedBy(1000)
-            .plus(localReserveSats);
-        const remoteBalanceSats = new BigNumber(channel.inboundCapacityMsat)
-            .dividedBy(1000)
-            .plus(remoteReserveSats);
+        const outboundSats = new BigNumber(
+            channel.outboundCapacityMsat
+        ).dividedBy(1000);
+        const inboundSats = new BigNumber(
+            channel.inboundCapacityMsat
+        ).dividedBy(1000);
+
+        let localBalanceSats: BigNumber;
+        if (outboundSats.gt(0)) {
+            // Normal case: outbound + our reserve = local balance
+            localBalanceSats = outboundSats.plus(localReserveSats);
+        } else {
+            // Below reserve: outbound is 0, derive from capacity.
+            // The commit fee is already reflected in inboundCapacityMsat,
+            // so only subtract the remote reserve and anchor outputs
+            // (2 × 330 sats for anchor channels).
+            localBalanceSats = new BigNumber(channel.channelValueSats)
+                .minus(inboundSats)
+                .minus(remoteReserveSats)
+                .minus(660);
+            if (localBalanceSats.lt(0)) localBalanceSats = new BigNumber(0);
+        }
+        const remoteBalanceSats = new BigNumber(channel.channelValueSats).minus(
+            localBalanceSats
+        );
 
         return {
             active: channel.isUsable,
