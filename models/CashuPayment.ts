@@ -1,5 +1,5 @@
 import { computed } from 'mobx';
-import bolt11 from 'bolt11';
+import { decodeBolt11 } from '../utils/Bolt11Utils';
 
 import Payment from './Payment';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -82,7 +82,7 @@ export default class CashuPayment extends Payment {
         const payReq = this.payment_request || this.bolt11;
         if (payReq) {
             try {
-                const decoded: any = bolt11.decode(payReq);
+                const decoded: any = decodeBolt11(payReq);
                 for (let i = 0; i < decoded.tags.length; i++) {
                     const tag = decoded.tags[i];
                     if (tag.tagName === 'description') return tag.data;

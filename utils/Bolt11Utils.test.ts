@@ -1,4 +1,4 @@
-import Bolt11Utils from './Bolt11Utils';
+import Bolt11Utils, { decodeBolt11 } from './Bolt11Utils';
 
 describe('decode', () => {
     it('correctly decodes a valid payment request', () => {
@@ -30,5 +30,31 @@ describe('decode', () => {
         const action = () => Bolt11Utils.decode(paymentRequest);
 
         expect(action).toThrowError('Not a proper lightning payment request');
+    });
+});
+
+describe('decodeBolt11 (npm bolt11 wrapper)', () => {
+    it('correctly decodes a mainnet payment request via npm bolt11', () => {
+        // A valid mainnet invoice (lnbc prefix)
+        const paymentRequest =
+            'lnbc1000n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+
+        const decoded = decodeBolt11(paymentRequest);
+
+        expect(decoded).toBeDefined();
+        expect(decoded.paymentRequest).toBe(paymentRequest);
+    });
+
+    it('correctly decodes a signet payment request via npm bolt11 (issue #2163)', () => {
+        // A valid signet invoice (lntbs prefix) — this previously threw
+        // "Unknown coin bech32 prefix" with bolt11.decode()
+        const paymentRequest =
+            'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
+
+        // This should NOT throw "Unknown coin bech32 prefix"
+        const decoded = decodeBolt11(paymentRequest);
+
+        expect(decoded).toBeDefined();
+        expect(decoded.paymentRequest).toBe(paymentRequest);
     });
 });

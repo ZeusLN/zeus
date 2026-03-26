@@ -1,6 +1,6 @@
 import { action, observable, runInAction } from 'mobx';
 import { Alert, InteractionManager } from 'react-native';
-import bolt11 from 'bolt11';
+import { decodeBolt11 } from '../utils/Bolt11Utils';
 import url from 'url';
 import querystring from 'querystring-es3';
 
@@ -682,7 +682,7 @@ export default class CashuStore {
                             let amount = externalQuote.amount || 0;
                             if (!amount && externalQuote.request) {
                                 try {
-                                    const decoded = bolt11.decode(
+                                    const decoded = decodeBolt11(
                                         externalQuote.request
                                     );
                                     amount = decoded.satoshis || 0;
@@ -2627,7 +2627,7 @@ export default class CashuStore {
                 // decode bolt11 for metadata
                 let decoded;
                 try {
-                    decoded = bolt11.decode(mintQuote.request);
+                    decoded = decodeBolt11(mintQuote.request);
                 } catch (e) {
                     if (__DEV__) {
                         console.log(
@@ -2774,7 +2774,7 @@ export default class CashuStore {
                 const cdkQuote = result.quote;
                 let decoded;
                 try {
-                    decoded = bolt11.decode(cdkQuote.request);
+                    decoded = decodeBolt11(cdkQuote.request);
                 } catch (e) {
                     if (__DEV__) {
                         console.log(
@@ -2914,7 +2914,7 @@ export default class CashuStore {
             }
             const data = await new Promise((resolve, reject) => {
                 try {
-                    const decoded: any = bolt11.decode(bolt11Invoice || '');
+                    const decoded: any = decodeBolt11(bolt11Invoice || '');
                     for (let i = 0; i < decoded.tags.length; i++) {
                         const tag = decoded.tags[i];
                         switch (tag.tagName) {

@@ -20,7 +20,7 @@ import Transaction from '../models/Transaction';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
-import bolt11 from 'bolt11';
+import { decodeBolt11 } from './Bolt11Utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -435,7 +435,7 @@ export default class NostrConnectUtils {
         isPaid?: boolean;
     }> {
         try {
-            const decoded = bolt11.decode(invoice);
+            const decoded = decodeBolt11(invoice);
             if (!decoded || !decoded.tags) {
                 throw new Error('Invalid payment request structure');
             }

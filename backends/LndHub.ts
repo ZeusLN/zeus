@@ -1,8 +1,7 @@
-import bolt11 from 'bolt11';
-
 import { settingsStore } from '../stores/Stores';
 
 import LND from './LND';
+import { decodeBolt11 } from '../utils/Bolt11Utils';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
@@ -51,7 +50,7 @@ export default class LndHub extends LND {
     getNewAddress = () => this.getRequest('/getbtc');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() => {
-            const decoded: any = bolt11.decode(
+            const decoded: any = decodeBolt11(
                 (urlParams && urlParams[0]) || ''
             );
             for (let i = 0; i < decoded.tags.length; i++) {

@@ -2,6 +2,7 @@
 
 import { bech32 } from 'bech32';
 import base64Utils from './Base64Utils';
+import bolt11 from 'bolt11';
 
 class Bolt11Utils {
     constructor() {
@@ -230,3 +231,37 @@ class Bolt11Utils {
 
 const bolt11Utils = new Bolt11Utils();
 export default bolt11Utils;
+
+/**
+ * Signet network configuration for the npm bolt11 package.
+ * The bolt11 npm package (v1.4.1) does not natively support signet invoices
+ * (bech32 prefix 'tbs'), causing "Unknown coin bech32 prefix" errors.
+ * This constant is used by decodeBolt11() to provide signet support.
+ *
+ * See: https://github.com/ZeusLN/zeus/issues/2163
+ */
+export const SIGNET_NETWORK = {
+    bech32: 'tbs' as const,
+    pubKeyHash: 0x6f,
+    scriptHash: 0xc4,
+    validWitnessVersions: [0, 1]
+};
+
+/**
+ * Wrapper around bolt11.decode() that adds support for signet invoices.
+ *
+ * The npm bolt11 package (bitcoinjs/bolt11 v1.4.1) only recognizes 4 networks
+ * (mainnet, testnet, regtest, simnet) and throws "Unknown coin bech32 prefix"
+ * for signet invoices which use the 'tbs' bech32 prefix.
+ *
+ * This function detects signet invoices by their 'lntbs' prefix and passes
+ * the appropriate network configuration to bolt11.decode().
+ *
+ * Fixes: https://github.com/ZeusLN/zeus/issues/2163
+ */
+export const decodeBolt11 = (paymentRequest: string): any => {
+    if (typeof paymentRequest === 'string' && paymentRequest.toLowerCase().startsWith('lntbs')) {
+        return bolt11.decode(paymentRequest, SIGNET_NETWORK);
+    }
+    return bolt11.decode(paymentRequest);
+};

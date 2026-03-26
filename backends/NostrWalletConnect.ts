@@ -1,7 +1,7 @@
-import bolt11 from 'bolt11';
 import { webln } from '@getalby/sdk';
 
 import { settingsStore } from '../stores/Stores';
+import { decodeBolt11 } from '../utils/Bolt11Utils';
 
 import Base64Utils from '../utils/Base64Utils';
 
@@ -56,7 +56,7 @@ export default class NostrWalletConnect {
         await this.nwc.sendPayment(data.payment_request);
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() => {
-            const decoded: any = bolt11.decode(
+            const decoded: any = decodeBolt11(
                 (urlParams && urlParams[0]) || ''
             );
             for (let i = 0; i < decoded.tags.length; i++) {

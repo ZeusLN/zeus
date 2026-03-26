@@ -1,5 +1,4 @@
 import { computed } from 'mobx';
-import bolt11 from 'bolt11';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
 
@@ -7,7 +6,7 @@ import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { getFeePercentage } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
-import Bolt11Utils from '../utils/Bolt11Utils';
+import Bolt11Utils, { decodeBolt11 } from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/Stores';
@@ -76,7 +75,7 @@ export default class Payment extends BaseModel {
         const pay_req = this.getPaymentRequest;
         if (pay_req) {
             try {
-                const decoded = bolt11.decode(pay_req);
+                const decoded = decodeBolt11(pay_req);
                 return decoded.payeeNodeKey;
             } catch {
                 return undefined;
@@ -116,7 +115,7 @@ export default class Payment extends BaseModel {
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
             try {
-                const decoded: any = bolt11.decode(this.getPaymentRequest);
+                const decoded: any = decodeBolt11(this.getPaymentRequest);
                 for (let i = 0; i < decoded.tags.length; i++) {
                     const tag = decoded.tags[i];
                     if (tag.tagName === 'description') return tag.data;
