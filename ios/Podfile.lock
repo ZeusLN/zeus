@@ -1633,7 +1633,7 @@ PODS:
   - react-native-tcp-socket (6.2.0):
     - CocoaAsyncSocket
     - React-Core
-  - react-native-tor (0.2.0-zeus):
+  - react-native-tor (0.2.1-zeus):
     - React
   - react-native-udp (4.1.7):
     - CocoaAsyncSocket
@@ -2468,7 +2468,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - SwiftProtobuf (1.33.3)
+  - SwiftProtobuf (1.35.1)
   - VisionCamera (4.7.3):
     - VisionCamera/Core (= 4.7.3)
     - VisionCamera/React (= 4.7.3)
@@ -2846,7 +2846,7 @@ SPEC CHECKSUMS:
   CashuDevKit: e1c67c3d60c5bec683f205f922e9894d7df23072
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   FBLazyVector: c12d2108050e27952983d565a232f6f7b1ad5e69
-  hermes-engine: 091191dd09def8842b792134f7816742ce77fcc7
+  hermes-engine: 0ccf977a1d175707a3eaac0467b76dee64f9da81
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: cbe3d931a7c24f7891a8e8032c2bb9b2373c4b9c
   RCTDeprecation: 3280799c14232a56e5a44f92981a8ee33bc69fd9
@@ -2857,7 +2857,7 @@ SPEC CHECKSUMS:
   React: 7ef36630d07638043a134a7dd2ec17e0be10fc3c
   React-callinvoker: af4e8fe1d60ab63dd8d74c2a68988064c2848954
   React-Core: c609976c034ba9556bef9850a571a71bd458d73f
-  React-Core-prebuilt: 471e4f2d9ee82dae331233d864c24b8ce17acf24
+  React-Core-prebuilt: b49da9ce59ae468009ca9d9a50236c5830e92e1d
   React-CoreModules: 0ea85f3b3f4b8cbfb3afacd2ed85458fb878517a
   React-cxxreact: 6752bab77c0599d6136e2b8b9b64b4a7d316d401
   React-debug: 38389b86e3570558ec73dd4cbc0cd2f2eec47a51
@@ -2903,7 +2903,7 @@ SPEC CHECKSUMS:
   react-native-safe-area-context: 37e680fc4cace3c0030ee46e8987d24f5d3bdab2
   react-native-slider: f954578344106f0a732a4358ce3a3e11015eb6e1
   react-native-tcp-socket: 61379457d7e702e83e28c213b6e085ac079e480f
-  react-native-tor: d9259d908d3ce3db8e152ca73425bcd2056fb0f8
+  react-native-tor: 39a5a49a3b31e5a315cab5fe0d6448e54c4abff4
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
   react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
@@ -2943,7 +2943,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 6b7e8d8d974ed13fb66698d82c30c5e70c1f7d3a
   ReactCodegen: c5e5343f6691b0cd76913b9be5e89e5a83ff3315
   ReactCommon: 92b53b0bd7f7d86154dc9f512c1ea5dee717cc72
-  ReactNativeDependencies: 168fa0520ac0e729126966a11679c59951d0c83f
+  ReactNativeDependencies: 34163534dda8e819c72f4ede424d3c1f94a4adf9
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
   RNCClipboard: 88d7eeb555d1183915f0885bdbc5c97eb6f7f3ba
   RNCPicker: c8a3584b74133464ee926224463fcc54dfdaebca
@@ -2959,7 +2959,7 @@ SPEC CHECKSUMS:
   RNShare: 0e600372fb35783fe30d413efd28d11de2bf6cf0
   RNSVG: 433ac648703176a5cb4879430fbfc5e46bf00545
   RNWorklets: 30f9a363d681c776a5f9d74f6d21a6d1bb7bfe80
-  SwiftProtobuf: e1b437c8e31a4c5577b643249a0bb62ed4f02153
+  SwiftProtobuf: c268fcf9642d613eb6639fed15842ae25d4b975a
   VisionCamera: 7187b3dac1ff3071234ead959ce311875748e14f
   Yoga: 772166513f9cd2d61a6251d0dacbbfaa5b537479
   ZeusCashuRestore: 393af11e3fda37ed1948256a2e6d33b7e7267802
