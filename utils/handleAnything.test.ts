@@ -25,6 +25,8 @@ let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
+const originalGlobalFetch = global.fetch;
+const mockDnsFetch = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 jest.mock('./AddressUtils', () => ({
@@ -95,6 +97,7 @@ describe('handleAnything', () => {
     beforeEach(() => {
         mockProcessBIP21Uri.mockReset();
         mockBlobUtilFetch.mockReset();
+        mockDnsFetch.mockReset();
         mockProcessLNDHubAddress.mockReset();
         mockProcessLndConnectUrl.mockReset();
         mockProcessCLNRestConnectUrl.mockReset();
@@ -111,6 +114,15 @@ describe('handleAnything', () => {
         mockIsValidNodeUri = false;
         mockIsValidCashuToken = false;
         mockDecodedCashuToken = {};
+
+        global.fetch = mockDnsFetch as any;
+        mockDnsFetch.mockResolvedValue({
+            json: async () => ({})
+        });
+    });
+
+    afterAll(() => {
+        global.fetch = originalGlobalFetch;
     });
 
     describe('input sanitization', () => {
