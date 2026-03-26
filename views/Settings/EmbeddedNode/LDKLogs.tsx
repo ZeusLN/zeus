@@ -30,7 +30,7 @@ export default class LDKLogs extends React.Component<
     };
     logListener: any = null;
 
-    async componentDidMount(): Promise<void> {
+    componentDidMount() {
         (async () => {
             const tailLog = await NativeModules.LdkNodeModule.tailLdkNodeLog(
                 100
