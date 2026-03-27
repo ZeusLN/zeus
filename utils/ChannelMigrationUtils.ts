@@ -468,7 +468,7 @@ export const restoreChannelBackupFromOlympus = async (
         const userConfirmed = await new Promise<boolean>((resolve) => {
             const dateStr = new Date(last_backup_at).toLocaleString();
             Alert.alert(
-                localeString('views.Tools.migration.import.backupFound'),
+                localeString('views.Tools.migration.export.backupFound'),
                 localeString(
                     'views.Tools.migration.import.backupFoundMessage',
                     { date: dateStr }

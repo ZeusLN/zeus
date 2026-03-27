@@ -755,8 +755,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     errorMsg: localeString(
                                         'views.Tools.migration.import.olympusRestoreFailed',
                                         {
-                                            error:
-                                                e.message || e.toString()
+                                            error: e.message || e.toString()
                                         }
                                     ),
                                     loading: false
