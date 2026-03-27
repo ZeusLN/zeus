@@ -108,13 +108,8 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             SettingsStore
         } = this.props;
         const { showHiddenItems, easterEggCount } = this.state;
-        const {
-            implementation,
-            settings,
-            seedPhrase,
-            ldkMnemonic,
-            isChannelMigrating
-        } = SettingsStore;
+        const { settings, seedPhrase, ldkMnemonic, isChannelMigrating } =
+            SettingsStore;
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -444,42 +439,48 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     {selectedNode &&
                         BackendUtils.supportsNodeInfo() &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('NodeInfo')}
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <NodeOn color={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NodeInfo')
+                                    }
                                 >
-                                    {BackendUtils.supportsNetworkInfo()
-                                        ? `${localeString(
-                                              'general.node'
-                                          )} & ${localeString(
-                                              'views.NetworkInfo.title'
-                                          )}`
-                                        : localeString('views.NodeInfo.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <NodeOn color={themeColor('text')} />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {BackendUtils.supportsNetworkInfo()
+                                            ? `${localeString(
+                                                  'general.node'
+                                              )} & ${localeString(
+                                                  'views.NetworkInfo.title'
+                                              )}`
+                                            : localeString(
+                                                  'views.NodeInfo.title'
+                                              )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode &&
                         BackendUtils.supportsCashuWallet() &&
@@ -662,16 +663,15 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     {selectedNode &&
                         BackendUtils.supportsBolt12Address() &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
-                            }}
-                        >
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
                             >
                                 <TouchableOpacity
                                     onPress={() =>
@@ -707,16 +707,15 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     {selectedNode &&
                         NodeInfoStore.supportsListingOffers &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginTop: 5,
-                                marginBottom: 5
-                            }}
-                        >
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
                             >
                                 <TouchableOpacity
                                     onPress={() =>
@@ -795,15 +794,14 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     {selectedNode &&
                         BackendUtils.supportsRouting() &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
                                 <TouchableOpacity
                                     onPress={() =>

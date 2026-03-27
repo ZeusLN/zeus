@@ -91,64 +91,68 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     {BackendUtils.isLocalWallet() &&
                         selectedNode &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('EmbeddedNodeSettings')
-                                }
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <BlockIcon
-                                        color={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'EmbeddedNodeSettings'
+                                        )
+                                    }
                                 >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <BlockIcon
+                                            color={themeColor('text')}
+                                            width={27}
+                                            height={27}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {BackendUtils.supportsFlowLSP() &&
                         selectedNode &&
                         !isChannelMigrating && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => {
-                                    const supportsLSPS1 =
-                                        BackendUtils.supportsLSPS1native() ||
-                                        BackendUtils.supportsLSPScustomMessage() ||
-                                        BackendUtils.supportsLSPS1rest();
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() => {
+                                        const supportsLSPS1 =
+                                            BackendUtils.supportsLSPS1native() ||
+                                            BackendUtils.supportsLSPScustomMessage() ||
+                                            BackendUtils.supportsLSPS1rest();
                                         if (
                                             BackendUtils.supportsFlowLSP() &&
                                             supportsLSPS1
