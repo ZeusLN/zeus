@@ -22,8 +22,7 @@ interface ChannelBackupModalProps {
 @observer
 export default class ChannelBackupModal extends React.Component<ChannelBackupModalProps> {
     render() {
-        const { ModalStore, SettingsStore } = this.props;
-        const isSqlite = SettingsStore!.isSqlite;
+        const { ModalStore } = this.props;
         const {
             showRestoreChannelModal,
             toggleRestoreChannelModal,
@@ -37,11 +36,10 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
             <ModalBox
                 isOpen={showRestoreChannelModal}
                 style={{
-                    backgroundColor: themeColor('background'),
-                    borderRadius: 24,
+                    backgroundColor: 'transparent',
                     height: 480,
-                    width: '90%',
-                    alignSelf: 'center'
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}
                 onClosed={() => toggleRestoreChannelModal({ show: false })}
                 swipeToClose={false}
@@ -50,7 +48,17 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                 backdrop={true}
                 position="center"
             >
-                <View style={styles.container}>
+                <View
+                    style={[
+                        styles.container,
+                        {
+                            backgroundColor: themeColor('background'),
+                            borderRadius: 24,
+                            width: '90%',
+                            height: '100%'
+                        }
+                    ]}
+                >
                     <Text
                         style={{
                             ...styles.title,
@@ -74,18 +82,16 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                         )}`}
                     </Text>
 
-                    {isSqlite && (
-                        <Button
-                            title={localeString(
-                                'views.Tools.migration.import.olympus'
-                            )}
-                            onPress={() => {
-                                if (onCheckOlympus) onCheckOlympus();
-                                toggleRestoreChannelModal({ show: false });
-                            }}
-                            containerStyle={{ marginBottom: 16 }}
-                        />
-                    )}
+                    <Button
+                        title={localeString(
+                            'views.Tools.migration.import.olympus'
+                        )}
+                        onPress={() => {
+                            if (onCheckOlympus) onCheckOlympus();
+                            toggleRestoreChannelModal({ show: false });
+                        }}
+                        containerStyle={{ marginBottom: 16 }}
+                    />
 
                     <Button
                         title={localeString(
