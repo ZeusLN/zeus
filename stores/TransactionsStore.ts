@@ -816,6 +816,9 @@ export default class TransactionsStore {
 
     public broadcastRawTxToMempoolSpace = (raw_tx_hex: string) => {
         this.resetBroadcast();
+        runInAction(() => {
+            this.loading = true;
+        });
         const headers = {
             'Access-Control-Allow-Origin': '*',
             'Content-Type': 'text/plain'
