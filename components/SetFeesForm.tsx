@@ -9,6 +9,7 @@ import {
     ErrorMessage
 } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
+import ToggleButton from './../components/ToggleButton';
 
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -43,6 +44,7 @@ interface SetFeesFormState {
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
+    feeRateMode: 'percent' | 'ppm';
 }
 
 @inject('FeeStore', 'ChannelsStore', 'SettingsStore')
@@ -62,7 +64,11 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound: props.feeRateInbound || '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
-            newMaxHtlc: props.maxHtlc || ''
+            newMaxHtlc: props.maxHtlc || '',
+            feeRateMode:
+                props.SettingsStore?.implementation === 'cln-rest'
+                    ? 'ppm'
+                    : 'percent'
         };
     }
 
@@ -75,14 +81,14 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
-            newMaxHtlc
+            newMaxHtlc,
+            feeRateMode
         } = this.state;
         const {
             FeeStore,
             ChannelsStore,
             SettingsStore,
             baseFee,
-            feeRate,
             baseFeeInbound,
             feeRateInbound,
             timeLockDelta,
@@ -140,6 +146,34 @@ export default class SetFeesForm extends React.Component<
                     autoCorrect={false}
                 />
 
+                {(BackendUtils.isLNDBased() ||
+                    implementation === 'cln-rest') && (
+                    <View style={{ marginVertical: 10 }}>
+                        <ToggleButton
+                            options={[
+                                {
+                                    key: 'percent',
+                                    label: `% ${localeString(
+                                        'general.percentage'
+                                    )}`
+                                },
+                                {
+                                    key: 'ppm',
+                                    label: localeString(
+                                        'components.SetFeesForm.ppm'
+                                    )
+                                }
+                            ]}
+                            value={feeRateMode}
+                            onToggle={(key) =>
+                                this.setState({
+                                    feeRateMode: key as 'percent' | 'ppm',
+                                    newFeeRate: ''
+                                })
+                            }
+                        />
+                    </View>
+                )}
                 <Text
                     style={{
                         ...styles.text,
@@ -151,14 +185,14 @@ export default class SetFeesForm extends React.Component<
                             ? localeString(
                                   'components.SetFeesForm.ppmMilliMsat'
                               )
+                            : feeRateMode === 'ppm'
+                            ? localeString('components.SetFeesForm.ppm')
                             : localeString('general.percentage')
                     })`}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
-                    placeholder={
-                        feeRate || implementation === 'cln-rest' ? '1' : '0.001'
-                    }
+                    placeholder={feeRateMode === 'ppm' ? '1000' : '0.001'}
                     value={newFeeRate}
                     onChangeText={(text: string) =>
                         this.setState({
@@ -309,7 +343,8 @@ export default class SetFeesForm extends React.Component<
                                     channelPoint,
                                     channelId,
                                     newMinHtlc,
-                                    newMaxHtlc
+                                    newMaxHtlc,
+                                    feeRateMode
                                 )
                                     .then(() => {
                                         if (
