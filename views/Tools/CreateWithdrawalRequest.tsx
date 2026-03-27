@@ -16,7 +16,6 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import InvoicesStore from '../../stores/InvoicesStore';
-import BalanceStore from '../../stores/BalanceStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -26,7 +25,6 @@ import { Icon } from '@rneui/themed';
 interface CreateWithdrawalRequestProps {
     navigation: NativeStackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
-    BalanceStore: BalanceStore;
     UnitsStore: UnitsStore;
 }
 
@@ -41,7 +39,7 @@ interface CreateWithdrawalRequestState {
     withdrawalRequestCreationError: boolean;
 }
 
-@inject('InvoicesStore', 'BalanceStore', 'UnitsStore')
+@inject('InvoicesStore', 'UnitsStore')
 @observer
 export default class CreateWithdrawalRequest extends Component<
     CreateWithdrawalRequestProps,
@@ -134,13 +132,9 @@ export default class CreateWithdrawalRequest extends Component<
     };
 
     render() {
-        const { navigation, BalanceStore } = this.props;
+        const { navigation } = this.props;
         const { amount, description, satsAmount } = this.state;
-        const hasBalance =
-            Number(BalanceStore.confirmedBlockchainBalance) > 0 ||
-            Number(BalanceStore.unconfirmedBlockchainBalance) > 0;
-        const disabled =
-            !description || !amount || !hasBalance || this.state.loading;
+        const disabled = !description || !amount || this.state.loading;
 
         const ClearButton = () => (
             <Icon
