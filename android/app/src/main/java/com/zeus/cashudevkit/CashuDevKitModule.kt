@@ -165,7 +165,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("request", quote.request)
             put("state", quoteStateToString(quote.state))
             put("expiry", quote.expiry)
-            put("mint_url", quote.mintUrl.toString())
+            put("mint_url", quote.mintUrl.url)
         }
     }
 
@@ -1402,7 +1402,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                         put("id", tx.id.toString())
                         put("direction", if (tx.direction == TransactionDirection.INCOMING) "incoming" else "outgoing")
                         put("amount", tx.amount.value.toLong())
-                        put("mint_url", tx.mintUrl.toString())
+                        put("mint_url", tx.mintUrl.url)
                         put("timestamp", tx.timestamp)
                         tx.fee?.let { put("fee", it.value.toLong()) }
                         tx.memo?.let { put("memo", it) }
