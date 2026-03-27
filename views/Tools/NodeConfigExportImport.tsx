@@ -213,7 +213,7 @@ export default class NodeConfigExportImport extends React.Component<
                 nodes.filter(
                     (node) =>
                         node.implementation !== 'embedded-lnd' &&
-                        node.implementation !== 'embedded-ldk-node'
+                        node.implementation !== 'ldk-node'
                 ).length;
 
         return (
@@ -261,7 +261,7 @@ export default class NodeConfigExportImport extends React.Component<
                                                             'embedded-lnd' &&
                                                         nodes[index]
                                                             .implementation !==
-                                                            'embedded-ldk-node'
+                                                            'ldk-node'
                                                 );
                                             this.setState({
                                                 selectedNodes: selectableNodes
@@ -284,7 +284,7 @@ export default class NodeConfigExportImport extends React.Component<
                             {nodes.map((node: Node, index: number) => {
                                 const isEmbedded =
                                     node.implementation === 'embedded-lnd' ||
-                                    node.implementation === 'embedded-ldk-node';
+                                    node.implementation === 'ldk-node';
                                 const isSelected =
                                     selectedNodes.includes(index);
 

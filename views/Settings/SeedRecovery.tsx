@@ -288,7 +288,7 @@ export default class SeedRecovery extends React.PureComponent<
         const node = {
             nickname,
             photo,
-            implementation: 'embedded-ldk-node',
+            implementation: 'ldk-node',
             embeddedLdkNetwork: network,
             ldkNodeDir: nodeDir,
             ldkMnemonic: mnemonic,
@@ -381,7 +381,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 const is12WordMode =
                                     restoreSwaps ||
                                     restoreRescueKey ||
-                                    implementation === 'embedded-ldk-node';
+                                    implementation === 'ldk-node';
                                 if (
                                     (is12WordMode && selectedWordIndex < 11) ||
                                     (!is12WordMode && selectedWordIndex < 23)
@@ -526,7 +526,7 @@ export default class SeedRecovery extends React.PureComponent<
 
             this.setState({ loading: true });
 
-            if (implementation === 'embedded-ldk-node') {
+            if (implementation === 'ldk-node') {
                 // LDK Node restore
                 await stopLdkNode();
 
@@ -751,7 +751,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             (restoreSwaps ||
                                                 restoreRescueKey ||
                                                 implementation ===
-                                                    'embedded-ldk-node') &&
+                                                    'ldk-node') &&
                                             (selectedWordIndex == null ||
                                                 selectedWordIndex >= 12)
                                         ) {
@@ -791,7 +791,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 >
                                     {restoreSwaps ||
                                     restoreRescueKey ||
-                                    implementation === 'embedded-ldk-node' ? (
+                                    implementation === 'ldk-node' ? (
                                         <>
                                             <View
                                                 style={{
@@ -899,7 +899,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 {!(
                                     restoreSwaps ||
                                     restoreRescueKey ||
-                                    implementation === 'embedded-ldk-node'
+                                    implementation === 'ldk-node'
                                 ) && (
                                     <View
                                         style={{
@@ -1195,8 +1195,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                               ?.trim()
                                                       )
                                               )
-                                            : implementation ===
-                                              'embedded-ldk-node'
+                                            : implementation === 'ldk-node'
                                             ? seedArray.length !== 12 ||
                                               seedArray.some((seed) => !seed)
                                             : seedArray.length !== 24 ||

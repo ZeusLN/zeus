@@ -77,8 +77,8 @@ describe('ClientInfoUtils', () => {
         });
 
         it('uses implementation string as fallback for unknown backends', () => {
-            const info = getClientInfo('ldk-node' as any, '0.5.0');
-            expect(info.node).toBe('ldk-node');
+            const info = getClientInfo('some-unknown-backend' as any, '0.5.0');
+            expect(info.node).toBe('some-unknown-backend');
             expect(info.node_version).toBe('0.5.0');
         });
 

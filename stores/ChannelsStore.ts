@@ -471,7 +471,7 @@ export default class ChannelsStore {
         });
 
         if (
-            this.settingsStore.implementation === 'embedded-ldk-node' &&
+            this.settingsStore.implementation === 'ldk-node' &&
             setPendingHtlcs
         ) {
             try {
@@ -1072,11 +1072,11 @@ export default class ChannelsStore {
             request.additionalChannels?.length > 0;
 
         // LDK Node needs the host for openChannel, other backends don't
-        if (this.settingsStore.implementation !== 'embedded-ldk-node') {
+        if (this.settingsStore.implementation !== 'ldk-node') {
             delete request.host;
         }
         // LDK Node doesn't support announced channels - always force private
-        if (this.settingsStore.implementation === 'embedded-ldk-node') {
+        if (this.settingsStore.implementation === 'ldk-node') {
             request.privateChannel = true;
         }
         if (!multipleChans) delete request.additionalChannels;

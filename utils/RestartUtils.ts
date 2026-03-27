@@ -19,7 +19,7 @@ const stopNode = async () => {
         } catch (e) {
             console.log('Error stopping LND:', e);
         }
-    } else if (implementation === 'embedded-ldk-node') {
+    } else if (implementation === 'ldk-node') {
         try {
             await LdkNode.node.stop();
         } catch (e) {

@@ -1049,7 +1049,7 @@ export default class Receive extends React.Component<
             }
         }
 
-        if (implementation === 'embedded-ldk-node') {
+        if (implementation === 'ldk-node') {
             const ldkBackend = BackendUtils.embeddedLdkNode;
 
             this.ldkUnsubscribe = ldkBackend.subscribeToEvents((event) => {

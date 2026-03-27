@@ -741,7 +741,7 @@ export default class SwapStore {
         // instead of generating a separate rescue key
         const { implementation, ldkMnemonic } = this.settingsStore;
         const mnemonic =
-            implementation === 'embedded-ldk-node' && ldkMnemonic
+            implementation === 'ldk-node' && ldkMnemonic
                 ? ldkMnemonic
                 : bip39.generateMnemonic();
         await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);

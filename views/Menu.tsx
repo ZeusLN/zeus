@@ -150,7 +150,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 }
             }
 
-            if (selectedNode.implementation === 'embedded-ldk-node') {
+            if (selectedNode.implementation === 'ldk-node') {
                 if (selectedNode.embeddedLdkNetwork) {
                     nodeSubtitle += ` (${
                         selectedNode.embeddedLdkNetwork

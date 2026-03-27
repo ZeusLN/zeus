@@ -757,7 +757,7 @@ export default class WalletConfiguration extends React.Component<
             }
 
             // If deleting active LDK Node wallet, stop it first
-            if (active && implementation === 'embedded-ldk-node') {
+            if (active && implementation === 'ldk-node') {
                 await stopLdkNode();
             }
 
@@ -779,7 +779,7 @@ export default class WalletConfiguration extends React.Component<
             if (implementation === 'embedded-lnd') {
                 await deleteLndWallet(lndDir || 'lnd');
             }
-            if (implementation === 'embedded-ldk-node' && ldkNodeDir) {
+            if (implementation === 'ldk-node' && ldkNodeDir) {
                 await deleteLdkNodeWallet(ldkNodeDir);
             }
 
@@ -1023,7 +1023,7 @@ export default class WalletConfiguration extends React.Component<
         const node = {
             nickname,
             photo,
-            implementation: 'embedded-ldk-node',
+            implementation: 'ldk-node',
             embeddedLdkNetwork: network,
             ldkNodeDir: nodeDir,
             ldkMnemonic: mnemonic,
@@ -1216,8 +1216,7 @@ export default class WalletConfiguration extends React.Component<
         } = SettingsStore;
 
         const isLocalImpl =
-            implementation === 'embedded-lnd' ||
-            implementation === 'embedded-ldk-node';
+            implementation === 'embedded-lnd' || implementation === 'ldk-node';
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
@@ -1725,7 +1724,7 @@ export default class WalletConfiguration extends React.Component<
                                 )}
 
                             {!ldkNodeInitialized &&
-                                implementation === 'embedded-ldk-node' && (
+                                implementation === 'ldk-node' && (
                                     <View>
                                         <DropdownSetting
                                             title={localeString(
@@ -2720,7 +2719,7 @@ export default class WalletConfiguration extends React.Component<
                             )}
                         </View>
 
-                        {implementation === 'embedded-ldk-node' && (
+                        {implementation === 'ldk-node' && (
                             <View style={{ ...styles.button }}>
                                 {!ldkNodeInitialized &&
                                     !creatingWallet &&
@@ -2779,7 +2778,7 @@ export default class WalletConfiguration extends React.Component<
                                                                 network:
                                                                     embeddedLdkNetwork,
                                                                 implementation:
-                                                                    'embedded-ldk-node',
+                                                                    'ldk-node',
                                                                 nickname,
                                                                 photo
                                                             }
@@ -2861,7 +2860,7 @@ export default class WalletConfiguration extends React.Component<
                         {((implementation === 'embedded-lnd' &&
                             adminMacaroon &&
                             seedPhrase) ||
-                            (implementation === 'embedded-ldk-node' &&
+                            (implementation === 'ldk-node' &&
                                 ldkNodeInitialized &&
                                 ldkMnemonic)) && (
                             <View style={styles.button}>
@@ -2872,11 +2871,9 @@ export default class WalletConfiguration extends React.Component<
                                     onPress={() =>
                                         navigation.navigate(
                                             'Seed',
-                                            implementation ===
-                                                'embedded-ldk-node'
+                                            implementation === 'ldk-node'
                                                 ? {
-                                                      implementation:
-                                                          'embedded-ldk-node'
+                                                      implementation: 'ldk-node'
                                                   }
                                                 : undefined
                                         )
@@ -2959,7 +2956,7 @@ export default class WalletConfiguration extends React.Component<
                             !(
                                 (implementation === 'embedded-lnd' &&
                                     !adminMacaroon) ||
-                                (implementation === 'embedded-ldk-node' &&
+                                (implementation === 'ldk-node' &&
                                     !ldkNodeInitialized)
                             ) &&
                             !saved && (
@@ -3083,7 +3080,7 @@ export default class WalletConfiguration extends React.Component<
 
                         {saved &&
                             implementation !== 'embedded-lnd' &&
-                            implementation !== 'embedded-ldk-node' && (
+                            implementation !== 'ldk-node' && (
                                 <View style={styles.button}>
                                     <Button
                                         title={localeString(

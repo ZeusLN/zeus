@@ -978,8 +978,7 @@ export default class OpenChannel extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                        {implementation !==
-                                            'embedded-ldk-node' && (
+                                        {implementation !== 'ldk-node' && (
                                             <>
                                                 <Text
                                                     style={{

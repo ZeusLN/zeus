@@ -50,7 +50,7 @@ export default class EmbeddedNode extends React.Component<
         const { automaticDisasterRecoveryBackup, expressGraphSync } = settings;
 
         const isEmbeddedLnd = implementation === 'embedded-lnd';
-        const isEmbeddedLdk = implementation === 'embedded-ldk-node';
+        const isEmbeddedLdk = implementation === 'ldk-node';
 
         return (
             <Screen>

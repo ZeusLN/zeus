@@ -1205,7 +1205,7 @@ export default class CashuStore {
     // causing Cashu data to collide across LDK wallets. Use ldkNodeDir instead.
     getNodeDir = () => {
         const { implementation, ldkNodeDir, lndDir } = this.settingsStore;
-        if (implementation === 'embedded-ldk-node') {
+        if (implementation === 'ldk-node') {
             return ldkNodeDir || 'ldk';
         }
         return lndDir || 'lnd';

@@ -105,7 +105,7 @@ export default class CustodialWalletWarning extends React.Component<
             const result = nodes?.filter(
                 (node) =>
                     node.implementation === 'embedded-lnd' ||
-                    node.implementation === 'embedded-ldk-node'
+                    node.implementation === 'ldk-node'
             );
             if (result.length > 0) {
                 hasEmbeddedWallet = true;

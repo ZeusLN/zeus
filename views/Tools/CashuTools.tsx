@@ -48,7 +48,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
     render() {
         const { navigation, CashuStore, SettingsStore } = this.props;
         const { seedVersion } = CashuStore;
-        const isLdk = SettingsStore.implementation === 'embedded-ldk-node';
+        const isLdk = SettingsStore.implementation === 'ldk-node';
         return (
             <Screen>
                 <View style={{ flex: 1 }}>

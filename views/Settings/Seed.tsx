@@ -195,7 +195,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         let seedPhrase: string[] | undefined;
         if (route.params?.seedPhrase) {
             seedPhrase = route.params.seedPhrase;
-        } else if (SettingsStore.implementation === 'embedded-ldk-node') {
+        } else if (SettingsStore.implementation === 'ldk-node') {
             // LDK Node stores mnemonic as a string, convert to array
             seedPhrase = SettingsStore.ldkMnemonic?.split(' ');
         } else {
@@ -293,8 +293,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 )}
                                 <DangerouslyCopySeed />
                                 {isRefundRescueKey ||
-                                SettingsStore.implementation ===
-                                    'embedded-ldk-node' ? (
+                                SettingsStore.implementation === 'ldk-node' ? (
                                     <></>
                                 ) : (
                                     <QRExport />

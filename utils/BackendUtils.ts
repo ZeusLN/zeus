@@ -5,7 +5,7 @@ import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // LDK Node
-import EmbeddedLdkNode from '../backends/EmbeddedLdkNode';
+import EmbeddedLdkNode from '../backends/LdkNode';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
 // Custodial
@@ -39,7 +39,7 @@ class BackendUtils {
                 return this.lightningNodeConnect;
             case 'embedded-lnd':
                 return this.embeddedLND;
-            case 'embedded-ldk-node':
+            case 'ldk-node':
                 return this.embeddedLdkNode;
             case 'cln-rest':
                 return this.clnRest;
@@ -59,7 +59,7 @@ class BackendUtils {
         const result = cls[funcName].apply(cls, args);
         // Parse LDK Node native error strings into clean messages
         if (
-            settingsStore.implementation === 'embedded-ldk-node' &&
+            settingsStore.implementation === 'ldk-node' &&
             result &&
             typeof result.catch === 'function'
         ) {
@@ -275,8 +275,7 @@ class BackendUtils {
     isLocalWallet = () => {
         const { implementation } = settingsStore;
         return (
-            implementation === 'embedded-lnd' ||
-            implementation === 'embedded-ldk-node'
+            implementation === 'embedded-lnd' || implementation === 'ldk-node'
         );
     };
 

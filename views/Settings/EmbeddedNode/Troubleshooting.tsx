@@ -97,7 +97,7 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
         }: any = SettingsStore;
 
         const isEmbeddedLnd = implementation === 'embedded-lnd';
-        const isLdkNode = implementation === 'embedded-ldk-node';
+        const isLdkNode = implementation === 'ldk-node';
 
         return (
             <Screen>

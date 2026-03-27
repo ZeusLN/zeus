@@ -3,7 +3,7 @@ import { Implementations } from '../stores/SettingsStore';
 
 // Only backends that support LSP (Flow, LSPS1, or LSPS7)
 const NODE_NAMES: Partial<Record<Implementations, string>> = {
-    'embedded-ldk-node': 'LDK',
+    'ldk-node': 'LDK',
     'embedded-lnd': 'LND',
     lnd: 'LND',
     'lightning-node-connect': 'LND',

@@ -61,8 +61,7 @@ export default class PayCodeView extends React.Component<
         const { payCode, infoIndex } = this.state;
         const { active, label, single_use, offer_id, bolt12, used } = payCode;
         const { loading, error_msg } = OffersStore;
-        const supportsLabels =
-            SettingsStore!.implementation !== 'embedded-ldk-node';
+        const supportsLabels = SettingsStore!.implementation !== 'ldk-node';
 
         const qrValue = `lightning:${bolt12}`;
 

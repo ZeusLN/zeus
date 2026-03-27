@@ -120,7 +120,7 @@ export default class Sweepremoteclosed extends React.Component<
             error
         } = this.state;
 
-        const isLdkNode = SettingsStore?.implementation === 'embedded-ldk-node';
+        const isLdkNode = SettingsStore?.implementation === 'ldk-node';
 
         return (
             <Screen>

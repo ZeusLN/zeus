@@ -547,7 +547,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // Initialize and start LDK Node
-        if (implementation === 'embedded-ldk-node' && connecting) {
+        if (implementation === 'ldk-node' && connecting) {
             const justCreated = SettingsStore.walletJustCreated;
 
             if (!justCreated) {
@@ -1066,7 +1066,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
-        } else if (implementation === 'embedded-ldk-node') {
+        } else if (implementation === 'ldk-node') {
             try {
                 console.log('[LDK startup] fetching node info');
                 await NodeInfoStore.getNodeInfo();

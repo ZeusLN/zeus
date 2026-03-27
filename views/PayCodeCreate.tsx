@@ -69,8 +69,7 @@ export default class PayCodeCreateView extends React.Component<
         const { description, label, singleUse } = this.state;
         const { loading, error_msg } = OffersStore;
         const hasOpenChannels = ChannelsStore.channels.length > 0;
-        const supportsLabels =
-            SettingsStore!.implementation !== 'embedded-ldk-node';
+        const supportsLabels = SettingsStore!.implementation !== 'ldk-node';
 
         const InfoButton = () => (
             <View style={{ marginRight: 5 }}>

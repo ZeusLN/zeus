@@ -288,7 +288,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
                     {selectedNode &&
                         BackendUtils.supportsChannelManagement() &&
-                        implementation !== 'embedded-ldk-node' && (
+                        implementation !== 'ldk-node' && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),

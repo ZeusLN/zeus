@@ -248,7 +248,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 // LDK Node: auto-populate rescue key from wallet seed
                 if (
                     !mnemonic &&
-                    SettingsStore.implementation === 'embedded-ldk-node' &&
+                    SettingsStore.implementation === 'ldk-node' &&
                     SettingsStore.ldkMnemonic
                 ) {
                     mnemonic = await SwapStore.generateRescueKey();
@@ -293,7 +293,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 // LDK Node: auto-populate rescue key from wallet seed
                 if (
                     !mnemonic &&
-                    SettingsStore.implementation === 'embedded-ldk-node' &&
+                    SettingsStore.implementation === 'ldk-node' &&
                     SettingsStore.ldkMnemonic
                 ) {
                     mnemonic = await SwapStore.generateRescueKey();

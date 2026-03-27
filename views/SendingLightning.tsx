@@ -618,8 +618,7 @@ export default class SendingLightning extends React.Component<
                                 {(!!payment_error || !!error) && (
                                     <>
                                         {(implementation === 'embedded-lnd' ||
-                                            implementation ===
-                                                'embedded-ldk-node') && (
+                                            implementation === 'ldk-node') && (
                                             <>
                                                 <Button
                                                     title={localeString(
