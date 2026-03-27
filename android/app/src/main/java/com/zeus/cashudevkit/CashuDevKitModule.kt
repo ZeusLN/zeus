@@ -210,10 +210,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val proofsArray = JSONArray()
         val w = wallet
         if (w != null) {
-            val keysets = w.getMintKeysets(mintUrl) ?: emptyList()
-            val proofs = token.proofs(keysets)
-            proofs.forEach { proof ->
-                proofsArray.put(encodeProof(proof))
+            try {
+                val keysets = w.getMintKeysets(mintUrl) ?: emptyList()
+                val proofs = token.proofs(keysets)
+                proofs.forEach { proof ->
+                    proofsArray.put(encodeProof(proof))
+                }
+            } catch (_: Exception) {
+                // Mint may not be known to the wallet yet (e.g. decoding a
+                // token before receiving it). Fall back to empty proofs, which
+                // matches the iOS behaviour.
             }
         }
         return JSONObject().apply {
