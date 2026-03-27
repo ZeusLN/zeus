@@ -3388,12 +3388,7 @@ export default class CashuStore {
                         token.mint
                     );
 
-                    // Move to confirmed received tokens
-                    const confirmedToken = new CashuToken({
-                        ...token,
-                        pendingClaim: false
-                    });
-                    this.receivedTokens?.push(confirmedToken);
+                    // CDK records the transaction internally
                     results.claimed++;
                 } catch (e: any) {
                     console.warn(
@@ -3447,10 +3442,6 @@ export default class CashuStore {
             await Storage.setItem(
                 `${this.getNodeDir()}-cashu-offline-pending-tokens`,
                 this.offlinePendingTokens
-            );
-            await Storage.setItem(
-                `${this.getNodeDir()}-cashu-received-tokens`,
-                this.receivedTokens
             );
             if (spent.length > 0) {
                 await Storage.setItem(
@@ -3590,21 +3581,8 @@ export default class CashuStore {
                 // Regular receive via CDK
                 await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
 
-                // Record received token activity
-                this.receivedTokens?.push(
-                    new CashuToken({
-                        ...decoded,
-                        received: true,
-                        encodedToken,
-                        received_at: Date.now() / 1000
-                    })
-                );
-                await Storage.setItem(
-                    `${this.getNodeDir()}-cashu-received-tokens`,
-                    this.receivedTokens
-                );
-
-                // CDK handles balance updates internally
+                // CDK handles balance updates internally and records the
+                // transaction, so no need to also push to receivedTokens
                 await this.syncCDKBalances(true); // Include transactions for activity
 
                 this.checkAndSweepMints(mintUrl);

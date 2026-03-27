@@ -329,12 +329,10 @@ export default class ActivityStore {
                 additions = additions.concat(pendingCashuInvoices);
             }
 
-            // Include Cashu tokens (sent and received)
+            // Include sent Cashu tokens (received tokens are tracked
+            // via CDK transaction history in cdkInvoices above)
             if (this.cashuStore.sentTokens) {
                 additions = additions.concat(this.cashuStore.sentTokens);
-            }
-            if (this.cashuStore.receivedTokens) {
-                additions = additions.concat(this.cashuStore.receivedTokens);
             }
             if (this.cashuStore.offlinePendingTokens) {
                 additions = additions.concat(
