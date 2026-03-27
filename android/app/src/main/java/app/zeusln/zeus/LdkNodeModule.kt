@@ -73,6 +73,14 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedVssHeaders = emptyMap()
     }
 
+    // Extract clean error message from NodeException or other exceptions
+    private fun errorMessage(e: Exception): String {
+        if (e is NodeException) {
+            return e.message ?: e.toString()
+        }
+        return e.message ?: e.toString()
+    }
+
     // Builder Methods
 
     @ReactMethod
@@ -82,7 +90,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder = Builder()
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -101,7 +109,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setNetwork(networkEnum)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -113,7 +121,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setStorageDirPath(path)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -125,7 +133,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setChainSourceEsplora(serverUrl, createEsploraSyncConfig())
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -137,7 +145,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setGossipSourceRgs(rgsServerUrl)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -148,7 +156,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setGossipSourceP2p()
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -164,7 +172,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setListeningAddresses(addressList)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -178,7 +186,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setLiquiditySourceLsps1(nodeId, address, token)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -192,7 +200,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             builder.setLiquiditySourceLsps2(nodeId, address, token)
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -205,7 +213,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             this.storedLsps7Token = token
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -220,7 +228,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             this.storedTrustedPeers0conf = peerList
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -243,7 +251,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -276,7 +284,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -301,7 +309,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -426,7 +434,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -507,7 +515,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -563,7 +571,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -581,7 +589,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -612,7 +620,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -723,7 +731,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -740,7 +748,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -755,7 +763,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -775,7 +783,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -797,7 +805,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -878,7 +886,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(response)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -917,7 +925,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(response)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -940,7 +948,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -957,7 +965,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -974,7 +982,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -993,7 +1001,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1012,7 +1020,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1033,7 +1041,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1065,7 +1073,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1100,7 +1108,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1122,7 +1130,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1148,7 +1156,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1174,7 +1182,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1192,7 +1200,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1206,7 +1214,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1241,7 +1249,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1264,7 +1272,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1287,7 +1295,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1308,7 +1316,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1325,7 +1333,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1346,7 +1354,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1369,7 +1377,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1385,7 +1393,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val result = Arguments.createMap().apply { putString("refund", refund.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1399,7 +1407,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1439,7 +1447,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(response)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1456,7 +1464,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1473,7 +1481,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1498,7 +1506,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(response)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1517,7 +1525,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(response)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1528,7 +1536,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             node.eventHandled()
             promise.resolve(null)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1752,7 +1760,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1770,7 +1778,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1872,7 +1880,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1895,7 +1903,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1913,7 +1921,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
+                    promise.reject("error", errorMessage(e))
                 }
             }
         }
@@ -1973,7 +1981,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 
@@ -1988,7 +1996,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
             promise.resolve(result)
         } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+            promise.reject("error", errorMessage(e))
         }
     }
 

@@ -1,4 +1,5 @@
 import { settingsStore } from '../stores/Stores';
+import { parseLdkNodeError } from './ErrorUtils';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
@@ -54,7 +55,22 @@ class BackendUtils {
     call = (funcName: string, args?: any) => {
         const cls: any = this.getClass();
         // return false if function is not defined in backend, as a fallback
-        return cls[funcName] ? cls[funcName].apply(cls, args) : false;
+        if (!cls[funcName]) return false;
+        const result = cls[funcName].apply(cls, args);
+        // Parse LDK Node native error strings into clean messages
+        if (
+            settingsStore.implementation === 'embedded-ldk-node' &&
+            result &&
+            typeof result.catch === 'function'
+        ) {
+            return result.catch((error: any) => {
+                const parsed = parseLdkNodeError(error);
+                const cleanError = new Error(parsed);
+                cleanError.name = error?.name || 'Error';
+                throw cleanError;
+            });
+        }
+        return result;
     };
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);

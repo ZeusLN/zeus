@@ -1,4 +1,4 @@
-import { errorToUserFriendly } from './ErrorUtils';
+import { errorToUserFriendly, parseLdkNodeError } from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => require('../locales/en.json')[key]
@@ -175,6 +175,101 @@ describe('ErrorUtils', () => {
                     )
                 )
             ).toEqual('Received invalid response data from the server');
+        });
+    });
+
+    describe('parseLdkNodeError', () => {
+        it('parses Android NodeException with dot separator', () => {
+            expect(
+                parseLdkNodeError(
+                    'org.lightningdevkit.ldknode.NodeException.RefundCreationFailed: Failed to create refund.'
+                )
+            ).toEqual('Failed to create refund.');
+        });
+
+        it('parses Android NodeException with dollar separator', () => {
+            expect(
+                parseLdkNodeError(
+                    'org.lightningdevkit.ldknode.NodeException$RefundCreationFailed: Failed to create refund.'
+                )
+            ).toEqual('Failed to create refund.');
+        });
+
+        it('parses iOS NodeError with message parameter', () => {
+            expect(
+                parseLdkNodeError(
+                    'RefundCreationFailed(message: "Failed to create refund.")'
+                )
+            ).toEqual('Failed to create refund.');
+        });
+
+        it('parses iOS error with Error: prefix', () => {
+            expect(
+                parseLdkNodeError(
+                    'Error: RefundCreationFailed(message: "Failed to create refund.")'
+                )
+            ).toEqual('Failed to create refund.');
+        });
+
+        it('parses Error object with Android-style message', () => {
+            expect(
+                parseLdkNodeError(
+                    new Error(
+                        'org.lightningdevkit.ldknode.NodeException.InvoiceCreationFailed: Invoice creation failed.'
+                    )
+                )
+            ).toEqual('Invoice creation failed.');
+        });
+
+        it('parses Error object with iOS-style message', () => {
+            expect(
+                parseLdkNodeError(
+                    new Error(
+                        'ChannelCreationFailed(message: "Channel creation failed.")'
+                    )
+                )
+            ).toEqual('Channel creation failed.');
+        });
+
+        it('parses various Android NodeException types', () => {
+            expect(
+                parseLdkNodeError(
+                    'org.lightningdevkit.ldknode.NodeException.PaymentSendingFailed: Payment failed to send.'
+                )
+            ).toEqual('Payment failed to send.');
+
+            expect(
+                parseLdkNodeError(
+                    'org.lightningdevkit.ldknode.NodeException.ChannelClosingFailed: Could not close channel.'
+                )
+            ).toEqual('Could not close channel.');
+        });
+
+        it('passes through non-LDK error strings unchanged', () => {
+            expect(parseLdkNodeError('Something went wrong')).toEqual(
+                'Something went wrong'
+            );
+        });
+
+        it('strips Error: prefix from plain errors', () => {
+            expect(parseLdkNodeError('Error: Something went wrong')).toEqual(
+                'Something went wrong'
+            );
+        });
+
+        it('passes through non-LDK Error objects unchanged', () => {
+            expect(
+                parseLdkNodeError(new Error('Something went wrong'))
+            ).toEqual('Something went wrong');
+        });
+
+        it('handles empty string', () => {
+            expect(parseLdkNodeError('')).toEqual('');
+        });
+
+        it('handles null/undefined', () => {
+            expect(parseLdkNodeError(null)).toEqual('');
+            expect(parseLdkNodeError(undefined)).toEqual('');
         });
     });
 });
