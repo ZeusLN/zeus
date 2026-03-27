@@ -381,12 +381,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 }
 
                                 if (item.implementation === 'ldk-node') {
-                                    if (item.embeddedLdkNetwork) {
+                                    if (item.ldkNetwork) {
                                         nodeSubtitle += ` (${
-                                            item.embeddedLdkNetwork
+                                            item.ldkNetwork
                                                 .charAt(0)
                                                 .toUpperCase() +
-                                            item.embeddedLdkNetwork.slice(1)
+                                            item.ldkNetwork.slice(1)
                                         })`;
                                     }
                                 }

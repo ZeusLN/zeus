@@ -9,7 +9,7 @@ import bolt11 from 'bolt11';
 import { Hash as sha256Hash } from 'fast-sha256';
 
 import libraryVersions from '../fetch-libraries-versions.json';
-import LdkNode from '../ldknode/LdkNodeInjection';
+import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
@@ -31,7 +31,7 @@ import { settingsStore } from '../stores/Stores';
 // Event callback type
 type EventCallback = (event: LdkNodeEvent) => void;
 
-export default class EmbeddedLdkNode {
+export default class LdkNode {
     // Event loop state
     private eventLoopRunning: boolean = false;
     private eventCallbacks: EventCallback[] = [];
@@ -65,7 +65,7 @@ export default class EmbeddedLdkNode {
             storeId: string;
         };
     }): Promise<void> => {
-        await LdkNode.utils.initializeNode({
+        await LdkNodeInjection.utils.initializeNode({
             network,
             storagePath,
             esploraServerUrl,
@@ -81,7 +81,7 @@ export default class EmbeddedLdkNode {
      * Start the node
      */
     startNode = async (): Promise<void> => {
-        await LdkNode.node.start();
+        await LdkNodeInjection.node.start();
         // Start the event loop for event subscribers
         if (!this.eventLoopRunning) {
             this.startEventLoop();
@@ -93,7 +93,7 @@ export default class EmbeddedLdkNode {
      */
     stopNode = async (): Promise<void> => {
         this.stopEventLoop();
-        await LdkNode.node.stop();
+        await LdkNodeInjection.node.stop();
     };
 
     // ========================================================================
@@ -134,7 +134,7 @@ export default class EmbeddedLdkNode {
         while (this.eventLoopRunning) {
             try {
                 // Poll for the next event (non-blocking)
-                const event = await LdkNode.events.nextEvent();
+                const event = await LdkNodeInjection.events.nextEvent();
 
                 if (event && this.eventLoopRunning) {
                     // Notify all callbacks
@@ -147,7 +147,7 @@ export default class EmbeddedLdkNode {
                     }
 
                     // Mark the event as handled
-                    await LdkNode.events.eventHandled();
+                    await LdkNodeInjection.events.eventHandled();
                 } else if (!event) {
                     // No event available — sleep briefly before polling again
                     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -187,14 +187,14 @@ export default class EmbeddedLdkNode {
      * Sync wallets (on-chain and lightning)
      */
     syncWallets = async (): Promise<void> => {
-        await LdkNode.node.syncWallets();
+        await LdkNodeInjection.node.syncWallets();
     };
 
     /**
      * Generate a new mnemonic
      */
     generateMnemonic = async (wordCount: number = 12): Promise<string> => {
-        return await LdkNode.mnemonic.generateMnemonic(wordCount);
+        return await LdkNodeInjection.mnemonic.generateMnemonic(wordCount);
     };
 
     // ========================================================================
@@ -205,10 +205,10 @@ export default class EmbeddedLdkNode {
      * Get node info (similar to LND's getInfo)
      */
     getMyNodeInfo = async (): Promise<any> => {
-        const nodeId = await LdkNode.node.nodeId();
-        const status = await LdkNode.node.status();
+        const nodeId = await LdkNodeInjection.node.nodeId();
+        const status = await LdkNodeInjection.node.status();
 
-        const network = settingsStore.embeddedLdkNetwork || 'mainnet';
+        const network = settingsStore.ldkNetwork || 'mainnet';
 
         return {
             identity_pubkey: nodeId,
@@ -235,14 +235,14 @@ export default class EmbeddedLdkNode {
      * Get node status
      */
     getStatus = async (): Promise<NodeStatus> => {
-        return await LdkNode.node.status();
+        return await LdkNodeInjection.node.status();
     };
 
     /**
      * Get network graph info
      */
     getNetworkInfo = async (): Promise<any> => {
-        const graphInfo = await LdkNode.node.networkGraphInfo();
+        const graphInfo = await LdkNodeInjection.node.networkGraphInfo();
         return {
             num_channels: graphInfo.channelCount,
             num_nodes: graphInfo.nodeCount
@@ -257,7 +257,7 @@ export default class EmbeddedLdkNode {
      * Get blockchain (on-chain) balance
      */
     getBlockchainBalance = async (): Promise<any> => {
-        const balances = await LdkNode.node.listBalances();
+        const balances = await LdkNodeInjection.node.listBalances();
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
             confirmed_balance: balances.spendableOnchainBalanceSats.toString(),
@@ -272,8 +272,8 @@ export default class EmbeddedLdkNode {
      */
     getLightningBalance = async (): Promise<any> => {
         const [channels, balances] = await Promise.all([
-            LdkNode.channel.listChannels(),
-            LdkNode.node.listBalances()
+            LdkNodeInjection.channel.listChannels(),
+            LdkNodeInjection.node.listBalances()
         ]);
 
         let localBalance = new BigNumber(0);
@@ -359,7 +359,7 @@ export default class EmbeddedLdkNode {
      * Get all balances
      */
     listBalances = async (): Promise<BalanceDetails> => {
-        return await LdkNode.node.listBalances();
+        return await LdkNodeInjection.node.listBalances();
     };
 
     // ========================================================================
@@ -370,7 +370,7 @@ export default class EmbeddedLdkNode {
      * Get all channels
      */
     getChannels = async (): Promise<any> => {
-        const channels = await LdkNode.channel.listChannels();
+        const channels = await LdkNodeInjection.channel.listChannels();
         // Only return ready channels — pending open channels are
         // returned by getPendingChannels() instead.
         const readyChannels = channels.filter((c) => c.isChannelReady);
@@ -385,7 +385,7 @@ export default class EmbeddedLdkNode {
      * List channels (raw)
      */
     listChannels = async (): Promise<ChannelDetails[]> => {
-        return await LdkNode.channel.listChannels();
+        return await LdkNodeInjection.channel.listChannels();
     };
 
     /**
@@ -400,10 +400,10 @@ export default class EmbeddedLdkNode {
      */
     getPendingChannels = async (): Promise<any> => {
         const [channels, balances, closedChannels, status] = await Promise.all([
-            LdkNode.channel.listChannels(),
-            LdkNode.node.listBalances(),
-            LdkNode.channel.listClosedChannels(),
-            LdkNode.node.status()
+            LdkNodeInjection.channel.listChannels(),
+            LdkNodeInjection.node.listBalances(),
+            LdkNodeInjection.channel.listClosedChannels(),
+            LdkNodeInjection.node.status()
         ]);
 
         const currentBlockHeight = status.currentBestBlock_height;
@@ -609,9 +609,7 @@ export default class EmbeddedLdkNode {
             // Skip channels that never had a funding tx broadcast
             if (!cc.fundingTxo_txid) continue;
 
-            const isCoop = EmbeddedLdkNode.isCooperativeReason(
-                cc.closureReason
-            );
+            const isCoop = LdkNode.isCooperativeReason(cc.closureReason);
             const localBalanceSats = cc.lastLocalBalanceMsat
                 ? Math.floor(cc.lastLocalBalanceMsat / 1000)
                 : 0;
@@ -685,10 +683,10 @@ export default class EmbeddedLdkNode {
     getClosedChannels = async (): Promise<any> => {
         const [channels, closedChannelList, balances, status] =
             await Promise.all([
-                LdkNode.channel.listChannels(),
-                LdkNode.channel.listClosedChannels(),
-                LdkNode.node.listBalances(),
-                LdkNode.node.status()
+                LdkNodeInjection.channel.listChannels(),
+                LdkNodeInjection.channel.listClosedChannels(),
+                LdkNodeInjection.node.listBalances(),
+                LdkNodeInjection.node.status()
             ]);
 
         const currentBlockHeight = status.currentBestBlock_height;
@@ -745,9 +743,7 @@ export default class EmbeddedLdkNode {
             // Skip channels that never had a funding tx broadcast
             if (!cc.fundingTxo_txid) continue;
 
-            const isCoop = EmbeddedLdkNode.isCooperativeReason(
-                cc.closureReason
-            );
+            const isCoop = LdkNode.isCooperativeReason(cc.closureReason);
 
             // Skip cooperative closes that are still in the pending window
             const ageSecs =
@@ -828,7 +824,7 @@ export default class EmbeddedLdkNode {
                 : null;
 
         if (data.fundMax) {
-            userChannelId = await LdkNode.channel.openChannelFundMax({
+            userChannelId = await LdkNodeInjection.channel.openChannelFundMax({
                 nodeId: data.node_pubkey_string,
                 address: data.host || '',
                 pushToCounterpartyMsat: data.push_sat
@@ -838,18 +834,20 @@ export default class EmbeddedLdkNode {
                 utxos: utxoOutpoints
             });
         } else if (utxoOutpoints) {
-            userChannelId = await LdkNode.channel.openChannelWithUtxos({
-                nodeId: data.node_pubkey_string,
-                address: data.host || '',
-                channelAmountSats: Number(data.local_funding_amount),
-                pushToCounterpartyMsat: data.push_sat
-                    ? Number(data.push_sat) * 1000
-                    : undefined,
-                announceChannel: !data.privateChannel,
-                utxos: utxoOutpoints
-            });
+            userChannelId = await LdkNodeInjection.channel.openChannelWithUtxos(
+                {
+                    nodeId: data.node_pubkey_string,
+                    address: data.host || '',
+                    channelAmountSats: Number(data.local_funding_amount),
+                    pushToCounterpartyMsat: data.push_sat
+                        ? Number(data.push_sat) * 1000
+                        : undefined,
+                    announceChannel: !data.privateChannel,
+                    utxos: utxoOutpoints
+                }
+            );
         } else {
-            userChannelId = await LdkNode.channel.openChannel({
+            userChannelId = await LdkNodeInjection.channel.openChannel({
                 nodeId: data.node_pubkey_string,
                 address: data.host || '',
                 channelAmountSats: Number(data.local_funding_amount),
@@ -890,7 +888,7 @@ export default class EmbeddedLdkNode {
                     ) {
                         clearTimeout(timeout);
                         unsubscribe();
-                        const reason = EmbeddedLdkNode.closureReasonToMessage(
+                        const reason = LdkNode.closureReasonToMessage(
                             event.reason
                         );
                         reject(new Error(reason));
@@ -999,7 +997,7 @@ export default class EmbeddedLdkNode {
         const fundingTxid = (urlParams && urlParams[0]) || '';
         const forceClose = urlParams && urlParams[2] ? true : false;
 
-        const channels = await LdkNode.channel.listChannels();
+        const channels = await LdkNodeInjection.channel.listChannels();
         const channel = channels.find((c) => c.fundingTxo_txid === fundingTxid);
 
         if (!channel) {
@@ -1009,12 +1007,12 @@ export default class EmbeddedLdkNode {
         }
 
         if (forceClose) {
-            await LdkNode.channel.forceCloseChannel({
+            await LdkNodeInjection.channel.forceCloseChannel({
                 userChannelId: channel.userChannelId,
                 counterpartyNodeId: channel.counterpartyNodeId
             });
         } else {
-            await LdkNode.channel.closeChannel({
+            await LdkNodeInjection.channel.closeChannel({
                 userChannelId: channel.userChannelId,
                 counterpartyNodeId: channel.counterpartyNodeId
             });
@@ -1031,7 +1029,7 @@ export default class EmbeddedLdkNode {
      * Get new on-chain address
      */
     getNewAddress = async (): Promise<any> => {
-        const address = await LdkNode.onchain.newOnchainAddress();
+        const address = await LdkNodeInjection.onchain.newOnchainAddress();
         return {
             address
         };
@@ -1041,7 +1039,7 @@ export default class EmbeddedLdkNode {
      * Get UTXOs for coin control
      */
     getUTXOs = async (): Promise<any> => {
-        const utxos = await LdkNode.onchain.listUtxos();
+        const utxos = await LdkNodeInjection.onchain.listUtxos();
         return {
             utxos: utxos.map((u) => ({
                 outpoint: {
@@ -1067,22 +1065,30 @@ export default class EmbeddedLdkNode {
                 return { txid: utxoTxid, vout: parseInt(vout) };
             });
             if (data.send_all) {
-                txid = await LdkNode.onchain.sendAllToOnchainAddressWithUtxos({
-                    address: data.addr,
-                    retainReserve: false,
-                    utxos: outpoints
-                });
+                txid =
+                    await LdkNodeInjection.onchain.sendAllToOnchainAddressWithUtxos(
+                        {
+                            address: data.addr,
+                            retainReserve: false,
+                            utxos: outpoints
+                        }
+                    );
             } else {
-                txid = await LdkNode.onchain.sendToOnchainAddressWithUtxos({
-                    address: data.addr,
-                    amountSats: Number(data.amount),
-                    utxos: outpoints
-                });
+                txid =
+                    await LdkNodeInjection.onchain.sendToOnchainAddressWithUtxos(
+                        {
+                            address: data.addr,
+                            amountSats: Number(data.amount),
+                            utxos: outpoints
+                        }
+                    );
             }
         } else if (data.send_all) {
-            txid = await LdkNode.onchain.sendAllToOnchainAddress(data.addr);
+            txid = await LdkNodeInjection.onchain.sendAllToOnchainAddress(
+                data.addr
+            );
         } else {
-            txid = await LdkNode.onchain.sendToOnchainAddress({
+            txid = await LdkNodeInjection.onchain.sendToOnchainAddress({
                 address: data.addr,
                 amountSats: Number(data.amount)
             });
@@ -1098,8 +1104,8 @@ export default class EmbeddedLdkNode {
      */
     getTransactions = async (): Promise<any> => {
         const [payments, status] = await Promise.all([
-            LdkNode.payments.listPayments(),
-            LdkNode.node.status()
+            LdkNodeInjection.payments.listPayments(),
+            LdkNodeInjection.node.status()
         ]);
         const bestBlockHeight = status.currentBestBlock_height;
 
@@ -1133,16 +1139,18 @@ export default class EmbeddedLdkNode {
                 ? Number(data.value_msat)
                 : Number(data.value) * 1000;
 
-            invoice = await LdkNode.bolt11.receiveBolt11({
+            invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
                 expirySecs
             });
         } else {
-            invoice = await LdkNode.bolt11.receiveVariableAmountBolt11({
-                description: data.memo || '',
-                expirySecs
-            });
+            invoice = await LdkNodeInjection.bolt11.receiveVariableAmountBolt11(
+                {
+                    description: data.memo || '',
+                    expirySecs
+                }
+            );
         }
 
         // Decode the invoice to get the payment hash
@@ -1170,7 +1178,7 @@ export default class EmbeddedLdkNode {
      * Get invoices (Lightning inbound payments only)
      */
     getInvoices = async (): Promise<any> => {
-        const payments = await LdkNode.payments.listPayments();
+        const payments = await LdkNodeInjection.payments.listPayments();
         // Filter to inbound Lightning payments only (not on-chain)
         const invoices = payments.filter(
             (p) => p.direction === 'inbound' && p.kind.type !== 'onchain'
@@ -1187,7 +1195,7 @@ export default class EmbeddedLdkNode {
      * Lookup invoice by payment hash
      */
     lookupInvoice = async (rHash: string): Promise<any> => {
-        const payments = await LdkNode.payments.listPayments();
+        const payments = await LdkNodeInjection.payments.listPayments();
         const payment = payments.find((p) => p.kind.hash === rHash);
 
         if (payment) {
@@ -1217,14 +1225,14 @@ export default class EmbeddedLdkNode {
         let paymentId: string;
 
         if (data.amt) {
-            paymentId = await LdkNode.bolt11.sendBolt11UsingAmount({
+            paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });
         } else {
-            paymentId = await LdkNode.bolt11.sendBolt11({
+            paymentId = await LdkNodeInjection.bolt11.sendBolt11({
                 invoice: data.payment_request,
                 maxTotalRoutingFeeMsat,
                 maxPathCount
@@ -1254,12 +1262,13 @@ export default class EmbeddedLdkNode {
             ? Number(data.max_parts)
             : undefined;
 
-        const paymentId = await LdkNode.spontaneous.sendSpontaneousPayment({
-            nodeId: pubkey,
-            amountMsat: amt * 1000,
-            maxTotalRoutingFeeMsat,
-            maxPathCount
-        });
+        const paymentId =
+            await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
+                nodeId: pubkey,
+                amountMsat: amt * 1000,
+                maxTotalRoutingFeeMsat,
+                maxPathCount
+            });
 
         const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
 
@@ -1275,7 +1284,7 @@ export default class EmbeddedLdkNode {
      * Get payments (Lightning outbound payments only)
      */
     getPayments = async (): Promise<any> => {
-        const payments = await LdkNode.payments.listPayments();
+        const payments = await LdkNodeInjection.payments.listPayments();
         // Filter to outbound Lightning payments only (not on-chain)
         const outboundPayments = payments.filter(
             (p) => p.direction === 'outbound' && p.kind.type !== 'onchain'
@@ -1292,7 +1301,7 @@ export default class EmbeddedLdkNode {
      * List all payments (raw)
      */
     listPayments = async (): Promise<PaymentDetails[]> => {
-        return await LdkNode.payments.listPayments();
+        return await LdkNodeInjection.payments.listPayments();
     };
 
     /**
@@ -1344,7 +1353,7 @@ export default class EmbeddedLdkNode {
      * Connect to a peer
      */
     connectPeer = async (data: any): Promise<any> => {
-        await LdkNode.peers.connect({
+        await LdkNodeInjection.peers.connect({
             nodeId: data.addr.pubkey,
             address: data.addr.host,
             persist: data.perm !== false
@@ -1358,7 +1367,7 @@ export default class EmbeddedLdkNode {
      */
     disconnectPeer = async (pubkey: string): Promise<boolean | null> => {
         try {
-            await LdkNode.peers.disconnect(pubkey);
+            await LdkNodeInjection.peers.disconnect(pubkey);
             return true;
         } catch (error) {
             console.error(`Error disconnecting peer ${pubkey}:`, error);
@@ -1370,7 +1379,7 @@ export default class EmbeddedLdkNode {
      * List peers
      */
     listPeers = async (): Promise<any[]> => {
-        const peers = await LdkNode.peers.listPeers();
+        const peers = await LdkNodeInjection.peers.listPeers();
         return peers.map((peer) => ({
             pub_key: peer.nodeId,
             address: peer.address,
@@ -1387,14 +1396,14 @@ export default class EmbeddedLdkNode {
      * Get next event (non-blocking)
      */
     nextEvent = async (): Promise<LdkNodeEvent | null> => {
-        return await LdkNode.events.nextEvent();
+        return await LdkNodeInjection.events.nextEvent();
     };
 
     /**
      * Mark event as handled
      */
     eventHandled = async (): Promise<void> => {
-        await LdkNode.events.eventHandled();
+        await LdkNodeInjection.events.eventHandled();
     };
 
     // ========================================================================
@@ -1416,7 +1425,7 @@ export default class EmbeddedLdkNode {
         channelExpiryBlocks: number;
         announceChannel?: boolean;
     }): Promise<Lsps1OrderResponse> => {
-        return await LdkNode.lsps1.requestChannel({
+        return await LdkNodeInjection.lsps1.requestChannel({
             lspBalanceSat,
             clientBalanceSat,
             channelExpiryBlocks,
@@ -1430,7 +1439,7 @@ export default class EmbeddedLdkNode {
     lsps1CheckOrderStatus = async (
         orderId: string
     ): Promise<Lsps1OrderStatus> => {
-        return await LdkNode.lsps1.checkOrderStatus(orderId);
+        return await LdkNodeInjection.lsps1.checkOrderStatus(orderId);
     };
 
     /**
@@ -1531,7 +1540,7 @@ export default class EmbeddedLdkNode {
     // ========================================================================
 
     lsps7GetExtendableChannels = async (): Promise<any> => {
-        return await LdkNode.lsps7.getExtendableChannels();
+        return await LdkNodeInjection.lsps7.getExtendableChannels();
     };
 
     lsps7CreateOrder = async (params: {
@@ -1540,7 +1549,7 @@ export default class EmbeddedLdkNode {
         token?: string;
         refundOnchainAddress?: string;
     }): Promise<any> => {
-        const response = await LdkNode.lsps7.createOrder({
+        const response = await LdkNodeInjection.lsps7.createOrder({
             shortChannelId: params.shortChannelId,
             channelExtensionExpiryBlocks: params.channelExtensionExpiryBlocks,
             token: params.token || null,
@@ -1584,7 +1593,7 @@ export default class EmbeddedLdkNode {
     };
 
     lsps7CheckOrderStatus = async (orderId: string): Promise<any> => {
-        const response = await LdkNode.lsps7.checkOrderStatus(orderId);
+        const response = await LdkNodeInjection.lsps7.checkOrderStatus(orderId);
 
         const paymentInfo = response.paymentInfo || {};
         const bolt11 = paymentInfo.bolt11Invoice;
@@ -1635,10 +1644,11 @@ export default class EmbeddedLdkNode {
         label?: string;
         singleUse?: boolean;
     }): Promise<any> => {
-        const result = await LdkNode.bolt12.bolt12ReceiveVariableAmount({
-            description: description || '',
-            expirySecs: 0
-        });
+        const result =
+            await LdkNodeInjection.bolt12.bolt12ReceiveVariableAmount({
+                description: description || '',
+                expirySecs: 0
+            });
 
         return {
             bolt12: result.offer,
@@ -1663,7 +1673,7 @@ export default class EmbeddedLdkNode {
         bolt12: string,
         amountSatoshis: string
     ): Promise<any> => {
-        const paymentId = await LdkNode.bolt12.bolt12SendUsingAmount({
+        const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: bolt12,
             amountMsat: Number(amountSatoshis) * 1000
         });
@@ -1684,7 +1694,7 @@ export default class EmbeddedLdkNode {
         amount: string;
         description: string;
     }): Promise<any> => {
-        const refundStr = await LdkNode.bolt12.bolt12InitiateRefund({
+        const refundStr = await LdkNodeInjection.bolt12.bolt12InitiateRefund({
             amountMsat: Number(amount) * 1000,
             expirySecs: 3600
         });
@@ -1699,9 +1709,8 @@ export default class EmbeddedLdkNode {
         invreq: string;
         label: string;
     }): Promise<any> => {
-        const invoiceStr = await LdkNode.bolt12.bolt12RequestRefundPayment(
-            invreq
-        );
+        const invoiceStr =
+            await LdkNodeInjection.bolt12.bolt12RequestRefundPayment(invreq);
 
         return { bolt12: invoiceStr };
     };
@@ -1711,7 +1720,7 @@ export default class EmbeddedLdkNode {
     // ========================================================================
 
     signMessage = async (msg: string) => {
-        const signature = await LdkNode.signing.signMessage(msg);
+        const signature = await LdkNodeInjection.signing.signMessage(msg);
         return { signature };
     };
 
@@ -1721,7 +1730,7 @@ export default class EmbeddedLdkNode {
         pubkey: string;
     }) => {
         const { msg, signature, pubkey } = data;
-        const valid = await LdkNode.signing.verifySignature({
+        const valid = await LdkNodeInjection.signing.verifySignature({
             message: msg,
             signature,
             publicKey: pubkey
@@ -1754,7 +1763,7 @@ export default class EmbeddedLdkNode {
         let payment = null;
 
         for (let i = 0; i < maxAttempts; i++) {
-            const payments = await LdkNode.payments.listPayments();
+            const payments = await LdkNodeInjection.payments.listPayments();
             payment = payments.find((p) => p.id === paymentId);
 
             if (payment?.status === 'succeeded') {

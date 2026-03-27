@@ -16,7 +16,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import {
     getDefaultRgsServer,
     SupportedNetwork
-} from '../../../utils/EmbeddedLdkNodeUtils';
+} from '../../../utils/LdkNodeUtils';
 
 interface RapidGossipSyncProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -58,10 +58,10 @@ export default class RapidGossipSync extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { rgsServer, savedRgsServer } = this.state;
-        const { embeddedLdkNetwork } = SettingsStore;
+        const { ldkNetwork } = SettingsStore;
 
         const defaultServer = getDefaultRgsServer(
-            (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
+            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
         );
 
         const showReset = rgsServer !== '' && rgsServer !== defaultServer;

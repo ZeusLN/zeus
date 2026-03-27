@@ -5,7 +5,7 @@ import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // LDK Node
-import EmbeddedLdkNode from '../backends/LdkNode';
+import LdkNode from '../backends/LdkNode';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
 // Custodial
@@ -16,7 +16,7 @@ class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
-    embeddedLdkNode: EmbeddedLdkNode;
+    ldkNode: LdkNode;
     clnRest: CLNRest;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
@@ -24,7 +24,7 @@ class BackendUtils {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
-        this.embeddedLdkNode = new EmbeddedLdkNode();
+        this.ldkNode = new LdkNode();
         this.clnRest = new CLNRest();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
@@ -40,7 +40,7 @@ class BackendUtils {
             case 'embedded-lnd':
                 return this.embeddedLND;
             case 'ldk-node':
-                return this.embeddedLdkNode;
+                return this.ldkNode;
             case 'cln-rest':
                 return this.clnRest;
             case 'lndhub':

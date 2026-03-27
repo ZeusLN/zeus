@@ -50,7 +50,7 @@ export default class EmbeddedNode extends React.Component<
         const { automaticDisasterRecoveryBackup, expressGraphSync } = settings;
 
         const isEmbeddedLnd = implementation === 'embedded-lnd';
-        const isEmbeddedLdk = implementation === 'ldk-node';
+        const isLdkNode = implementation === 'ldk-node';
 
         return (
             <Screen>
@@ -70,7 +70,7 @@ export default class EmbeddedNode extends React.Component<
                     />
                     <ScrollView>
                         {/* LDK Node: Esplora Server */}
-                        {isEmbeddedLdk && (
+                        {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -99,7 +99,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* LDK Node: RGS Settings */}
-                        {isEmbeddedLdk && (
+                        {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -128,7 +128,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* LDK Node: VSS Server */}
-                        {isEmbeddedLdk && (
+                        {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -294,7 +294,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* Embedded LDK: LDK Logs */}
-                        {isEmbeddedLdk && (
+                        {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -350,7 +350,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* Channel tools (LDK Node) */}
-                        {isEmbeddedLdk && (
+                        {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -377,7 +377,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* Persistent Mode (LDK Node, Android only) */}
-                        {isEmbeddedLdk && Platform.OS === 'android' && (
+                        {isLdkNode && Platform.OS === 'android' && (
                             <>
                                 <ListItem
                                     containerStyle={{
@@ -436,7 +436,7 @@ export default class EmbeddedNode extends React.Component<
                         )}
 
                         {/* Troubleshooting */}
-                        {(isEmbeddedLnd || isEmbeddedLdk) && (
+                        {(isEmbeddedLnd || isLdkNode) && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'

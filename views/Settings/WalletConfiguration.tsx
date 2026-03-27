@@ -79,7 +79,7 @@ import {
     getDefaultRgsServer,
     DEFAULT_VSS_SERVER,
     SupportedNetwork
-} from '../../utils/EmbeddedLdkNodeUtils';
+} from '../../utils/LdkNodeUtils';
 
 interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -148,7 +148,7 @@ interface WalletConfigurationState {
     ldkMnemonic?: string;
     ldkPassphrase?: string;
     ldkNodeDir?: string;
-    embeddedLdkNetwork?: string;
+    ldkNetwork?: string;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
     ldkVssServer?: string;
@@ -228,7 +228,7 @@ export default class WalletConfiguration extends React.Component<
         ldkMnemonic: '',
         ldkPassphrase: '',
         ldkNodeDir: '',
-        embeddedLdkNetwork: 'mainnet',
+        ldkNetwork: 'mainnet',
         ldkEsploraServer: '',
         ldkRgsServer: '',
         ldkVssServer: '',
@@ -443,7 +443,7 @@ export default class WalletConfiguration extends React.Component<
                 ldkMnemonic,
                 ldkPassphrase,
                 ldkNodeDir,
-                embeddedLdkNetwork,
+                ldkNetwork,
                 ldkEsploraServer,
                 ldkRgsServer,
                 ldkVssServer,
@@ -487,7 +487,7 @@ export default class WalletConfiguration extends React.Component<
                 ldkMnemonic,
                 ldkPassphrase,
                 ldkNodeDir,
-                embeddedLdkNetwork,
+                ldkNetwork,
                 ldkEsploraServer,
                 ldkRgsServer,
                 ldkVssServer,
@@ -540,7 +540,7 @@ export default class WalletConfiguration extends React.Component<
             ldkMnemonic,
             ldkPassphrase,
             ldkNodeDir,
-            embeddedLdkNetwork,
+            ldkNetwork,
             ldkEsploraServer,
             ldkRgsServer,
             ldkVssServer
@@ -583,7 +583,7 @@ export default class WalletConfiguration extends React.Component<
             ldkMnemonic,
             ldkPassphrase,
             ldkNodeDir,
-            embeddedLdkNetwork,
+            ldkNetwork,
             ldkEsploraServer,
             ldkRgsServer,
             ldkVssServer
@@ -1024,7 +1024,7 @@ export default class WalletConfiguration extends React.Component<
             nickname,
             photo,
             implementation: 'ldk-node',
-            embeddedLdkNetwork: network,
+            ldkNetwork: network,
             ldkNodeDir: nodeDir,
             ldkMnemonic: mnemonic,
             ldkPassphrase,
@@ -1127,7 +1127,7 @@ export default class WalletConfiguration extends React.Component<
                 this.setState({
                     ldkMnemonic: response.mnemonic,
                     ldkNodeDir,
-                    embeddedLdkNetwork: network,
+                    ldkNetwork: network,
                     ldkNodeInitialized: true,
                     creatingWallet: false
                 });
@@ -1193,7 +1193,7 @@ export default class WalletConfiguration extends React.Component<
             deletingWallet,
             // LDK Node
             ldkMnemonic,
-            embeddedLdkNetwork,
+            ldkNetwork,
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
@@ -1731,11 +1731,11 @@ export default class WalletConfiguration extends React.Component<
                                                 'general.network'
                                             )}
                                             selectedValue={
-                                                embeddedLdkNetwork || 'mainnet'
+                                                ldkNetwork || 'mainnet'
                                             }
                                             onValueChange={(value: string) => {
                                                 this.setState({
-                                                    embeddedLdkNetwork: value
+                                                    ldkNetwork: value
                                                 });
                                             }}
                                             values={EMBEDDED_NODE_NETWORK_KEYS}
@@ -2735,7 +2735,7 @@ export default class WalletConfiguration extends React.Component<
                                                                     EMBEDDED_NODE_NETWORK_KEYS.find(
                                                                         (k) =>
                                                                             k.value ===
-                                                                            (embeddedLdkNetwork ||
+                                                                            (ldkNetwork ||
                                                                                 'mainnet')
                                                                     )
                                                                         ?.translateKey ||
@@ -2745,7 +2745,7 @@ export default class WalletConfiguration extends React.Component<
                                                     )}
                                                     onPress={async () => {
                                                         await this.createLdkNodeNewWallet(
-                                                            embeddedLdkNetwork ||
+                                                            ldkNetwork ||
                                                                 'mainnet'
                                                         );
                                                     }}
@@ -2763,7 +2763,7 @@ export default class WalletConfiguration extends React.Component<
                                                                     EMBEDDED_NODE_NETWORK_KEYS.find(
                                                                         (k) =>
                                                                             k.value ===
-                                                                            (embeddedLdkNetwork ||
+                                                                            (ldkNetwork ||
                                                                                 'mainnet')
                                                                     )
                                                                         ?.translateKey ||
@@ -2776,7 +2776,7 @@ export default class WalletConfiguration extends React.Component<
                                                             'SeedRecovery',
                                                             {
                                                                 network:
-                                                                    embeddedLdkNetwork,
+                                                                    ldkNetwork,
                                                                 implementation:
                                                                     'ldk-node',
                                                                 nickname,

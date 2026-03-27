@@ -49,7 +49,7 @@ export interface Node {
     lndDir?: string;
     isSqlite?: boolean;
     // Embedded LDK Node
-    embeddedLdkNetwork?: string;
+    ldkNetwork?: string;
     ldkNodeDir?: string;
     ldkMnemonic?: string;
     ldkPassphrase?: string;
@@ -1644,7 +1644,7 @@ export default class SettingsStore {
     @observable public ldkNodeDir?: string;
     @observable public ldkMnemonic?: string;
     @observable public ldkPassphrase?: string;
-    @observable public embeddedLdkNetwork?: string;
+    @observable public ldkNetwork?: string;
     @observable public ldkEsploraServer?: string;
     @observable public ldkRgsServer?: string;
     @observable public ldkVssServer?: string;
@@ -1847,7 +1847,7 @@ export default class SettingsStore {
             this.ldkNodeDir = node.ldkNodeDir;
             this.ldkMnemonic = node.ldkMnemonic;
             this.ldkPassphrase = node.ldkPassphrase;
-            this.embeddedLdkNetwork = node.embeddedLdkNetwork;
+            this.ldkNetwork = node.ldkNetwork;
             this.ldkEsploraServer = node.ldkEsploraServer;
             this.ldkRgsServer = node.ldkRgsServer;
             this.ldkVssServer = node.ldkVssServer;
@@ -1861,7 +1861,7 @@ export default class SettingsStore {
             this.ldkNodeDir = undefined;
             this.ldkMnemonic = undefined;
             this.ldkPassphrase = undefined;
-            this.embeddedLdkNetwork = undefined;
+            this.ldkNetwork = undefined;
             this.ldkEsploraServer = undefined;
             this.ldkRgsServer = undefined;
             this.ldkVssServer = undefined;

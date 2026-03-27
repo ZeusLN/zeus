@@ -1050,7 +1050,7 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'ldk-node') {
-            const ldkBackend = BackendUtils.embeddedLdkNode;
+            const ldkBackend = BackendUtils.ldkNode;
 
             this.ldkUnsubscribe = ldkBackend.subscribeToEvents((event) => {
                 if (event.type === 'paymentReceived') {

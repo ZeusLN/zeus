@@ -16,7 +16,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import {
     getDefaultEsploraServer,
     SupportedNetwork
-} from '../../../utils/EmbeddedLdkNodeUtils';
+} from '../../../utils/LdkNodeUtils';
 
 interface EsploraServerProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -58,10 +58,10 @@ export default class EsploraServer extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { esploraServer, savedEsploraServer } = this.state;
-        const { embeddedLdkNetwork } = SettingsStore;
+        const { ldkNetwork } = SettingsStore;
 
         const defaultServer = getDefaultEsploraServer(
-            (embeddedLdkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
+            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
         );
 
         const showReset =

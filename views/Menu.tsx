@@ -151,12 +151,10 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             }
 
             if (selectedNode.implementation === 'ldk-node') {
-                if (selectedNode.embeddedLdkNetwork) {
+                if (selectedNode.ldkNetwork) {
                     nodeSubtitle += ` (${
-                        selectedNode.embeddedLdkNetwork
-                            .charAt(0)
-                            .toUpperCase() +
-                        selectedNode.embeddedLdkNetwork.slice(1)
+                        selectedNode.ldkNetwork.charAt(0).toUpperCase() +
+                        selectedNode.ldkNetwork.slice(1)
                     })`;
                 }
             }

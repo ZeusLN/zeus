@@ -61,7 +61,7 @@ import {
     startLdkNodeWallet,
     stopLdkNode,
     DEFAULT_VSS_SERVER
-} from '../../utils/EmbeddedLdkNodeUtils';
+} from '../../utils/LdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -489,7 +489,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ldkNodeDir,
             ldkMnemonic,
             ldkPassphrase,
-            embeddedLdkNetwork,
+            ldkNetwork,
             ldkEsploraServer,
             ldkRgsServer,
             ldkVssServer,
@@ -565,7 +565,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // Get LSPS1 config from settings based on network
                 const lspConfig = getLspConfigForNetwork(
                     settings,
-                    embeddedLdkNetwork || 'mainnet'
+                    ldkNetwork || 'mainnet'
                 );
                 const lsps1Token = settings.lsps1Token;
 
@@ -596,7 +596,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     nodeDir: ldkNodeDir,
                     seedMnemonic: ldkMnemonic,
                     passphrase: ldkPassphrase,
-                    network: (embeddedLdkNetwork || 'mainnet') as
+                    network: (ldkNetwork || 'mainnet') as
                         | 'mainnet'
                         | 'testnet'
                         | 'signet'

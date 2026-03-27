@@ -13,7 +13,7 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import { DEFAULT_VSS_SERVER } from '../../../utils/EmbeddedLdkNodeUtils';
+import { DEFAULT_VSS_SERVER } from '../../../utils/LdkNodeUtils';
 
 interface VssServerProps {
     navigation: NativeStackNavigationProp<any, any>;
