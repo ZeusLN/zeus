@@ -1163,7 +1163,8 @@ export async function createLndWallet({
     isTestnet,
     channelBackupsBase64,
     channelDbUri,
-    channelDbFileName
+    channelDbFileName,
+    setStatus
 }: {
     lndDir: string;
     seedMnemonic?: string;
@@ -1172,6 +1173,7 @@ export async function createLndWallet({
     channelBackupsBase64?: string;
     channelDbUri?: string;
     channelDbFileName?: string;
+    setStatus?: (message: string | null) => void;
 }) {
     const {
         initialize,
@@ -1192,6 +1194,8 @@ export async function createLndWallet({
     });
     await initialize();
 
+    if (setStatus)
+        setStatus(localeString('views.Tools.migration.status.startingLnd'));
     await startLnd({
         lndDir,
         walletPassword: '',
@@ -1213,6 +1217,10 @@ export async function createLndWallet({
 
     const isRestore = walletPassphrase || seedMnemonic;
     const hasChannelDb = channelDbUri && channelDbFileName;
+    if (setStatus)
+        setStatus(
+            localeString('views.Tools.migration.status.initializingWallet')
+        );
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
@@ -1222,7 +1230,8 @@ export async function createLndWallet({
     );
 
     if (hasChannelDb) {
-        console.log('Stopping LND to import graph data');
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
         try {
             await stopLnd();
             await sleep(5000);
@@ -1239,7 +1248,10 @@ export async function createLndWallet({
             }
         }
 
-        console.log('Importing graph data');
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.status.importingBackup')
+            );
         await importChannelDb(
             channelDbUri,
             channelDbFileName,
@@ -1247,7 +1259,10 @@ export async function createLndWallet({
             isTestnet || false
         );
 
-        console.log('Restarting LND with imported graph data');
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.status.restartingLnd')
+            );
         await startLnd({
             lndDir,
             walletPassword: randomBase64,
