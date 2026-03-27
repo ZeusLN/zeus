@@ -1498,8 +1498,20 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        // Validate public key: must be 66-char hex (compressed secp256k1)
+        guard publicKey.count == 66,
+              publicKey.allSatisfy({ $0.isHexDigit }) else {
+            reject("error", "Invalid public key format", nil)
+            return
+        }
+
+        // Validate signature is non-empty
+        guard !signature.isEmpty else {
+            reject("error", "Signature cannot be empty", nil)
+            return
+        }
+
         let messageBytes = Array(message.utf8)
-        // PublicKey is a typealias for String, so use publicKey directly
         let isValid = node.verifySignature(msg: messageBytes, sig: signature, pkey: publicKey)
         resolve(["valid": isValid])
     }
