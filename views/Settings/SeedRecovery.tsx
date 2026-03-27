@@ -714,23 +714,74 @@ export default class SeedRecovery extends React.PureComponent<
                         isTestnet: network === 'testnet',
                         channelBackupsBase64,
                         channelDbUri,
-                        channelDbFileName
+                        channelDbFileName,
+                        setStatus: (msg) =>
+                            this.setState({
+                                successMsg: msg || ''
+                            })
                     });
 
                     const { wallet, seed, randomBase64 }: any = response;
 
                     if (wallet && wallet.admin_macaroon) {
-                        this.setState({
-                            adminMacaroon: wallet.admin_macaroon,
-                            seedPhrase: seed.cipher_seed_mnemonic,
-                            walletPassword: randomBase64,
-                            embeddedLndNetwork:
-                                network.charAt(0).toUpperCase() +
-                                network.slice(1),
-                            lndDir
-                        });
+                        let olympusRestoreSuccess = true;
 
-                        this.saveWalletConfiguration(recoveryCipherSeed);
+                        if (this.state.olympusRestorePending) {
+                            try {
+                                this.setState({
+                                    successMsg: localeString(
+                                        'views.Tools.migration.import.waitingForLnd'
+                                    )
+                                });
+
+                                const nodeInfo = await waitForRpcReady();
+
+                                this.setState({
+                                    successMsg: localeString(
+                                        'views.Tools.migration.import.downloadingFromOlympus'
+                                    )
+                                });
+
+                                await restoreChannelBackupFromOlympus(
+                                    lndDir,
+                                    nodeInfo.testnet,
+                                    nodeInfo.identity_pubkey,
+                                    recoveryCipherSeed
+                                );
+                            } catch (e: any) {
+                                olympusRestoreSuccess = false;
+                                this.setState({
+                                    errorCreatingWallet: true,
+                                    errorMsg: localeString(
+                                        'views.Tools.migration.import.olympusRestoreFailed',
+                                        {
+                                            error:
+                                                e.message || e.toString()
+                                        }
+                                    ),
+                                    loading: false
+                                });
+                            }
+                        }
+
+                        if (olympusRestoreSuccess) {
+                            this.setState(
+                                {
+                                    adminMacaroon: wallet.admin_macaroon,
+                                    seedPhrase: seed.cipher_seed_mnemonic,
+                                    walletPassword: randomBase64,
+                                    embeddedLndNetwork:
+                                        network.charAt(0).toUpperCase() +
+                                        network.slice(1),
+                                    lndDir
+                                },
+                                () => {
+                                    this.saveWalletConfiguration(
+                                        recoveryCipherSeed
+                                    );
+                                }
+                            );
+                        }
                     } else {
                         this.setState({
                             loading: false,
