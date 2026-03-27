@@ -191,8 +191,18 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     render() {
         const { navigation, SettingsStore, route } = this.props;
         const { understood, showModal } = this.state;
-        const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
+        // Get seed phrase based on implementation
+        let seedPhrase: string[] | undefined;
+        if (route.params?.seedPhrase) {
+            seedPhrase = route.params.seedPhrase;
+        } else if (SettingsStore.implementation === 'embedded-ldk-node') {
+            // LDK Node stores mnemonic as a string, convert to array
+            seedPhrase = SettingsStore.ldkMnemonic?.split(' ');
+        } else {
+            seedPhrase = SettingsStore.seedPhrase;
+        }
         const isRefundRescueKey = !!route.params?.seedPhrase;
+        const isTwelveWords = seedPhrase?.length === 12;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -282,7 +292,13 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     <></>
                                 )}
                                 <DangerouslyCopySeed />
-                                {isRefundRescueKey ? <></> : <QRExport />}
+                                {isRefundRescueKey ||
+                                SettingsStore.implementation ===
+                                    'embedded-ldk-node' ? (
+                                    <></>
+                                ) : (
+                                    <QRExport />
+                                )}
                             </Row>
                         ) : undefined
                     }
@@ -313,13 +329,20 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             margin: 10
                                         }}
                                     >
-                                        {isRefundRescueKey
-                                            ? localeString(
-                                                  'views.Swaps.rescueKey.dangerousText'
-                                              )
-                                            : localeString(
-                                                  'views.Settings.Seed.dangerousText1'
-                                              )}
+                                        {(() => {
+                                            const text = isRefundRescueKey
+                                                ? localeString(
+                                                      'views.Swaps.rescueKey.dangerousText'
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.Seed.dangerousText1'
+                                                  );
+                                            // Show correct word count based on seed length
+                                            if (isTwelveWords) {
+                                                return text.replace('24', '12');
+                                            }
+                                            return text;
+                                        })()}
                                     </Text>
                                     <Text
                                         style={{
@@ -337,7 +360,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             title={localeString(
                                                 'views.Settings.Seed.dangerousButton'
                                             )}
-                                            copyValue={seedPhrase.join(' ')}
+                                            copyValue={
+                                                seedPhrase?.join(' ') || ''
+                                            }
                                             icon={{
                                                 name: 'warning',
                                                 size: 25
@@ -379,11 +404,18 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 fontSize: 20
                             }}
                         >
-                            {localeString(
-                                isRefundRescueKey
-                                    ? 'views.Swaps.rescueKey.text1'
-                                    : 'views.Settings.Seed.text1'
-                            )}
+                            {(() => {
+                                const text = localeString(
+                                    isRefundRescueKey
+                                        ? 'views.Swaps.rescueKey.text1'
+                                        : 'views.Settings.Seed.text1'
+                                );
+                                // Show correct word count based on seed length
+                                if (isTwelveWords) {
+                                    return text.replace('24', '12');
+                                }
+                                return text;
+                            })()}
                         </Text>
                         <Text
                             style={{
@@ -508,15 +540,20 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                         navigation.popTo('Wallet');
                                     }
                                 }}
-                                title={
-                                    isRefundRescueKey
+                                title={(() => {
+                                    const text = isRefundRescueKey
                                         ? localeString(
                                               'views.Swaps.rescueKey.backupComplete'
                                           )
                                         : localeString(
                                               'views.Settings.Seed.backupComplete'
-                                          )
-                                }
+                                          );
+                                    // Show correct word count based on seed length
+                                    if (isTwelveWords) {
+                                        return text.replace('24', '12');
+                                    }
+                                    return text;
+                                })()}
                                 containerStyle={{ marginBottom: 10 }}
                             />
                             {isRefundRescueKey && (

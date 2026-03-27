@@ -21,6 +21,30 @@ const userFriendlyErrors: any = {
     Error: 'general.error'
 };
 
+// Parses LDK Node error strings from both platforms into clean messages.
+// Android: "org.lightningdevkit.ldknode.NodeException.RefundCreationFailed: Failed to create refund."
+// iOS:     "Error: RefundCreationFailed(message: \"Failed to create refund.\")"
+const parseLdkNodeError = (error: any): string => {
+    const str =
+        typeof error === 'string'
+            ? error
+            : error?.message || error?.toString?.() || '';
+
+    // Android: strip "org.lightningdevkit.ldknode.NodeException.<Type>: " prefix
+    // Inner class separator can be "." or "$" depending on context
+    const androidMatch = str.match(
+        /org\.lightningdevkit\.ldknode\.NodeException[.$]\w+:\s*(.+)/
+    );
+    if (androidMatch) return androidMatch[1].trim();
+
+    // iOS: extract message from "<Type>(message: "...")"
+    const iosMatch = str.match(/\w+\(message:\s*"(.+?)"\)/);
+    if (iosMatch) return iosMatch[1].trim();
+
+    // Fallback: strip generic "Error: " prefix
+    return str.replace(/^Error:\s*/, '').trim() || str;
+};
+
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
 
 const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
@@ -74,4 +98,4 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     return baseError;
 };
 
-export { errorToUserFriendly };
+export { errorToUserFriendly, parseLdkNodeError };

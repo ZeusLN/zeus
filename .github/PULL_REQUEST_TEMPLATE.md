@@ -35,7 +35,11 @@ I have tested this PR on the following platforms (please specify OS version and 
 
 I have tested this PR with the following types of nodes (please specify node version and API version where appropriate):
 
+On-device
 - [ ] Embedded LND
+- [ ] LDK Node
+
+Remote
 - [ ] LND (REST)
 - [ ] LND (Lightning Node Connect)
 - [ ] Core Lightning (CLNRest)

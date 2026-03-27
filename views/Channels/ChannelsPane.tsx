@@ -37,7 +37,9 @@ import ChannelsStore, {
 } from '../../stores/ChannelsStore';
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, {
+    getLspConfigForNetwork
+} from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -185,14 +187,12 @@ export default class ChannelsPane extends React.PureComponent<
     initFromProps(props: ChannelsProps) {
         const { NodeInfoStore, SettingsStore } = props;
 
-        let olympusPubkey, olympusHost;
-        if (NodeInfoStore?.nodeInfo.isTestNet) {
-            olympusPubkey = SettingsStore?.settings.lsps1PubkeyTestnet;
-            olympusHost = SettingsStore?.settings.lsps1HostTestnet;
-        } else {
-            olympusPubkey = SettingsStore?.settings.lsps1PubkeyMainnet;
-            olympusHost = SettingsStore?.settings.lsps1HostMainnet;
-        }
+        const lspConfig = getLspConfigForNetwork(
+            SettingsStore!.settings,
+            NodeInfoStore!.nodeInfo
+        );
+        const olympusPubkey = lspConfig.lsps1Pubkey;
+        const olympusHost = lspConfig.lsps1Host;
 
         this.setState({
             channelDestination: 'Olympus by ZEUS',
@@ -242,7 +242,12 @@ export default class ChannelsPane extends React.PureComponent<
                 return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
-            } else if (item.pendingClose || item.forceClose || item.closing) {
+            } else if (item.pendingClose || item.closing) {
+                return Status.Closing;
+            } else if (
+                item.forceClose &&
+                channelsType !== ChannelsType.Closed
+            ) {
                 return Status.Closing;
             } else {
                 return Status.Offline;
@@ -254,7 +259,7 @@ export default class ChannelsPane extends React.PureComponent<
             const currentBlockHeight =
                 NodeInfoStore?.nodeInfo?.currentBlockHeight;
 
-            const renewalInfo = LSPStore?.getExtendableOrdersData?.filter(
+            const renewalInfo = LSPStore?.getExtendableChannelsData?.filter(
                 (extendableChannel: any) => {
                     return (
                         extendableChannel.short_channel_id ===
@@ -339,7 +344,8 @@ export default class ChannelsPane extends React.PureComponent<
                         status={getStatus()}
                         pendingHTLCs={closedItem?.pending_htlcs?.length > 0}
                         pendingTimelock={
-                            closedItem.forceClose
+                            closedItem.forceClose &&
+                            closedItem.blocks_til_maturity > 0
                                 ? forceCloseTimeLabel(
                                       closedItem.blocks_til_maturity
                                   )
@@ -368,7 +374,7 @@ export default class ChannelsPane extends React.PureComponent<
                     status={getStatus()}
                     pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
-                        item.forceClose
+                        item.forceClose && item.blocks_til_maturity > 0
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
                             : undefined
                     }
@@ -534,7 +540,8 @@ export default class ChannelsPane extends React.PureComponent<
                             <View style={{ marginTop: 40 }}>
                                 <LoadingIndicator />
                             </View>
-                        ) : BackendUtils.supportsPendingChannels() ? (
+                        ) : BackendUtils.supportsPendingChannels() &&
+                          BackendUtils.supportsClosedChannels() ? (
                             <NavigationIndependentTree>
                                 <NavigationContainer
                                     theme={Theme}
@@ -572,6 +579,40 @@ export default class ChannelsPane extends React.PureComponent<
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Closed
+                                                    )
+                                            }}
+                                        />
+                                    </Tab.Navigator>
+                                </NavigationContainer>
+                            </NavigationIndependentTree>
+                        ) : BackendUtils.supportsPendingChannels() ? (
+                            <NavigationIndependentTree>
+                                <NavigationContainer
+                                    theme={Theme}
+                                    ref={this.tabNavigationRef}
+                                >
+                                    <Tab.Navigator
+                                        initialRouteName={initialRoute}
+                                        backBehavior="none"
+                                        screenOptions={getTabScreenOptions}
+                                    >
+                                        <Tab.Screen
+                                            name={openChannelsTabName}
+                                            component={OpenChannelsScreen}
+                                            listeners={{
+                                                focus: () =>
+                                                    setChannelsType(
+                                                        ChannelsType.Open
+                                                    )
+                                            }}
+                                        />
+                                        <Tab.Screen
+                                            name={pendingChannelsTabName}
+                                            component={PendingChannelsScreen}
+                                            listeners={{
+                                                focus: () =>
+                                                    setChannelsType(
+                                                        ChannelsType.Pending
                                                     )
                                             }}
                                         />

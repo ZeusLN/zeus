@@ -141,6 +141,15 @@ export default class KeypadPane extends React.PureComponent<
         if (prevState.amount !== this.state.amount) {
             this.amountInput = this.state.amount;
         }
+
+        // Switch out of ecash mode when channels become available
+        if (
+            this.state.ecashMode &&
+            this.props.ChannelsStore?.channels &&
+            this.props.ChannelsStore.channels.length > 0
+        ) {
+            this.setState({ ecashMode: false });
+        }
     }
 
     componentWillUnmount() {

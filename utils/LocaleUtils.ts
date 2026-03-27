@@ -79,7 +79,8 @@ const JAVA_LAYER_STRINGS = [
     'androidNotification.lndRunningBackground',
     'androidNotification.shutdown',
     'androidNotification.nwcRunningBackground',
-    'androidNotification.nwcShutdown'
+    'androidNotification.nwcShutdown',
+    'androidNotification.ldkNodeRunningBackground'
 ];
 
 export function localeString(

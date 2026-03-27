@@ -420,6 +420,8 @@ export default class EmbeddedLND extends LND {
     supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
+    supportsMessageVerification = () => true;
+    requiresVerifyPubkey = () => false;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
@@ -428,6 +430,8 @@ export default class EmbeddedLND extends LND {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsCircularRebalancing = () => true;
+    supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
@@ -456,8 +460,11 @@ export default class EmbeddedLND extends LND {
     supportsLSPScustomMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
+    supportsListingOffers = () => false;
+    supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
+    supportsCustomFeeLimit = () => true;
     isLNDBased = () => true;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => this.supports('v0.18.0');

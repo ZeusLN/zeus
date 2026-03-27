@@ -7,6 +7,7 @@ interface VerificationRequest {
     msg: string;
     signature: string;
     addr?: string;
+    pubkey?: string;
 }
 
 export default class MessageSignStore {
@@ -233,7 +234,8 @@ export default class MessageSignStore {
                 this.signingMode === 'lightning'
                     ? BackendUtils.verifyMessage({
                           msg: data.msg,
-                          signature: data.signature
+                          signature: data.signature,
+                          pubkey: data.pubkey
                       })
                     : BackendUtils.verifyMessageWithAddr(
                           data.msg,

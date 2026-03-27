@@ -57,6 +57,11 @@ import {
     retryOnTransientError,
     waitForRpcReady
 } from '../../utils/LndMobileUtils';
+import {
+    startLdkNodeWallet,
+    stopLdkNode,
+    DEFAULT_VSS_SERVER
+} from '../../utils/EmbeddedLdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -89,7 +94,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
-    INTERFACE_KEYS
+    INTERFACE_KEYS,
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -255,6 +261,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // 1. On initial wallet load to ensure proper initialization
             // 2. When exiting POS to handle potential lockscreen navigation
             // 3. When any settings are updated to refresh the UI state
+            console.log(
+                `[LDK startup] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
+            );
             this.getSettingsAndNavigate(shareIntentData);
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
@@ -322,6 +331,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
+                console.log(
+                    `[LDK startup] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
+                );
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
@@ -473,6 +485,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             lndDir,
             embeddedLndNetwork,
             isSqlite,
+            // LDK Node settings
+            ldkNodeDir,
+            ldkMnemonic,
+            ldkPassphrase,
+            embeddedLdkNetwork,
+            ldkEsploraServer,
+            ldkRgsServer,
+            ldkVssServer,
             updateSettings,
             fetchLock
         } = SettingsStore;
@@ -524,6 +544,93 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (fiatEnabled) {
             FiatStore.getFiatRates();
+        }
+
+        // Initialize and start LDK Node
+        if (implementation === 'embedded-ldk-node' && connecting) {
+            const justCreated = SettingsStore.walletJustCreated;
+
+            if (!justCreated) {
+                console.log('[LDK startup] stopping previous instance');
+                await stopLdkNode();
+                console.log('[LDK startup] stopped');
+            } else {
+                console.log(
+                    '[LDK startup] node already built, skipping stop + init'
+                );
+                SettingsStore.walletJustCreated = false;
+            }
+
+            if (ldkMnemonic && ldkNodeDir) {
+                // Get LSPS1 config from settings based on network
+                const lspConfig = getLspConfigForNetwork(
+                    settings,
+                    embeddedLdkNetwork || 'mainnet'
+                );
+                const lsps1Token = settings.lsps1Token;
+
+                const lsps1Config =
+                    lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+                        ? {
+                              nodeId: lspConfig.lsps1Pubkey,
+                              address: lspConfig.lsps1Host,
+                              token: lsps1Token || null
+                          }
+                        : undefined;
+
+                // Always include Flow LSP pubkey as trusted 0-conf peer
+                const flowLspPubkey = lspConfig.defaultPubkey;
+
+                // Include both the default Flow LSP and user-configured
+                // LSP as trusted 0-conf peers (dedup if they're the same)
+                const trustedPeers = [flowLspPubkey];
+                if (
+                    lsps1Config?.nodeId &&
+                    lsps1Config.nodeId !== flowLspPubkey
+                ) {
+                    trustedPeers.push(lsps1Config.nodeId);
+                }
+
+                console.log('[LDK startup] calling startLdkNodeWallet');
+                const ldkResult = await startLdkNodeWallet({
+                    nodeDir: ldkNodeDir,
+                    seedMnemonic: ldkMnemonic,
+                    passphrase: ldkPassphrase,
+                    network: (embeddedLdkNetwork || 'mainnet') as
+                        | 'mainnet'
+                        | 'testnet'
+                        | 'signet'
+                        | 'regtest',
+                    esploraServerUrl: ldkEsploraServer,
+                    rgsServerUrl: ldkRgsServer,
+                    lsps1Config,
+                    trustedPeers0conf: trustedPeers,
+                    vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                    skipInit: justCreated,
+                    onSyncStart: () => {
+                        SettingsStore.ldkNodeSyncing = true;
+                    }
+                });
+
+                console.log('[LDK startup] startLdkNodeWallet returned');
+                SettingsStore.ldkNodeSyncing = false;
+                if (ldkResult?.vssError) {
+                    AlertStore.setVssError(ldkResult.vssError);
+                }
+                if (ldkResult?.esploraError) {
+                    AlertStore.setEsploraError(ldkResult.esploraError);
+                }
+                if (ldkResult?.rgsError) {
+                    AlertStore.setRgsError(ldkResult.rgsError);
+                }
+
+                if (settings?.ecash?.enableCashu)
+                    await CashuStore.initializeWallets();
+            } else {
+                console.error(
+                    'LDK Node configuration missing mnemonic or nodeDir'
+                );
+            }
         }
 
         if (implementation === 'embedded-lnd') {
@@ -959,6 +1066,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'embedded-ldk-node') {
+            try {
+                console.log('[LDK startup] fetching node info');
+                await NodeInfoStore.getNodeInfo();
+                console.log('[LDK startup] fetching balance');
+                await BalanceStore.getCombinedBalance();
+                console.log('[LDK startup] polling channels');
+                ChannelsStore.getChannelsWithPolling().then(() => {
+                    // Check for sweep to self-custody threshold after channels are online
+                    if (settings?.ecash?.enableCashu) {
+                        CashuStore.checkAndSweepMints();
+                        CashuStore.checkAndShowUpgradeModal(
+                            0,
+                            CashuStore.totalBalanceSats || 0
+                        );
+                    }
+                });
+
+                if (recovery) {
+                    await updateSettings({
+                        recovery: false
+                    });
+                }
+            } catch (connectionError) {
+                console.log('LDK Node connection failed:', connectionError);
+                NodeInfoStore.handleGetNodeInfoError();
+                setConnectingStatus(false);
+                return;
+            }
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
@@ -1019,7 +1155,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting && start != null) {
             console.log(
-                'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
+                '[LDK startup] connect time: ' +
+                    (new Date().getTime() - start) / 1000 +
+                    's'
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
@@ -1197,7 +1335,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         const implementationDisplayValue: ImplementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
@@ -1577,10 +1715,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             : settings.nodes &&
                                               loggedIn &&
                                               implementation
-                                            ? implementation === 'embedded-lnd'
+                                            ? BackendUtils.isLocalWallet()
                                                 ? isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                    : SettingsStore.ldkNodeSyncing
+                                                    ? localeString(
+                                                          'views.Sync.title'
                                                       ).replace('Zeus', 'ZEUS')
                                                     : localeString(
                                                           'views.Wallet.Wallet.startingNode'

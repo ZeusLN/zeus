@@ -1,15 +1,30 @@
-VERSION=v0.20.0-beta-zeus
+# All library versions and hashes are defined in fetch-libraries-versions.json
+LV="fetch-libraries-versions.json"
+jq() { python3 -c "import json; print(json.load(open('$LV'))$1)"; }
 
-ANDROID_FILE=Lndmobile.aar
-IOS_FILE=Lndmobile.xcframework
+EMBEDDED_LND_VERSION=$(jq "['embedded-lnd']['version']")
+EMBEDDED_LND_ANDROID_SHA256=$(jq "['embedded-lnd']['androidSha256']")
+EMBEDDED_LND_IOS_SHA256=$(jq "['embedded-lnd']['iosSha256']")
+LDK_NODE_VERSION=$(jq "['ldk-node']['version']")
+LDK_NODE_IOS_SHA256=$(jq "['ldk-node']['iosSha256']")
+CDK_VERSION=$(jq "['cdk']['version']")
+CDK_ANDROID_SHA256=$(jq "['cdk']['androidSha256']")
+CDK_IOS_SHA256=$(jq "['cdk']['iosSha256']")
+RESTORE_VERSION=$(jq "['zeus-cashu-restore']['version']")
+RESTORE_ANDROID_SHA256=$(jq "['zeus-cashu-restore']['androidSha256']")
+RESTORE_IOS_SHA256=$(jq "['zeus-cashu-restore']['iosSha256']")
 
-ANDROID_SHA256='f984f0a910fcec0b4aedafcb1a7b5e8ca40a122646774d54ba0156a7075e87ab'
-IOS_SHA256='018bf400f48cfe838c605d99b310955187c476dd382623b2cb8f2235b5dfb74a'
+EMBEDDED_LND_ANDROID_FILE=Lndmobile.aar
+EMBEDDED_LND_IOS_FILE=Lndmobile.xcframework
 
-FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$VERSION/
+EMBEDDED_LND_FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$EMBEDDED_LND_VERSION/
 
-ANDROID_LINK=$FILE_PATH$ANDROID_FILE
-IOS_LINK=$FILE_PATH$IOS_FILE.zip
+EMBEDDED_LND_ANDROID_LINK=$EMBEDDED_LND_FILE_PATH$EMBEDDED_LND_ANDROID_FILE
+EMBEDDED_LND_IOS_LINK=$EMBEDDED_LND_FILE_PATH$EMBEDDED_LND_IOS_FILE.zip
+
+# LDK Node
+LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
+LDK_NODE_IOS_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
 
 # test that curl and unzip are installed
 if ! command -v curl &> /dev/null
@@ -28,17 +43,17 @@ fi
 # Android #
 ###########
 
-if ! echo "$ANDROID_SHA256 android/lndmobile/$ANDROID_FILE" | sha256sum -c -; then
+if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_FILE" | sha256sum -c -; then
     echo "Android library file missing or checksum failed" >&2
 
     # delete old instance of library file
-    rm android/lndmobile/$ANDROID_FILE
+    rm android/lndmobile/$EMBEDDED_LND_ANDROID_FILE
 
     # download Android LND library file
-    curl -L $ANDROID_LINK > android/lndmobile/$ANDROID_FILE
+    curl -L $EMBEDDED_LND_ANDROID_LINK > android/lndmobile/$EMBEDDED_LND_ANDROID_FILE
 
     # check checksum
-    if ! echo "$ANDROID_SHA256 android/lndmobile/$ANDROID_FILE" | sha256sum -c -; then
+    if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_FILE" | sha256sum -c -; then
         echo "Android checksum failed" >&2
         exit 1
     fi
@@ -50,41 +65,37 @@ fi
 
 mkdir ios/LndMobileLibZipFile
 
-if ! echo "$IOS_SHA256 ios/LndMobileLibZipFile/$IOS_FILE.zip" | sha256sum -c -; then
+if ! echo "$EMBEDDED_LND_IOS_SHA256 ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip" | sha256sum -c -; then
     echo "iOS library file missing or checksum failed" >&2
 
     # delete old instance of library file
-    rm ios/LndMobileLibZipFile/$IOS_FILE.zip
+    rm ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip
 
     # download iOS LND library file
-    curl -L $IOS_LINK > ios/LndMobileLibZipFile/$IOS_FILE.zip
+    curl -L $EMBEDDED_LND_IOS_LINK > ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip
 
     # check checksum
-    if ! echo "$IOS_SHA256 ios/LndMobileLibZipFile/$IOS_FILE.zip" | sha256sum -c -; then
+    if ! echo "$EMBEDDED_LND_IOS_SHA256 ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip" | sha256sum -c -; then
         echo "iOS checksum failed" >&2
         exit 1
     fi
 fi
 
 # delete old instances of library files
-rm -rf ios/LncMobile/$IOS_FILE
+rm -rf ios/LncMobile/$EMBEDDED_LND_IOS_FILE
 
 # unzip LND library file
-unzip ios/LndMobileLibZipFile/$IOS_FILE.zip -d ios/LncMobile
+unzip ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip -d ios/LncMobile
 
 ###############
 # CashuDevKit #
 ###############
 
-CDK_VERSION=0.14.2
 # Local filename (what we save as)
 CDK_ANDROID_FILE=cashudevkit.aar
 CDK_IOS_FILE=cdkFFI.xcframework
 # Remote filename (what's on GitHub releases)
 CDK_ANDROID_REMOTE=cdk-kotlin-$CDK_VERSION.aar
-
-CDK_ANDROID_SHA256='e8e9ee354cf21546e49946d351a6c482355f8b3800c60a8a9348c4ae40f529cb'
-CDK_IOS_SHA256='5c4a152cdcd6aaa6bbd1aef65c43eaeeb6ebde3f0f365fb2254cefbc49d5ea49'
 
 CDK_FILE_PATH=https://github.com/cashubtc/cdk-kotlin/releases/download/v$CDK_VERSION/
 CDK_IOS_PATH=https://github.com/cashubtc/cdk-swift/releases/download/v$CDK_VERSION/
@@ -169,12 +180,8 @@ echo "CashuDevKit Swift bindings updated to v$CDK_VERSION"
 # Zeus Cashu Restore #
 ######################
 
-RESTORE_VERSION=0.1.0
 RESTORE_ANDROID_FILE=zeus-cashu-restore.aar
 RESTORE_IOS_FILE=zeusRestoreFFI.xcframework
-
-RESTORE_ANDROID_SHA256='a067b281e99489cbfae66717b3c14196033fb864be6742f994a9ae71f886f85a'
-RESTORE_IOS_SHA256='a5b98ce83f242b670e492e914d51a96f05e27e7c3b4c6dbde2663bb5fa720ea5'
 
 RESTORE_PATH=https://github.com/ZeusLN/zeus-cashu-restore/releases/download/v$RESTORE_VERSION/
 
@@ -262,3 +269,31 @@ echo "Downloading Zeus Cashu Restore Kotlin bindings..." >&2
 curl -L "$RESTORE_KOTLIN_BINDINGS_URL" > "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
 
 echo "Zeus Cashu Restore Kotlin bindings updated to v$RESTORE_VERSION"
+
+################
+# LDK Node iOS #
+################
+
+mkdir -p ios/LdkNodeLibZipFile
+
+if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+    echo "LDK Node iOS library file missing or checksum failed" >&2
+
+    # delete old instance of library file
+    rm -f ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # download LDK Node iOS library file
+    curl -L $LDK_NODE_IOS_LINK > ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # check checksum
+    if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+        echo "LDK Node iOS checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# delete old instances of library files
+rm -rf ios/LdkNodeMobile/$LDK_NODE_IOS_FILE
+
+# unzip LDK Node library file
+unzip ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip -d ios/LdkNodeMobile

@@ -226,11 +226,15 @@ export default class Channel extends BaseModel {
 
     @computed
     public get shortChannelId(): string | undefined {
-        return this.short_channel_id
-            ? this.short_channel_id
-            : this.channelId
-            ? chanFormat({ number: this.channelId }).channel
-            : undefined;
+        if (this.short_channel_id) return this.short_channel_id;
+        if (this.chan_id) {
+            try {
+                return chanFormat({ number: this.chan_id }).channel;
+            } catch (e) {
+                return undefined;
+            }
+        }
+        return undefined;
     }
 
     @computed

@@ -39,6 +39,7 @@ export default class NewChannelModal extends React.Component<
         } = ModalStore;
 
         const supportsLSPS1 =
+            BackendUtils.supportsLSPS1native() ||
             BackendUtils.supportsLSPScustomMessage() ||
             BackendUtils.supportsLSPS1rest();
 

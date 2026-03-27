@@ -212,6 +212,7 @@ export default class PaymentView extends React.Component<
                                             debit
                                             sensitive
                                             toggleable
+                                            forceMsats
                                         />
                                         {getFeePercentage && (
                                             <Text

@@ -40,11 +40,14 @@ interface SignVerifyMessageState {
     messageToSign: string;
     messageToVerify: string;
     signatureToVerify: string;
+    pubkeyToVerify: string;
     selectedIndex: number;
     signingMethodIndex: number;
     selectedAddress: string;
     signingMode: string;
     supportsAddressMessageSigning: boolean;
+    supportsMessageVerification: boolean;
+    requiresVerifyPubkey: boolean;
     loading: boolean;
 }
 
@@ -60,11 +63,14 @@ export default class SignVerifyMessage extends React.Component<
         messageToSign: '',
         messageToVerify: '',
         signatureToVerify: '',
+        pubkeyToVerify: '',
         selectedIndex: 0,
         signingMethodIndex: 0,
         selectedAddress: '',
         signingMode: 'lightning',
         supportsAddressMessageSigning: false,
+        supportsMessageVerification: true,
+        requiresVerifyPubkey: false,
         loading: false
     };
 
@@ -85,6 +91,14 @@ export default class SignVerifyMessage extends React.Component<
                     this.checkForAddressSelection();
                 }
             );
+        }
+
+        if (!BackendUtils.supportsMessageVerification()) {
+            this.setState({ supportsMessageVerification: false });
+        }
+
+        if (BackendUtils.requiresVerifyPubkey()) {
+            this.setState({ requiresVerifyPubkey: true });
         }
 
         this.handleRouteParams(route?.params || {});
@@ -219,6 +233,7 @@ export default class SignVerifyMessage extends React.Component<
             messageToSign: '',
             messageToVerify: '',
             signatureToVerify: '',
+            pubkeyToVerify: '',
             selectedAddress: ''
         });
 
@@ -603,7 +618,7 @@ export default class SignVerifyMessage extends React.Component<
                                     'views.Settings.SignMessage.success'
                                 )}
                             />
-                            {pubkey && (
+                            {pubkey && !this.state.requiresVerifyPubkey && (
                                 <View style={styles.copyBoxContainer}>
                                     <CopyBox
                                         heading={localeString(
@@ -668,10 +683,12 @@ export default class SignVerifyMessage extends React.Component<
         const {
             messageToVerify,
             signatureToVerify,
+            pubkeyToVerify,
             selectedAddress,
-            signingMode
+            signingMode,
+            requiresVerifyPubkey,
+            supportsAddressMessageSigning
         } = this.state;
-        const { supportsAddressMessageSigning } = this.state;
 
         if (!messageToVerify || messageToVerify.trim() === '') {
             Alert.alert(
@@ -685,6 +702,16 @@ export default class SignVerifyMessage extends React.Component<
         if (!signatureToVerify || signatureToVerify.trim() === '') {
             Alert.alert(
                 localeString('views.Settings.SignMessage.pleaseEnterSignature')
+            );
+            return false;
+        }
+
+        if (
+            requiresVerifyPubkey &&
+            (!pubkeyToVerify || pubkeyToVerify.trim() === '')
+        ) {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterPubkey')
             );
             return false;
         }
@@ -715,7 +742,8 @@ export default class SignVerifyMessage extends React.Component<
         } = this.state;
         const { signMessage, signature } = MessageSignStore;
 
-        const { supportsAddressMessageSigning } = this.state;
+        const { supportsAddressMessageSigning, supportsMessageVerification } =
+            this.state;
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -781,23 +809,25 @@ export default class SignVerifyMessage extends React.Component<
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={buttonElements}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('text'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
+                    {supportsMessageVerification && (
+                        <ButtonGroup
+                            onPress={this.updateIndex}
+                            selectedIndex={selectedIndex}
+                            buttons={buttonElements}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('text'),
+                                borderRadius: 12
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary')
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
+                    )}
 
                     {supportsAddressMessageSigning && (
                         <Text
@@ -854,6 +884,8 @@ export default class SignVerifyMessage extends React.Component<
                                             text
                                         );
                                     }}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
                                     multiline
                                     style={{
                                         height: 100
@@ -872,7 +904,7 @@ export default class SignVerifyMessage extends React.Component<
                                     }}
                                     onPress={() => {
                                         if (this.validateSigningInput()) {
-                                            signMessage(messageToSign);
+                                            signMessage(messageToSign.trim());
                                         }
                                     }}
                                 />
@@ -929,6 +961,8 @@ export default class SignVerifyMessage extends React.Component<
                                         );
                                     }}
                                     locked={loading}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
                                     multiline
                                     style={{
                                         height: 100
@@ -955,6 +989,8 @@ export default class SignVerifyMessage extends React.Component<
                                             text
                                         );
                                     }}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
                                     multiline
                                     style={{
                                         height: 100
@@ -962,6 +998,33 @@ export default class SignVerifyMessage extends React.Component<
                                     locked={loading}
                                 />
                             </View>
+
+                            {this.state.requiresVerifyPubkey && (
+                                <View style={styles.form}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.SignMessage.pubkeyToVerify'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={this.state.pubkeyToVerify}
+                                        onChangeText={(text: string) => {
+                                            this.handleTextInputChange(
+                                                'pubkeyToVerify',
+                                                text
+                                            );
+                                        }}
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        locked={loading}
+                                    />
+                                </View>
+                            )}
 
                             {this.renderVerificationResult()}
 
@@ -1001,6 +1064,7 @@ export default class SignVerifyMessage extends React.Component<
         const {
             messageToVerify,
             signatureToVerify,
+            pubkeyToVerify,
             selectedAddress,
             signingMode
         } = this.state;
@@ -1012,8 +1076,9 @@ export default class SignVerifyMessage extends React.Component<
         const { supportsAddressMessageSigning } = this.state;
 
         const verifyRequest = {
-            msg: messageToVerify,
-            signature: signatureToVerify,
+            msg: messageToVerify.trim(),
+            signature: signatureToVerify.trim(),
+            pubkey: pubkeyToVerify.trim() || undefined,
             addr:
                 supportsAddressMessageSigning && signingMode === 'onchain'
                     ? selectedAddress

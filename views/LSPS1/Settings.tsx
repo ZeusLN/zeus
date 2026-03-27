@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
-import { FlatList, View, Text } from 'react-native';
+import { FlatList, View, Text, Alert } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RNRestart from 'react-native-restart';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -19,10 +20,14 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
     DEFAULT_LSPS1_PUBKEY_MAINNET,
     DEFAULT_LSPS1_PUBKEY_TESTNET,
+    DEFAULT_LSPS1_PUBKEY_MUTINYNET,
     DEFAULT_LSPS1_HOST_MAINNET,
     DEFAULT_LSPS1_HOST_TESTNET,
+    DEFAULT_LSPS1_HOST_MUTINYNET,
     DEFAULT_LSPS1_REST_MAINNET,
-    DEFAULT_LSPS1_REST_TESTNET
+    DEFAULT_LSPS1_REST_TESTNET,
+    DEFAULT_LSPS1_REST_MUTINYNET,
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 
 import Olympus from '../../assets/images/SVG/Olympus.svg';
@@ -39,6 +44,11 @@ interface LSPS1SettingsState {
     host: string;
     restHost: string;
     lsps1Token: string;
+    // Track original values for native LSPS1 to detect changes
+    originalPubkey: string;
+    originalHost: string;
+    originalToken: string;
+    nativeSettingsChanged: boolean;
 }
 
 @inject('LSPStore', 'NodeInfoStore', 'SettingsStore')
@@ -53,7 +63,11 @@ export default class LSPS1Settings extends React.Component<
             pubkey: '',
             host: '',
             restHost: '',
-            lsps1Token: ''
+            lsps1Token: '',
+            originalPubkey: '',
+            originalHost: '',
+            originalToken: '',
+            nativeSettingsChanged: false
         };
     }
 
@@ -62,67 +76,119 @@ export default class LSPS1Settings extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
+        const pubkey = LSPStore.getLSPSPubkey();
+        const host = LSPStore.getLSPSHost();
+        const token = settings?.lsps1Token || '';
+
         this.setState({
-            pubkey: LSPStore.getLSPSPubkey(),
-            host: LSPStore.getLSPSHost(),
+            pubkey,
+            host,
             restHost: LSPStore.getLSPS1Rest(),
-            lsps1Token: settings?.lsps1Token || ''
+            lsps1Token: token,
+            originalPubkey: pubkey,
+            originalHost: host,
+            originalToken: token
         });
     }
 
+    checkNativeSettingsChanged = () => {
+        const {
+            pubkey,
+            host,
+            lsps1Token,
+            originalPubkey,
+            originalHost,
+            originalToken
+        } = this.state;
+        const changed =
+            pubkey !== originalPubkey ||
+            host !== originalHost ||
+            lsps1Token !== originalToken;
+        this.setState({ nativeSettingsChanged: changed });
+    };
+
+    showRestartPrompt = () => {
+        Alert.alert(
+            localeString('views.LSPS1.restartRequired'),
+            localeString('views.LSPS1.restartRequiredDescription'),
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.LSPS1.restartNow'),
+                    onPress: () => RNRestart.restart()
+                }
+            ]
+        );
+    };
+
     handleReset = async () => {
-        const isTestNet = this.props.NodeInfoStore?.nodeInfo?.isTestNet;
+        const { nodeInfo } = this.props.NodeInfoStore!;
+        const { settings } = this.props.SettingsStore;
+        const defaults = getLspConfigForNetwork(
+            {
+                ...settings,
+                lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
+                lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+                lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
+                lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
+                lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+                lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+                lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
+                lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+                lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET
+            },
+            nodeInfo
+        );
         this.setState({
-            pubkey: isTestNet
-                ? DEFAULT_LSPS1_PUBKEY_TESTNET
-                : DEFAULT_LSPS1_PUBKEY_MAINNET,
-            host: isTestNet
-                ? DEFAULT_LSPS1_HOST_TESTNET
-                : DEFAULT_LSPS1_HOST_MAINNET,
-            restHost: isTestNet
-                ? DEFAULT_LSPS1_REST_TESTNET
-                : DEFAULT_LSPS1_REST_MAINNET,
+            pubkey: defaults.lsps1Pubkey,
+            host: defaults.lsps1Host,
+            restHost: defaults.lsps1Rest,
             lsps1Token: ''
         });
         await this.props.SettingsStore.updateSettings({
             lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
             lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+            lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
             lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
             lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+            lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
             lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
             lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+            lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET,
             lsps1Token: ''
         });
     };
 
     render() {
-        const { pubkey, host, restHost, lsps1Token } = this.state;
+        const { pubkey, host, restHost, lsps1Token, nativeSettingsChanged } =
+            this.state;
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { updateSettings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
 
-        const isOlympusMainnetCustom =
-            !nodeInfo.isTestNet &&
-            pubkey === DEFAULT_LSPS1_PUBKEY_MAINNET &&
-            host === DEFAULT_LSPS1_HOST_MAINNET;
-        const isOlympusTestnetCustom =
-            nodeInfo?.isTestNet &&
-            pubkey === DEFAULT_LSPS1_PUBKEY_TESTNET &&
-            host === DEFAULT_LSPS1_HOST_TESTNET;
+        const lspConfig = getLspConfigForNetwork(
+            SettingsStore.settings,
+            nodeInfo
+        );
+        const isMutinynet = nodeInfo?.isMutinynet;
+        const isTestNet = nodeInfo?.isTestNet;
 
-        const isOlympusMainnetRest =
-            !nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_MAINNET;
-        const isOlympusTestnetRest =
-            nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_TESTNET;
+        const isOlympusCustom =
+            pubkey === lspConfig.defaultPubkey && host === lspConfig.lsps1Host;
+        const isOlympusRestMatch = restHost === lspConfig.lsps1Rest;
 
         const isOlympusCustomMessage =
-            BackendUtils.supportsLSPScustomMessage() &&
-            (isOlympusMainnetCustom || isOlympusTestnetCustom);
+            BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
         const isOlympusRest =
-            BackendUtils.supportsLSPS1rest() &&
-            (isOlympusMainnetRest || isOlympusTestnetRest);
+            BackendUtils.supportsLSPS1rest() && isOlympusRestMatch;
+        const isOlympusNative =
+            BackendUtils.supportsLSPS1native() && isOlympusCustom;
 
-        const isOlympus = isOlympusCustomMessage || isOlympusRest;
+        const isOlympus =
+            isOlympusCustomMessage || isOlympusRest || isOlympusNative;
 
         return (
             <Screen>
@@ -140,6 +206,119 @@ export default class LSPS1Settings extends React.Component<
                     navigation={navigation}
                 />
                 <View style={{ flex: 1, padding: 12 }}>
+                    {BackendUtils.supportsLSPS1native() && (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginBottom: 16
+                                }}
+                            >
+                                {localeString(
+                                    'views.LSPS1.nativeLsps1Description'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 16
+                                }}
+                            >
+                                {localeString('views.OpenChannel.nodePubkey')}
+                            </Text>
+                            <TextInput
+                                value={pubkey}
+                                placeholder={'0A...'}
+                                onChangeText={async (text: string) => {
+                                    this.setState(
+                                        { pubkey: text },
+                                        this.checkNativeSettingsChanged
+                                    );
+                                    await updateSettings(
+                                        isMutinynet
+                                            ? { lsps1PubkeyMutinynet: text }
+                                            : isTestNet
+                                            ? { lsps1PubkeyTestnet: text }
+                                            : { lsps1PubkeyMainnet: text }
+                                    );
+                                }}
+                            />
+
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 16,
+                                    marginTop: 12
+                                }}
+                            >
+                                {localeString('views.OpenChannel.host')}
+                            </Text>
+                            <TextInput
+                                value={host}
+                                placeholder={localeString(
+                                    'views.OpenChannel.hostPort'
+                                )}
+                                onChangeText={async (text: string) => {
+                                    this.setState(
+                                        { host: text },
+                                        this.checkNativeSettingsChanged
+                                    );
+                                    await updateSettings(
+                                        isMutinynet
+                                            ? { lsps1HostMutinynet: text }
+                                            : isTestNet
+                                            ? { lsps1HostTestnet: text }
+                                            : { lsps1HostMainnet: text }
+                                    );
+                                }}
+                            />
+
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 16,
+                                    marginTop: 12
+                                }}
+                            >
+                                {localeString('general.discountCode')}
+                            </Text>
+                            <TextInput
+                                value={lsps1Token}
+                                onChangeText={async (text: string) => {
+                                    this.setState(
+                                        { lsps1Token: text },
+                                        this.checkNativeSettingsChanged
+                                    );
+                                    await updateSettings({ lsps1Token: text });
+                                }}
+                                autoCapitalize="none"
+                            />
+
+                            {nativeSettingsChanged && (
+                                <Button
+                                    containerStyle={{ paddingTop: 20 }}
+                                    title={localeString(
+                                        'views.LSPS1.restartToApply'
+                                    )}
+                                    onPress={this.showRestartPrompt}
+                                    warning
+                                />
+                            )}
+
+                            {!isOlympus && (
+                                <Button
+                                    containerStyle={{ paddingTop: 20 }}
+                                    title={localeString('general.reset')}
+                                    onPress={async () => {
+                                        await this.handleReset();
+                                        this.checkNativeSettingsChanged();
+                                    }}
+                                />
+                            )}
+                        </>
+                    )}
                     {BackendUtils.supportsLSPScustomMessage() && (
                         <>
                             <Text
@@ -209,49 +388,45 @@ export default class LSPS1Settings extends React.Component<
                             </Text>
                             <TextInput
                                 value={restHost}
-                                placeholder={
-                                    nodeInfo.isTestNet
-                                        ? DEFAULT_LSPS1_REST_TESTNET
-                                        : DEFAULT_LSPS1_REST_MAINNET
-                                }
+                                placeholder={lspConfig.lsps1Rest}
                                 onChangeText={async (text: string) => {
                                     this.setState({ restHost: text });
                                     await updateSettings(
-                                        nodeInfo?.isTestNet
-                                            ? {
-                                                  lsps1RestTestnet: text
-                                              }
-                                            : {
-                                                  lsps1RestMainnet: text
-                                              }
+                                        isMutinynet
+                                            ? { lsps1RestMutinynet: text }
+                                            : isTestNet
+                                            ? { lsps1RestTestnet: text }
+                                            : { lsps1RestMainnet: text }
                                     );
                                 }}
                             />
                         </>
                     )}
-                    <>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontSize: 16,
-                                marginTop: 12
-                            }}
-                        >
-                            {localeString('general.discountCode')}
-                        </Text>
-                        <TextInput
-                            value={lsps1Token}
-                            onChangeText={async (text: string) => {
-                                this.setState({ lsps1Token: text });
-                                await updateSettings({
-                                    lsps1Token: text
-                                });
-                            }}
-                            autoCapitalize="none"
-                        />
-                    </>
+                    {!BackendUtils.supportsLSPS1native() && (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 16,
+                                    marginTop: 12
+                                }}
+                            >
+                                {localeString('general.discountCode')}
+                            </Text>
+                            <TextInput
+                                value={lsps1Token}
+                                onChangeText={async (text: string) => {
+                                    this.setState({ lsps1Token: text });
+                                    await updateSettings({
+                                        lsps1Token: text
+                                    });
+                                }}
+                                autoCapitalize="none"
+                            />
+                        </>
+                    )}
 
-                    {!isOlympus && (
+                    {!BackendUtils.supportsLSPS1native() && !isOlympus && (
                         <Button
                             containerStyle={{ paddingTop: 30 }}
                             title={localeString('general.reset')}

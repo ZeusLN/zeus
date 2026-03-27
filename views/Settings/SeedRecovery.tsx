@@ -44,13 +44,23 @@ import {
     stopLnd
 } from '../../utils/LndMobileUtils';
 
+import {
+    createLdkNodeWallet,
+    stopLdkNode,
+    getDefaultEsploraServer,
+    getDefaultRgsServer,
+    DEFAULT_VSS_SERVER
+} from '../../utils/EmbeddedLdkNodeUtils';
+
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 
 import SettingsStore, {
     DEFAULT_SWAP_HOST_MAINNET,
     DEFAULT_SWAP_HOST_TESTNET,
     SWAP_HOST_KEYS_MAINNET,
-    SWAP_HOST_KEYS_TESTNET
+    SWAP_HOST_KEYS_TESTNET,
+    EMBEDDED_NODE_NETWORK_KEYS,
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
@@ -67,6 +77,7 @@ interface SeedRecoveryProps {
         'SeedRecovery',
         {
             network: string;
+            implementation?: string;
             restoreSwaps?: boolean;
             restoreRescueKey?: boolean;
             nickname?: string;
@@ -101,6 +112,12 @@ interface SeedRecoveryState {
     showClipboardPrompt: boolean;
     clipboardSeedArray: string[];
     showValidation: boolean;
+    // LDK Node specific
+    implementation: string;
+    ldkMnemonic: string;
+    ldkPassphrase: string;
+    ldkNodeDir: string;
+    embeddedLdkNetwork: string;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -142,7 +159,13 @@ export default class SeedRecovery extends React.PureComponent<
             invalidInput: false,
             showClipboardPrompt: false,
             clipboardSeedArray: [],
-            showValidation: false
+            showValidation: false,
+            // LDK Node defaults
+            implementation: 'embedded-lnd',
+            ldkMnemonic: '',
+            ldkPassphrase: '',
+            ldkNodeDir: '',
+            embeddedLdkNetwork: 'mainnet'
         };
     }
 
@@ -173,9 +196,17 @@ export default class SeedRecovery extends React.PureComponent<
 
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
+        const implementation =
+            props.route.params?.implementation ?? 'embedded-lnd';
         const restoreSwaps = props.route.params?.restoreSwaps ?? false;
         const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
-        this.setState({ network, restoreSwaps, restoreRescueKey });
+        this.setState({
+            network,
+            implementation,
+            restoreSwaps,
+            restoreRescueKey,
+            embeddedLdkNetwork: network
+        });
     }
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {
@@ -211,8 +242,8 @@ export default class SeedRecovery extends React.PureComponent<
 
         let nodes: any;
         if (settings.nodes) {
-            nodes = settings.nodes || [];
-            nodes[nodes.length] = node;
+            nodes = [...settings.nodes];
+            nodes.push(node);
         } else {
             nodes = [node];
         }
@@ -236,6 +267,59 @@ export default class SeedRecovery extends React.PureComponent<
         });
     };
 
+    saveLdkNodeWalletConfiguration = (
+        mnemonic: string,
+        nodeDir: string,
+        network: string
+    ) => {
+        const { SettingsStore, navigation, route } = this.props;
+        const { ldkPassphrase } = this.state;
+        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+
+        const nickname = route.params?.nickname;
+        const photo = route.params?.photo;
+
+        const networkType = network as
+            | 'mainnet'
+            | 'testnet'
+            | 'signet'
+            | 'regtest';
+
+        const node = {
+            nickname,
+            photo,
+            implementation: 'embedded-ldk-node',
+            embeddedLdkNetwork: network,
+            ldkNodeDir: nodeDir,
+            ldkMnemonic: mnemonic,
+            ldkPassphrase,
+            ldkEsploraServer: getDefaultEsploraServer(networkType),
+            ldkRgsServer: getDefaultRgsServer(networkType),
+            ldkVssServer: DEFAULT_VSS_SERVER
+        };
+
+        let nodes: any;
+        if (settings.nodes) {
+            nodes = [...settings.nodes];
+            nodes.push(node);
+        } else {
+            nodes = [node];
+        }
+
+        updateSettings({
+            nodes,
+            selectedNode: nodes.length - 1,
+            recovery: true
+        }).then(async () => {
+            setConnectingStatus(true);
+            if (nodes.length === 1) {
+                navigation.popTo('Wallet');
+            } else {
+                navigation.popTo('Wallets');
+            }
+        });
+    };
+
     render() {
         const { navigation, NodeInfoStore, SwapStore } = this.props;
         const {
@@ -253,7 +337,8 @@ export default class SeedRecovery extends React.PureComponent<
             restoreRescueKey,
             rescueHost,
             customRescueHost,
-            showValidation
+            showValidation,
+            implementation
         } = this.state;
 
         const invalidWordIndices: number[] = showValidation
@@ -293,11 +378,13 @@ export default class SeedRecovery extends React.PureComponent<
                             } else if (selectedWordIndex != null) {
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
-                                const isRestoreMode =
-                                    restoreSwaps || restoreRescueKey;
+                                const is12WordMode =
+                                    restoreSwaps ||
+                                    restoreRescueKey ||
+                                    implementation === 'embedded-ldk-node';
                                 if (
-                                    (isRestoreMode && selectedWordIndex < 11) ||
-                                    (!isRestoreMode && selectedWordIndex < 23)
+                                    (is12WordMode && selectedWordIndex < 11) ||
+                                    (!is12WordMode && selectedWordIndex < 23)
                                 ) {
                                     this.setState({
                                         selectedWordIndex:
@@ -439,27 +526,98 @@ export default class SeedRecovery extends React.PureComponent<
 
             this.setState({ loading: true });
 
-            await stopLnd();
+            if (implementation === 'embedded-ldk-node') {
+                // LDK Node restore
+                await stopLdkNode();
 
-            await optimizeNeutrinoPeers(network === 'testnet');
+                const mnemonic = seedArray.join(' ');
+                const nodeDir = uuidv4();
 
-            const recoveryCipherSeed = seedArray.join(' ');
+                try {
+                    // Get LSPS1 config from settings based on network
+                    const { SettingsStore } = this.props;
+                    const { settings } = SettingsStore;
+                    const lspConfig = getLspConfigForNetwork(
+                        settings,
+                        network || 'mainnet'
+                    );
+                    const lsps1Token = settings.lsps1Token;
 
-            const lndDir = uuidv4();
+                    const lsps1Config =
+                        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+                            ? {
+                                  nodeId: lspConfig.lsps1Pubkey,
+                                  address: lspConfig.lsps1Host,
+                                  token: lsps1Token || null
+                              }
+                            : undefined;
 
-            try {
-                const response = await createLndWallet({
-                    lndDir,
-                    seedMnemonic: recoveryCipherSeed,
-                    isTestnet: network === 'testnet',
-                    channelBackupsBase64
-                });
+                    // Always include Flow LSP pubkey as trusted 0-conf peer
+                    const flowLspPubkey = lspConfig.defaultPubkey;
 
-                const { wallet, seed, randomBase64 }: any = response;
+                    const trustedPeers = [flowLspPubkey];
+                    if (
+                        lsps1Config?.nodeId &&
+                        lsps1Config.nodeId !== flowLspPubkey
+                    ) {
+                        trustedPeers.push(lsps1Config.nodeId);
+                    }
 
-                if (wallet && wallet.admin_macaroon) {
-                    this.setState(
-                        {
+                    const networkType = network as
+                        | 'mainnet'
+                        | 'testnet'
+                        | 'signet'
+                        | 'regtest'
+                        | 'mutinynet';
+
+                    await createLdkNodeWallet({
+                        nodeDir,
+                        seedMnemonic: mnemonic,
+                        network: networkType,
+                        esploraServerUrl: getDefaultEsploraServer(networkType),
+                        rgsServerUrl: getDefaultRgsServer(networkType),
+                        lsps1Config,
+                        trustedPeers0conf: trustedPeers,
+                        vssServerUrl: DEFAULT_VSS_SERVER
+                    });
+
+                    // Node is already built — tell Wallet.tsx to skip re-init
+                    SettingsStore.walletJustCreated = true;
+
+                    this.saveLdkNodeWalletConfiguration(
+                        mnemonic,
+                        nodeDir,
+                        network
+                    );
+                } catch (e: any) {
+                    this.setState({
+                        errorCreatingWallet: true,
+                        errorMsg: e.toString(),
+                        loading: false
+                    });
+                }
+            } else {
+                // Embedded LND restore
+                await stopLnd();
+
+                await optimizeNeutrinoPeers(network === 'testnet');
+
+                const recoveryCipherSeed = seedArray.join(' ');
+
+                const lndDir = uuidv4();
+
+                try {
+                    const response = await createLndWallet({
+                        lndDir,
+                        seedMnemonic: recoveryCipherSeed,
+                        isTestnet: network === 'testnet',
+                        channelBackupsBase64
+                    });
+
+                    const { wallet, seed, randomBase64 }: any = response;
+
+                    if (wallet && wallet.admin_macaroon) {
+                        this.setState({
                             adminMacaroon: wallet.admin_macaroon,
                             seedPhrase: seed.cipher_seed_mnemonic,
                             walletPassword: randomBase64,
@@ -467,24 +625,22 @@ export default class SeedRecovery extends React.PureComponent<
                                 network.charAt(0).toUpperCase() +
                                 network.slice(1),
                             lndDir
-                        },
-                        () => {
-                            // Use callback to ensure state is updated before saving
-                            this.saveWalletConfiguration(recoveryCipherSeed);
-                        }
-                    );
-                } else {
+                        });
+
+                        this.saveWalletConfiguration(recoveryCipherSeed);
+                    } else {
+                        this.setState({
+                            loading: false,
+                            errorCreatingWallet: true
+                        });
+                    }
+                } catch (e: any) {
                     this.setState({
-                        loading: false,
-                        errorCreatingWallet: true
+                        errorCreatingWallet: true,
+                        errorMsg: e.toString(),
+                        loading: false
                     });
                 }
-            } catch (e: any) {
-                this.setState({
-                    errorCreatingWallet: true,
-                    errorMsg: e.toString(),
-                    loading: false
-                });
             }
         };
 
@@ -593,7 +749,9 @@ export default class SeedRecovery extends React.PureComponent<
                                         }
                                         if (
                                             (restoreSwaps ||
-                                                restoreRescueKey) &&
+                                                restoreRescueKey ||
+                                                implementation ===
+                                                    'embedded-ldk-node') &&
                                             (selectedWordIndex == null ||
                                                 selectedWordIndex >= 12)
                                         ) {
@@ -631,7 +789,9 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     keyboardShouldPersistTaps="handled"
                                 >
-                                    {restoreSwaps || restoreRescueKey ? (
+                                    {restoreSwaps ||
+                                    restoreRescueKey ||
+                                    implementation === 'embedded-ldk-node' ? (
                                         <>
                                             <View
                                                 style={{
@@ -736,7 +896,11 @@ export default class SeedRecovery extends React.PureComponent<
                                     )}
                                 </ScrollView>
 
-                                {!(restoreSwaps || restoreRescueKey) && (
+                                {!(
+                                    restoreSwaps ||
+                                    restoreRescueKey ||
+                                    implementation === 'embedded-ldk-node'
+                                ) && (
                                     <View
                                         style={{
                                             flexGrow: 1,
@@ -1003,12 +1167,19 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? localeString(
                                                   'views.Swaps.rescueKey.restore'
                                               )
-                                            : network === 'mainnet'
-                                            ? localeString(
-                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                              )
                                             : localeString(
-                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                  'views.Settings.NodeConfiguration.restoreWallet',
+                                                  {
+                                                      network: localeString(
+                                                          EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                              (k) =>
+                                                                  k.value ===
+                                                                  (network ||
+                                                                      'mainnet')
+                                                          )?.translateKey ||
+                                                              'network.mainnet'
+                                                      )
+                                                  }
                                               )
                                     }
                                     disabled={
@@ -1024,6 +1195,10 @@ export default class SeedRecovery extends React.PureComponent<
                                                               ?.trim()
                                                       )
                                               )
+                                            : implementation ===
+                                              'embedded-ldk-node'
+                                            ? seedArray.length !== 12 ||
+                                              seedArray.some((seed) => !seed)
                                             : seedArray.length !== 24 ||
                                               seedArray.some(
                                                   (seed) =>

@@ -1,35 +1,40 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ButtonGroup } from '@rneui/themed';
 
 import Button from '../components/Button';
+import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
+import Text from '../components/Text';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import { confirmAction } from '../utils/ActionUtils';
+import { getButtonGroupStyles } from '../utils/buttonGroupStyles';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import OffersStore from '../stores/OffersStore';
-
-import QR from '../assets/images/SVG/QR.svg';
+import SettingsStore from '../stores/SettingsStore';
 
 interface PayCodeProps {
     navigation: NativeStackNavigationProp<any, any>;
     OffersStore: OffersStore;
-    route: Route<'PayCode', { payCode: any }>;
+    SettingsStore: SettingsStore;
+    route: Route<'PayCode', { payCode: any; startOnQrTab?: boolean }>;
 }
 
 interface PayCodeState {
     payCode: any;
+    infoIndex: number;
 }
 
-@inject('OffersStore')
+@inject('OffersStore', 'SettingsStore')
 @observer
 export default class PayCodeView extends React.Component<
     PayCodeProps,
@@ -38,30 +43,62 @@ export default class PayCodeView extends React.Component<
     constructor(props: PayCodeProps) {
         super(props);
         const { route } = props;
-        const { payCode } = route.params ?? {};
+        const { payCode, startOnQrTab } = route.params ?? {};
 
         this.state = {
-            payCode
+            payCode,
+            infoIndex: startOnQrTab ? 1 : 0
         };
     }
 
+    componentDidMount() {
+        this.props.OffersStore.error_msg = '';
+        this.props.OffersStore.error = false;
+    }
+
     render() {
-        const { navigation, OffersStore } = this.props;
-        const { payCode } = this.state;
+        const { navigation, OffersStore, SettingsStore } = this.props;
+        const { payCode, infoIndex } = this.state;
         const { active, label, single_use, offer_id, bolt12, used } = payCode;
         const { loading, error_msg } = OffersStore;
+        const supportsLabels =
+            SettingsStore!.implementation !== 'embedded-ldk-node';
 
-        const QRButton = () => (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('QR', {
-                        value: `lightning:${this.state.payCode.bolt12}`
-                    })
-                }
+        const qrValue = `lightning:${bolt12}`;
+
+        const groupStyles = getButtonGroupStyles();
+
+        const infoButton = () => (
+            <Text
+                style={{
+                    ...styles.text,
+                    color:
+                        infoIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
             >
-                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
-            </TouchableOpacity>
+                {localeString('general.info')}
+            </Text>
         );
+        const qrButton = () => (
+            <Text
+                style={{
+                    ...styles.text,
+                    color:
+                        infoIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('general.qr')}
+            </Text>
+        );
+
+        const tabButtons: any = [
+            { element: infoButton },
+            { element: qrButton }
+        ];
 
         return (
             <Screen>
@@ -74,114 +111,168 @@ export default class PayCodeView extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<QRButton />}
+                    rightComponent={
+                        loading ? (
+                            <View>
+                                <LoadingIndicator size={30} />
+                            </View>
+                        ) : (
+                            <></>
+                        )
+                    }
                     navigation={navigation}
                 />
 
-                <ScrollView
-                    style={styles.content}
-                    keyboardShouldPersistTaps="handled"
-                >
+                <ScrollView keyboardShouldPersistTaps="handled">
                     {error_msg && <ErrorMessage message={error_msg} />}
-                    <KeyValue
-                        keyValue={localeString('general.active')}
-                        value={
-                            active
-                                ? localeString('general.true')
-                                : localeString('general.false')
-                        }
-                        color={
-                            active ? themeColor('success') : themeColor('error')
-                        }
+
+                    <ButtonGroup
+                        onPress={(index: number) => {
+                            this.setState({ infoIndex: index });
+                        }}
+                        selectedIndex={infoIndex}
+                        buttons={tabButtons}
+                        selectedButtonStyle={groupStyles.selectedButtonStyle}
+                        containerStyle={groupStyles.containerStyle}
+                        innerBorderStyle={groupStyles.innerBorderStyle}
                     />
 
-                    <KeyValue
-                        keyValue={localeString('general.used')}
-                        value={
-                            used
-                                ? localeString('general.true')
-                                : localeString('general.false')
-                        }
-                        color={
-                            used ? themeColor('success') : themeColor('error')
-                        }
-                    />
+                    {infoIndex === 0 && (
+                        <View style={styles.content}>
+                            <KeyValue
+                                keyValue={localeString('general.active')}
+                                value={
+                                    active
+                                        ? localeString('general.true')
+                                        : localeString('general.false')
+                                }
+                                color={
+                                    active
+                                        ? themeColor('success')
+                                        : themeColor('error')
+                                }
+                            />
 
-                    <KeyValue
-                        keyValue={localeString('general.type')}
-                        value={
-                            single_use
-                                ? localeString('views.PayCode.singleUse')
-                                : localeString('views.PayCode.multiUse')
-                        }
-                    />
+                            <KeyValue
+                                keyValue={localeString('general.used')}
+                                value={
+                                    used
+                                        ? localeString('general.true')
+                                        : localeString('general.false')
+                                }
+                                color={
+                                    used
+                                        ? themeColor('success')
+                                        : themeColor('error')
+                                }
+                            />
 
-                    <KeyValue
-                        keyValue={localeString('general.label')}
-                        value={label || localeString('general.noLabel')}
-                    />
+                            <KeyValue
+                                keyValue={localeString('general.type')}
+                                value={
+                                    single_use
+                                        ? localeString(
+                                              'views.PayCode.singleUse'
+                                          )
+                                        : localeString('views.PayCode.multiUse')
+                                }
+                            />
 
-                    <KeyValue
-                        keyValue={localeString('views.PayCode.offerId')}
-                        value={offer_id}
-                    />
+                            {supportsLabels && (
+                                <KeyValue
+                                    keyValue={localeString('general.label')}
+                                    value={
+                                        label || localeString('general.noLabel')
+                                    }
+                                />
+                            )}
 
-                    <KeyValue
-                        keyValue={localeString('views.PayCode.bolt12')}
-                        value={bolt12}
-                    />
+                            <KeyValue
+                                keyValue={localeString('views.PayCode.offerId')}
+                                value={offer_id}
+                            />
+
+                            {bolt12 && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PayCode.bolt12'
+                                    )}
+                                    value={bolt12}
+                                />
+                            )}
+                        </View>
+                    )}
+
+                    {infoIndex === 1 && (
+                        <View style={styles.content}>
+                            <CollapsedQR
+                                value={qrValue}
+                                copyValue={qrValue}
+                                expanded
+                                showShare
+                                iconOnly
+                                textBottom
+                                truncateLongValue
+                            />
+                        </View>
+                    )}
                 </ScrollView>
-                <View style={{ bottom: 15 }}>
-                    {loading && <LoadingIndicator />}
-                    {!loading && active && (
-                        <Button
-                            title={localeString('views.PayCode.disableOffer')}
-                            warning
-                            onPress={() => {
-                                confirmAction(
-                                    localeString('views.PayCode.disableOffer'),
-                                    localeString(
-                                        'views.PayCode.disableOffer.confirm'
-                                    ),
-                                    {
-                                        text: localeString(
+
+                {infoIndex === 0 && (
+                    <View style={{ bottom: 15 }}>
+                        {!loading && active && (
+                            <Button
+                                title={localeString(
+                                    'views.PayCode.disableOffer'
+                                )}
+                                warning
+                                onPress={() => {
+                                    confirmAction(
+                                        localeString(
                                             'views.PayCode.disableOffer'
                                         ),
-                                        style: 'destructive',
-                                        onPress: () => {
-                                            OffersStore.disableOffer(
-                                                offer_id
-                                            ).then((data: any) => {
-                                                this.setState({
-                                                    payCode: data
+                                        localeString(
+                                            'views.PayCode.disableOffer.confirm'
+                                        ),
+                                        {
+                                            text: localeString(
+                                                'views.PayCode.disableOffer'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: () => {
+                                                OffersStore.disableOffer(
+                                                    offer_id
+                                                ).then((data: any) => {
+                                                    this.setState({
+                                                        payCode: data
+                                                    });
                                                 });
-                                            });
+                                            }
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
                                         }
-                                    },
-                                    {
-                                        text: localeString('general.cancel'),
-                                        onPress: () => void 0,
-                                        isPreferred: true
-                                    }
-                                );
-                            }}
-                        />
-                    )}
-                </View>
+                                    );
+                                }}
+                            />
+                        )}
+                    </View>
+                )}
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'PPNeueMontreal-Book'
+    },
     content: {
-        flex: 1,
         paddingLeft: 20,
         paddingRight: 20
-    },
-    center: {
-        alignItems: 'center',
-        paddingTop: 15,
-        paddingBottom: 15
     }
 });

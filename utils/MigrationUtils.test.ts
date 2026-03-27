@@ -263,7 +263,8 @@ describe('MigrationUtils', () => {
         it('should set seedVersion to "v1" and save to Storage if undefined', async () => {
             const mockCashuStore: any = {
                 seedVersion: undefined,
-                getLndDir: jest.fn().mockReturnValue('testLndDir')
+                getLndDir: jest.fn().mockReturnValue('testLndDir'),
+                getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
@@ -285,7 +286,8 @@ describe('MigrationUtils', () => {
         it('should not change seedVersion or call Storage.setItem if seedVersion is already "v1"', async () => {
             const mockCashuStore: any = {
                 seedVersion: 'v1',
-                getLndDir: jest.fn().mockReturnValue('testLndDir')
+                getLndDir: jest.fn().mockReturnValue('testLndDir'),
+                getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
@@ -300,7 +302,8 @@ describe('MigrationUtils', () => {
         it('should not change seedVersion or call Storage.setItem if seedVersion is already defined with another value', async () => {
             const mockCashuStore: any = {
                 seedVersion: 'v2-bip39',
-                getLndDir: jest.fn().mockReturnValue('testLndDir')
+                getLndDir: jest.fn().mockReturnValue('testLndDir'),
+                getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
@@ -315,7 +318,8 @@ describe('MigrationUtils', () => {
             );
             const mockCashuStore: any = {
                 seedVersion: undefined,
-                getLndDir: jest.fn().mockReturnValue('testLndDir')
+                getLndDir: jest.fn().mockReturnValue('testLndDir'),
+                getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);

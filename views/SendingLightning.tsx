@@ -617,46 +617,55 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
-                                        <Button
-                                            title={localeString(
-                                                'views.SendingLightning.tryAgain'
-                                            )}
-                                            icon={{
-                                                name: 'rotate-ccw',
-                                                type: 'feather',
-                                                size: 25
-                                            }}
-                                            onPress={() => navigation.goBack()}
-                                            buttonStyle={{
-                                                backgroundColor: 'white',
-                                                height: 40
-                                            }}
-                                            containerStyle={{
-                                                width: '100%',
-                                                margin: 3
-                                            }}
-                                        />
-                                        {implementation === 'embedded-lnd' && (
-                                            <Button
-                                                title={localeString(
-                                                    'views.Settings.EmbeddedNode.Troubleshooting.title'
+                                        {(implementation === 'embedded-lnd' ||
+                                            implementation ===
+                                                'embedded-ldk-node') && (
+                                            <>
+                                                <Button
+                                                    title={localeString(
+                                                        'views.SendingLightning.tryAgain'
+                                                    )}
+                                                    icon={{
+                                                        name: 'rotate-ccw',
+                                                        type: 'feather',
+                                                        size: 25
+                                                    }}
+                                                    onPress={() =>
+                                                        navigation.goBack()
+                                                    }
+                                                    buttonStyle={{
+                                                        backgroundColor:
+                                                            'white',
+                                                        height: 40
+                                                    }}
+                                                    containerStyle={{
+                                                        width: '100%',
+                                                        margin: 3
+                                                    }}
+                                                />
+                                                {BackendUtils.isLocalWallet() && (
+                                                    <Button
+                                                        title={localeString(
+                                                            'views.Settings.EmbeddedNode.Troubleshooting.title'
+                                                        )}
+                                                        icon={{
+                                                            name: 'life-buoy',
+                                                            type: 'feather',
+                                                            size: 25
+                                                        }}
+                                                        onPress={() => {
+                                                            navigation.navigate(
+                                                                'EmbeddedNodeTroubleshooting'
+                                                            );
+                                                        }}
+                                                        containerStyle={{
+                                                            width: '100%',
+                                                            margin: 3
+                                                        }}
+                                                        secondary
+                                                    />
                                                 )}
-                                                icon={{
-                                                    name: 'life-buoy',
-                                                    type: 'feather',
-                                                    size: 25
-                                                }}
-                                                onPress={() => {
-                                                    navigation.navigate(
-                                                        'EmbeddedNodeTroubleshooting'
-                                                    );
-                                                }}
-                                                containerStyle={{
-                                                    width: '100%',
-                                                    margin: 3
-                                                }}
-                                                secondary
-                                            />
+                                            </>
                                         )}
                                     </>
                                 )}

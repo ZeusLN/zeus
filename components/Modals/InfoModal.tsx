@@ -121,7 +121,12 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     color: themeColor('text'),
                                     fontSize: 34,
                                     textAlign: 'center',
-                                    marginTop: 30,
+                                    marginTop:
+                                        infoModalShowCloseButton ||
+                                        (infoModalShowHelpButton &&
+                                            infoModalLink)
+                                            ? 30
+                                            : 0,
                                     marginBottom: 20
                                 }}
                             >

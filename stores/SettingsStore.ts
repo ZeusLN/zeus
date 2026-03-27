@@ -48,6 +48,14 @@ export interface Node {
     embeddedLndNetwork?: string;
     lndDir?: string;
     isSqlite?: boolean;
+    // Embedded LDK Node
+    embeddedLdkNetwork?: string;
+    ldkNodeDir?: string;
+    ldkMnemonic?: string;
+    ldkPassphrase?: string;
+    ldkEsploraServer?: string;
+    ldkRgsServer?: string;
+    ldkVssServer?: string;
 }
 
 interface PrivacySettings {
@@ -213,15 +221,19 @@ export interface Settings {
     enableLSP: boolean;
     lspMainnet: string;
     lspTestnet: string;
+    lspMutinynet: string;
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
     //LSPS1
     lsps1RestMainnet: string;
     lsps1RestTestnet: string;
+    lsps1RestMutinynet: string;
     lsps1PubkeyMainnet: string;
     lsps1PubkeyTestnet: string;
+    lsps1PubkeyMutinynet: string;
     lsps1HostMainnet: string;
     lsps1HostTestnet: string;
+    lsps1HostMutinynet: string;
     lsps1Token: string;
     lsps1ShowPurchaseButton?: boolean; // deprecated
     // Swaps
@@ -367,8 +379,12 @@ export const SPEEDLOADER_KEYS = [
 export const INTERFACE_KEYS: {
     key: string;
     value: string;
+    isHeader?: boolean;
 }[] = [
+    { key: 'On-device', value: '', isHeader: true },
     { key: 'Embedded LND', value: 'embedded-lnd' },
+    { key: 'LDK Node', value: 'embedded-ldk-node' },
+    { key: 'Remote', value: '', isHeader: true },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
@@ -378,6 +394,7 @@ export const INTERFACE_KEYS: {
 
 export type Implementations =
     | 'embedded-lnd'
+    | 'embedded-ldk-node'
     | 'lnd'
     | 'lightning-node-connect'
     | 'cln-rest'
@@ -386,7 +403,12 @@ export type Implementations =
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
-    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' }
+    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' },
+    {
+        key: 'Mutinynet',
+        translateKey: 'network.mutinynet',
+        value: 'mutinynet'
+    }
 ];
 
 export const LNC_MAILBOX_KEYS = [
@@ -1266,6 +1288,69 @@ export const DEFAULT_LSPS1_PUBKEY_TESTNET =
 export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
+export const DEFAULT_LSP_MUTINYNET = 'https://mutinynet-flow.lnolymp.us';
+export const DEFAULT_LSPS1_REST_MUTINYNET =
+    'https://mutinynet-lsps1.lnolymp.us';
+export const DEFAULT_LSPS1_PUBKEY_MUTINYNET =
+    '032ae843e4d7d177f151d021ac8044b0636ec72b1ce3ffcde5c04748db2517ab03';
+export const DEFAULT_LSPS1_HOST_MUTINYNET = '45.79.201.241:9735';
+
+/**
+ * Select LSP config values for a given network.
+ * Accepts either a network string ('mainnet'|'testnet'|'signet'|'mutinynet')
+ * or NodeInfo-style flags ({ isMutinynet, isTestNet }).
+ */
+export function getLspConfigForNetwork(
+    settings: Settings,
+    network: string | { isMutinynet: boolean; isTestNet: boolean }
+): {
+    flowHost: string;
+    lsps1Rest: string;
+    lsps1Pubkey: string;
+    lsps1Host: string;
+    defaultPubkey: string;
+} {
+    const isMutinynet =
+        typeof network === 'string'
+            ? network === 'mutinynet'
+            : network.isMutinynet;
+    const isTestnet =
+        typeof network === 'string'
+            ? network === 'testnet' || network === 'signet'
+            : network.isTestNet;
+
+    if (isMutinynet) {
+        return {
+            flowHost: settings.lspMutinynet || DEFAULT_LSP_MUTINYNET,
+            lsps1Rest:
+                settings.lsps1RestMutinynet || DEFAULT_LSPS1_REST_MUTINYNET,
+            lsps1Pubkey:
+                settings.lsps1PubkeyMutinynet || DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+            lsps1Host:
+                settings.lsps1HostMutinynet || DEFAULT_LSPS1_HOST_MUTINYNET,
+            defaultPubkey: DEFAULT_LSPS1_PUBKEY_MUTINYNET
+        };
+    }
+    if (isTestnet) {
+        return {
+            flowHost: settings.lspTestnet || DEFAULT_LSP_TESTNET,
+            lsps1Rest: settings.lsps1RestTestnet || DEFAULT_LSPS1_REST_TESTNET,
+            lsps1Pubkey:
+                settings.lsps1PubkeyTestnet || DEFAULT_LSPS1_PUBKEY_TESTNET,
+            lsps1Host: settings.lsps1HostTestnet || DEFAULT_LSPS1_HOST_TESTNET,
+            defaultPubkey: DEFAULT_LSPS1_PUBKEY_TESTNET
+        };
+    }
+    return {
+        flowHost: settings.lspMainnet || DEFAULT_LSP_MAINNET,
+        lsps1Rest: settings.lsps1RestMainnet || DEFAULT_LSPS1_REST_MAINNET,
+        lsps1Pubkey:
+            settings.lsps1PubkeyMainnet || DEFAULT_LSPS1_PUBKEY_MAINNET,
+        lsps1Host: settings.lsps1HostMainnet || DEFAULT_LSPS1_HOST_MAINNET,
+        defaultPubkey: DEFAULT_LSPS1_PUBKEY_MAINNET
+    };
+}
+
 // Swaps
 export const DEFAULT_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =
@@ -1381,7 +1466,7 @@ export default class SettingsStore {
             bigKeypadButtons: false,
             showAllDecimalPlaces: false,
             removeDecimalSpaces: false,
-            showMillisatoshiAmounts: true
+            showMillisatoshiAmounts: false
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
@@ -1458,15 +1543,19 @@ export default class SettingsStore {
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
+        lspMutinynet: DEFAULT_LSP_MUTINYNET,
         lspAccessKey: '',
         requestSimpleTaproot: true,
         //lsps1
         lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
         lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+        lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
         lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
         lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+        lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
         lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
         lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+        lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET,
         lsps1Token: '',
         //swaps
         swaps: {
@@ -1551,6 +1640,15 @@ export default class SettingsStore {
     @observable public embeddedLndStarted: boolean = false;
     @observable public walletJustCreated: boolean = false;
     @observable public lndFolderMissing: boolean = false;
+    // Embedded LDK Node
+    @observable public ldkNodeDir?: string;
+    @observable public ldkMnemonic?: string;
+    @observable public ldkPassphrase?: string;
+    @observable public embeddedLdkNetwork?: string;
+    @observable public ldkEsploraServer?: string;
+    @observable public ldkRgsServer?: string;
+    @observable public ldkVssServer?: string;
+    @observable public ldkNodeSyncing: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
     // Favorite currencies
@@ -1745,8 +1843,28 @@ export default class SettingsStore {
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
             this.isSqlite = node.isSqlite;
+            // Embedded LDK Node
+            this.ldkNodeDir = node.ldkNodeDir;
+            this.ldkMnemonic = node.ldkMnemonic;
+            this.ldkPassphrase = node.ldkPassphrase;
+            this.embeddedLdkNetwork = node.embeddedLdkNetwork;
+            this.ldkEsploraServer = node.ldkEsploraServer;
+            this.ldkRgsServer = node.ldkRgsServer;
+            this.ldkVssServer = node.ldkVssServer;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
+        } else {
+            // No node selected — clear all node properties to prevent
+            // stale references to deleted wallets
+            this.implementation = 'lnd';
+            this.certVerification = false;
+            this.ldkNodeDir = undefined;
+            this.ldkMnemonic = undefined;
+            this.ldkPassphrase = undefined;
+            this.embeddedLdkNetwork = undefined;
+            this.ldkEsploraServer = undefined;
+            this.ldkRgsServer = undefined;
+            this.ldkVssServer = undefined;
         }
     };
 

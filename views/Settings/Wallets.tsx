@@ -128,22 +128,25 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         }
     };
 
-    handleJustDeletedWallet = async () => {
+    handleJustDeletedWallet = async (nodeIndex: number) => {
         const { SettingsStore } = this.props;
         const { settings, updateSettings, setConnectingStatus } = SettingsStore;
 
         if (!settings?.justDeletedWallet) return;
         setConnectingStatus(true);
         await sleep(2000);
-        const { nodes, selectedNode } = settings;
-        const newSelectedNode = nodes?.[selectedNode ?? 0];
-        if (newSelectedNode) {
+        const { nodes } = settings;
+        const selectedNode = nodes?.[nodeIndex];
+        if (selectedNode) {
             try {
                 console.log(
-                    'Wallet deleted - restarting selected node:',
-                    selectedNode
+                    'Wallet deleted - starting selected node:',
+                    nodeIndex
                 );
-                await updateSettings({ justDeletedWallet: false });
+                await updateSettings({
+                    justDeletedWallet: false,
+                    selectedNode: nodeIndex
+                });
                 this.navigateAfterWalletSelection();
             } catch (error) {
                 console.error('Error restarting after wallet deletion:', error);
@@ -199,7 +202,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
@@ -259,7 +262,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             nodeActive: boolean
         ) => {
             if (SettingsStore.settings?.justDeletedWallet) {
-                await this.handleJustDeletedWallet();
+                await this.handleJustDeletedWallet(nodeIndex);
                 return;
             }
             if (initialStart) {
@@ -321,7 +324,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     onBack={
                         SettingsStore.settings?.justDeletedWallet
                             ? async () => {
-                                  await this.handleJustDeletedWallet();
+                                  await this.handleJustDeletedWallet(
+                                      SettingsStore.settings?.selectedNode ?? 0
+                                  );
                               }
                             : undefined
                     }
@@ -372,6 +377,19 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     }
                                     if (!item.isSqlite) {
                                         nodeSubtitle += ' [Bolt]';
+                                    }
+                                }
+
+                                if (
+                                    item.implementation === 'embedded-ldk-node'
+                                ) {
+                                    if (item.embeddedLdkNetwork) {
+                                        nodeSubtitle += ` (${
+                                            item.embeddedLdkNetwork
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                            item.embeddedLdkNetwork.slice(1)
+                                        })`;
                                     }
                                 }
 

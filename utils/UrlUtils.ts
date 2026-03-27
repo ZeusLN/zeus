@@ -1,6 +1,19 @@
 import { Linking } from 'react-native';
 import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
 
+/**
+ * Get the Esplora-compatible API base URL for the current network.
+ * Used for transaction broadcasting and other API calls.
+ */
+const getMempoolApiUrl = (nodeInfo: {
+    isMutinynet: boolean;
+    isTestNet: boolean;
+}): string => {
+    if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
+    const prefix = nodeInfo.isTestNet ? 'testnet/' : '';
+    return `https://mempool.space/${prefix}api`;
+};
+
 const goToBlockExplorer = (
     type: string,
     value: string | number,
@@ -9,12 +22,17 @@ const goToBlockExplorer = (
     const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
+    const { isMutinynet } = nodeInfoStore.nodeInfo;
     const host =
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
+            : isMutinynet
+            ? 'mutinynet.com'
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
     const network =
-        nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
+        !isMutinynet && (nodeInfoStore.nodeInfo.isTestNet || testnet)
+            ? 'testnet/'
+            : '';
 
     let path: string = type;
     if (type === 'block-height') {
@@ -93,6 +111,7 @@ const leaveZeus = (url: string) => {
 
 export default {
     isValidUrl,
+    getMempoolApiUrl,
     goToBlockExplorerTXID,
     goToBlockExplorerAddress,
     goToBlockExplorerBlockHeight,

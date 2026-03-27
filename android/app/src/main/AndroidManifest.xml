@@ -244,6 +244,16 @@
           android:value="Maintain Nostr Wallet Connect connections to enable background payments from external apps"
         />
       </service>
+      <service
+        android:name="app.zeusln.zeus.LdkNodeService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse"
+      >
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Run Lightning Network node to receive incoming payments"
+        />
+      </service>
     </application>
 
     <!-- <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
