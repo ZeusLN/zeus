@@ -15,16 +15,23 @@ const ZIcon = require('../../assets/images/icon-black.png');
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import ChannelsStore from '../../stores/ChannelsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
+import ModalStore from '../../stores/ModalStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import { Icon } from '@rneui/themed';
 
 interface CreateWithdrawalRequestProps {
     navigation: NativeStackNavigationProp<any, any>;
+    ChannelsStore: ChannelsStore;
     InvoicesStore: InvoicesStore;
+    ModalStore: ModalStore;
     UnitsStore: UnitsStore;
 }
 
@@ -39,7 +46,7 @@ interface CreateWithdrawalRequestState {
     withdrawalRequestCreationError: boolean;
 }
 
-@inject('InvoicesStore', 'UnitsStore')
+@inject('ChannelsStore', 'InvoicesStore', 'ModalStore', 'UnitsStore')
 @observer
 export default class CreateWithdrawalRequest extends Component<
     CreateWithdrawalRequestProps,
@@ -132,9 +139,11 @@ export default class CreateWithdrawalRequest extends Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, ChannelsStore, ModalStore } = this.props;
         const { amount, description, satsAmount } = this.state;
-        const disabled = !description || !amount || this.state.loading;
+        const hasBalance = ChannelsStore.totalOutbound > 0;
+        const disabled =
+            !description || !amount || this.state.loading || !hasBalance;
 
         const ClearButton = () => (
             <Icon
@@ -153,6 +162,34 @@ export default class CreateWithdrawalRequest extends Component<
             />
         );
 
+        const InfoButton = () => (
+            <View style={{ marginRight: 5 }}>
+                <Icon
+                    name="info"
+                    onPress={() => {
+                        ModalStore.toggleInfoModal({
+                            title: localeString('general.withdrawalRequest'),
+                            text: [
+                                localeString(
+                                    'views.Tools.withdrawal.infoModal.line1'
+                                ),
+                                localeString(
+                                    'views.Tools.withdrawal.infoModal.line2'
+                                ),
+                                localeString(
+                                    'views.Tools.withdrawal.infoModal.line3'
+                                ),
+                                localeString('general.bolt12Requirement')
+                            ]
+                        });
+                    }}
+                    color={themeColor('text')}
+                    underlayColor="transparent"
+                    size={30}
+                />
+            </View>
+        );
+
         return (
             <Screen>
                 <Header
@@ -165,7 +202,7 @@ export default class CreateWithdrawalRequest extends Component<
                         }
                     }}
                     rightComponent={
-                        this.state.showQR ? <ClearButton /> : undefined
+                        this.state.showQR ? <ClearButton /> : <InfoButton />
                     }
                     navigation={navigation}
                 />
@@ -212,6 +249,13 @@ export default class CreateWithdrawalRequest extends Component<
                             style={{ padding: 20 }}
                             keyboardShouldPersistTaps="handled"
                         >
+                            {!hasBalance && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Tools.withdrawal.noBalanceWarning'
+                                    )}
+                                />
+                            )}
                             <Text
                                 style={{ color: themeColor('secondaryText') }}
                             >
