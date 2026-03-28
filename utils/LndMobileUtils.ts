@@ -329,7 +329,8 @@ export async function expressGraphSync() {
                 settingsStore?.settings?.speedloader === 'Custom'
                     ? settingsStore?.settings?.customSpeedloader
                     : settingsStore?.settings?.speedloader ||
-                          DEFAULT_SPEEDLOADER
+                          DEFAULT_SPEEDLOADER,
+                settingsStore?.lndDir || 'lnd'
             );
 
             const completionTime =
