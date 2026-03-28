@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Να επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Να μην επιτρέπονται συνδέσεις σε άλλους ομότιμους.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Το σήμα έληξε",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Βελτιστοποίηση της επιλογής ομότιμων χρηστών",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Ομότιμοι χρήστες μηδενικών επιβεβαιώσεων",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Ορίστε τους ομότιμους χρήστες από τους οποίους θα θέλατε να δέχεστε lightning κανάλια μηδενικών επιβεβαιώσεων, εκτός από το LSP.",
