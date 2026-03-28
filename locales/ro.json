@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Permițând conexiuni la alți parteneri.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Nu se permite conexiuni la alți parteneri.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping a expirat",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimizați selecția colegilor",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Setați partenerii de la care doriți să acceptați canale Lightning Zero Conf, altele decât LSP.",
