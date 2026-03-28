@@ -430,7 +430,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void gossipSync(String serviceUrl, Promise promise) {
+  public void gossipSync(String serviceUrl, String lndDir, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -441,10 +441,9 @@ class LndMobile extends ReactContextBaseJavaModule {
       "serviceUrl",
       serviceUrl
     );
-    // TODO remove unused param
     bundle.putString(
-      "networkType",
-      ""
+      "lndDir",
+      lndDir
     );
     message.setData(bundle);
 
