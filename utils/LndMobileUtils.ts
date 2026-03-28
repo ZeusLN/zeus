@@ -327,6 +327,97 @@ export async function initializeLnd({
     await initialize();
 }
 
+export async function migrateBboltToSqlite({
+    lndDir = 'lnd',
+    isTestnet,
+    walletPassword,
+    isTorEnabled
+}: {
+    lndDir: string;
+    isTestnet?: boolean;
+    walletPassword: string;
+    isTorEnabled?: boolean;
+}): Promise<boolean> {
+    try {
+        console.log(`Starting bbolt to SQLite migration for wallet: ${lndDir}`);
+
+        await stopLnd();
+
+        await sleep(1000);
+
+        // Delete old neutrino bbolt files before switching to sqlite.
+        // Neutrino data (block headers, compact filters) is always
+        // re-downloadable and doesn't contain wallet data.
+        const network = isTestnet ? 'testnet' : 'mainnet';
+        try {
+            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                lndDir,
+                network,
+                false // not sqlite yet - delete bbolt files
+            );
+        } catch (e) {
+            console.warn('Failed to delete neutrino files:', e);
+        }
+
+        await writeLndConfig({
+            lndDir,
+            isTestnet,
+            isSqlite: true
+        });
+
+        const { initialize, checkStatus } = lndMobile.index;
+        await initialize();
+
+        await sleep(1000);
+
+        const status = await checkStatus();
+        if (
+            (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+        ) {
+            await startLnd({
+                lndDir,
+                walletPassword,
+                isTorEnabled: isTorEnabled || false,
+                isTestnet: isTestnet || false
+            });
+        }
+
+        await retry({
+            fn: async () => {
+                const currentStatus = await checkStatus();
+                const isRunning =
+                    (currentStatus &
+                        ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+                    ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+                if (!isRunning) {
+                    throw new Error('LND not yet running');
+                }
+            },
+            maxRetries: 10,
+            delayMs: 500
+        });
+
+        console.log(`Migration successful for wallet: ${lndDir}`);
+        return true;
+    } catch (error) {
+        console.error(
+            `Error during bbolt to SQLite migration for wallet ${lndDir}:`,
+            error
+        );
+        try {
+            await writeLndConfig({
+                lndDir,
+                isTestnet,
+                isSqlite: false
+            });
+        } catch (rollbackError) {
+            console.error('Error rolling back config:', rollbackError);
+        }
+        return false;
+    }
+}
+
 /**
  * Stops the LND process gracefully with retry mechanism
  * @param maxRetries - Maximum number of polling attempts to verify shutdown (default: 10)
@@ -1101,7 +1192,7 @@ export async function createLndWallet({
     }
 
     // New wallets always use SQLite
-    await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
+    await writeLndConfig({ lndDir, isTestnet, isSqlite: false });
     await initialize();
 
     await startLnd({

@@ -756,6 +756,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         }
                     }
 
+                    console.log('lndDir', lndDir);
+
                     try {
                         await startLnd({
                             lndDir: lndDir || 'lnd',

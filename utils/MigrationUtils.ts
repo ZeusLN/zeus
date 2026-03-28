@@ -81,6 +81,7 @@ export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
 const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
+const BBOLT_TO_SQLITE_MIGRATION_KEY = 'bbolt-to-sqlite-migration-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
@@ -1071,6 +1072,75 @@ class MigrationsUtils {
             }
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
+        }
+    }
+
+    public async hasDatabaseMigrationBeenAttempted(
+        lndDir: string
+    ): Promise<boolean> {
+        try {
+            const key = `${BBOLT_TO_SQLITE_MIGRATION_KEY}:${lndDir}`;
+            const attempted = await EncryptedStorage.getItem(key);
+            return attempted === 'true';
+        } catch (error) {
+            console.error(
+                'Error checking bbolt to SQLite migration status:',
+                error
+            );
+            return false;
+        }
+    }
+
+    public async markDatabaseMigrationAttempted(lndDir: string): Promise<void> {
+        try {
+            const key = `${BBOLT_TO_SQLITE_MIGRATION_KEY}:${lndDir}`;
+            await EncryptedStorage.setItem(key, 'true');
+        } catch (error) {
+            console.error(
+                'Error marking bbolt to SQLite migration as attempted:',
+                error
+            );
+        }
+    }
+
+    public async checkBboltWalletExists(
+        lndDir: string,
+        isSqlite?: boolean
+    ): Promise<boolean> {
+        if (isSqlite === true) {
+            return false;
+        }
+
+        try {
+            const settingsJson = await Storage.getItem(STORAGE_KEY);
+            if (!settingsJson) {
+                return false;
+            }
+
+            const settings = JSON.parse(settingsJson);
+            if (!settings.nodes || !Array.isArray(settings.nodes)) {
+                return false;
+            }
+
+            const node = settings.nodes.find(
+                (n: any) =>
+                    n.implementation === 'embedded-lnd' &&
+                    (n.lndDir || 'lnd') === lndDir
+            );
+
+            if (!node) {
+                return false;
+            }
+
+            const nodeIsBbolt =
+                node.isSqlite === false || node.isSqlite === undefined;
+            const hasWalletData =
+                node.seedPhrase || node.adminMacaroon || node.walletPassword;
+
+            return nodeIsBbolt && hasWalletData;
+        } catch (error) {
+            console.error('Error checking bbolt wallet existence:', error);
+            return false;
         }
     }
 }
