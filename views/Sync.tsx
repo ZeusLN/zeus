@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, View, TouchableOpacity, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import CircularProgress from 'react-native-circular-progress-indicator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,8 +26,30 @@ interface SyncProps {
 export default class Sync extends React.PureComponent<SyncProps, {}> {
     render() {
         const { navigation, SyncStore } = this.props;
-        const { bestBlockHeight, currentBlockHeight, numBlocksUntilSynced } =
-            SyncStore;
+        const {
+            bestBlockHeight,
+            currentBlockHeight,
+            numBlocksUntilSynced,
+            headerSyncHeight,
+            filterHeaderSyncHeight,
+            showAdvancedSyncMetrics,
+            toggleAdvancedSyncMetrics
+        } = SyncStore;
+
+        let effectiveCurrentHeight = currentBlockHeight;
+        if (!effectiveCurrentHeight || effectiveCurrentHeight === 0) {
+            effectiveCurrentHeight =
+                filterHeaderSyncHeight || headerSyncHeight || 0;
+        }
+
+        const progressValue =
+            effectiveCurrentHeight && bestBlockHeight
+                ? Number(
+                      Math.floor(
+                          (effectiveCurrentHeight / bestBlockHeight) * 1000
+                      ) / 1000
+                  ) * 100
+                : 0;
 
         const { width } = Dimensions.get('window');
 
@@ -47,17 +69,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                 <View style={{ flex: 1, justifyContent: 'center' }}>
                     <View style={{ alignItems: 'center', marginBottom: 40 }}>
                         <CircularProgress
-                            value={
-                                currentBlockHeight && bestBlockHeight
-                                    ? Number(
-                                          Math.floor(
-                                              (currentBlockHeight /
-                                                  bestBlockHeight) *
-                                                  1000
-                                          ) / 1000
-                                      ) * 100
-                                    : 0
-                            }
+                            value={progressValue}
                             radius={width / 3}
                             inActiveStrokeOpacity={0.5}
                             activeStrokeWidth={width / 20}
@@ -77,9 +89,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                         />
                     </View>
 
-                    <View
-                        style={{ marginLeft: 20, marginRight: 20, height: 140 }}
-                    >
+                    <View style={{ marginLeft: 20, marginRight: 20 }}>
                         {currentBlockHeight != null ? (
                             <KeyValue
                                 keyValue={localeString(
@@ -101,6 +111,52 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                                 )}
                                 value={numberWithCommas(numBlocksUntilSynced)}
                             />
+                        )}
+
+                        <TouchableOpacity
+                            onPress={toggleAdvancedSyncMetrics}
+                            style={{ marginTop: 15, paddingVertical: 5 }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('highlight'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 16
+                                }}
+                            >
+                                {showAdvancedSyncMetrics
+                                    ? localeString(
+                                          'views.Sync.hideAdvancedMetrics'
+                                      )
+                                    : localeString(
+                                          'views.Sync.showAdvancedMetrics'
+                                      )}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showAdvancedSyncMetrics && (
+                            <View style={{ marginTop: 10 }}>
+                                {headerSyncHeight != null ? (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Sync.blockHeadersSync'
+                                        )}
+                                        value={numberWithCommas(
+                                            headerSyncHeight
+                                        )}
+                                    />
+                                ) : null}
+                                {filterHeaderSyncHeight != null ? (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Sync.filterHeadersSync'
+                                        )}
+                                        value={numberWithCommas(
+                                            filterHeaderSyncHeight
+                                        )}
+                                    />
+                                ) : null}
+                            </View>
                         )}
                     </View>
                 </View>

@@ -5,11 +5,19 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
 import { sleep } from '../utils/SleepUtils';
+import Storage from '../storage';
 
 import NodeInfo from '../models/NodeInfo';
 
 import ConnectivityStore from './ConnectivityStore';
 import SettingsStore from './SettingsStore';
+
+const ADVANCED_SYNC_METRICS_KEY = 'advancedSyncMetrics';
+
+interface AdvancedSyncMetrics {
+    headerSyncHeight: number | null;
+    filterHeaderSyncHeight: number | null;
+}
 
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
@@ -21,7 +29,6 @@ export default class SyncStore {
     @observable public currentProgress: number;
     @observable public numBlocksUntilSynced: number;
     @observable public error: boolean = false;
-    // rescan tracking
     @observable public isRescanning: boolean = false;
     @observable public rescanStartHeight: number | null = null;
     @observable public rescanCurrentHeight: number | null = null;
@@ -29,6 +36,11 @@ export default class SyncStore {
     @observable public rescanTxnsFound: number = 0;
     @observable public isLogObservationActive: boolean = false;
     private logListener: EmitterSubscription | null = null;
+
+    @observable public headerSyncHeight: number | null = null;
+    @observable public filterHeaderSyncHeight: number | null = null;
+    @observable public showAdvancedSyncMetrics: boolean = false;
+    private syncLogListener: EmitterSubscription | null = null;
 
     nodeInfo: any;
     settingsStore: SettingsStore;
@@ -40,7 +52,7 @@ export default class SyncStore {
     ) {
         this.settingsStore = settingsStore;
         this.connectivityStore = connectivityStore;
-        // Resume syncing when connectivity is restored (embedded-lnd only)
+        this.loadAdvancedMetrics();
         connectivityStore.onReconnect(() => {
             if (
                 !this.isSyncing &&
@@ -62,6 +74,8 @@ export default class SyncStore {
         this.currentBlockHeight = 0;
         this.currentProgress = 0;
         this.numBlocksUntilSynced = 1;
+        this.stopSyncLogObservation();
+
         this.stopRescanTracking();
     };
 
@@ -126,14 +140,28 @@ export default class SyncStore {
                 .then(async (response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
-                        this.bestBlockHeight = Number.parseInt(response.json());
-                        if (
-                            typeof this.bestBlockHeight === 'number' &&
-                            this.currentBlockHeight
-                        ) {
-                            this.updateProgress();
+                        try {
+                            const rawText = response.text
+                                ? response.text()
+                                : response.data;
+                            const parsedVal = Number.parseInt(rawText, 10);
+                            if (!isNaN(parsedVal)) {
+                                this.bestBlockHeight = parsedVal;
+                                if (
+                                    typeof this.bestBlockHeight === 'number' &&
+                                    this.currentBlockHeight
+                                ) {
+                                    this.updateProgress();
+                                }
+                                resolve(this.bestBlockHeight);
+                            } else {
+                                this.error = true;
+                                reject('Not a number');
+                            }
+                        } catch (e) {
+                            this.error = true;
+                            reject(e);
                         }
-                        resolve(this.bestBlockHeight);
                     } else {
                         this.error = true;
                         reject();
@@ -152,6 +180,11 @@ export default class SyncStore {
         this.error = false;
         this.bestBlockHeight = 0;
         this.numBlocksUntilSynced = 1;
+
+        if (this.settingsStore.implementation === 'embedded-lnd') {
+            await this.loadAdvancedMetrics();
+            this.startSyncLogObservation();
+        }
 
         // Fetch best block height, retrying until successful
         while (!this.bestBlockHeight) {
@@ -192,6 +225,7 @@ export default class SyncStore {
                 this.getBestBlockHeight().catch(() => {});
             }
         }
+        this.stopSyncLogObservation();
     };
 
     public checkRecoveryStatus = () => {
@@ -230,7 +264,6 @@ export default class SyncStore {
             await this.getRecoveryStatus();
         }
     };
-
     // Rescan tracking methods
     private getNetwork = (): string => {
         const network = this.settingsStore.embeddedLndNetwork?.toLowerCase();
@@ -258,13 +291,11 @@ export default class SyncStore {
 
         const network = this.getNetwork();
         const lndDir = this.settingsStore.lndDir || 'lnd';
-
         // Add listener for log events
         this.logListener = LndMobileToolsEventEmitter.addListener(
             'lndlog',
             (data: string) => this.parseRescanLog(data)
         );
-
         // Start observing log file (may fail if file doesn't exist yet)
         NativeModules.LndMobileTools.observeLndLogFile(lndDir, network)
             .then(() => {
@@ -309,7 +340,6 @@ export default class SyncStore {
             this.rescanCurrentHeight = parseInt(startMatch[1], 10);
             return;
         }
-
         // Check for rescan progress updates
         // Pattern: "Rescanned through block ... (height 119000)"
         const progressMatch = logLine.match(
@@ -338,5 +368,112 @@ export default class SyncStore {
         if (addrMatch) {
             this.rescanAddressCount = parseInt(addrMatch[1], 10);
         }
+    };
+
+    @action
+    public startSyncLogObservation = () => {
+        if (this.syncLogListener) {
+            this.syncLogListener.remove();
+            this.syncLogListener = null;
+        }
+
+        const network = this.getNetwork();
+        const lndDir = this.settingsStore.lndDir || 'lnd';
+
+        this.syncLogListener = LndMobileToolsEventEmitter.addListener(
+            'lndlog',
+            (data: string) => this.parseSyncLog(data)
+        );
+
+        NativeModules.LndMobileTools.observeLndLogFile(lndDir, network).catch(
+            (e: any) => {
+                console.log('Could not observe log file for sync metrics:', e);
+            }
+        );
+    };
+
+    @action
+    public loadAdvancedMetrics = async () => {
+        try {
+            const metrics = await Storage.getItem(ADVANCED_SYNC_METRICS_KEY);
+            if (metrics) {
+                const parsed: AdvancedSyncMetrics = JSON.parse(metrics);
+                this.headerSyncHeight =
+                    parsed?.headerSyncHeight != null
+                        ? Number(parsed.headerSyncHeight)
+                        : null;
+                this.filterHeaderSyncHeight =
+                    parsed?.filterHeaderSyncHeight != null
+                        ? Number(parsed.filterHeaderSyncHeight)
+                        : null;
+                return;
+            }
+
+            const h = await Storage.getItem('headerSyncHeight');
+            const f = await Storage.getItem('filterHeaderSyncHeight');
+            this.headerSyncHeight = h ? parseInt(h, 10) : null;
+            this.filterHeaderSyncHeight = f ? parseInt(f, 10) : null;
+            this.persistAdvancedMetrics();
+        } catch (e) {
+            console.log('Error loading advanced sync metrics', e);
+        }
+    };
+
+    private persistAdvancedMetrics = async () => {
+        try {
+            await Storage.setItem(ADVANCED_SYNC_METRICS_KEY, {
+                headerSyncHeight: this.headerSyncHeight,
+                filterHeaderSyncHeight: this.filterHeaderSyncHeight
+            });
+        } catch (e) {
+            console.log('Error saving advanced sync metrics', e);
+        }
+    };
+
+    @action
+    public stopSyncLogObservation = () => {
+        if (this.syncLogListener) {
+            this.syncLogListener.remove();
+            this.syncLogListener = null;
+        }
+    };
+
+    @action
+    private parseSyncLog = (logLine: string) => {
+        // "Processed 18000 blocks in the last 10.7s (height 1100008,"
+        const blockMatch = logLine.match(
+            /Processed .* blocks .* \(height (\d+),/
+        );
+        if (blockMatch) {
+            this.headerSyncHeight = parseInt(blockMatch[1], 10);
+            this.persistAdvancedMetrics();
+            return;
+        }
+
+        // "Verified 18000 filter headers in the last 10.68s (height 1104001,"
+        const verifiedMatch = logLine.match(
+            /Verified .* filter headers .* \(height (\d+),/
+        );
+        if (verifiedMatch) {
+            this.filterHeaderSyncHeight = parseInt(verifiedMatch[1], 10);
+            this.persistAdvancedMetrics();
+            return;
+        }
+
+        // "Successfully got filter headers for 1100 checkpoints"
+        const checkpointMatch = logLine.match(
+            /Successfully got filter headers for (\d+) checkpoints/
+        );
+        if (checkpointMatch) {
+            this.filterHeaderSyncHeight =
+                parseInt(checkpointMatch[1], 10) * 1000;
+            this.persistAdvancedMetrics();
+            return;
+        }
+    };
+
+    @action
+    public toggleAdvancedSyncMetrics = () => {
+        this.showAdvancedSyncMetrics = !this.showAdvancedSyncMetrics;
     };
 }
