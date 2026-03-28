@@ -281,6 +281,7 @@ import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
+import NostrKeysTools from './views/Tools/NostrKeys';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
@@ -1461,6 +1462,12 @@ export default class App extends React.PureComponent {
                                                             name="CashuTools" // @ts-ignore:next-line
                                                             component={
                                                                 CashuTools
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="NostrKeysTools" // @ts-ignore:next-line
+                                                            component={
+                                                                NostrKeysTools
                                                             }
                                                         />
                                                         <Stack.Screen
