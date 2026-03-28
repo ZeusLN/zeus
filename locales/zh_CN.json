@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "允许与其他对等节点建立连接。",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "禁止与其他对等节点建立连接。",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping 请求超时",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "优化对等节点选择",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "零确认对等节点",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "设置您希望接受零确认闪电网络通道的对等节点（不包括闪电网络服务提供方）。",
