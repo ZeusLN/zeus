@@ -74,6 +74,13 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
+  DEBUG_resetGraphDb: (NSString)lndDir
+  network: (NSString)network
+  resolver: (RCTPromiseResolveBlock)resolve
+  rejecter: (RCTPromiseRejectBlock)reject
+)
+
+RCT_EXTERN_METHOD(
   checkApplicationSupportExists: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
