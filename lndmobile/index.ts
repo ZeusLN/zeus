@@ -105,9 +105,10 @@ export const startLnd = async ({
  */
 export const gossipSync = async (
     serviceUrl: string,
-    lndDir: string = 'lnd'
+    lndDir: string = 'lnd',
+    isSqlite: boolean = false
 ): Promise<{ data: string }> => {
-    return await LndMobile.gossipSync(serviceUrl, lndDir);
+    return await LndMobile.gossipSync(serviceUrl, lndDir, isSqlite);
 };
 
 /**

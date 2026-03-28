@@ -276,14 +276,14 @@ class LndMobile: RCTEventEmitter {
     }
   }
 
-@objc(gossipSync:lndDir:resolver:rejecter:)
-  func gossipSync(serviceUrl: String, lndDir: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+@objc(gossipSync:lndDir:isSqlite:resolver:rejecter:)
+  func gossipSync(serviceUrl: String, lndDir: String, isSqlite: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
    let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
    let folderName = lndDir.isEmpty ? "lnd" : lndDir
    let lndPath = applicationSupport.appendingPathComponent(folderName, isDirectory: true)
    let cachePath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
 
-    Lnd.shared.gossipSync(serviceUrl, cacheDir: cachePath.path, dataDir: lndPath.path, callback: { (data, error) in
+    Lnd.shared.gossipSync(serviceUrl, cacheDir: cachePath.path, dataDir: lndPath.path, isSqlite: isSqlite, callback: { (data, error) in
      if let e = error {
        reject("error", e.localizedDescription, e)
        return

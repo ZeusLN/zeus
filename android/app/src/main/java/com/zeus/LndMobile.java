@@ -430,7 +430,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void gossipSync(String serviceUrl, String lndDir, Promise promise) {
+  public void gossipSync(String serviceUrl, String lndDir, boolean isSqlite, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -444,6 +444,10 @@ class LndMobile extends ReactContextBaseJavaModule {
     bundle.putString(
       "lndDir",
       lndDir
+    );
+    bundle.putBoolean(
+      "isSqlite",
+      isSqlite
     );
     message.setData(bundle);
 
