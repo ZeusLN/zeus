@@ -2043,4 +2043,5 @@ export default class LdkNode {
     supportsSettingInvoiceExpiration = () => true;
     supportsWatchtowerClient = () => false;
     supportsPeers = () => true;
+    supportsNostrWalletConnectService = () => true;
 }
