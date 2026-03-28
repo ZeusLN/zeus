@@ -5462,11 +5462,6 @@ event-target-shim@^5.0.0:
   resolved "https://registry.yarnpkg.com/event-target-shim/-/event-target-shim-5.0.1.tgz#5d4d3ebdf9583d63a5333ce2deb7480ab2b05789"
   integrity sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==
 
-eventemitter3@^4.0.7:
-  version "4.0.7"
-  resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
-  integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
-
 events@1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/events/-/events-1.1.1.tgz#9ebdb7635ad099c70dcc4c2a1f5004288e8bd924"
@@ -8695,14 +8690,6 @@ react-native-system-navigation-bar@2.8.0:
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/react-native-system-navigation-bar/-/react-native-system-navigation-bar-2.8.0.tgz#68b0359121fc08751436a01e44639cb3b39bdad8"
   integrity sha512-VaBdTAUCnKfngphHJxZn/Axs6pzANYOr3UQDb9+iOzwqN6br43S4yFtqnnH85WPSMa+4aiOdm0AivG9e0tPUnA==
-
-react-native-tcp-socket@6.2.0:
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/react-native-tcp-socket/-/react-native-tcp-socket-6.2.0.tgz#2dc3a794c0fea53f037a3fccf391296451314664"
-  integrity sha512-q1FSK3cdwyFP3eNxgk+Z6Dgnb84RoAFKaDOIrt2gjG8YbLUad+StGhdd7BUdufNw1bS7JY7IAAgnwwvee3z08Q==
-  dependencies:
-    buffer "^5.4.3"
-    eventemitter3 "^4.0.7"
 
 "react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.2.1-zeus":
   version "0.2.1-zeus"

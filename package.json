@@ -143,7 +143,6 @@
     "react-native-svg": "15.15.1",
     "react-native-svg-transformer": "1.5.3",
     "react-native-system-navigation-bar": "2.8.0",
-    "react-native-tcp-socket": "6.2.0",
     "react-native-tor": "https://github.com/ZeusLN/react-native-tor.git#v0.2.1-zeus",
     "react-native-udp": "4.1.7",
     "react-native-v8": "0.61.5-patch.4",
@@ -209,7 +208,6 @@
   },
   "react-native": {
     "crypto": "react-native-crypto",
-    "net": "react-native-tcp",
     "querystring": "querystring-es3",
     "_stream_transform": "readable-stream/transform",
     "_stream_readable": "readable-stream/readable",
@@ -222,7 +220,6 @@
   },
   "browser": {
     "crypto": "react-native-crypto",
-    "net": "react-native-tcp",
     "querystring": "querystring-es3",
     "_stream_transform": "readable-stream/transform",
     "_stream_readable": "readable-stream/readable",
