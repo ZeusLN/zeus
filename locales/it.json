@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Consentendo connessioni ad altri coetanei.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Non consente connessioni ad altri coetanei.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Il ping è scaduto",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Ottimizza la selezione dei peer",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Imposta i coetanei da cui desideri accettare i canali di fulmini a zero conf, oltre all'LSP.",
