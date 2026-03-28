@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "अन्य पीयर्स से कनेक्शन की अनुमति दे रहा है।",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "अन्य पीयर्स से कनेक्शन की अनुमति नहीं दे रहा है।",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "पिंग का समय समाप्त हो गया",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "पीयर्स चयन का अनुकूलन करें",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "ज़ीरो कॉन्फ पीयर्स",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "उन पीयर्स को सेट करें जिनसे आप LSP के अलावा ज़ीरो कॉन्फ लाइटनिंग चैनल्स स्वीकार करना चाहते हैं।",
