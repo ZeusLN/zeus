@@ -8,13 +8,11 @@ import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
 
-// @ts-ignore:next-line
-import Ping from 'react-native-ping';
-
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
+import { localeString } from './LocaleUtils';
 import { retry, sleep } from './SleepUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -81,6 +79,44 @@ export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
 export const NEUTRINO_PING_LAX_MS = 500;
 export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+
+// Fetch-based latency check that runs entirely on the JS thread,
+// avoiding the native thread race condition in react-native-ping.
+export async function pingPeer(
+    host: string,
+    timeout: number = NEUTRINO_PING_TIMEOUT_MS
+): Promise<number> {
+    if (host.includes('://')) {
+        throw new Error(
+            localeString(
+                'views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost'
+            )
+        );
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    const start = global.performance.now();
+    try {
+        await fetch(`http://${host}:8333`, {
+            method: 'HEAD',
+            signal: controller.signal
+        });
+    } catch {
+        // We only care about the round-trip time. A connection refused,
+        // reset, or other network error still proves the host is reachable.
+        // Only an abort (timeout) should be treated as unreachable.
+        if (controller.signal.aborted) {
+            throw new Error(
+                localeString(
+                    'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
+                )
+            );
+        }
+    } finally {
+        clearTimeout(timer);
+    }
+    return Math.round(global.performance.now() - start);
+}
 
 // ~4GB
 const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
@@ -807,9 +843,7 @@ export async function optimizeNeutrinoPeers(
         const peer = peers[i];
         await new Promise(async (resolve) => {
             try {
-                const ms = await Ping.start(peer, {
-                    timeout: NEUTRINO_PING_TIMEOUT_MS
-                });
+                const ms = await pingPeer(peer);
                 console.log(`# ${peer} - ${ms}`);
                 results.push({
                     peer,
@@ -912,9 +946,7 @@ export async function optimizeNeutrinoPeers(
                     const peer = peers[i];
                     await new Promise(async (resolve) => {
                         try {
-                            const ms = await Ping.start(peer, {
-                                timeout: NEUTRINO_PING_TIMEOUT_MS
-                            });
+                            const ms = await pingPeer(peer);
                             console.log(`# ${peer} - ${ms}`);
                             results.push({
                                 peer,

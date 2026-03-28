@@ -2,8 +2,6 @@ import * as React from 'react';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-// @ts-ignore:next-line
-import Ping from 'react-native-ping';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../../components/Button';
@@ -27,8 +25,8 @@ import SettingsStore, {
 
 import {
     optimizeNeutrinoPeers,
-    NEUTRINO_PING_THRESHOLD_MS,
-    NEUTRINO_PING_TIMEOUT_MS
+    pingPeer,
+    NEUTRINO_PING_THRESHOLD_MS
 } from '../../../../utils/LndMobileUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
@@ -273,12 +271,8 @@ export default class NeutrinoPeers extends React.Component<
                                                         });
 
                                                         const ms =
-                                                            await Ping.start(
-                                                                addPeer,
-                                                                {
-                                                                    timeout:
-                                                                        NEUTRINO_PING_TIMEOUT_MS
-                                                                }
+                                                            await pingPeer(
+                                                                addPeer
                                                             );
                                                         this.setState({
                                                             pingTime: ms,
@@ -389,12 +383,8 @@ export default class NeutrinoPeers extends React.Component<
                                                                     );
 
                                                                     const ms =
-                                                                        await Ping.start(
-                                                                            item,
-                                                                            {
-                                                                                timeout:
-                                                                                    NEUTRINO_PING_TIMEOUT_MS
-                                                                            }
+                                                                        await pingPeer(
+                                                                            item
                                                                         );
                                                                     this.setState(
                                                                         {

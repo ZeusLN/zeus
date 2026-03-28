@@ -1,15 +1,10 @@
 import { action, reaction, observable } from 'mobx';
-// @ts-ignore:next-line
-import Ping from 'react-native-ping';
 
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 
-import {
-    NEUTRINO_PING_TIMEOUT_MS,
-    NEUTRINO_PING_THRESHOLD_MS
-} from '../utils/LndMobileUtils';
+import { NEUTRINO_PING_THRESHOLD_MS, pingPeer } from '../utils/LndMobileUtils';
 
 const ZOMBIE_CHAN_THRESHOLD = 21000;
 
@@ -89,9 +84,7 @@ export default class AlertStore {
             const peer = peers[i];
             await new Promise(async (resolve) => {
                 try {
-                    const ms = await Ping.start(peer, {
-                        timeout: NEUTRINO_PING_TIMEOUT_MS
-                    });
+                    const ms = await pingPeer(peer);
                     console.log(`# ${peer} - ${ms}`);
                     results.push({
                         peer,
