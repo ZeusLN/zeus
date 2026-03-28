@@ -214,7 +214,7 @@ const writeLndConfig = async ({
     }`;
 
     const config = `[Application Options]
-    debuglevel=info
+    debuglevel=debug
     maxbackoff=2s
     sync-freelist=1
     accept-keysend=1
