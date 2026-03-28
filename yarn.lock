@@ -8817,11 +8817,6 @@ react-native-notifications@5.2.2:
   resolved "https://registry.yarnpkg.com/react-native-notifications/-/react-native-notifications-5.2.2.tgz#c97f31394a550a6a6fae2647cecd406cae77d11d"
   integrity sha512-So4o7KfQfmNtpXDgzxPCRbuzVr3Mc6Hiz7IrdiMm0lxsMGgKgitQV4vO51DKIA5J//CzagJED6NBrTERSnZBFw==
 
-react-native-ping@1.2.8:
-  version "1.2.8"
-  resolved "https://registry.yarnpkg.com/react-native-ping/-/react-native-ping-1.2.8.tgz#c84a944cad50e7874f35b3f8bf884cd08333575e"
-  integrity sha512-yqUJuaoZKi6DclNIppTEKJinppwD0OHzcDkLwtClbLwaYIUrZeMuuAM0iBgeyZeDgNt1DWA4Nr86ictuA48xuA==
-
 react-native-print@0.11.0:
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/react-native-print/-/react-native-print-0.11.0.tgz#3dc69fb05552f0c5da5be0dd345a93e1604621d1"

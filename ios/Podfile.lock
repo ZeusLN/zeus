@@ -2019,8 +2019,6 @@ PODS:
     - React-Core
   - react-native-notifications (5.2.2):
     - React-Core
-  - react-native-ping (1.2.8):
-    - React
   - react-native-print (0.11.0):
     - React-Core
   - react-native-qr-kit (1.0.1):
@@ -3362,7 +3360,6 @@ DEPENDENCIES:
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-notifications (from `../node_modules/react-native-notifications`)
-  - react-native-ping (from `../node_modules/react-native-ping`)
   - react-native-print (from `../node_modules/react-native-print`)
   - react-native-qr-kit (from `../node_modules/react-native-qr-kit`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
@@ -3545,8 +3542,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-notifications:
     :path: "../node_modules/react-native-notifications"
-  react-native-ping:
-    :path: "../node_modules/react-native-ping"
   react-native-print:
     :path: "../node_modules/react-native-print"
   react-native-qr-kit:
@@ -3732,7 +3727,6 @@ SPEC CHECKSUMS:
   react-native-image-picker: 0314366753615115fa55c3cc937ac44cb7e75702
   react-native-nfc-manager: c8891e460b4943b695d63f7f4effc6345bbefc83
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
-  react-native-ping: 589027e929c300b0b68cc5c34105f33610177055
   react-native-print: 692e8782bc89872ea01738c6759631388e77358c
   react-native-qr-kit: a40acb98a771a6e614602b5dd53546a5c51e8af4
   react-native-randombytes: 4a00fba06ca0d80a7c02a6b73cfe58ffa4a093a0
