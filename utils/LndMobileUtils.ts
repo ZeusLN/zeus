@@ -1100,8 +1100,11 @@ export async function createLndWallet({
         await excludeLndICloudBackup(lndDir);
     }
 
-    // New wallets always use SQLite
-    await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
+    await writeLndConfig({
+        lndDir,
+        isTestnet,
+        isSqlite: Platform.OS === 'ios'
+    });
     await initialize();
 
     await startLnd({
