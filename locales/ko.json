@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "다른 피어들과의 연결을 허용",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "다른 피어들과의 연결을 불허",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "핑 시간 초과",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "피어 선택 최적화",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "미확정(0-conf) 피어들",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "LSP 외에, 제로 컨펌 라이트닝 채널을 허용할 피어들을 설정합니다.",

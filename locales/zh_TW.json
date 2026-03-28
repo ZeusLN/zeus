@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "允許和其他友站連線",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "不允許和其他友站連線",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Ping 逾時無回應",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "友站選擇最佳化",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "零確認友站",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "設定除了 LSP 以外，可以接受零確認的閃電網管道的友站。",
