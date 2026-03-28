@@ -1244,6 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Perbolehkan koneksi ke peer lain.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "Tidak perbolehkan koneksi ke peer lain.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Waktu Ping habis",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimalkan pemilihan peer",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Peer Zero conf",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Pilih peer selain LSP yang ingin Anda izinkan untuk membuka saluran Lightning zero-conf.",
