@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Badge } from '@rneui/themed';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
 
@@ -71,22 +71,26 @@ const ZeusPay = () => (
 );
 
 const ZeusPayAnimated = () => {
-    let state = new Animated.Value(1);
-    Animated.loop(
-        Animated.sequence([
-            Animated.timing(state, {
-                toValue: 0,
-                duration: 500,
-                delay: 1000,
-                useNativeDriver: true
-            }),
-            Animated.timing(state, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: true
-            })
-        ])
-    ).start();
+    const state = React.useRef(new Animated.Value(1)).current;
+    React.useEffect(() => {
+        const anim = Animated.loop(
+            Animated.sequence([
+                Animated.timing(state, {
+                    toValue: 0,
+                    duration: 500,
+                    delay: 1000,
+                    useNativeDriver: true
+                }),
+                Animated.timing(state, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true
+                })
+            ])
+        );
+        anim.start();
+        return () => anim.stop();
+    }, []);
 
     return (
         <Animated.View
@@ -101,22 +105,26 @@ const ZeusPayAnimated = () => {
 };
 
 const NWCAnimated = () => {
-    let state = new Animated.Value(1);
-    Animated.loop(
-        Animated.sequence([
-            Animated.timing(state, {
-                toValue: 0,
-                duration: 300,
-                delay: 500,
-                useNativeDriver: true
-            }),
-            Animated.timing(state, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true
-            })
-        ])
-    ).start();
+    const state = React.useRef(new Animated.Value(1)).current;
+    React.useEffect(() => {
+        const anim = Animated.loop(
+            Animated.sequence([
+                Animated.timing(state, {
+                    toValue: 0,
+                    duration: 300,
+                    delay: 500,
+                    useNativeDriver: true
+                }),
+                Animated.timing(state, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true
+                })
+            ])
+        );
+        anim.start();
+        return () => anim.stop();
+    }, []);
 
     return (
         <Animated.View
@@ -251,6 +259,40 @@ const POSBadge = ({
         <POS stroke={themeColor('text')} width="30" height="35" />
     </TouchableOpacity>
 );
+
+const SyncBadge = ({
+    navigation
+}: {
+    navigation: NativeStackNavigationProp<any, any>;
+}) => {
+    const spinAnim = React.useRef(new Animated.Value(0)).current;
+
+    const interpolateRotation = spinAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg']
+    });
+
+    React.useEffect(() => {
+        const anim = Animated.loop(
+            Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 3000,
+                easing: Easing.linear,
+                useNativeDriver: true
+            })
+        );
+        anim.start();
+        return () => anim.stop();
+    }, []);
+
+    return (
+        <Animated.View style={{ transform: [{ rotate: interpolateRotation }] }}>
+            <TouchableOpacity onPress={() => navigation.navigate('Sync')}>
+                <Sync fill={themeColor('text')} width="35" height="25.66" />
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
 
 interface WalletHeaderProps {
     AlertStore?: AlertStore;
@@ -561,48 +603,6 @@ export default class WalletHeader extends React.Component<
                 />
             </TouchableOpacity>
         );
-
-        const SyncBadge = ({
-            navigation
-        }: {
-            navigation: NativeStackNavigationProp<any, any>;
-        }) => {
-            const [spinAnim] = useState(new Animated.Value(0));
-
-            const interpolateRotation = spinAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', '360deg']
-            });
-
-            const animatedStyle = {
-                transform: [{ rotate: interpolateRotation }]
-            };
-
-            useEffect(() => {
-                Animated.loop(
-                    Animated.timing(spinAnim, {
-                        toValue: 1,
-                        duration: 3000,
-                        easing: Easing.linear,
-                        useNativeDriver: true
-                    })
-                ).start();
-            });
-
-            return (
-                <Animated.View style={animatedStyle}>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Sync')}
-                    >
-                        <Sync
-                            fill={themeColor('text')}
-                            width="35"
-                            height="25.66"
-                        />
-                    </TouchableOpacity>
-                </Animated.View>
-            );
-        };
 
         return (
             <>
