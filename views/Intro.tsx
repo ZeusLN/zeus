@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Dimensions, Image, Platform, Text, View } from 'react-native';
+import { Dimensions, Image, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import Carousel, {
@@ -250,7 +250,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                                                     'general.defaultNodeNickname'
                                                 ),
                                                 lndDir,
-                                                isSqlite: Platform.OS === 'ios'
+                                                isSqlite: true
                                             }
                                         ];
 

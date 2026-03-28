@@ -3,7 +3,6 @@ import {
     BackHandler,
     Dimensions,
     ImageBackground,
-    Platform,
     NativeEventSubscription,
     View,
     Text
@@ -311,8 +310,7 @@ export default class IntroSplash extends React.Component<
                                                         'general.defaultNodeNickname'
                                                     ),
                                                     lndDir,
-                                                    isSqlite:
-                                                        Platform.OS === 'ios'
+                                                    isSqlite: true
                                                 }
                                             ];
 

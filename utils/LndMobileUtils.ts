@@ -1135,7 +1135,7 @@ export async function createLndWallet({
     await writeLndConfig({
         lndDir,
         isTestnet,
-        isSqlite: Platform.OS === 'ios'
+        isSqlite: true
     });
     await initialize();
 
