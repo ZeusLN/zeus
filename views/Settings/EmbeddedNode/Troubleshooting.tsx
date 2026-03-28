@@ -364,7 +364,7 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                                             'Mainnet'
                                                             ? 'mainnet'
                                                             : 'testnet',
-                                                        isSqlite
+                                                        isSqlite ?? false
                                                     );
                                                     this.setState({
                                                         deleteNeutrinoLoading:
