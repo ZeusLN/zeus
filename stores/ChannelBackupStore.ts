@@ -281,7 +281,7 @@ export default class ChannelBackupStore {
 
     private isOlderThanThreeDays(time: string) {
         const ONE_HOUR = 60 * 60 * 1000; /* ms */
-        const THREE_DAYS = 36 * ONE_HOUR;
+        const THREE_DAYS = 3 * 24 * ONE_HOUR;
         return Number(new Date()) - Number(new Date(time)) > THREE_DAYS;
     }
 }
