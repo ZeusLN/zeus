@@ -275,6 +275,23 @@ export async function expressGraphSync() {
             } catch (error) {
                 log.e('Gossip files deletion failed', [error]);
             }
+
+            if (settingsStore?.isSqlite) {
+                log.d('Resetting native SQL graph database');
+                try {
+                    const lndDir = settingsStore?.lndDir || 'lnd';
+                    const network =
+                        settingsStore?.embeddedLndNetwork === 'Mainnet'
+                            ? 'mainnet'
+                            : 'testnet';
+                    await NativeModules.LndMobileTools.DEBUG_resetGraphDb(
+                        lndDir,
+                        network
+                    );
+                } catch (error) {
+                    log.e('Graph database reset failed', [error]);
+                }
+            }
         }
 
         try {
@@ -283,7 +300,8 @@ export async function expressGraphSync() {
                     ? settingsStore?.settings?.customSpeedloader
                     : settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER,
-                settingsStore?.lndDir || 'lnd'
+                settingsStore?.lndDir || 'lnd',
+                settingsStore?.isSqlite || false
             );
 
             const completionTime =

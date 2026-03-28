@@ -328,8 +328,8 @@ open class Lnd {
     }
   }
 
-  func gossipSync(_ serviceUrl: String, cacheDir: String, dataDir: String, callback: @escaping Callback) {
-    LndmobileGossipSync(serviceUrl, cacheDir, dataDir, "", LndmobileCallback(method: "zeus_gossipSync", callback: callback))
+  func gossipSync(_ serviceUrl: String, cacheDir: String, dataDir: String, isSqlite: Bool, callback: @escaping Callback) {
+    LndmobileGossipSync(serviceUrl, cacheDir, dataDir, "", isSqlite, LndmobileCallback(method: "zeus_gossipSync", callback: callback))
   }
   
   func cancelGossipSync(_ callback: @escaping Callback) {
