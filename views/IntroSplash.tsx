@@ -3,30 +3,22 @@ import {
     BackHandler,
     Dimensions,
     ImageBackground,
-    Platform,
     NativeEventSubscription,
-    View,
-    Text
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { v4 as uuidv4 } from 'uuid';
 
 import Globe from '../assets/images/SVG/Globe.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 import Button from '../components/Button';
-import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
-import {
-    optimizeNeutrinoPeers,
-    createLndWallet
-} from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -38,10 +30,7 @@ interface IntroSplashProps {
 }
 
 interface IntroSplashState {
-    choosingPeers: boolean;
-    creatingWallet: boolean;
     error: boolean;
-    modalBlur: number;
 }
 
 @inject('SettingsStore')
@@ -52,10 +41,7 @@ export default class IntroSplash extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
     state = {
-        choosingPeers: false,
-        creatingWallet: false,
-        error: false,
-        modalBlur: 90
+        error: false
     };
 
     componentDidMount() {
@@ -71,9 +57,6 @@ export default class IntroSplash extends React.Component<
     }
 
     handleBackPress = () => {
-        if (this.state.creatingWallet) {
-            return true;
-        }
         BackHandler.exitApp();
         return true;
     };
@@ -84,7 +67,6 @@ export default class IntroSplash extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { creatingWallet, choosingPeers } = this.state;
         const { settings } = SettingsStore;
         const locale = settings.locale || '';
 
@@ -93,57 +75,6 @@ export default class IntroSplash extends React.Component<
         );
         let localeName;
         if (localeItem[0]) localeName = localeItem[0].value;
-
-        if (choosingPeers || creatingWallet) {
-            return (
-                <Screen>
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            top: 10
-                        }}
-                    >
-                        <View
-                            style={{
-                                width: Dimensions.get('window').width * 0.85,
-                                maxHeight: 200,
-                                marginTop: 10,
-                                alignSelf: 'center'
-                            }}
-                        >
-                            <Wordmark fill={themeColor('highlight')} />
-                        </View>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                alignSelf: 'center',
-                                fontSize: 15,
-                                padding: 8
-                            }}
-                        >
-                            {choosingPeers
-                                ? localeString('views.Intro.choosingPeers')
-                                : localeString(
-                                      'views.Intro.creatingWallet'
-                                  ).replace('Zeus', 'ZEUS')}
-                        </Text>
-                        <View style={{ marginTop: 40 }}>
-                            <LoadingIndicator />
-                        </View>
-                    </View>
-                    <View
-                        style={{
-                            bottom: 56,
-                            position: 'absolute',
-                            alignSelf: 'center'
-                        }}
-                    ></View>
-                </Screen>
-            );
-        }
 
         return (
             <Screen>
@@ -244,92 +175,10 @@ export default class IntroSplash extends React.Component<
                                         color: themeColor('background')
                                     }}
                                     title={localeString(
-                                        'views.Intro.quickStart'
+                                        'views.Intro.getStarted'
                                     )}
-                                    onPress={async () => {
-                                        this.setState({
-                                            choosingPeers: true
-                                        });
-                                        const { SettingsStore } = this.props;
-                                        const {
-                                            setConnectingStatus,
-                                            updateSettings
-                                        } = SettingsStore;
-
-                                        try {
-                                            await optimizeNeutrinoPeers(
-                                                undefined
-                                            );
-                                        } catch (e) {
-                                            this.setState({
-                                                error: true,
-                                                choosingPeers: false,
-                                                creatingWallet: false
-                                            });
-                                        }
-
-                                        this.setState({
-                                            choosingPeers: false,
-                                            creatingWallet: true
-                                        });
-
-                                        const lndDir = uuidv4();
-
-                                        let response;
-                                        try {
-                                            response = await createLndWallet({
-                                                lndDir
-                                            });
-                                        } catch (e) {
-                                            this.setState({
-                                                error: true,
-                                                choosingPeers: false,
-                                                creatingWallet: false
-                                            });
-                                            return;
-                                        }
-
-                                        const {
-                                            wallet,
-                                            seed,
-                                            randomBase64
-                                        }: any = response;
-                                        if (wallet && wallet.admin_macaroon) {
-                                            let nodes = [
-                                                {
-                                                    adminMacaroon:
-                                                        wallet.admin_macaroon,
-                                                    seedPhrase:
-                                                        seed.cipher_seed_mnemonic,
-                                                    walletPassword:
-                                                        randomBase64,
-                                                    embeddedLndNetwork:
-                                                        'Mainnet',
-                                                    implementation:
-                                                        'embedded-lnd',
-                                                    nickname: localeString(
-                                                        'general.defaultNodeNickname'
-                                                    ),
-                                                    lndDir,
-                                                    isSqlite:
-                                                        Platform.OS === 'ios'
-                                                }
-                                            ];
-
-                                            updateSettings({ nodes }).then(
-                                                () => {
-                                                    setConnectingStatus(true);
-                                                    navigation.navigate(
-                                                        'Wallet'
-                                                    );
-                                                }
-                                            );
-                                        } else {
-                                            this.setState({
-                                                error: true,
-                                                creatingWallet: false
-                                            });
-                                        }
+                                    onPress={() => {
+                                        navigation.navigate('Onboarding1');
                                     }}
                                 />
                             </View>
