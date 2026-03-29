@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     ImageBackground,
     View,
     StyleSheet,
@@ -8,6 +9,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
+import DeviceInfo from 'react-native-device-info';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -15,8 +17,13 @@ import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 
 import ModalStore from '../../stores/ModalStore';
+import { DEFAULT_NEUTRINO_PEERS_MAINNET } from '../../stores/SettingsStore';
 
 import { font } from '../../utils/FontUtils';
+import {
+    pingPeer,
+    NEUTRINO_PING_THRESHOLD_MS
+} from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -26,9 +33,74 @@ interface NodeChoiceProps {
     route: Route<'NodeChoice', { enableCashu: boolean; returnTo?: string }>;
 }
 
+interface NodeChoiceState {
+    lowRam: boolean;
+    poorConnectivity: boolean;
+    checking: boolean;
+}
+
+const FOUR_GB = 4 * 1024 * 1024 * 1024;
+
 @inject('ModalStore')
 @observer
-export default class NodeChoice extends React.Component<NodeChoiceProps, {}> {
+export default class NodeChoice extends React.Component<
+    NodeChoiceProps,
+    NodeChoiceState
+> {
+    private _isMounted = false;
+
+    state: NodeChoiceState = {
+        lowRam: false,
+        poorConnectivity: false,
+        checking: true
+    };
+
+    async componentDidMount() {
+        this._isMounted = true;
+        await Promise.allSettled([
+            this.checkRam(),
+            this.checkPeerConnectivity()
+        ]);
+        if (this._isMounted) this.setState({ checking: false });
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
+    }
+
+    private checkRam = async () => {
+        try {
+            const totalMemory = await DeviceInfo.getTotalMemory();
+            if (totalMemory < FOUR_GB && this._isMounted) {
+                this.setState({ lowRam: true });
+            }
+        } catch (e) {
+            console.log('RAM check failed', e);
+        }
+    };
+
+    private checkPeerConnectivity = async () => {
+        try {
+            let reachableCount = 0;
+            for (const peer of DEFAULT_NEUTRINO_PEERS_MAINNET) {
+                try {
+                    const ms = await pingPeer(peer);
+                    if (ms < NEUTRINO_PING_THRESHOLD_MS) {
+                        reachableCount++;
+                    }
+                } catch {
+                    // peer timed out or unreachable
+                }
+                if (reachableCount >= 2) return;
+            }
+            if (reachableCount < 2 && this._isMounted) {
+                this.setState({ poorConnectivity: true });
+            }
+        } catch (e) {
+            console.log('Peer connectivity check failed', e);
+        }
+    };
+
     showLdkNodeInfo = () => {
         const { ModalStore } = this.props;
         ModalStore!.toggleInfoModal({
@@ -68,6 +140,8 @@ export default class NodeChoice extends React.Component<NodeChoiceProps, {}> {
 
     render() {
         const { navigation } = this.props;
+        const { lowRam, poorConnectivity, checking } = this.state;
+        const showWarning = lowRam || poorConnectivity;
 
         return (
             <Screen>
@@ -157,6 +231,64 @@ export default class NodeChoice extends React.Component<NodeChoiceProps, {}> {
                                         </TouchableOpacity>
                                     </View>
                                 </View>
+
+                                {checking ? (
+                                    <View style={styles.warningContainer}>
+                                        <View style={styles.checkingRow}>
+                                            <ActivityIndicator
+                                                size="small"
+                                                color={themeColor('text')}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.checkingText,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.NodeChoice.warning.checking'
+                                                )}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ) : showWarning ? (
+                                    <View style={styles.warningContainer}>
+                                        {lowRam && (
+                                            <Text
+                                                style={{
+                                                    ...styles.warningText,
+                                                    color: themeColor('warning')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.NodeChoice.warning.lowRam'
+                                                )}
+                                            </Text>
+                                        )}
+                                        {poorConnectivity && (
+                                            <Text
+                                                style={{
+                                                    ...styles.warningText,
+                                                    color: themeColor('warning')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.NodeChoice.warning.poorConnectivity'
+                                                )}
+                                            </Text>
+                                        )}
+                                        <Text
+                                            style={{
+                                                ...styles.suggestionText,
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NodeChoice.warning.suggestion'
+                                            )}
+                                        </Text>
+                                    </View>
+                                ) : null}
                             </View>
                         </View>
                     </View>
@@ -202,5 +334,32 @@ const styles = StyleSheet.create({
     infoButton: {
         padding: 10,
         marginLeft: 5
+    },
+    warningContainer: {
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        marginHorizontal: 10,
+        marginTop: 5
+    },
+    checkingRow: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    checkingText: {
+        fontSize: 13,
+        fontFamily: font('regular'),
+        marginLeft: 8
+    },
+    warningText: {
+        fontSize: 13,
+        fontFamily: font('regular'),
+        marginBottom: 4
+    },
+    suggestionText: {
+        fontSize: 13,
+        fontFamily: font('regular'),
+        marginTop: 4
     }
 });
