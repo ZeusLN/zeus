@@ -1244,7 +1244,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.allowingOtherPeers": "Permitiendo conexiones a otros pares.",
     "views.Settings.EmbeddedNode.NeutrinoPeers.notAllowingOtherPeers": "No permitir conexiones a otros pares",
     "views.Settings.EmbeddedNode.NeutrinoPeers.timedOut": "Se agotó el tiempo de ping",
-    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Introduzca un nombre de host o una dirección IP sin http:// ni https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimice la selección de pares",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Pares de zero-conf",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Establezca los pares de los que desea aceptar los canales de Lightning zero-conf, aparte del LSP.",
