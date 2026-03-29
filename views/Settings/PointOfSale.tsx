@@ -1,6 +1,11 @@
 import * as React from 'react';
-import { Platform, ScrollView, View } from 'react-native';
-import { Icon, ListItem } from '@rneui/themed';
+import {
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -8,8 +13,10 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
+import { Row } from '../../components/layout/Row';
 import {
     ErrorMessage,
     WarningMessage
@@ -199,8 +206,7 @@ export default class PointOfSale extends React.Component<
                             <>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -225,8 +231,7 @@ export default class PointOfSale extends React.Component<
 
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -249,51 +254,36 @@ export default class PointOfSale extends React.Component<
                                     }}
                                 />
 
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Title
+                                <View style={styles.switchRow}>
+                                    <Text
                                         style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            left: -10
+                                            ...styles.settingLabel,
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString(
                                             'views.Settings.POS.devMode'
                                         )}
-                                    </ListItem.Title>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={squareDevMode}
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress
-                                            }
-                                            onValueChange={async () => {
-                                                this.setState({
+                                    </Text>
+                                    <Switch
+                                        value={squareDevMode}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                squareDevMode: !squareDevMode
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    ...settings.pos,
                                                     squareDevMode:
                                                         !squareDevMode
-                                                });
-                                                await updateSettings({
-                                                    pos: {
-                                                        ...settings.pos,
-                                                        squareDevMode:
-                                                            !squareDevMode
-                                                    }
-                                                });
-                                            }}
-                                        />
-                                    </View>
-                                </ListItem>
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
                             </>
                         )}
 
@@ -301,8 +291,7 @@ export default class PointOfSale extends React.Component<
                             <>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -371,153 +360,108 @@ export default class PointOfSale extends React.Component<
                                     />
                                 )}
 
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Title
+                                <View style={styles.switchRow}>
+                                    <Text
                                         style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            left: -10
+                                            ...styles.settingLabel,
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString(
                                             'views.Settings.POS.disableTips'
                                         )}
-                                    </ListItem.Title>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={disableTips}
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress
-                                            }
-                                            onValueChange={async () => {
-                                                this.setState({
+                                    </Text>
+                                    <Switch
+                                        value={disableTips}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                disableTips: !disableTips
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    ...settings.pos,
                                                     disableTips: !disableTips
-                                                });
-                                                await updateSettings({
-                                                    pos: {
-                                                        ...settings.pos,
-                                                        disableTips:
-                                                            !disableTips
-                                                    }
-                                                });
-                                            }}
-                                        />
-                                    </View>
-                                </ListItem>
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
 
                                 {Platform.OS === 'android' && (
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                    >
-                                        <ListItem.Title
+                                    <View style={styles.switchRow}>
+                                        <Text
                                             style={{
+                                                ...styles.settingLabel,
                                                 color: themeColor(
                                                     'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                left: -10
+                                                )
                                             }}
                                         >
                                             {localeString(
                                                 'views.Settings.POS.enablePrinter'
                                             )}
-                                        </ListItem.Title>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <Switch
-                                                value={enablePrinter}
-                                                disabled={
-                                                    SettingsStore.settingsUpdateInProgress
-                                                }
-                                                onValueChange={async () => {
-                                                    this.setState({
+                                        </Text>
+                                        <Switch
+                                            value={enablePrinter}
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress
+                                            }
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    enablePrinter:
+                                                        !enablePrinter
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        ...settings.pos,
                                                         enablePrinter:
                                                             !enablePrinter
-                                                    });
-                                                    await updateSettings({
-                                                        pos: {
-                                                            ...settings.pos,
-                                                            enablePrinter:
-                                                                !enablePrinter
-                                                        }
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    </ListItem>
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
                                 )}
                             </>
                         )}
 
                         {posEnabled === PosEnabled.Standalone && (
                             <>
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Title
+                                <View style={styles.switchRow}>
+                                    <Text
                                         style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            left: -10
+                                            ...styles.settingLabel,
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString(
                                             'views.Settings.POS.showKeypad'
                                         )}
-                                    </ListItem.Title>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={showKeypad}
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress
-                                            }
-                                            onValueChange={async () => {
-                                                this.setState({
+                                    </Text>
+                                    <Switch
+                                        value={showKeypad}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                showKeypad: !showKeypad
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    ...settings.pos,
                                                     showKeypad: !showKeypad
-                                                });
-                                                await updateSettings({
-                                                    pos: {
-                                                        ...settings.pos,
-                                                        showKeypad: !showKeypad
-                                                    }
-                                                });
-                                            }}
-                                        />
-                                    </View>
-                                </ListItem>
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        color: themeColor('secondaryText')
                                     }}
                                     infoModalText={localeString(
                                         'views.Settings.POS.taxPercentage.global.info'
@@ -548,35 +492,48 @@ export default class PointOfSale extends React.Component<
                                 />
                             </>
                         )}
+                        {posEnabled !== PosEnabled.Disabled &&
+                            LIST_ITEMS.map((item, index) => (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(item.path)
+                                    }
+                                    key={`${item.label}-${index}`}
+                                >
+                                    <View style={styles.tappableRow}>
+                                        <Row justify="space-between">
+                                            <Text style={styles.settingLabel}>
+                                                {item.label}
+                                            </Text>
+                                            <CaretRight
+                                                fill={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                width="20"
+                                                height="20"
+                                            />
+                                        </Row>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
                     </View>
-                    {posEnabled !== PosEnabled.Disabled &&
-                        LIST_ITEMS.map((item, index) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'none'
-                                }}
-                                onPress={() => navigation.navigate(item.path)}
-                                key={`${item.label}-${index}`}
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {item.label}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                <Icon
-                                    name="keyboard-arrow-right"
-                                    color={themeColor('secondaryText')}
-                                />
-                            </ListItem>
-                        ))}
                 </ScrollView>
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    switchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16
+    },
+    tappableRow: {
+        paddingVertical: 16
+    },
+    settingLabel: {
+        fontSize: 17
+    }
+});
