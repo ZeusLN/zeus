@@ -12,6 +12,7 @@ import CashuDevKit, {
     CDKMelted,
     CDKToken,
     CDKSendKind,
+    CDKPreparedSend,
     CDKSpendingConditions,
     CDKP2PKCondition,
     CDKProofWithY
@@ -64,6 +65,7 @@ import NavigationService from '../NavigationService';
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
 
 const UPGRADE_THRESHOLDS = [10000, 25000, 50000, 100000];
+const CONSOLIDATION_THRESHOLDS = [50, 100, 200];
 const UPGRADE_MESSAGES: { [key: number]: string } = {
     10000: 'cashu.upgradePrompt.message10k',
     25000: 'cashu.upgradePrompt.message25k',
@@ -218,6 +220,10 @@ export default class CashuStore {
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
     @observable dismissedUpgradeThreshold: number = 0;
+    @observable shownConsolidationModals: string[] = [];
+    @observable dismissedConsolidationThresholds: {
+        [mintUrl: string]: number;
+    } = {};
 
     // CDK integration state
     @observable public cdkInitialized: boolean = false;
@@ -230,6 +236,8 @@ export default class CashuStore {
     public get isOffline(): boolean {
         return connectivityStore.isOffline;
     }
+    private consolidationAlertPending: boolean = false;
+    private consolidationThresholdsLoaded: boolean = false;
     @observable public offlinePendingTokens: Array<CashuToken> = [];
     @observable public offlinePendingBalance: number = 0;
     @observable public offlineSpentTokens: Array<CashuToken> = [];
@@ -491,6 +499,16 @@ export default class CashuStore {
             // Only load transactions when explicitly requested
             if (includeTransactions) {
                 await this.loadTransactions();
+            }
+
+            // Check consolidation alerts after balance sync (debounced)
+            if (!this.consolidationAlertPending) {
+                this.consolidationAlertPending = true;
+                InteractionManager.runAfterInteractions(() => {
+                    this.checkConsolidationAlert().finally(() => {
+                        this.consolidationAlertPending = false;
+                    });
+                });
             }
         } catch (e) {
             console.error('CDK: Failed to sync balances:', e);
@@ -934,7 +952,7 @@ export default class CashuStore {
      * Build a cashu v3 token string from proofs.
      * Format: cashuA + base64url(JSON)
      */
-    private buildCashuToken = (
+    public buildCashuToken = (
         mintUrl: string,
         proofs: CDKProofWithY[],
         memo?: string
@@ -1152,6 +1170,9 @@ export default class CashuStore {
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
+        this.shownConsolidationModals = [];
+        this.consolidationAlertPending = false;
+        this.consolidationThresholdsLoaded = false;
         this.addedMintsCache.clear();
         this.originalSeedVersion = undefined;
         this.offlinePendingTokens = [];
@@ -2051,6 +2072,168 @@ export default class CashuStore {
             showCloseButton: true,
             showHelpButton: true
         });
+    };
+
+    // --- Token Vault & Consolidation methods ---
+
+    @action
+    public getProofsByMint = async (
+        mintUrl: string
+    ): Promise<CDKProofWithY[]> => {
+        return await CashuDevKit.getUnspentProofs(mintUrl);
+    };
+
+    @action
+    public removeSelectedProofs = async (proofYs: string[]): Promise<void> => {
+        await CashuDevKit.removeProofs(proofYs);
+        await this.syncCDKBalances();
+    };
+
+    @action
+    public prepareConsolidation = async (
+        mintUrl: string
+    ): Promise<CDKPreparedSend> => {
+        const balance = this.mintBalances[mintUrl];
+        if (!balance || balance <= 0) {
+            throw new Error('No balance to consolidate');
+        }
+        const prepared = await CashuDevKit.prepareSend(mintUrl, balance, {
+            send_kind: 'OnlineExact',
+            include_fee: true
+        });
+        return prepared;
+    };
+
+    @action
+    public executeConsolidation = async (
+        preparedSendId: string
+    ): Promise<number> => {
+        const token = await CashuDevKit.confirmSend(preparedSendId);
+        const received = await CashuDevKit.receive(token.encoded);
+        await this.syncCDKBalances();
+        return received;
+    };
+
+    @action
+    public cancelConsolidation = async (
+        preparedSendId: string
+    ): Promise<void> => {
+        await CashuDevKit.cancelSend(preparedSendId);
+    };
+
+    @action
+    public estimateConsolidationFee = async (
+        mintUrl: string,
+        proofCount: number
+    ): Promise<number> => {
+        const keysets = await CashuDevKit.getMintKeysets(mintUrl);
+        const activeKeyset = keysets.find((k) => k.active && k.unit === 'sat');
+        const feePpk = activeKeyset?.input_fee_ppk || 0;
+        return Math.ceil((proofCount * feePpk) / 1000);
+    };
+
+    @action
+    public loadDismissedConsolidationThresholds = async () => {
+        const stored = await Storage.getItem(
+            `${this.getNodeDir()}-cashu-dismissedConsolidationThresholds`
+        );
+        runInAction(() => {
+            this.dismissedConsolidationThresholds = stored
+                ? JSON.parse(stored)
+                : {};
+        });
+    };
+
+    @action
+    private dismissConsolidationThreshold = async (
+        mintUrl: string,
+        threshold: number
+    ) => {
+        runInAction(() => {
+            this.dismissedConsolidationThresholds[mintUrl] = threshold;
+        });
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-dismissedConsolidationThresholds`,
+            JSON.stringify(this.dismissedConsolidationThresholds)
+        );
+    };
+
+    @action
+    public checkConsolidationAlert = async () => {
+        if (this.isOffline) return;
+
+        // Load persisted dismissed thresholds once
+        if (!this.consolidationThresholdsLoaded) {
+            await this.loadDismissedConsolidationThresholds();
+            this.consolidationThresholdsLoaded = true;
+        }
+
+        for (const mintUrl of this.mintUrls) {
+            try {
+                const proofs = await CashuDevKit.getUnspentProofs(mintUrl);
+                const count = proofs.length;
+
+                for (const threshold of [
+                    ...CONSOLIDATION_THRESHOLDS
+                ].reverse()) {
+                    const modalKey = `${mintUrl}-${threshold}`;
+                    if (
+                        count >= threshold &&
+                        !this.shownConsolidationModals.includes(modalKey) &&
+                        (this.dismissedConsolidationThresholds[mintUrl] || 0) <
+                            threshold
+                    ) {
+                        const fee = await this.estimateConsolidationFee(
+                            mintUrl,
+                            count
+                        );
+
+                        this.modalStore.toggleInfoModal({
+                            title: localeString(
+                                'cashu.consolidation.alertTitle'
+                            ),
+                            text: localeString(
+                                'cashu.consolidation.alertMessage',
+                                {
+                                    count: String(count),
+                                    fee: String(fee)
+                                }
+                            ),
+                            buttons: [
+                                {
+                                    title: localeString(
+                                        'cashu.consolidation.consolidateNow'
+                                    ),
+                                    callback: () => {
+                                        this.modalStore.toggleInfoModal({});
+                                        NavigationService.navigate(
+                                            'TokenVault',
+                                            { mintUrl }
+                                        );
+                                    }
+                                }
+                            ],
+                            showCloseButton: true,
+                            onDismiss: () =>
+                                this.dismissConsolidationThreshold(
+                                    mintUrl,
+                                    threshold
+                                )
+                        });
+
+                        runInAction(() => {
+                            this.shownConsolidationModals.push(modalKey);
+                        });
+                        return; // one alert at a time
+                    }
+                }
+            } catch (e) {
+                console.error(
+                    `CashuStore: Error checking consolidation for ${mintUrl}:`,
+                    e
+                );
+            }
+        }
     };
 
     @action
