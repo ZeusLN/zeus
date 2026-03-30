@@ -25,6 +25,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
+import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -273,9 +274,9 @@ export default class NWCConnectionsList extends React.Component<
                                         { color: themeColor('text') }
                                     ]}
                                 >
-                                    {`${connection.remainingBudget.toLocaleString()} ${localeString(
-                                        'general.sats'
-                                    )}`}
+                                    {`${numberWithCommas(
+                                        connection.remainingBudget
+                                    )} ${localeString('general.sats')}`}
                                 </Text>
                                 <Text
                                     style={[
@@ -340,9 +341,11 @@ export default class NWCConnectionsList extends React.Component<
                                         { color: themeColor('secondaryText') }
                                     ]}
                                 >
-                                    {`${connection.totalSpendSats.toLocaleString()} / ${connection.maxAmountSats.toLocaleString()} ${localeString(
-                                        'general.sats'
-                                    )}`}
+                                    {`${numberWithCommas(
+                                        connection.totalSpendSats
+                                    )} / ${numberWithCommas(
+                                        connection.maxAmountSats
+                                    )} ${localeString('general.sats')}`}
                                     {connection.budgetRenewal !== 'never'
                                         ? ` (${connection.budgetRenewal})`
                                         : ''}

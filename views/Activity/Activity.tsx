@@ -26,11 +26,7 @@ import ActivityToCsv from './ActivityToCsv';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    SATS_PER_BTC,
-    numberWithCommas,
-    numberWithDecimals
-} from '../../utils/UnitsUtils';
+import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
@@ -716,18 +712,15 @@ export default class Activity extends React.PureComponent<
                             (entry: any) => entry.code === fiat
                         )[0];
 
-                    const { symbol, space, rtl, separatorSwap } = fiatEntry
+                    const { symbol, space, rtl } = fiatEntry
                         ? FiatStore.symbolLookup(fiatEntry.code)
                         : {
                               symbol: 'N/A',
                               space: true,
-                              rtl: false,
-                              separatorSwap: false
+                              rtl: false
                           };
 
-                    const formattedRate = separatorSwap
-                        ? numberWithDecimals(rate)
-                        : numberWithCommas(rate);
+                    const formattedRate = numberWithCommas(rate);
 
                     const exchangeRate = rtl
                         ? `${formattedRate}${
