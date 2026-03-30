@@ -202,7 +202,6 @@ import SwapSettings from './views/Swaps/Settings';
 // POS
 import Order from './views/Order';
 
-import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
 
 // Onboarding
@@ -564,10 +563,6 @@ export default class App extends React.PureComponent {
                                                             component={
                                                                 WalletSettings
                                                             }
-                                                        />
-                                                        <Stack.Screen
-                                                            name="Intro" // @ts-ignore:next-line
-                                                            component={Intro}
                                                         />
                                                         <Stack.Screen
                                                             name="Lockscreen" // @ts-ignore:next-line

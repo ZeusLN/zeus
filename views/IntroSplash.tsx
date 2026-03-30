@@ -140,18 +140,6 @@ export default class IntroSplash extends React.Component<
                             >
                                 <Button
                                     title={localeString(
-                                        'views.Intro.whatIsZeus'
-                                    ).replace('Zeus', 'ZEUS')}
-                                    onPress={() => navigation.navigate('Intro')}
-                                />
-                            </View>
-                            <View
-                                style={{
-                                    padding: 10
-                                }}
-                            >
-                                <Button
-                                    title={localeString(
                                         'views.Intro.advancedSetUp'
                                     )}
                                     onPress={() => navigation.navigate('Menu')}
