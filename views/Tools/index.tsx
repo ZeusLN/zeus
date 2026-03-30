@@ -32,10 +32,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    exportChannelDb,
-    uploadChannelBackupToOlympus
-} from '../../utils/ChannelMigrationUtils';
+import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -132,84 +129,18 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
             return;
         }
 
-        const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
-        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
-        const lndDir = () => SettingsStore.lndDir || 'lnd';
-        const seedPhrase = SettingsStore.seedPhrase.join(' ');
-        const isSqlite = SettingsStore.isSqlite;
-
-        const setStatus = (msg: string | null) =>
-            this.setState({
-                isChannelExporting: msg !== null,
-                channelExportMessage: msg ?? ''
-            });
-
-        const warningText =
-            `${localeString('views.Tools.migration.export.text1')}\n\n` +
-            `⚠️ ${localeString('views.Tools.migration.export.text2')}`;
-
-        if (isSqlite) {
-            Alert.alert(
-                localeString('views.Tools.migration.export.title'),
-                warningText,
-                [
-                    {
-                        text: localeString('general.cancel'),
-                        style: 'cancel'
-                    },
-                    {
-                        text: localeString(
-                            'views.Tools.migration.export.olympus'
-                        ),
-                        style: 'default',
-                        onPress: async () => {
-                            await uploadChannelBackupToOlympus(
-                                lndDir(),
-                                isTestnet,
-                                pubkey,
-                                seedPhrase,
-                                setStatus
-                            );
-                        }
-                    },
-                    {
-                        text: localeString(
-                            'views.Tools.migration.export.local'
-                        ),
-                        style: 'default',
-                        onPress: async () => {
-                            await exportChannelDb(
-                                lndDir(),
-                                isTestnet,
-                                setStatus
-                            );
-                        }
-                    }
-                ]
-            );
-        } else {
-            Alert.alert(
-                localeString('views.Tools.migration.export.title'),
-                warningText,
-                [
-                    {
-                        text: localeString('general.cancel'),
-                        style: 'cancel'
-                    },
-                    {
-                        text: localeString('general.ok'),
-                        style: 'default',
-                        onPress: async () => {
-                            await exportChannelDb(
-                                lndDir(),
-                                isTestnet,
-                                setStatus
-                            );
-                        }
-                    }
-                ]
-            );
-        }
+        handleExportChannels({
+            isSqlite: SettingsStore.isSqlite ?? true,
+            lndDir: SettingsStore.lndDir || 'lnd',
+            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
+            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            setStatus: (msg: string | null) =>
+                this.setState({
+                    isChannelExporting: msg !== null,
+                    channelExportMessage: msg ?? ''
+                })
+        });
     };
 
     render() {
