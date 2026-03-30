@@ -81,7 +81,7 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
         'wallet may have been deleted'
     ],
     [LndErrorCode.WALLET_CREATION_UNLOCKED_TOO_QUICKLY]: [],
-    [LndErrorCode.RPC_CONNECTION_CLOSED]: ['connection closed'],
+    [LndErrorCode.RPC_CONNECTION_CLOSED]: ['connection closed', 'closed'],
     [LndErrorCode.RPC_READY_TIMEOUT]: [],
     [LndErrorCode.LND_FAILED_TO_STOP]: [],
     [LndErrorCode.LND_START_FAILED]: [],

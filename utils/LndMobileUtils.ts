@@ -1233,7 +1233,7 @@ export async function createLndWallet({
         if (setStatus)
             setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
         try {
-            await stopLnd();
+            await stopLnd(STOP_LND_MAX_RETRIES, STOP_LND_POLL_DELAY_MS, true);
             await sleep(5000);
         } catch (e: any) {
             if (e?.message?.includes?.('closed')) {
@@ -1259,22 +1259,15 @@ export async function createLndWallet({
             isTestnet || false
         );
 
-        if (setStatus)
-            setStatus(
-                localeString('views.Tools.migration.status.restartingLnd')
-            );
-        await startLnd({
-            lndDir,
-            walletPassword: randomBase64,
-            isTorEnabled: false,
-            isTestnet: isTestnet || false
-        });
+        LndMobileEventEmitter.removeAllListeners('SubscribeState');
+        settingsStore.embeddedLndStarted = false;
+        settingsStore.walletJustCreated = false;
+    } else {
+        // Mark that LND is already running from wallet creation,
+        // so Wallet.tsx skips the stop→init→start cycle
+        settingsStore.embeddedLndStarted = true;
+        settingsStore.walletJustCreated = true;
     }
-
-    // Mark that LND is already running from wallet creation,
-    // so Wallet.tsx skips the stop→init→start cycle
-    settingsStore.embeddedLndStarted = true;
-    settingsStore.walletJustCreated = true;
 
     return { wallet, seed, randomBase64 };
 }

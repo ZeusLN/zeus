@@ -34,7 +34,6 @@ import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import {
     exportChannelDb,
-    exportChannelDbBolt,
     uploadChannelBackupToOlympus
 } from '../../utils/ChannelMigrationUtils';
 
@@ -201,7 +200,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         text: localeString('general.ok'),
                         style: 'default',
                         onPress: async () => {
-                            await exportChannelDbBolt(
+                            await exportChannelDb(
                                 lndDir(),
                                 isTestnet,
                                 setStatus

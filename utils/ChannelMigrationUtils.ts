@@ -19,7 +19,7 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
-const VALID_CHANNEL_DB_EXTENSIONS = ['.zip', '.db'];
+const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
 
 const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
     const network = isTestnet ? 'testnet' : 'mainnet';
@@ -783,175 +783,8 @@ export const exportChannelDb = async (
 };
 
 /**
- * Exports channel.db directly as a raw binary file for bolt DB wallets.
- */
-export const exportChannelDbBolt = async (
-    lndDir: string,
-    isTestnet: boolean,
-    setStatus?: (message: string | null) => void
-) => {
-    try {
-        const channelDbPath = `${getGraphDir(lndDir, isTestnet)}/channel.db`;
-
-        if (!(await RNFS.exists(channelDbPath))) {
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Tools.migration.databaseNotFound')
-            );
-            if (setStatus) setStatus(null);
-            return;
-        }
-
-        if (setStatus)
-            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
-        try {
-            await stopLndSafely();
-        } catch (e: any) {
-            console.error('Failed to stop LND:', e.message);
-            if (setStatus) setStatus(null);
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Tools.migration.export.failedToStopLnd')
-            );
-            return;
-        }
-
-        const backupFileName = 'channel.db';
-
-        if (setStatus)
-            setStatus(localeString('views.Tools.migration.export.savingFile'));
-
-        const finishExport = async () => {
-            if (setStatus) setStatus(null);
-            await Storage.setItem(
-                CHANNEL_MIGRATION_ACTIVE,
-                JSON.stringify({ migrationStatus: true, lndDir })
-            );
-            Alert.alert(
-                localeString('views.Tools.migration.export.success'),
-                localeString(
-                    Platform.OS === 'android'
-                        ? 'views.Tools.migration.export.success.text.android'
-                        : 'views.Tools.migration.export.success.text'
-                ),
-                [
-                    {
-                        text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
-                    }
-                ],
-                { cancelable: false }
-            );
-        };
-
-        if (Platform.OS === 'android') {
-            const downloadPath = `${RNFS.DownloadDirectoryPath}/${backupFileName}`;
-            await RNFS.copyFile(channelDbPath, downloadPath);
-            await finishExport();
-            return;
-        }
-
-        const stagingPath = `${RNFS.DocumentDirectoryPath}/${backupFileName}`;
-        await RNFS.copyFile(channelDbPath, stagingPath);
-
-        try {
-            const shareResult = await Share.open({
-                title: localeString('views.Tools.migration.export.title'),
-                url: `file://${stagingPath}`,
-                type: 'application/octet-stream',
-                filename: backupFileName,
-                failOnCancel: false
-            });
-
-            const isDismissed =
-                shareResult.dismissedAction || shareResult.success === false;
-
-            if (isDismissed) {
-                await RNFS.unlink(stagingPath);
-                Alert.alert(
-                    localeString('views.Tools.migration.export.cancelled'),
-                    localeString('views.Tools.migration.export.cancelled.text'),
-                    [
-                        {
-                            text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
-                        }
-                    ],
-                    { cancelable: false }
-                );
-                return;
-            }
-
-            await RNFS.unlink(stagingPath);
-            await finishExport();
-        } catch (err: any) {
-            if (await RNFS.exists(stagingPath)) {
-                await RNFS.unlink(stagingPath);
-            }
-
-            const errorMsg = err?.message || String(err);
-            if (
-                errorMsg.includes('User did not share') ||
-                errorMsg.includes('cancel')
-            ) {
-                Alert.alert(
-                    localeString('views.Tools.migration.export.cancelled'),
-                    localeString('views.Tools.migration.export.cancelled.text'),
-                    [
-                        {
-                            text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
-                        }
-                    ],
-                    { cancelable: false }
-                );
-                return;
-            }
-
-            throw err;
-        }
-    } catch (error) {
-        console.error('Bolt DB Export Failed:', error);
-        if (setStatus) setStatus(null);
-        Alert.alert(
-            localeString('general.error'),
-            undefined,
-            [
-                {
-                    text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
-                }
-            ],
-            { cancelable: false }
-        );
-    }
-};
-
-/**
- * Imports a raw bolt DB channel.db from a backup file.
- */
-const importChannelDbBolt = async (
-    localPath: string,
-    lndDir: string,
-    isTestnet: boolean
-) => {
-    const destFolder = getGraphDir(lndDir, isTestnet);
-
-    if (!(await RNFS.exists(destFolder))) {
-        await RNFS.mkdir(destFolder);
-    }
-
-    const destPath = `${destFolder}/channel.db`;
-    if (await RNFS.exists(destPath)) {
-        await RNFS.unlink(destPath);
-    }
-
-    await RNFS.copyFile(localPath, destPath);
-};
-
-/**
- * Imports a channel backup file. Routes by extension:
- * .db files are bolt DB, .zip files are SQLite backups.
+ * Imports a channel backup zip file (works for both SQLite and bolt DB).
+ * Clears existing files in the graph directory and unzips the backup.
  */
 export const importChannelDb = async (
     sourceUri: string,
@@ -965,12 +798,6 @@ export const importChannelDb = async (
     }
 
     const localPath = await resolveToLocalPath(sourceUri);
-
-    if (fileName.toLowerCase().endsWith('.db')) {
-        await importChannelDbBolt(localPath, lndDir, isTestnet);
-        return;
-    }
-
     const destFolder = getGraphDir(lndDir, isTestnet);
 
     if (!(await RNFS.exists(destFolder))) {
