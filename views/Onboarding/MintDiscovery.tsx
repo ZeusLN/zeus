@@ -488,7 +488,7 @@ export default class MintDiscovery extends React.Component<
                     }}
                 >
                     <Button
-                        title={localeString('views.MintDiscovery.next')}
+                        title={localeString('general.select')}
                         onPress={this.handleNext}
                         disabled={isLoading && discoverMode !== 'later'}
                     />

@@ -83,8 +83,10 @@ export default class RecommendedSettings extends React.Component<
     componentDidMount() {
         const { navigation, CashuStore, SettingsStore } = this.props;
 
-        // Fetch mints with default mode (ZEUS' contacts)
-        CashuStore.fetchMintsFromFollows();
+        // Restore cached results or fetch mints with default mode (ZEUS' contacts)
+        if (!CashuStore.restoreCachedRecommendations('zeus')) {
+            CashuStore.fetchMintsFromFollows();
+        }
 
         // Listen for updates when returning from questionnaire steps
         navigation.addListener('focus', async () => {
@@ -103,7 +105,7 @@ export default class RecommendedSettings extends React.Component<
     }
 
     syncFromRouteParams = () => {
-        const { route } = this.props;
+        const { route, CashuStore } = this.props;
         const params = route.params;
         if (!params) return;
 
@@ -112,6 +114,8 @@ export default class RecommendedSettings extends React.Component<
         }
         if (params.discoverMode) {
             this.setState({ discoverMode: params.discoverMode });
+            // Restore the correct cache so getTopScoredMints reads the right data
+            CashuStore.restoreCachedRecommendations(params.discoverMode);
         }
         if (params.initialMintUrls) {
             this.setState({ initialMintUrls: params.initialMintUrls });
@@ -204,6 +208,7 @@ export default class RecommendedSettings extends React.Component<
             clipboard,
             fiatEnabled,
             selectedCurrency,
+            initialMintUrls,
             implementation,
             choosingPeers,
             creatingWallet,
@@ -270,22 +275,28 @@ export default class RecommendedSettings extends React.Component<
             ? CashuStore.loading
             : CashuStore.loadingTrustedMints;
 
-        const topMints =
-            enableCashu && !isLater
-                ? CashuStore.getTopScoredMints(
-                      5,
-                      discoverMode === 'all' ? 'all' : 'zeus'
-                  )
-                : [];
+        // Use initialMintUrls from MintDiscovery when available,
+        // otherwise compute from the store
+        let displayMintUrls: string[] = [];
+        if (enableCashu && !isLater) {
+            if (initialMintUrls.length > 0) {
+                displayMintUrls = initialMintUrls;
+            } else {
+                const topMints = CashuStore.getTopScoredMints(
+                    5,
+                    discoverMode === 'all' ? 'all' : 'zeus'
+                );
+                displayMintUrls = topMints.map((m: ScoredMint) => m.url);
+            }
+        }
 
-        // Fetch mint info for icons when top mints are available
-        if (topMints.length > 0 && !isLoadingMints) {
-            const urls = topMints.map((m: ScoredMint) => m.url);
-            const hasUncached = urls.some(
+        // Fetch mint info for icons
+        if (displayMintUrls.length > 0 && !isLoadingMints) {
+            const hasUncached = displayMintUrls.some(
                 (u: string) => !CashuStore.mintInfoCache.has(u)
             );
             if (hasUncached) {
-                CashuStore.fetchMintInfoBatch(urls);
+                CashuStore.fetchMintInfoBatch(displayMintUrls);
             }
         }
 
@@ -482,7 +493,7 @@ export default class RecommendedSettings extends React.Component<
                                     >
                                         <LoadingIndicator size={24} />
                                     </View>
-                                ) : topMints.length > 0 ? (
+                                ) : displayMintUrls.length > 0 ? (
                                     <View
                                         style={{
                                             flexDirection: 'row',
@@ -490,19 +501,16 @@ export default class RecommendedSettings extends React.Component<
                                             gap: 8
                                         }}
                                     >
-                                        {topMints.map((mint: ScoredMint) => {
+                                        {displayMintUrls.map((url: string) => {
                                             const mintInfo =
                                                 CashuStore.mintInfoCache.get(
-                                                    mint.url
+                                                    url
                                                 );
                                             return (
                                                 <MintAvatar
-                                                    key={mint.url}
+                                                    key={url}
                                                     iconUrl={mintInfo?.icon_url}
-                                                    name={
-                                                        mintInfo?.name ||
-                                                        mint.url
-                                                    }
+                                                    name={mintInfo?.name || url}
                                                     size="medium"
                                                     style={{
                                                         width: 36,
