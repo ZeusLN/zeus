@@ -2307,5 +2307,5 @@
     "backends.NWC.permissionDenied": "Autorizzazione negata per questa operazione",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect è in esecuzione in il fondo",
     "androidNotification.nwcShutdown": "Interrompere il servizio",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.ldkNodeRunningBackground": "Nodo LDK in esecuzione in background"
 }
