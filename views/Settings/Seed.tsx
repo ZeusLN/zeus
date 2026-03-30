@@ -584,7 +584,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 onPress={async () => {
                                     if (isRefundRescueKey) {
                                         navigation.goBack();
-                                    } else if (hasChannels) {
+                                    } else if (
+                                        SettingsStore.implementation ===
+                                            'embedded-lnd' &&
+                                        hasChannels
+                                    ) {
                                         Alert.alert(
                                             localeString(
                                                 'views.Settings.Seed.channelBackupReminder.title'
@@ -642,16 +646,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 })()}
                                 containerStyle={{ marginBottom: 10 }}
                             />
-                            {!isRefundRescueKey && hasChannels && (
-                                <Button
-                                    onPress={this.handleExportChannels}
-                                    title={localeString(
-                                        'views.Tools.migration.export'
-                                    )}
-                                    secondary
-                                    containerStyle={{ marginBottom: 15 }}
-                                />
-                            )}
+                            {!isRefundRescueKey &&
+                                hasChannels &&
+                                SettingsStore.implementation ==
+                                    'embedded-lnd' && (
+                                    <Button
+                                        onPress={this.handleExportChannels}
+                                        title={localeString(
+                                            'views.Tools.migration.export'
+                                        )}
+                                        secondary
+                                        containerStyle={{ marginBottom: 15 }}
+                                    />
+                                )}
                             {isRefundRescueKey && (
                                 <Button
                                     onPress={() =>
