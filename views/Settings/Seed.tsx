@@ -41,7 +41,6 @@ import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import {
     exportChannelDb,
-    exportChannelDbBolt,
     uploadChannelBackupToOlympus
 } from '../../utils/ChannelMigrationUtils';
 
@@ -284,7 +283,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         text: localeString('general.ok'),
                         style: 'default',
                         onPress: async () => {
-                            await exportChannelDbBolt(
+                            await exportChannelDb(
                                 lndDir(),
                                 isTestnet,
                                 setStatus

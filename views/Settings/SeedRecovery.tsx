@@ -249,8 +249,9 @@ export default class SeedRecovery extends React.PureComponent<
             return;
         }
 
-        if (nodes.length === 1) {
+        if (nodes.length === 1 || this.state.channelDbUri) {
             setConnectingStatus(true);
+            SettingsStore.triggerSettingsRefresh = true;
             navigation.popTo('Wallet');
         } else {
             if (Platform.OS === 'android' && embeddedLndStarted) {
