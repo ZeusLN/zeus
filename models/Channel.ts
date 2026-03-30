@@ -71,8 +71,12 @@ export default class Channel extends BaseModel {
     alias?: string;
     // pending
     remote_node_pub?: string;
+    // LND/LNC: confirmation progress computed from height delta
     confirmations_until_active?: number;
     confirmation_height?: number;
+    // LDK: provides direct counts instead of height-based fields
+    confirmations?: number;
+    confirmations_required?: number;
 
     // enrichments
     displayName?: string;
@@ -81,8 +85,16 @@ export default class Channel extends BaseModel {
         current: number;
         total: number;
     } | null {
-        if (!this.pendingOpen || this.confirmations_until_active == null)
-            return null;
+        if (!this.pendingOpen) return null;
+        // LDK path: direct counts available, no block-height arithmetic needed
+        if (this.confirmations != null && this.confirmations_required != null) {
+            return {
+                current: this.confirmations,
+                total: this.confirmations_required
+            };
+        }
+        // LND/LNC path: derive current count from confirmation_height delta
+        if (this.confirmations_until_active == null) return null;
         const current =
             this.confirmation_height && currentBlockHeight
                 ? currentBlockHeight - this.confirmation_height + 1
