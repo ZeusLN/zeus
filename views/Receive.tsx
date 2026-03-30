@@ -790,20 +790,48 @@ export default class Receive extends React.Component<
             .catch();
     };
 
-    subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
-        const {
-            InvoicesStore,
-            PosStore,
-            SettingsStore,
-            NodeInfoStore,
-            BalanceStore,
-            ChannelsStore
-        } = this.props;
-        const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
+    handlePaymentReceived = (
+        amount: number,
+        posPayment?: {
+            type: 'ln' | 'onchain';
+            tx: string;
+            preimage?: string;
+        }
+    ) => {
+        const { InvoicesStore, PosStore, BalanceStore, ChannelsStore } =
+            this.props;
+        const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
+
+        InvoicesStore.setWatchedInvoicePaid(amount);
+        BalanceStore.getCombinedBalance();
+
+        if (
+            posPayment?.type === 'ln' &&
+            BackendUtils.supportsChannelManagement()
+        ) {
+            ChannelsStore.getChannels();
+        }
+
+        if (orderId && posPayment) {
+            PosStore.recordPayment({
+                orderId,
+                orderTotal,
+                orderTip,
+                exchangeRate,
+                rate,
+                ...posPayment
+            });
+            // Clear stored invoice after successful payment
+            PosStore.clearOrderInvoice(orderId);
+        }
+    };
+
+    subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { value } = this.state;
         const { implementation, settings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
-        const { setWatchedInvoicePaid } = InvoicesStore;
 
         const numConfPreference =
             settings.pos && settings.pos.confirmationPreference === '1conf'
@@ -840,29 +868,17 @@ export default class Receive extends React.Component<
                                 // @ts-ignore:next-line
                                 Base64Utils.bytesToHex(invoice.r_hash) === rHash
                             ) {
-                                setWatchedInvoicePaid(
-                                    Number(invoice.amt_paid_sat)
-                                );
-                                BalanceStore.getCombinedBalance();
-                                ChannelsStore.getChannels();
-
-                                if (orderId) {
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
+                                this.handlePaymentReceived(
+                                    Number(invoice.amt_paid_sat),
+                                    {
                                         type: 'ln',
                                         tx: invoice.payment_request,
                                         preimage: Base64Utils.bytesToHex(
                                             // @ts-ignore:next-line
                                             invoice.r_preimage
                                         )
-                                    });
-                                    // Clear stored invoice after successful payment
-                                    PosStore.clearOrderInvoice(orderId);
-                                }
+                                    }
+                                );
                                 this.listener?.remove();
                             }
                         } catch (error) {
@@ -905,24 +921,13 @@ export default class Receive extends React.Component<
                                     numConfPreference &&
                                 Number(transaction.amount) >= Number(value)
                             ) {
-                                setWatchedInvoicePaid(
-                                    Number(transaction.amount)
-                                );
-                                BalanceStore.getCombinedBalance();
-
-                                if (orderId) {
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
+                                this.handlePaymentReceived(
+                                    Number(transaction.amount),
+                                    {
                                         type: 'onchain',
                                         tx: transaction.tx_hash
-                                    });
-                                    // Clear stored invoice after successful payment
-                                    PosStore.clearOrderInvoice(orderId);
-                                }
+                                    }
+                                );
                                 this.listenerSecondary?.remove();
                             }
                         } catch (error) {
@@ -962,24 +967,14 @@ export default class Receive extends React.Component<
                                     return;
                                 }
                                 if (result.settled) {
-                                    setWatchedInvoicePaid(result.amt_paid_sat);
-                                    BalanceStore.getCombinedBalance();
-                                    ChannelsStore.getChannels();
-
-                                    if (orderId) {
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
+                                    this.handlePaymentReceived(
+                                        result.amt_paid_sat,
+                                        {
                                             type: 'ln',
                                             tx: result.payment_request,
                                             preimage: result.r_preimage
-                                        });
-                                        // Clear stored invoice after successful payment
-                                        PosStore.clearOrderInvoice(orderId);
-                                    }
+                                        }
+                                    );
                                     this.listener?.remove();
                                 }
                             } catch (error) {
@@ -1021,22 +1016,10 @@ export default class Receive extends React.Component<
                                         numConfPreference &&
                                     Number(result.amount) >= Number(value)
                                 ) {
-                                    setWatchedInvoicePaid(result.amount);
-                                    BalanceStore.getCombinedBalance();
-
-                                    if (orderId) {
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
-                                            type: 'onchain',
-                                            tx: result.tx_hash
-                                        });
-                                        // Clear stored invoice after successful payment
-                                        PosStore.clearOrderInvoice(orderId);
-                                    }
+                                    this.handlePaymentReceived(result.amount, {
+                                        type: 'onchain',
+                                        tx: result.tx_hash
+                                    });
                                     this.listenerSecondary?.remove();
                                 }
                             } catch (error) {
@@ -1100,23 +1083,13 @@ export default class Receive extends React.Component<
                                         Number(value) &&
                                     Number(result.amt_paid_sat) !== 0
                                 ) {
-                                    setWatchedInvoicePaid(result.amt_paid_sat);
-                                    BalanceStore.getCombinedBalance();
-                                    ChannelsStore.getChannels();
-
-                                    if (orderId) {
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
+                                    this.handlePaymentReceived(
+                                        result.amt_paid_sat,
+                                        {
                                             type: 'ln',
                                             tx: result.payment_request
-                                        });
-                                        // Clear stored invoice after successful payment
-                                        PosStore.clearOrderInvoice(orderId);
-                                    }
+                                        }
+                                    );
                                     this.clearIntervals();
                                     break;
                                 }
@@ -1159,22 +1132,13 @@ export default class Receive extends React.Component<
                                             Number(value) &&
                                         output.address === onChainAddress
                                     ) {
-                                        setWatchedInvoicePaid(output.amount);
-                                        BalanceStore.getCombinedBalance();
-
-                                        if (orderId) {
-                                            PosStore.recordPayment({
-                                                orderId,
-                                                orderTotal,
-                                                orderTip,
-                                                exchangeRate,
-                                                rate,
+                                        this.handlePaymentReceived(
+                                            output.amount,
+                                            {
                                                 type: 'onchain',
                                                 tx: result.tx_hash
-                                            });
-                                            // Clear stored invoice after successful payment
-                                            PosStore.clearOrderInvoice(orderId);
-                                        }
+                                            }
+                                        );
                                         this.clearIntervals();
                                         // break parent loop
                                         i = txs.length;
@@ -1206,24 +1170,13 @@ export default class Receive extends React.Component<
                                     ) >= Number(value) &&
                                     Number(result.amount_received_msat) !== 0
                                 ) {
-                                    setWatchedInvoicePaid(
-                                        result.amount_received_msat / 1000
-                                    );
-                                    BalanceStore.getCombinedBalance();
-                                    ChannelsStore.getChannels();
-                                    if (orderId) {
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
+                                    this.handlePaymentReceived(
+                                        result.amount_received_msat / 1000,
+                                        {
                                             type: 'ln',
                                             tx: result.bolt11
-                                        });
-                                        // Clear stored invoice after successful payment
-                                        PosStore.clearOrderInvoice(orderId);
-                                    }
+                                        }
+                                    );
                                     this.clearIntervals();
                                     break;
                                 }
@@ -1247,21 +1200,11 @@ export default class Receive extends React.Component<
                                 Number(result.amt) >= Number(value) &&
                                 Number(result.amt) !== 0
                             ) {
-                                setWatchedInvoicePaid(result.amt);
-                                if (orderId) {
-                                    PosStore.recordPayment({
-                                        orderId,
-                                        orderTotal,
-                                        orderTip,
-                                        exchangeRate,
-                                        rate,
-                                        type: 'ln',
-                                        tx: result.payment_request,
-                                        preimage: result.r_preimage
-                                    });
-                                    // Clear stored invoice after successful payment
-                                    PosStore.clearOrderInvoice(orderId);
-                                }
+                                this.handlePaymentReceived(Number(result.amt), {
+                                    type: 'ln',
+                                    tx: result.payment_request,
+                                    preimage: result.r_preimage
+                                });
                                 this.clearIntervals();
                                 break;
                             }
