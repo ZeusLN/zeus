@@ -39,10 +39,7 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
-import {
-    exportChannelDb,
-    uploadChannelBackupToOlympus
-} from '../../utils/ChannelMigrationUtils';
+import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -215,84 +212,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             );
             return;
         }
-        const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
-        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
-        const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
-        const seedPhrase = SettingsStore.seedPhrase.join(' ');
-        const isSqlite = SettingsStore.isSqlite;
 
-        const setStatus = (msg: string | null) =>
-            this.setState({
-                isChannelExporting: msg !== null,
-                channelExportMessage: msg ?? ''
-            });
-
-        const warningText =
-            `${localeString('views.Tools.migration.export.text1')}\n\n` +
-            `⚠️ ${localeString('views.Tools.migration.export.text2')}`;
-
-        if (isSqlite) {
-            Alert.alert(
-                localeString('views.Tools.migration.export.title'),
-                warningText,
-                [
-                    {
-                        text: localeString('general.cancel'),
-                        style: 'cancel'
-                    },
-                    {
-                        text: localeString(
-                            'views.Tools.migration.export.olympus'
-                        ),
-                        style: 'default',
-                        onPress: async () => {
-                            await uploadChannelBackupToOlympus(
-                                lndDir(),
-                                isTestnet,
-                                pubkey,
-                                seedPhrase,
-                                setStatus
-                            );
-                        }
-                    },
-                    {
-                        text: localeString(
-                            'views.Tools.migration.export.local'
-                        ),
-                        style: 'default',
-                        onPress: async () => {
-                            await exportChannelDb(
-                                lndDir(),
-                                isTestnet,
-                                setStatus
-                            );
-                        }
-                    }
-                ]
-            );
-        } else {
-            Alert.alert(
-                localeString('views.Tools.migration.export.title'),
-                warningText,
-                [
-                    {
-                        text: localeString('general.cancel'),
-                        style: 'cancel'
-                    },
-                    {
-                        text: localeString('general.ok'),
-                        style: 'default',
-                        onPress: async () => {
-                            await exportChannelDb(
-                                lndDir(),
-                                isTestnet,
-                                setStatus
-                            );
-                        }
-                    }
-                ]
-            );
-        }
+        handleExportChannels({
+            isSqlite: SettingsStore.isSqlite ?? true,
+            lndDir: SettingsStore.lndDir || 'lnd',
+            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
+            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            setStatus: (msg: string | null) =>
+                this.setState({
+                    isChannelExporting: msg !== null,
+                    channelExportMessage: msg ?? ''
+                })
+        });
     };
 
     render() {
@@ -652,7 +584,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 onPress={async () => {
                                     if (isRefundRescueKey) {
                                         navigation.goBack();
-                                    } else {
+                                    } else if (hasChannels) {
                                         Alert.alert(
                                             localeString(
                                                 'views.Settings.Seed.channelBackupReminder.title'
@@ -686,6 +618,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                                 }
                                             ]
                                         );
+                                    } else {
+                                        await Storage.setItem(
+                                            IS_BACKED_UP_KEY,
+                                            true
+                                        );
+                                        navigation.popTo('Wallet');
                                     }
                                 }}
                                 title={(() => {

@@ -41,7 +41,10 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                onClosed={() => toggleRestoreChannelModal({ show: false })}
+                onClosed={() => {
+                    if (onCancelBackupModal) onCancelBackupModal();
+                    toggleRestoreChannelModal({ show: false });
+                }}
                 swipeToClose={false}
                 backButtonClose={true}
                 backdropPressToClose={false}
@@ -120,7 +123,6 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                     <Button
                         title={localeString('general.cancel')}
                         onPress={() => {
-                            if (onCancelBackupModal) onCancelBackupModal();
                             toggleRestoreChannelModal({ show: false });
                         }}
                         secondary

@@ -783,6 +783,81 @@ export const exportChannelDb = async (
 };
 
 /**
+ * Prompts the user to export channel backup — either to Olympus (SQLite only)
+ * or as a local zip file.
+ */
+export const handleExportChannels = ({
+    isSqlite,
+    lndDir,
+    isTestnet,
+    pubkey,
+    seedPhrase,
+    setStatus
+}: {
+    isSqlite: boolean;
+    lndDir: string;
+    isTestnet: boolean;
+    pubkey: string;
+    seedPhrase: string;
+    setStatus: (msg: string | null) => void;
+}) => {
+    const warningText =
+        `${localeString('views.Tools.migration.export.text1')}\n\n` +
+        `⚠️ ${localeString('views.Tools.migration.export.text2')}`;
+
+    if (isSqlite) {
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+            warningText,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.migration.export.olympus'),
+                    style: 'default',
+                    onPress: async () => {
+                        await uploadChannelBackupToOlympus(
+                            lndDir,
+                            isTestnet,
+                            pubkey,
+                            seedPhrase,
+                            setStatus
+                        );
+                    }
+                },
+                {
+                    text: localeString('views.Tools.migration.export.local'),
+                    style: 'default',
+                    onPress: async () => {
+                        await exportChannelDb(lndDir, isTestnet, setStatus);
+                    }
+                }
+            ]
+        );
+    } else {
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+            warningText,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('general.ok'),
+                    style: 'default',
+                    onPress: async () => {
+                        await exportChannelDb(lndDir, isTestnet, setStatus);
+                    }
+                }
+            ]
+        );
+    }
+};
+
+/**
  * Imports a channel backup zip file (works for both SQLite and bolt DB).
  * Clears existing files in the graph directory and unzips the backup.
  */
