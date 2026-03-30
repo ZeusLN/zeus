@@ -166,7 +166,7 @@ export default class MintDiscovery extends React.Component<
         }
 
         if (returnTo) {
-            navigation.navigate(returnTo, {
+            navigation.popTo(returnTo, {
                 discoverMode,
                 initialMintUrls
             });
