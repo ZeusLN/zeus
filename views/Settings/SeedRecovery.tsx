@@ -33,6 +33,8 @@ import ZeusText from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
+import KeyValue from '../../components/KeyValue';
+import { Row } from '../../components/layout/Row';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -67,6 +69,8 @@ import SwapStore from '../../stores/SwapStore';
 import { SWAPS_RESCUE_KEY } from '../../utils/SwapUtils';
 
 import Storage from '../../storage';
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 interface SeedRecoveryProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -102,6 +106,7 @@ interface SeedRecoveryState {
     lndDir: string;
     recoveryCipherSeed: string;
     channelBackupsBase64: string;
+    aezeedPassphrase: string;
     errorCreatingWallet: boolean;
     errorMsg: string;
     restoreSwaps?: boolean;
@@ -112,6 +117,7 @@ interface SeedRecoveryState {
     showClipboardPrompt: boolean;
     clipboardSeedArray: string[];
     showValidation: boolean;
+    advancedOptionsToggle: boolean;
     // LDK Node specific
     implementation: string;
     ldkMnemonic: string;
@@ -150,6 +156,7 @@ export default class SeedRecovery extends React.PureComponent<
             lndDir: '',
             recoveryCipherSeed: '',
             channelBackupsBase64: '',
+            aezeedPassphrase: '',
             errorCreatingWallet: false,
             errorMsg: '',
             rescueHost: isTestnet
@@ -160,6 +167,7 @@ export default class SeedRecovery extends React.PureComponent<
             showClipboardPrompt: false,
             clipboardSeedArray: [],
             showValidation: false,
+            advancedOptionsToggle: false,
             // LDK Node defaults
             implementation: 'embedded-lnd',
             ldkMnemonic: '',
@@ -330,6 +338,7 @@ export default class SeedRecovery extends React.PureComponent<
             selectedText,
             seedArray,
             channelBackupsBase64,
+            aezeedPassphrase,
             showSuggestions,
             filteredData,
             errorMsg,
@@ -338,6 +347,7 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost,
             customRescueHost,
             showValidation,
+            advancedOptionsToggle,
             implementation
         } = this.state;
 
@@ -407,7 +417,10 @@ export default class SeedRecovery extends React.PureComponent<
                                     selectedWordIndex: index
                                 });
                             } else {
-                                this.setState({ selectedInputType: 'scb' });
+                                this.setState({
+                                    selectedInputType: 'scb',
+                                    selectedWordIndex: null
+                                });
                             }
                         }
 
@@ -610,6 +623,7 @@ export default class SeedRecovery extends React.PureComponent<
                     const response = await createLndWallet({
                         lndDir,
                         seedMnemonic: recoveryCipherSeed,
+                        walletPassphrase: aezeedPassphrase || undefined,
                         isTestnet: network === 'testnet',
                         channelBackupsBase64
                     });
@@ -746,8 +760,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             this.setState({
                                                 channelBackupsBase64: text
                                             });
-                                        }
-                                        if (
+                                        } else if (
                                             (restoreSwaps ||
                                                 restoreRescueKey ||
                                                 implementation ===
@@ -901,19 +914,108 @@ export default class SeedRecovery extends React.PureComponent<
                                     restoreRescueKey ||
                                     implementation === 'ldk-node'
                                 ) && (
-                                    <View
-                                        style={{
-                                            flexGrow: 1,
-                                            flexDirection: 'row'
-                                        }}
-                                    >
-                                        <View style={styles.scb}>
-                                            <RecoveryLabel
-                                                type="scb"
-                                                text={channelBackupsBase64}
-                                            />
+                                    <>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    advancedOptionsToggle:
+                                                        !advancedOptionsToggle
+                                                });
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    paddingHorizontal: 20,
+                                                    marginTop: 10,
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                <Row justify="space-between">
+                                                    <View style={{ flex: 1 }}>
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'general.advancedSettings'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                    {advancedOptionsToggle ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    )}
+                                                </Row>
+                                            </View>
+                                        </TouchableOpacity>
+                                        {advancedOptionsToggle && (
+                                            <View
+                                                style={{
+                                                    paddingHorizontal: 20,
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.SeedRecovery.aezeedPassphrase'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    value={aezeedPassphrase}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            aezeedPassphrase:
+                                                                text
+                                                        })
+                                                    }
+                                                    placeholder={localeString(
+                                                        'views.Settings.SeedRecovery.aezeedPassphrasePlaceholder'
+                                                    )}
+                                                    secureTextEntry
+                                                    autoCapitalize="none"
+                                                    autoCorrect={false}
+                                                    style={{
+                                                        height: 38,
+                                                        marginBottom: 0
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+                                        <View
+                                            style={{
+                                                flexGrow: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'center'
+                                            }}
+                                        >
+                                            <View style={styles.scb}>
+                                                <RecoveryLabel
+                                                    type="scb"
+                                                    text={channelBackupsBase64}
+                                                />
+                                            </View>
                                         </View>
-                                    </View>
+                                    </>
                                 )}
                             </>
                         )}
@@ -1325,10 +1427,9 @@ const styles = StyleSheet.create({
         width: '50%'
     },
     scb: {
-        alignItems: 'flex-start',
+        alignItems: 'center',
         flexDirection: 'column',
-        marginTop: 8,
-        width: '100%',
+        justifyContent: 'center',
         lineHeight: 1
     },
     modalWrapper: {
