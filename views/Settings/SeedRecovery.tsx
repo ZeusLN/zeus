@@ -743,12 +743,18 @@ export default class SeedRecovery extends React.PureComponent<
                                     )
                                 });
 
-                                await restoreChannelBackupFromOlympus(
-                                    lndDir,
-                                    nodeInfo.testnet,
-                                    nodeInfo.identity_pubkey,
-                                    recoveryCipherSeed
-                                );
+                                const restored =
+                                    await restoreChannelBackupFromOlympus(
+                                        lndDir,
+                                        nodeInfo.testnet,
+                                        nodeInfo.identity_pubkey,
+                                        recoveryCipherSeed
+                                    );
+                                if (!restored) {
+                                    this.setState({
+                                        olympusRestorePending: false
+                                    });
+                                }
                             } catch (e: any) {
                                 olympusRestoreSuccess = false;
                                 this.setState({
@@ -827,9 +833,7 @@ export default class SeedRecovery extends React.PureComponent<
                             .join(', #')}`}
                     />
                 )}
-                {successMsg && (
-                    <SuccessMessage message={successMsg} dismissable />
-                )}
+                {successMsg && <SuccessMessage message={successMsg} />}
                 {loading && <LoadingIndicator />}
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
