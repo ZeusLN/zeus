@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     ImageBackground,
     Modal,
     ScrollView,
@@ -11,6 +12,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RNRestart from 'react-native-restart';
 
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -24,6 +26,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -58,6 +61,8 @@ interface BalancePaneProps {
     SyncStore: SyncStore;
     ModalStore: ModalStore;
     loading: boolean;
+    isChannelMigrating: boolean;
+    onUnlock: () => void;
 }
 
 interface BalancePaneState {
@@ -125,6 +130,38 @@ export default class BalancePane extends React.PureComponent<
         });
     };
 
+    handleCancelMigration = () => {
+        Alert.alert(
+            localeString('views.Wallet.BalancePane.migration.alert.title'),
+            `⚠️ ${
+                localeString('views.Wallet.BalancePane.migration.alert.text1') +
+                '\n\n'
+            }${
+                localeString('views.Wallet.BalancePane.migration.alert.text2') +
+                '\n\n'
+            }${localeString('views.Wallet.BalancePane.migration.alert.text3')}`,
+            [
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.cancel'
+                    ),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.confirm'
+                    ),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+                        this.props.onUnlock();
+                        RNRestart.Restart();
+                    }
+                }
+            ]
+        );
+    };
+
     render() {
         const {
             NodeInfoStore,
@@ -133,7 +170,8 @@ export default class BalancePane extends React.PureComponent<
             SettingsStore,
             SyncStore,
             navigation,
-            loading
+            loading,
+            isChannelMigrating
         } = this.props;
         const {
             showBackupPrompt,
@@ -270,691 +308,546 @@ export default class BalancePane extends React.PureComponent<
                         loading={loading}
                     />
                     <View style={styles.contentContainer}>
-                        <RecoveryStatus navigation={navigation} />
-                        <RescanStatus navigation={navigation} />
-                        {(SyncStore.isSyncing ||
-                            cashuOfflinePendingBalance > 0 ||
-                            CashuStore.offlineSpentTokens.length > 0) && (
-                            <View style={{ marginTop: 20 }}>
-                                <SyncingStatus navigation={navigation} />
-                                {implementation === 'embedded-lnd' &&
-                                    !SyncStore.isSyncing &&
-                                    showBackupPrompt &&
-                                    (BalanceStore.lightningBalance !== 0 ||
-                                        BalanceStore.totalBlockchainBalance !==
-                                            0) &&
-                                    !BalanceStore.loadingBlockchainBalance &&
-                                    !BalanceStore.loadingLightningBalance && (
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                navigation.navigate('Seed')
-                                            }
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.backupCard,
-                                                    {
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'secondary'
-                                                            ),
-                                                        borderColor:
-                                                            themeColor(
-                                                                'highlight'
-                                                            )
-                                                    }
-                                                ]}
-                                            >
-                                                <View
-                                                    style={
-                                                        styles.lockIconContainer
-                                                    }
-                                                >
-                                                    <LockIcon
-                                                        fill={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                    />
-                                                </View>
-                                                <Text
-                                                    style={[
-                                                        styles.cardTitleText,
-                                                        {
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {localeString(
-                                                        'views.Wallet.BalancePane.backup.title'
-                                                    )}
-                                                </Text>
-                                                <Text
-                                                    style={[
-                                                        styles.cardBodyText,
-                                                        {
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {localeString(
-                                                        'views.Wallet.BalancePane.backup.text'
-                                                    )}
-                                                </Text>
-                                                <Text
-                                                    style={[
-                                                        styles.cardBodyTextBold,
-                                                        {
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {localeString(
-                                                        'views.Wallet.BalancePane.backup.action'
-                                                    )}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
+                        {isChannelMigrating ? (
+                            <View
+                                style={[
+                                    styles.errorCard,
+                                    { backgroundColor: themeColor('error') }
+                                ]}
+                            >
+                                <View style={styles.lockIconContainer}>
+                                    <LockIcon fill="#fff" />
+                                </View>
+
+                                <Text style={styles.errorTitleText}>
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.title'
                                     )}
-                                {implementation === 'embedded-lnd' &&
-                                    lndFolderMissing && (
-                                        <View
-                                            style={[
-                                                styles.errorCard,
-                                                {
-                                                    backgroundColor:
-                                                        themeColor('error')
-                                                }
-                                            ]}
-                                        >
-                                            <Text style={styles.errorTitleText}>
-                                                {localeString(
-                                                    'views.Wallet.lndFolderMissing.title'
-                                                )}
-                                            </Text>
-                                            <Text style={styles.errorBodyText}>
-                                                {localeString(
-                                                    'views.Wallet.lndFolderMissing.message'
-                                                )}
-                                            </Text>
-                                            <View style={styles.errorButtonRow}>
-                                                <Button
-                                                    title={localeString(
-                                                        'views.Wallet.lndFolderMissing.deleteWallet'
-                                                    )}
+                                </Text>
+
+                                <Text style={styles.errorBodyText}>
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.text1'
+                                    )}
+                                    {'\n\n'}
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.text2'
+                                    )}
+                                </Text>
+
+                                <View style={styles.errorButtonRow}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.lndFolderMissing.deleteWallet'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('Wallets')
+                                        }
+                                        quaternary
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginRight: 5
+                                        }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.BalancePane.migration.action.unlock'
+                                        )}
+                                        onPress={this.handleCancelMigration}
+                                        quaternary
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginLeft: 5
+                                        }}
+                                    />
+                                </View>
+                            </View>
+                        ) : (
+                            <>
+                                <RecoveryStatus navigation={navigation} />
+                                <RescanStatus navigation={navigation} />
+                                {(SyncStore.isSyncing ||
+                                    cashuOfflinePendingBalance > 0 ||
+                                    CashuStore.offlineSpentTokens.length >
+                                        0) && (
+                                    <View style={{ marginTop: 20 }}>
+                                        <SyncingStatus
+                                            navigation={navigation}
+                                        />
+                                        {implementation === 'embedded-lnd' &&
+                                            !SyncStore.isSyncing &&
+                                            showBackupPrompt &&
+                                            (BalanceStore.lightningBalance !==
+                                                0 ||
+                                                BalanceStore.totalBlockchainBalance !==
+                                                    0) &&
+                                            !BalanceStore.loadingBlockchainBalance &&
+                                            !BalanceStore.loadingLightningBalance && (
+                                                <TouchableOpacity
                                                     onPress={() =>
                                                         navigation.navigate(
-                                                            'Wallets'
+                                                            'Seed'
                                                         )
                                                     }
-                                                    quaternary
-                                                    buttonStyle={{
-                                                        minHeight: 80
-                                                    }}
-                                                    containerStyle={{
-                                                        flex: 1,
-                                                        marginRight: 5
-                                                    }}
-                                                />
-                                                <Button
-                                                    title={localeString(
-                                                        'views.Tools.clearStorage.title'
-                                                    )}
-                                                    onPress={() =>
-                                                        navigation.navigate(
-                                                            'Tools',
-                                                            {
-                                                                showClearDataModal:
-                                                                    true
-                                                            }
-                                                        )
-                                                    }
-                                                    quaternary
-                                                    buttonStyle={{
-                                                        minHeight: 80
-                                                    }}
-                                                    containerStyle={{
-                                                        flex: 1,
-                                                        marginLeft: 5
-                                                    }}
-                                                />
-                                            </View>
-                                        </View>
-                                    )}
-                                {cashuOfflinePendingBalance > 0 && (
-                                    <>
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                this.setState({
-                                                    showOfflinePendingModal:
-                                                        true
-                                                })
-                                            }
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.pendingBanner,
-                                                    {
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'warning'
-                                                            )
-                                                    }
-                                                ]}
-                                            >
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center'
-                                                    }}
                                                 >
-                                                    <ClockIcon
-                                                        color="#fff"
-                                                        width={18}
-                                                        height={18}
-                                                        style={{
-                                                            marginRight: 8
-                                                        }}
-                                                    />
-                                                    <Text
-                                                        style={
-                                                            styles.pendingBannerText
-                                                        }
-                                                    >
-                                                        {`${
-                                                            CashuStore
-                                                                .offlinePendingTokens
-                                                                .length
-                                                        } ${localeString(
-                                                            CashuStore
-                                                                .offlinePendingTokens
-                                                                .length === 1
-                                                                ? 'cashu.offlinePending.bannerTitleSingular'
-                                                                : 'cashu.offlinePending.bannerTitle'
-                                                        )}`}
-                                                    </Text>
-                                                </View>
-                                                <Amount
-                                                    sats={
-                                                        cashuOfflinePendingBalance
-                                                    }
-                                                    sensitive
-                                                    toggleable
-                                                    colorOverride="#fff"
-                                                />
-                                            </View>
-                                        </TouchableOpacity>
-                                        <Modal
-                                            animationType="fade"
-                                            transparent
-                                            visible={showOfflinePendingModal}
-                                            onRequestClose={() =>
-                                                this.setState({
-                                                    showOfflinePendingModal:
-                                                        false
-                                                })
-                                            }
-                                        >
-                                            <TouchableOpacity
-                                                style={styles.modalOverlay}
-                                                activeOpacity={1}
-                                                onPress={() =>
-                                                    this.setState({
-                                                        showOfflinePendingModal:
-                                                            false
-                                                    })
-                                                }
-                                            >
-                                                <View
-                                                    style={[
-                                                        styles.modalContent,
-                                                        {
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'secondary'
-                                                                )
-                                                        }
-                                                    ]}
-                                                    onStartShouldSetResponder={() =>
-                                                        true
-                                                    }
-                                                >
-                                                    <Text
+                                                    <View
                                                         style={[
-                                                            styles.cardTitleText,
-                                                            {
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                fontSize: 18,
-                                                                marginBottom: 15
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {localeString(
-                                                            'cashu.offlinePending.bannerTitle'
-                                                        )}
-                                                    </Text>
-                                                    <ScrollView
-                                                        style={{
-                                                            maxHeight: 250
-                                                        }}
-                                                    >
-                                                        {CashuStore.offlinePendingTokens.map(
-                                                            (token, index) => (
-                                                                <TouchableOpacity
-                                                                    key={index}
-                                                                    onPress={() => {
-                                                                        this.setState(
-                                                                            {
-                                                                                showOfflinePendingModal:
-                                                                                    false
-                                                                            }
-                                                                        );
-                                                                        navigation.navigate(
-                                                                            'CashuToken',
-                                                                            {
-                                                                                token: token.encodedToken,
-                                                                                decoded:
-                                                                                    token
-                                                                            }
-                                                                        );
-                                                                    }}
-                                                                    style={[
-                                                                        styles.tokenRow,
-                                                                        {
-                                                                            borderBottomColor:
-                                                                                themeColor(
-                                                                                    'secondaryText'
-                                                                                ),
-                                                                            borderBottomWidth:
-                                                                                index <
-                                                                                CashuStore
-                                                                                    .offlinePendingTokens
-                                                                                    .length -
-                                                                                    1
-                                                                                    ? StyleSheet.hairlineWidth
-                                                                                    : 0
-                                                                        }
-                                                                    ]}
-                                                                >
-                                                                    <View
-                                                                        style={{
-                                                                            flex: 1
-                                                                        }}
-                                                                    >
-                                                                        <Amount
-                                                                            sats={
-                                                                                token.getAmount
-                                                                            }
-                                                                            sensitive
-                                                                            toggleable
-                                                                            pending
-                                                                        />
-                                                                        <Text
-                                                                            style={[
-                                                                                styles.tokenMint,
-                                                                                {
-                                                                                    color: themeColor(
-                                                                                        'secondaryText'
-                                                                                    )
-                                                                                }
-                                                                            ]}
-                                                                            numberOfLines={
-                                                                                1
-                                                                            }
-                                                                            ellipsizeMode="middle"
-                                                                        >
-                                                                            {
-                                                                                token.mint
-                                                                            }
-                                                                        </Text>
-                                                                        {token.getDisplayTimeShort !==
-                                                                            '' && (
-                                                                            <Text
-                                                                                style={[
-                                                                                    styles.tokenMint,
-                                                                                    {
-                                                                                        color: themeColor(
-                                                                                            'secondaryText'
-                                                                                        )
-                                                                                    }
-                                                                                ]}
-                                                                            >
-                                                                                {
-                                                                                    token.getDisplayTimeShort
-                                                                                }
-                                                                            </Text>
-                                                                        )}
-                                                                    </View>
-                                                                    <Text
-                                                                        style={{
-                                                                            color: themeColor(
-                                                                                'secondaryText'
-                                                                            ),
-                                                                            fontSize: 18
-                                                                        }}
-                                                                    >
-                                                                        {'>'}
-                                                                    </Text>
-                                                                </TouchableOpacity>
-                                                            )
-                                                        )}
-                                                    </ScrollView>
-                                                    <Text
-                                                        style={[
-                                                            styles.cardBodyText,
-                                                            {
-                                                                color: themeColor(
-                                                                    'warning'
-                                                                )
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {localeString(
-                                                            'cashu.offlinePending.bannerWarning'
-                                                        )}
-                                                    </Text>
-                                                    <TouchableOpacity
-                                                        onPress={() =>
-                                                            this.setState({
-                                                                showOfflinePendingModal:
-                                                                    false
-                                                            })
-                                                        }
-                                                        style={[
-                                                            styles.modalDismiss,
+                                                            styles.backupCard,
                                                             {
                                                                 backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderColor:
                                                                     themeColor(
                                                                         'highlight'
                                                                     )
                                                             }
                                                         ]}
                                                     >
+                                                        <View
+                                                            style={
+                                                                styles.lockIconContainer
+                                                            }
+                                                        >
+                                                            <LockIcon
+                                                                fill={themeColor(
+                                                                    'highlight'
+                                                                )}
+                                                            />
+                                                        </View>
                                                         <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'background'
-                                                                ),
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Medium',
-                                                                textAlign:
-                                                                    'center'
-                                                            }}
+                                                            style={[
+                                                                styles.cardTitleText,
+                                                                {
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }
+                                                            ]}
                                                         >
                                                             {localeString(
-                                                                'general.ok'
+                                                                'views.Wallet.BalancePane.backup.title'
                                                             )}
                                                         </Text>
-                                                    </TouchableOpacity>
-                                                </View>
-                                            </TouchableOpacity>
-                                        </Modal>
-                                    </>
-                                )}
-                                {CashuStore.offlineSpentTokens.length > 0 && (
-                                    <>
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                this.setState({
-                                                    showOfflineSpentModal: true
-                                                })
-                                            }
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.pendingBanner,
-                                                    {
-                                                        backgroundColor:
-                                                            themeColor('error')
-                                                    }
-                                                ]}
-                                            >
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    <AlertIcon
-                                                        fill="#fff"
-                                                        width={18}
-                                                        height={18}
-                                                        style={{
-                                                            marginRight: 8
-                                                        }}
-                                                    />
-                                                    <Text
-                                                        style={
-                                                            styles.pendingBannerText
-                                                        }
-                                                    >
-                                                        {`${
-                                                            CashuStore
-                                                                .offlineSpentTokens
-                                                                .length
-                                                        } ${localeString(
-                                                            CashuStore
-                                                                .offlineSpentTokens
-                                                                .length === 1
-                                                                ? 'cashu.offlineSpent.bannerTitleSingular'
-                                                                : 'cashu.offlineSpent.bannerTitle'
-                                                        )}`}
-                                                    </Text>
-                                                </View>
-                                                <Amount
-                                                    sats={CashuStore.offlineSpentTokens.reduce(
-                                                        (sum, t) =>
-                                                            sum + t.getAmount,
-                                                        0
-                                                    )}
-                                                    sensitive
-                                                    toggleable
-                                                    colorOverride="#fff"
-                                                />
-                                            </View>
-                                        </TouchableOpacity>
-                                        <Modal
-                                            animationType="fade"
-                                            transparent
-                                            visible={
-                                                showOfflineSpentModal ||
-                                                CashuStore.showOfflineSpentAlert
-                                            }
-                                            onRequestClose={() => {
-                                                CashuStore.dismissOfflineSpentTokens();
-                                                this.setState({
-                                                    showOfflineSpentModal: false
-                                                });
-                                            }}
-                                        >
-                                            <TouchableOpacity
-                                                style={styles.modalOverlay}
-                                                activeOpacity={1}
-                                                onPress={() => {
-                                                    CashuStore.dismissOfflineSpentTokens();
-                                                    this.setState({
-                                                        showOfflineSpentModal:
-                                                            false
-                                                    });
-                                                }}
-                                            >
+                                                        <Text
+                                                            style={[
+                                                                styles.cardBodyText,
+                                                                {
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {localeString(
+                                                                'views.Wallet.BalancePane.backup.text'
+                                                            )}
+                                                        </Text>
+                                                        <Text
+                                                            style={[
+                                                                styles.cardBodyTextBold,
+                                                                {
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {localeString(
+                                                                'views.Wallet.BalancePane.backup.action'
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )}
+                                        {implementation === 'embedded-lnd' &&
+                                            lndFolderMissing && (
                                                 <View
                                                     style={[
-                                                        styles.modalContent,
+                                                        styles.errorCard,
                                                         {
                                                             backgroundColor:
                                                                 themeColor(
-                                                                    'secondary'
-                                                                ),
-                                                            borderColor:
-                                                                themeColor(
                                                                     'error'
-                                                                ),
-                                                            borderWidth: 2
+                                                                )
                                                         }
                                                     ]}
-                                                    onStartShouldSetResponder={() =>
-                                                        true
-                                                    }
                                                 >
                                                     <Text
-                                                        style={[
-                                                            styles.cardTitleText,
-                                                            {
-                                                                color: themeColor(
-                                                                    'warning'
-                                                                ),
-                                                                fontSize: 18,
-                                                                marginBottom: 15
-                                                            }
-                                                        ]}
+                                                        style={
+                                                            styles.errorTitleText
+                                                        }
                                                     >
                                                         {localeString(
-                                                            'cashu.offlineSpent.title'
+                                                            'views.Wallet.lndFolderMissing.title'
                                                         )}
                                                     </Text>
                                                     <Text
+                                                        style={
+                                                            styles.errorBodyText
+                                                        }
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.lndFolderMissing.message'
+                                                        )}
+                                                    </Text>
+                                                    <View
+                                                        style={
+                                                            styles.errorButtonRow
+                                                        }
+                                                    >
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.Wallet.lndFolderMissing.deleteWallet'
+                                                            )}
+                                                            onPress={() =>
+                                                                navigation.navigate(
+                                                                    'Wallets'
+                                                                )
+                                                            }
+                                                            quaternary
+                                                            buttonStyle={{
+                                                                minHeight: 80
+                                                            }}
+                                                            containerStyle={{
+                                                                flex: 1,
+                                                                marginRight: 5
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.Tools.clearStorage.title'
+                                                            )}
+                                                            onPress={() =>
+                                                                navigation.navigate(
+                                                                    'Tools',
+                                                                    {
+                                                                        showClearDataModal:
+                                                                            true
+                                                                    }
+                                                                )
+                                                            }
+                                                            quaternary
+                                                            buttonStyle={{
+                                                                minHeight: 80
+                                                            }}
+                                                            containerStyle={{
+                                                                flex: 1,
+                                                                marginLeft: 5
+                                                            }}
+                                                        />
+                                                    </View>
+                                                </View>
+                                            )}
+                                        {cashuOfflinePendingBalance > 0 && (
+                                            <>
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            showOfflinePendingModal:
+                                                                true
+                                                        })
+                                                    }
+                                                >
+                                                    <View
                                                         style={[
-                                                            styles.cardBodyText,
+                                                            styles.pendingBanner,
                                                             {
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                marginTop: 0,
-                                                                marginBottom: 10
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'warning'
+                                                                    )
                                                             }
                                                         ]}
                                                     >
-                                                        {localeString(
-                                                            'cashu.offlineSpent.message'
-                                                        )}
-                                                    </Text>
-                                                    <ScrollView
-                                                        style={{
-                                                            maxHeight: 250
-                                                        }}
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+                                                                alignItems:
+                                                                    'center'
+                                                            }}
+                                                        >
+                                                            <ClockIcon
+                                                                color="#fff"
+                                                                width={18}
+                                                                height={18}
+                                                                style={{
+                                                                    marginRight: 8
+                                                                }}
+                                                            />
+                                                            <Text
+                                                                style={
+                                                                    styles.pendingBannerText
+                                                                }
+                                                            >
+                                                                {`${
+                                                                    CashuStore
+                                                                        .offlinePendingTokens
+                                                                        .length
+                                                                } ${localeString(
+                                                                    CashuStore
+                                                                        .offlinePendingTokens
+                                                                        .length ===
+                                                                        1
+                                                                        ? 'cashu.offlinePending.bannerTitleSingular'
+                                                                        : 'cashu.offlinePending.bannerTitle'
+                                                                )}`}
+                                                            </Text>
+                                                        </View>
+                                                        <Amount
+                                                            sats={
+                                                                cashuOfflinePendingBalance
+                                                            }
+                                                            sensitive
+                                                            toggleable
+                                                            colorOverride="#fff"
+                                                        />
+                                                    </View>
+                                                </TouchableOpacity>
+                                                <Modal
+                                                    animationType="fade"
+                                                    transparent
+                                                    visible={
+                                                        showOfflinePendingModal
+                                                    }
+                                                    onRequestClose={() =>
+                                                        this.setState({
+                                                            showOfflinePendingModal:
+                                                                false
+                                                        })
+                                                    }
+                                                >
+                                                    <TouchableOpacity
+                                                        style={
+                                                            styles.modalOverlay
+                                                        }
+                                                        activeOpacity={1}
+                                                        onPress={() =>
+                                                            this.setState({
+                                                                showOfflinePendingModal:
+                                                                    false
+                                                            })
+                                                        }
                                                     >
-                                                        {CashuStore.offlineSpentTokens.map(
-                                                            (token, index) => (
-                                                                <TouchableOpacity
-                                                                    key={index}
-                                                                    onPress={() => {
-                                                                        CashuStore.dismissOfflineSpentTokens();
-                                                                        this.setState(
-                                                                            {
-                                                                                showOfflineSpentModal:
-                                                                                    false
+                                                        <View
+                                                            style={[
+                                                                styles.modalContent,
+                                                                {
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'secondary'
+                                                                        )
+                                                                }
+                                                            ]}
+                                                            onStartShouldSetResponder={() =>
+                                                                true
+                                                            }
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.cardTitleText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        ),
+                                                                        fontSize: 18,
+                                                                        marginBottom: 15
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'cashu.offlinePending.bannerTitle'
+                                                                )}
+                                                            </Text>
+                                                            <ScrollView
+                                                                style={{
+                                                                    maxHeight: 250
+                                                                }}
+                                                            >
+                                                                {CashuStore.offlinePendingTokens.map(
+                                                                    (
+                                                                        token,
+                                                                        index
+                                                                    ) => (
+                                                                        <TouchableOpacity
+                                                                            key={
+                                                                                index
                                                                             }
-                                                                        );
-                                                                        navigation.navigate(
-                                                                            'CashuToken',
-                                                                            {
-                                                                                token: token.encodedToken,
-                                                                                decoded:
-                                                                                    token,
-                                                                                offlineSpent:
-                                                                                    true
-                                                                            }
-                                                                        );
-                                                                    }}
-                                                                    style={[
-                                                                        styles.tokenRow,
-                                                                        {
-                                                                            borderBottomColor:
-                                                                                themeColor(
-                                                                                    'secondaryText'
-                                                                                ),
-                                                                            borderBottomWidth:
-                                                                                index <
-                                                                                CashuStore
-                                                                                    .offlineSpentTokens
-                                                                                    .length -
-                                                                                    1
-                                                                                    ? StyleSheet.hairlineWidth
-                                                                                    : 0
-                                                                        }
-                                                                    ]}
-                                                                >
-                                                                    <View
-                                                                        style={{
-                                                                            flex: 1
-                                                                        }}
-                                                                    >
-                                                                        <Amount
-                                                                            sats={
-                                                                                token.getAmount
-                                                                            }
-                                                                            sensitive
-                                                                            toggleable
-                                                                            color="warning"
-                                                                        />
-                                                                        <Text
+                                                                            onPress={() => {
+                                                                                this.setState(
+                                                                                    {
+                                                                                        showOfflinePendingModal:
+                                                                                            false
+                                                                                    }
+                                                                                );
+                                                                                navigation.navigate(
+                                                                                    'CashuToken',
+                                                                                    {
+                                                                                        token: token.encodedToken,
+                                                                                        decoded:
+                                                                                            token
+                                                                                    }
+                                                                                );
+                                                                            }}
                                                                             style={[
-                                                                                styles.tokenMint,
+                                                                                styles.tokenRow,
                                                                                 {
-                                                                                    color: themeColor(
-                                                                                        'secondaryText'
-                                                                                    )
+                                                                                    borderBottomColor:
+                                                                                        themeColor(
+                                                                                            'secondaryText'
+                                                                                        ),
+                                                                                    borderBottomWidth:
+                                                                                        index <
+                                                                                        CashuStore
+                                                                                            .offlinePendingTokens
+                                                                                            .length -
+                                                                                            1
+                                                                                            ? StyleSheet.hairlineWidth
+                                                                                            : 0
                                                                                 }
                                                                             ]}
-                                                                            numberOfLines={
-                                                                                1
-                                                                            }
-                                                                            ellipsizeMode="middle"
                                                                         >
-                                                                            {
-                                                                                token.mint
-                                                                            }
-                                                                        </Text>
-                                                                        {token.getDisplayTimeShort !==
-                                                                            '' && (
-                                                                            <Text
-                                                                                style={[
-                                                                                    styles.tokenMint,
-                                                                                    {
-                                                                                        color: themeColor(
-                                                                                            'secondaryText'
-                                                                                        )
+                                                                            <View
+                                                                                style={{
+                                                                                    flex: 1
+                                                                                }}
+                                                                            >
+                                                                                <Amount
+                                                                                    sats={
+                                                                                        token.getAmount
                                                                                     }
-                                                                                ]}
+                                                                                    sensitive
+                                                                                    toggleable
+                                                                                    pending
+                                                                                />
+                                                                                <Text
+                                                                                    style={[
+                                                                                        styles.tokenMint,
+                                                                                        {
+                                                                                            color: themeColor(
+                                                                                                'secondaryText'
+                                                                                            )
+                                                                                        }
+                                                                                    ]}
+                                                                                    numberOfLines={
+                                                                                        1
+                                                                                    }
+                                                                                    ellipsizeMode="middle"
+                                                                                >
+                                                                                    {
+                                                                                        token.mint
+                                                                                    }
+                                                                                </Text>
+                                                                                {token.getDisplayTimeShort !==
+                                                                                    '' && (
+                                                                                    <Text
+                                                                                        style={[
+                                                                                            styles.tokenMint,
+                                                                                            {
+                                                                                                color: themeColor(
+                                                                                                    'secondaryText'
+                                                                                                )
+                                                                                            }
+                                                                                        ]}
+                                                                                    >
+                                                                                        {
+                                                                                            token.getDisplayTimeShort
+                                                                                        }
+                                                                                    </Text>
+                                                                                )}
+                                                                            </View>
+                                                                            <Text
+                                                                                style={{
+                                                                                    color: themeColor(
+                                                                                        'secondaryText'
+                                                                                    ),
+                                                                                    fontSize: 18
+                                                                                }}
                                                                             >
                                                                                 {
-                                                                                    token.getDisplayTimeShort
+                                                                                    '>'
                                                                                 }
                                                                             </Text>
-                                                                        )}
-                                                                    </View>
-                                                                    <Text
-                                                                        style={{
-                                                                            color: themeColor(
-                                                                                'secondaryText'
-                                                                            ),
-                                                                            fontSize: 18
-                                                                        }}
-                                                                    >
-                                                                        {'>'}
-                                                                    </Text>
-                                                                </TouchableOpacity>
-                                                            )
-                                                        )}
-                                                    </ScrollView>
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            CashuStore.dismissOfflineSpentTokens();
-                                                            this.setState({
-                                                                showOfflineSpentModal:
-                                                                    false
-                                                            });
-                                                        }}
+                                                                        </TouchableOpacity>
+                                                                    )
+                                                                )}
+                                                            </ScrollView>
+                                                            <Text
+                                                                style={[
+                                                                    styles.cardBodyText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'warning'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'cashu.offlinePending.bannerWarning'
+                                                                )}
+                                                            </Text>
+                                                            <TouchableOpacity
+                                                                onPress={() =>
+                                                                    this.setState(
+                                                                        {
+                                                                            showOfflinePendingModal:
+                                                                                false
+                                                                        }
+                                                                    )
+                                                                }
+                                                                style={[
+                                                                    styles.modalDismiss,
+                                                                    {
+                                                                        backgroundColor:
+                                                                            themeColor(
+                                                                                'highlight'
+                                                                            )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'background'
+                                                                        ),
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Medium',
+                                                                        textAlign:
+                                                                            'center'
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'general.ok'
+                                                                    )}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                </Modal>
+                                            </>
+                                        )}
+                                        {CashuStore.offlineSpentTokens.length >
+                                            0 && (
+                                            <>
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            showOfflineSpentModal:
+                                                                true
+                                                        })
+                                                    }
+                                                >
+                                                    <View
                                                         style={[
-                                                            styles.modalDismiss,
+                                                            styles.pendingBanner,
                                                             {
                                                                 backgroundColor:
                                                                     themeColor(
@@ -963,44 +856,309 @@ export default class BalancePane extends React.PureComponent<
                                                             }
                                                         ]}
                                                     >
-                                                        <Text
+                                                        <View
                                                             style={{
-                                                                color: '#fff',
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Medium',
-                                                                textAlign:
+                                                                flexDirection:
+                                                                    'row',
+                                                                alignItems:
                                                                     'center'
                                                             }}
                                                         >
-                                                            {localeString(
-                                                                'general.ok'
+                                                            <AlertIcon
+                                                                fill="#fff"
+                                                                width={18}
+                                                                height={18}
+                                                                style={{
+                                                                    marginRight: 8
+                                                                }}
+                                                            />
+                                                            <Text
+                                                                style={
+                                                                    styles.pendingBannerText
+                                                                }
+                                                            >
+                                                                {`${
+                                                                    CashuStore
+                                                                        .offlineSpentTokens
+                                                                        .length
+                                                                } ${localeString(
+                                                                    CashuStore
+                                                                        .offlineSpentTokens
+                                                                        .length ===
+                                                                        1
+                                                                        ? 'cashu.offlineSpent.bannerTitleSingular'
+                                                                        : 'cashu.offlineSpent.bannerTitle'
+                                                                )}`}
+                                                            </Text>
+                                                        </View>
+                                                        <Amount
+                                                            sats={CashuStore.offlineSpentTokens.reduce(
+                                                                (sum, t) =>
+                                                                    sum +
+                                                                    t.getAmount,
+                                                                0
                                                             )}
-                                                        </Text>
+                                                            sensitive
+                                                            toggleable
+                                                            colorOverride="#fff"
+                                                        />
+                                                    </View>
+                                                </TouchableOpacity>
+                                                <Modal
+                                                    animationType="fade"
+                                                    transparent
+                                                    visible={
+                                                        showOfflineSpentModal ||
+                                                        CashuStore.showOfflineSpentAlert
+                                                    }
+                                                    onRequestClose={() => {
+                                                        CashuStore.dismissOfflineSpentTokens();
+                                                        this.setState({
+                                                            showOfflineSpentModal:
+                                                                false
+                                                        });
+                                                    }}
+                                                >
+                                                    <TouchableOpacity
+                                                        style={
+                                                            styles.modalOverlay
+                                                        }
+                                                        activeOpacity={1}
+                                                        onPress={() => {
+                                                            CashuStore.dismissOfflineSpentTokens();
+                                                            this.setState({
+                                                                showOfflineSpentModal:
+                                                                    false
+                                                            });
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={[
+                                                                styles.modalContent,
+                                                                {
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'secondary'
+                                                                        ),
+                                                                    borderColor:
+                                                                        themeColor(
+                                                                            'error'
+                                                                        ),
+                                                                    borderWidth: 2
+                                                                }
+                                                            ]}
+                                                            onStartShouldSetResponder={() =>
+                                                                true
+                                                            }
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.cardTitleText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'warning'
+                                                                        ),
+                                                                        fontSize: 18,
+                                                                        marginBottom: 15
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'cashu.offlineSpent.title'
+                                                                )}
+                                                            </Text>
+                                                            <Text
+                                                                style={[
+                                                                    styles.cardBodyText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        ),
+                                                                        marginTop: 0,
+                                                                        marginBottom: 10
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'cashu.offlineSpent.message'
+                                                                )}
+                                                            </Text>
+                                                            <ScrollView
+                                                                style={{
+                                                                    maxHeight: 250
+                                                                }}
+                                                            >
+                                                                {CashuStore.offlineSpentTokens.map(
+                                                                    (
+                                                                        token,
+                                                                        index
+                                                                    ) => (
+                                                                        <TouchableOpacity
+                                                                            key={
+                                                                                index
+                                                                            }
+                                                                            onPress={() => {
+                                                                                CashuStore.dismissOfflineSpentTokens();
+                                                                                this.setState(
+                                                                                    {
+                                                                                        showOfflineSpentModal:
+                                                                                            false
+                                                                                    }
+                                                                                );
+                                                                                navigation.navigate(
+                                                                                    'CashuToken',
+                                                                                    {
+                                                                                        token: token.encodedToken,
+                                                                                        decoded:
+                                                                                            token,
+                                                                                        offlineSpent:
+                                                                                            true
+                                                                                    }
+                                                                                );
+                                                                            }}
+                                                                            style={[
+                                                                                styles.tokenRow,
+                                                                                {
+                                                                                    borderBottomColor:
+                                                                                        themeColor(
+                                                                                            'secondaryText'
+                                                                                        ),
+                                                                                    borderBottomWidth:
+                                                                                        index <
+                                                                                        CashuStore
+                                                                                            .offlineSpentTokens
+                                                                                            .length -
+                                                                                            1
+                                                                                            ? StyleSheet.hairlineWidth
+                                                                                            : 0
+                                                                                }
+                                                                            ]}
+                                                                        >
+                                                                            <View
+                                                                                style={{
+                                                                                    flex: 1
+                                                                                }}
+                                                                            >
+                                                                                <Amount
+                                                                                    sats={
+                                                                                        token.getAmount
+                                                                                    }
+                                                                                    sensitive
+                                                                                    toggleable
+                                                                                    color="warning"
+                                                                                />
+                                                                                <Text
+                                                                                    style={[
+                                                                                        styles.tokenMint,
+                                                                                        {
+                                                                                            color: themeColor(
+                                                                                                'secondaryText'
+                                                                                            )
+                                                                                        }
+                                                                                    ]}
+                                                                                    numberOfLines={
+                                                                                        1
+                                                                                    }
+                                                                                    ellipsizeMode="middle"
+                                                                                >
+                                                                                    {
+                                                                                        token.mint
+                                                                                    }
+                                                                                </Text>
+                                                                                {token.getDisplayTimeShort !==
+                                                                                    '' && (
+                                                                                    <Text
+                                                                                        style={[
+                                                                                            styles.tokenMint,
+                                                                                            {
+                                                                                                color: themeColor(
+                                                                                                    'secondaryText'
+                                                                                                )
+                                                                                            }
+                                                                                        ]}
+                                                                                    >
+                                                                                        {
+                                                                                            token.getDisplayTimeShort
+                                                                                        }
+                                                                                    </Text>
+                                                                                )}
+                                                                            </View>
+                                                                            <Text
+                                                                                style={{
+                                                                                    color: themeColor(
+                                                                                        'secondaryText'
+                                                                                    ),
+                                                                                    fontSize: 18
+                                                                                }}
+                                                                            >
+                                                                                {
+                                                                                    '>'
+                                                                                }
+                                                                            </Text>
+                                                                        </TouchableOpacity>
+                                                                    )
+                                                                )}
+                                                            </ScrollView>
+                                                            <TouchableOpacity
+                                                                onPress={() => {
+                                                                    CashuStore.dismissOfflineSpentTokens();
+                                                                    this.setState(
+                                                                        {
+                                                                            showOfflineSpentModal:
+                                                                                false
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                style={[
+                                                                    styles.modalDismiss,
+                                                                    {
+                                                                        backgroundColor:
+                                                                            themeColor(
+                                                                                'error'
+                                                                            )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: '#fff',
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Medium',
+                                                                        textAlign:
+                                                                            'center'
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'general.ok'
+                                                                    )}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        </View>
                                                     </TouchableOpacity>
-                                                </View>
-                                            </TouchableOpacity>
-                                        </Modal>
-                                    </>
+                                                </Modal>
+                                            </>
+                                        )}
+                                    </View>
                                 )}
-                            </View>
-                        )}
-                        {implementation === 'lndhub' ||
-                        implementation === 'nostr-wallet-connect' ? (
-                            <View style={styles.balanceContainer}>
-                                <LightningBalance />
-                            </View>
-                        ) : (
-                            <View
-                                style={[
-                                    styles.balanceContainer,
-                                    SyncStore.isBusy && {
-                                        marginTop: 30,
-                                        marginBottom: 15
-                                    }
-                                ]}
-                            >
-                                <BalanceViewCombined />
-                            </View>
+                                {implementation === 'lndhub' ||
+                                implementation === 'nostr-wallet-connect' ? (
+                                    <View style={styles.balanceContainer}>
+                                        <LightningBalance />
+                                    </View>
+                                ) : (
+                                    <View
+                                        style={[
+                                            styles.balanceContainer,
+                                            SyncStore.isBusy && {
+                                                marginTop: 30,
+                                                marginBottom: 15
+                                            }
+                                        ]}
+                                    >
+                                        <BalanceViewCombined />
+                                    </View>
+                                )}
+                            </>
                         )}
                     </View>
                 </View>

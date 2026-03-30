@@ -73,6 +73,7 @@ import {
     loadPendingPaymentData,
     clearPendingPaymentData
 } from '../../utils/GraphSyncUtils';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
 import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
 
@@ -150,6 +151,7 @@ interface WalletState {
     initialLoad: boolean;
     loading: boolean;
     pendingShareIntent?: { qrData?: string; base64Image?: string };
+    isChannelMigrating: boolean;
 }
 
 @inject(
@@ -191,7 +193,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             unlocked: false,
             initialLoad: true,
             loading: false,
-            pendingShareIntent: undefined
+            pendingShareIntent: undefined,
+            isChannelMigrating: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -355,12 +358,43 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             const { SettingsStore, navigation } = this.props;
             const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
+            // This awaits on settings, so should await on Tor being bootstrapped before making requests
+            const settings = await SettingsStore.getSettings();
+
+            const { lndDir, implementation } = SettingsStore;
+
+            const migrationDataString = await Storage.getItem(
+                CHANNEL_MIGRATION_ACTIVE
+            );
+
+            if (migrationDataString) {
+                try {
+                    const migrationData = JSON.parse(migrationDataString);
+
+                    if (
+                        implementation === 'embedded-lnd' &&
+                        migrationData.migrationStatus &&
+                        migrationData.lndDir === lndDir
+                    ) {
+                        this.setState({ isChannelMigrating: true });
+                        SettingsStore.setChannelMigrating(true);
+                    } else {
+                        this.setState({ isChannelMigrating: false });
+                        SettingsStore.setChannelMigrating(false);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse migration data:', e);
+                    this.setState({ isChannelMigrating: false });
+                    SettingsStore.setChannelMigrating(false);
+                }
+            } else {
+                this.setState({ isChannelMigrating: false });
+                SettingsStore.setChannelMigrating(false);
+            }
+
             const shareIntentResult = await processSharedQRImageFast();
             const shareIntentData =
                 explicitShareIntentData || shareIntentResult?.params;
-
-            // This awaits on settings, so should await on Tor being bootstrapped before making requests
-            const settings = await SettingsStore.getSettings();
             if (Platform.OS === 'android') {
                 const locale = settings.locale || 'en';
                 bridgeJavaStrings(locale);
@@ -674,6 +708,24 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (!SettingsStore.walletJustCreated) {
                     try {
                         AlertStore.checkNeutrinoPeers();
+
+                        const isChannelMigrating =
+                            this.state.isChannelMigrating ||
+                            SettingsStore.isChannelMigrating;
+
+                        if (isChannelMigrating) {
+                            try {
+                                await stopLnd();
+                            } catch (e) {
+                                console.log('stopLnd in migration mode:', e);
+                            }
+                            console.log(
+                                'Wallet is in migration lock mode - skipping LND startup'
+                            );
+                            this.setState({ loading: false });
+                            setConnectingStatus(false);
+                            return;
+                        }
 
                         // Skip stopLnd when wallet is already closed (e.g. after delete)
                         if (!recovery && SettingsStore.embeddedLndStarted) {
@@ -1294,7 +1346,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     render() {
-        const { loading } = this.state;
+        const { loading, isChannelMigrating } = this.state;
         const {
             NodeInfoStore,
             BalanceStore,
@@ -1351,6 +1403,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         SyncStore={SyncStore}
                         ModalStore={ModalStore}
                         loading={loading}
+                        isChannelMigrating={isChannelMigrating}
+                        onUnlock={() => {
+                            this.setState({ isChannelMigrating: false });
+                            SettingsStore.setChannelMigrating(false);
+                        }}
                     />
 
                     {error && (
@@ -1415,7 +1472,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         </View>
                     )}
 
-                    {dataAvailable && !error && (
+                    {dataAvailable && !error && !isChannelMigrating && (
                         <>
                             <LayerBalances
                                 navigation={navigation}
@@ -1529,8 +1586,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             >
                                 <Tab.Navigator
                                     initialRouteName={
-                                        error &&
-                                        posEnabled === PosEnabled.Disabled
+                                        isChannelMigrating
+                                            ? 'Balance'
+                                            : error &&
+                                              posEnabled === PosEnabled.Disabled
                                             ? 'Balance'
                                             : posEnabled !==
                                                   PosEnabled.Disabled &&
@@ -1607,7 +1666,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 : undefined
                                     })}
                                 >
-                                    {posEnabled !== PosEnabled.Disabled &&
+                                    {!isChannelMigrating &&
+                                    posEnabled !== PosEnabled.Disabled &&
                                     posStatus === 'active' ? (
                                         <Tab.Screen name="Products">
                                             {PosScreen}
@@ -1617,54 +1677,58 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             {BalanceScreen}
                                         </Tab.Screen>
                                     )}
-                                    {posEnabled === PosEnabled.Standalone &&
+                                    {!isChannelMigrating &&
+                                        posEnabled === PosEnabled.Standalone &&
                                         posStatus === 'active' &&
                                         showKeypad && (
                                             <Tab.Screen name="POS Keypad">
                                                 {PosKeypadScreen}
                                             </Tab.Screen>
                                         )}
-                                    {posStatus !== 'active' && (
-                                        <>
-                                            {!error &&
-                                                !(
-                                                    isSyncing &&
-                                                    !settings?.ecash
-                                                        ?.enableCashu
-                                                ) && (
-                                                    <Tab.Screen name="Keypad">
-                                                        {KeypadScreen}
-                                                    </Tab.Screen>
-                                                )}
-                                            {BackendUtils.supportsChannelManagement() &&
-                                                !error &&
-                                                !isSyncing && (
-                                                    <Tab.Screen
-                                                        name={localeString(
-                                                            'views.Wallet.Wallet.channels'
-                                                        )}
-                                                    >
-                                                        {ChannelsScreen}
-                                                    </Tab.Screen>
-                                                )}
-                                        </>
-                                    )}
-                                    {posStatus !== 'active' && !error && (
-                                        <Tab.Screen
-                                            name="Camera"
-                                            listeners={{
-                                                tabPress: (e) => {
-                                                    // Prevent default action
-                                                    e.preventDefault();
-                                                    navigation.navigate(
-                                                        'HandleAnythingQRScanner'
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            {CameraScreen}
-                                        </Tab.Screen>
-                                    )}
+                                    {!isChannelMigrating &&
+                                        posStatus !== 'active' && (
+                                            <>
+                                                {!error &&
+                                                    !(
+                                                        isSyncing &&
+                                                        !settings?.ecash
+                                                            ?.enableCashu
+                                                    ) && (
+                                                        <Tab.Screen name="Keypad">
+                                                            {KeypadScreen}
+                                                        </Tab.Screen>
+                                                    )}
+                                                {BackendUtils.supportsChannelManagement() &&
+                                                    !error &&
+                                                    !isSyncing && (
+                                                        <Tab.Screen
+                                                            name={localeString(
+                                                                'views.Wallet.Wallet.channels'
+                                                            )}
+                                                        >
+                                                            {ChannelsScreen}
+                                                        </Tab.Screen>
+                                                    )}
+                                            </>
+                                        )}
+                                    {!isChannelMigrating &&
+                                        posStatus !== 'active' &&
+                                        !error && (
+                                            <Tab.Screen
+                                                name="Camera"
+                                                listeners={{
+                                                    tabPress: (e) => {
+                                                        // Prevent default action
+                                                        e.preventDefault();
+                                                        navigation.navigate(
+                                                            'HandleAnythingQRScanner'
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                {CameraScreen}
+                                            </Tab.Screen>
+                                        )}
                                 </Tab.Navigator>
                             </NavigationContainer>
                         </NavigationIndependentTree>

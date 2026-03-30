@@ -1,4 +1,5 @@
 import {
+    Alert,
     DeviceEventEmitter,
     NativeEventEmitter,
     NativeModules,
@@ -14,6 +15,7 @@ const log = Log('utils/LndMobileUtils.ts');
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
 import { retry, sleep } from './SleepUtils';
+import { importChannelDb } from './ChannelMigrationUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -423,9 +425,23 @@ export async function stopLnd(
         } else {
             log.d('Force stop: skipping status check (Go state mismatch)');
         }
-        // Initiate graceful shutdown - both can throw; continue even if one fails
+        // Initiate graceful shutdown - proceed to killLnd even if stopLnd fails
         log.d('Stopping LND...');
-        await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        try {
+            await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        } catch (stopError) {
+            const stopMsg = getErrorMessage(stopError);
+            if (
+                matchesLndErrorCode(
+                    stopMsg,
+                    LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                )
+            ) {
+                log.d('Wallet recovery in progress - proceeding to force kill');
+            } else {
+                throw stopError;
+            }
+        }
         const killResult = await runWithExpectedErrorHandling(
             () => NativeModules.LndMobileTools.killLnd(),
             'killLnd'
@@ -590,7 +606,40 @@ async function startLndWithRetry({
             matchesLndErrorCode(errorMessage, LndErrorCode.LND_ALREADY_RUNNING)
         ) {
             log.d('LND already started - force stop (Go thinks running)');
-            await stopLnd(STOP_LND_MAX_RETRIES, STOP_LND_POLL_DELAY_MS, true);
+            const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    await stopLnd(
+                        STOP_LND_MAX_RETRIES,
+                        STOP_LND_POLL_DELAY_MS,
+                        true
+                    );
+                    break;
+                } catch (stopError: unknown) {
+                    const stopMsg = getErrorMessage(stopError);
+                    if (
+                        matchesLndErrorCode(
+                            stopMsg,
+                            LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                        )
+                    ) {
+                        if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
+                            log.e(
+                                `Wallet recovery still in progress after ${attempt} attempts, giving up`
+                            );
+                            throw createLndError(
+                                LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                            );
+                        }
+                        log.d(
+                            `Wallet recovery in progress, waiting 5s before retry (attempt ${attempt}/${MAX_RECOVERY_WAIT_ATTEMPTS})...`
+                        );
+                        await sleep(5000);
+                        continue;
+                    }
+                    throw stopError;
+                }
+            }
             const delayMs =
                 Platform.OS === 'android'
                     ? ANDROID_PROCESS_CLEANUP_DELAY_MS
@@ -1112,13 +1161,19 @@ export async function createLndWallet({
     seedMnemonic,
     walletPassphrase,
     isTestnet,
-    channelBackupsBase64
+    channelBackupsBase64,
+    channelDbUri,
+    channelDbFileName,
+    setStatus
 }: {
     lndDir: string;
     seedMnemonic?: string;
     walletPassphrase?: string;
     isTestnet?: boolean;
     channelBackupsBase64?: string;
+    channelDbUri?: string;
+    channelDbFileName?: string;
+    setStatus?: (message: string | null) => void;
 }) {
     const {
         initialize,
@@ -1139,6 +1194,8 @@ export async function createLndWallet({
     });
     await initialize();
 
+    if (setStatus)
+        setStatus(localeString('views.Tools.migration.status.startingLnd'));
     await startLnd({
         lndDir,
         walletPassword: '',
@@ -1159,18 +1216,58 @@ export async function createLndWallet({
     const randomBase64 = Base64Utils.bytesToBase64(random);
 
     const isRestore = walletPassphrase || seedMnemonic;
+    const hasChannelDb = channelDbUri && channelDbFileName;
+    if (setStatus)
+        setStatus(
+            localeString('views.Tools.migration.status.initializingWallet')
+        );
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
-        isRestore ? 500 : undefined,
+        isRestore && !hasChannelDb ? 500 : undefined,
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
 
-    // Mark that LND is already running from wallet creation,
-    // so Wallet.tsx skips the stop→init→start cycle
-    settingsStore.embeddedLndStarted = true;
-    settingsStore.walletJustCreated = true;
+    if (hasChannelDb) {
+        if (setStatus)
+            setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
+        try {
+            await stopLnd(STOP_LND_MAX_RETRIES, STOP_LND_POLL_DELAY_MS, true);
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
+                throw e;
+            }
+        }
+
+        if (setStatus)
+            setStatus(
+                localeString('views.Tools.migration.status.importingBackup')
+            );
+        await importChannelDb(
+            channelDbUri,
+            channelDbFileName,
+            lndDir,
+            isTestnet || false
+        );
+
+        LndMobileEventEmitter.removeAllListeners('SubscribeState');
+        settingsStore.embeddedLndStarted = false;
+        settingsStore.walletJustCreated = false;
+    } else {
+        // Mark that LND is already running from wallet creation,
+        // so Wallet.tsx skips the stop→init→start cycle
+        settingsStore.embeddedLndStarted = true;
+        settingsStore.walletJustCreated = true;
+    }
 
     return { wallet, seed, randomBase64 };
 }
@@ -1178,6 +1275,7 @@ export async function createLndWallet({
 /**
  * Waits for LND RPC to become ready by polling getInfo
  * @param timeoutMs - Maximum time to wait in milliseconds (default: 30000)
+ * @returns The getInfo response once RPC is ready
  * @throws Error if RPC doesn't become ready within timeout or encounters a fatal error
  */
 export async function waitForRpcReady(timeoutMs = 30000) {
@@ -1187,7 +1285,7 @@ export async function waitForRpcReady(timeoutMs = 30000) {
         try {
             const info = await lndMobile.index.getInfo();
             log.d(`RPC ready - Node pubkey: ${info.identity_pubkey}`);
-            return;
+            return info;
         } catch (error: any) {
             const errorMessage = error?.message ?? '';
             log.d(`RPC not ready yet: ${errorMessage}`);

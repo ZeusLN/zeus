@@ -23,8 +23,12 @@ import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
+import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoadingModal';
 
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SyncStore from '../../stores/SyncStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 import {
     SWAPS_KEY,
@@ -35,6 +39,7 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -44,10 +49,14 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface SeedProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
+    SyncStore: SyncStore;
+    ChannelsStore: ChannelsStore;
     route: Route<
         'Seed',
         {
             seedPhrase?: string[];
+            skipWarning?: boolean;
         }
     >;
 }
@@ -56,6 +65,8 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    isChannelExporting: boolean;
+    channelExportMessage: string;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -106,13 +117,15 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
-        understood: false,
+        understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
-        isDeleteModalVisible: false
+        isDeleteModalVisible: false,
+        isChannelExporting: false,
+        channelExportMessage: ''
     };
 
     componentDidMount() {
@@ -188,9 +201,40 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         );
     };
 
+    handleExportChannels = () => {
+        const { SettingsStore, NodeInfoStore, SyncStore } = this.props;
+        const { isSyncing } = SyncStore;
+
+        if (isSyncing) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.syncInProgress')
+            );
+            return;
+        }
+
+        handleExportChannels({
+            isSqlite: SettingsStore.isSqlite ?? true,
+            lndDir: SettingsStore.lndDir || 'lnd',
+            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
+            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            setStatus: (msg: string | null) =>
+                this.setState({
+                    isChannelExporting: msg !== null,
+                    channelExportMessage: msg ?? ''
+                })
+        });
+    };
+
     render() {
-        const { navigation, SettingsStore, route } = this.props;
-        const { understood, showModal } = this.state;
+        const { navigation, SettingsStore, ChannelsStore, route } = this.props;
+        const {
+            understood,
+            showModal,
+            isChannelExporting,
+            channelExportMessage
+        } = this.state;
         // Get seed phrase based on implementation
         let seedPhrase: string[] | undefined;
         if (route.params?.seedPhrase) {
@@ -203,6 +247,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         }
         const isRefundRescueKey = !!route.params?.seedPhrase;
         const isTwelveWords = seedPhrase?.length === 12;
+        const hasChannels =
+            ChannelsStore.channels.length > 0 ||
+            ChannelsStore.pendingChannels.length > 0 ||
+            ChannelsStore.closedChannels.length > 0;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -270,6 +318,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         return (
             <Screen>
                 {this.renderDeleteModal()}
+                <ChannelBackupLoadingModal
+                    isOpen={isChannelExporting}
+                    message={channelExportMessage}
+                />
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -530,8 +582,47 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    if (isRefundRescueKey) navigation.goBack();
-                                    else {
+                                    if (isRefundRescueKey) {
+                                        navigation.goBack();
+                                    } else if (
+                                        SettingsStore.implementation ===
+                                            'embedded-lnd' &&
+                                        hasChannels
+                                    ) {
+                                        Alert.alert(
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.title'
+                                            ),
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.message'
+                                            ),
+                                            [
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                                                    ),
+                                                    onPress: () => {
+                                                        this.handleExportChannels();
+                                                    }
+                                                },
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.Seed.channelBackupReminder.later'
+                                                    ),
+                                                    style: 'cancel',
+                                                    onPress: async () => {
+                                                        await Storage.setItem(
+                                                            IS_BACKED_UP_KEY,
+                                                            true
+                                                        );
+                                                        navigation.popTo(
+                                                            'Wallet'
+                                                        );
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    } else {
                                         await Storage.setItem(
                                             IS_BACKED_UP_KEY,
                                             true
@@ -555,6 +646,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 })()}
                                 containerStyle={{ marginBottom: 10 }}
                             />
+                            {!isRefundRescueKey &&
+                                hasChannels &&
+                                SettingsStore.implementation ==
+                                    'embedded-lnd' && (
+                                    <Button
+                                        onPress={this.handleExportChannels}
+                                        title={localeString(
+                                            'views.Tools.migration.export'
+                                        )}
+                                        secondary
+                                        containerStyle={{ marginBottom: 15 }}
+                                    />
+                                )}
                             {isRefundRescueKey && (
                                 <Button
                                     onPress={() =>
