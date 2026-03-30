@@ -214,7 +214,7 @@ const writeLndConfig = async ({
     }`;
 
     const config = `[Application Options]
-    debuglevel=info
+    debuglevel=debug
     maxbackoff=2s
     sync-freelist=1
     accept-keysend=1
@@ -322,6 +322,23 @@ export async function expressGraphSync() {
             } catch (error) {
                 log.e('Gossip files deletion failed', [error]);
             }
+
+            if (settingsStore?.isSqlite) {
+                log.d('Resetting native SQL graph database');
+                try {
+                    const lndDir = settingsStore?.lndDir || 'lnd';
+                    const network =
+                        settingsStore?.embeddedLndNetwork === 'Mainnet'
+                            ? 'mainnet'
+                            : 'testnet';
+                    await NativeModules.LndMobileTools.DEBUG_resetGraphDb(
+                        lndDir,
+                        network
+                    );
+                } catch (error) {
+                    log.e('Graph database reset failed', [error]);
+                }
+            }
         }
 
         try {
@@ -329,7 +346,9 @@ export async function expressGraphSync() {
                 settingsStore?.settings?.speedloader === 'Custom'
                     ? settingsStore?.settings?.customSpeedloader
                     : settingsStore?.settings?.speedloader ||
-                          DEFAULT_SPEEDLOADER
+                          DEFAULT_SPEEDLOADER,
+                settingsStore?.lndDir || 'lnd',
+                settingsStore?.isSqlite || false
             );
 
             const completionTime =
@@ -1135,7 +1154,7 @@ export async function createLndWallet({
     await writeLndConfig({
         lndDir,
         isTestnet,
-        isSqlite: Platform.OS === 'ios'
+        isSqlite: true
     });
     await initialize();
 

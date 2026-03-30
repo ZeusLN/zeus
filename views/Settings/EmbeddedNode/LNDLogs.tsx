@@ -41,7 +41,7 @@ export default class LNDLogs extends React.Component<
             const network =
                 embeddedLndNetwork === 'Testnet' ? 'testnet' : 'mainnet';
             const tailLog = await NativeModules.LndMobileTools.tailLog(
-                100,
+                350,
                 lndDir || 'lnd',
                 network
             );

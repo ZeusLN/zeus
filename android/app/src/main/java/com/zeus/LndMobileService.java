@@ -254,7 +254,9 @@ public class LndMobileService extends Service {
 
           case MSG_GOSSIP_SYNC:
             final String serviceUrl = bundle.getString("serviceUrl", "");
-            gossipSync(msg.replyTo, serviceUrl, request);
+            final String gossipLndDir = bundle.getString("lndDir", "lnd");
+            final boolean gossipIsSqlite = bundle.getBoolean("isSqlite", false);
+            gossipSync(msg.replyTo, serviceUrl, gossipLndDir, gossipIsSqlite, request);
             break;
 
           case MSG_CANCEL_GOSSIP_SYNC:
@@ -388,14 +390,21 @@ public class LndMobileService extends Service {
     }
   }
 
-  void gossipSync(Messenger recipient, String serviceUrl, int request) {
+  void gossipSync(Messenger recipient, String serviceUrl, String lndDir, boolean isSqlite, int request) {
     Runnable gossipSync = new Runnable() {
       public void run() {
+        String dataDir;
+        if (lndDir.equals("lnd")) {
+          dataDir = getApplicationContext().getFilesDir().getAbsolutePath();
+        } else {
+          dataDir = getApplicationContext().getFilesDir().getAbsolutePath() + "/" + lndDir;
+        }
         Lndmobile.gossipSync(
           serviceUrl,
           getApplicationContext().getCacheDir().getAbsolutePath(),
-          getApplicationContext().getFilesDir().getAbsolutePath(),
+          dataDir,
           "",
+          isSqlite,
           new lndmobile.Callback() {
 
           @Override

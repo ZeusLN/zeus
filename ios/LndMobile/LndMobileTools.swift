@@ -283,6 +283,76 @@ class LndMobileTools: RCTEventEmitter {
     resolve(true)
   }
 
+  @objc(DEBUG_resetGraphDb:network:resolver:rejecter:)
+  func DEBUG_resetGraphDb(lndDir: String, network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    let folderName = lndDir.isEmpty ? "lnd" : lndDir
+    let networkName = network.isEmpty ? "mainnet" : network
+    let graphPath = applicationSupport.appendingPathComponent(folderName, isDirectory: true)
+                                      .appendingPathComponent("data", isDirectory: true)
+                                      .appendingPathComponent("graph", isDirectory: true)
+                                      .appendingPathComponent(networkName, isDirectory: true)
+    let dbPath = graphPath.appendingPathComponent("lnd.sqlite").path
+
+    guard FileManager.default.fileExists(atPath: dbPath) else {
+      resolve(true)
+      return
+    }
+
+    var db: OpaquePointer?
+    guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
+      reject("error", "Failed to open lnd.sqlite", nil)
+      return
+    }
+    defer { sqlite3_close(db) }
+
+    let sql = """
+      DROP INDEX IF EXISTS graph_nodes_unique;
+      DROP INDEX IF EXISTS graph_node_extra_types_unique;
+      DROP INDEX IF EXISTS graph_node_features_unique;
+      DROP INDEX IF EXISTS graph_node_addresses_unique;
+      DROP INDEX IF EXISTS graph_node_last_update_idx;
+      DROP INDEX IF EXISTS graph_source_nodes_unique;
+      DROP INDEX IF EXISTS graph_channels_node_id_1_idx;
+      DROP INDEX IF EXISTS graph_channels_node_id_2_idx;
+      DROP INDEX IF EXISTS graph_channels_unique;
+      DROP INDEX IF EXISTS graph_channels_version_outpoint_idx;
+      DROP INDEX IF EXISTS graph_channels_version_id_idx;
+      DROP INDEX IF EXISTS graph_channel_features_unique;
+      DROP INDEX IF EXISTS graph_channel_extra_types_unique;
+      DROP INDEX IF EXISTS graph_channel_policies_unique;
+      DROP INDEX IF EXISTS graph_channel_policy_extra_types_unique;
+      DROP INDEX IF EXISTS graph_channel_policy_last_update_idx;
+      DROP INDEX IF EXISTS graph_zombie_channels_channel_id_version_idx;
+      DROP TABLE IF EXISTS graph_channel_policy_extra_types;
+      DROP TABLE IF EXISTS graph_channel_policies;
+      DROP TABLE IF EXISTS graph_channel_features;
+      DROP TABLE IF EXISTS graph_channel_extra_types;
+      DROP TABLE IF EXISTS graph_channels;
+      DROP TABLE IF EXISTS graph_source_nodes;
+      DROP TABLE IF EXISTS graph_node_addresses;
+      DROP TABLE IF EXISTS graph_node_features;
+      DROP TABLE IF EXISTS graph_node_extra_types;
+      DROP TABLE IF EXISTS graph_nodes;
+      DROP TABLE IF EXISTS graph_zombie_channels;
+      DROP TABLE IF EXISTS graph_prune_log;
+      DROP TABLE IF EXISTS graph_closed_scids;
+      DELETE FROM migration_tracker WHERE version IN (9, 10);
+      DELETE FROM schema_migrations;
+      INSERT INTO schema_migrations (version, dirty) VALUES (7, 0);
+    """
+
+    var errMsg: UnsafeMutablePointer<CChar>?
+    if sqlite3_exec(db, sql, nil, nil, &errMsg) != SQLITE_OK {
+      let error = errMsg != nil ? String(cString: errMsg!) : "Unknown SQLite error"
+      sqlite3_free(errMsg)
+      reject("error", error, nil)
+      return
+    }
+
+    resolve(true)
+  }
+
   @objc(checkApplicationSupportExists:rejecter:)
   func checkApplicationSupportExists(resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
