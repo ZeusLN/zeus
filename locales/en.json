@@ -740,6 +740,7 @@
     "views.WalletSettings.title": "Settings",
     "views.WalletSettings.createWallet": "Create wallet",
     "views.RecommendedSettings.title": "Recommended settings",
+    "views.RecommendedSettings.titleCustomized": "Your selected settings",
     "views.RecommendedSettings.walletType": "Wallet type",
     "views.RecommendedSettings.walletType.cashu": "Cashu ecash (low fees)",
     "views.RecommendedSettings.walletType.selfCustody": "Self-custody",

@@ -34,7 +34,12 @@ interface MintDiscoveryProps {
     SettingsStore: SettingsStore;
     route: Route<
         'MintDiscovery',
-        { enableCashu: boolean; returnTo?: string; implementation?: string }
+        {
+            enableCashu: boolean;
+            returnTo?: string;
+            implementation?: string;
+            discoverMode?: DiscoverMode;
+        }
     >;
 }
 
@@ -63,8 +68,14 @@ export default class MintDiscovery extends React.Component<
     };
 
     componentDidMount() {
-        // Auto-fetch with default mode (ZEUS' contacts)
-        this.handleFetchMints();
+        const initialMode = this.props.route.params?.discoverMode;
+        if (initialMode) {
+            this.setState({ discoverMode: initialMode }, () => {
+                this.handleFetchMints();
+            });
+        } else {
+            this.handleFetchMints();
+        }
     }
 
     validateAndSetNpub = (text: string) => {

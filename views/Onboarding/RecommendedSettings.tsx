@@ -70,7 +70,7 @@ export default class RecommendedSettings extends React.Component<
         enableCashu: true,
         discoverMode: 'zeus',
         clipboard: true,
-        fiatEnabled: true,
+        fiatEnabled: false,
         selectedCurrency: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         initialMintUrls: [],
@@ -275,6 +275,13 @@ export default class RecommendedSettings extends React.Component<
             ? CashuStore.loading
             : CashuStore.loadingTrustedMints;
 
+        const hasCustomized =
+            !enableCashu ||
+            !clipboard ||
+            fiatEnabled ||
+            discoverMode !== 'zeus' ||
+            implementation !== 'ldk-node';
+
         // Use initialMintUrls from MintDiscovery when available,
         // otherwise compute from the store
         let displayMintUrls: string[] = [];
@@ -305,7 +312,11 @@ export default class RecommendedSettings extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.RecommendedSettings.title'),
+                        text: localeString(
+                            hasCustomized
+                                ? 'views.RecommendedSettings.titleCustomized'
+                                : 'views.RecommendedSettings.title'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -459,7 +470,8 @@ export default class RecommendedSettings extends React.Component<
                             onPress={() =>
                                 navigation.navigate('MintDiscovery', {
                                     returnTo: 'RecommendedSettings',
-                                    enableCashu: true
+                                    enableCashu: true,
+                                    discoverMode
                                 })
                             }
                         >
