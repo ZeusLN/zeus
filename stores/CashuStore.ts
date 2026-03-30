@@ -1926,6 +1926,10 @@ export default class CashuStore {
             runInAction(() => {
                 this.nostrMintBackupTimestamp = timestamp;
             });
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-nostrMintBackupTimestamp`,
+                String(timestamp)
+            );
         } catch (e) {
             console.warn('Nostr mint backup failed:', e);
         }
