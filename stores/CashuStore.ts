@@ -215,6 +215,13 @@ export default class CashuStore {
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
+    @observable public cachedRecommendations: Map<
+        string,
+        {
+            recommendations: MintRecommendation[];
+            reviews: Map<string, MintReview[]>;
+        }
+    > = new Map();
     @observable public mintReviews: Map<string, MintReview[]> = new Map();
     @observable public reviewerProfiles: Map<string, ReviewerProfile> =
         new Map();
@@ -1336,6 +1343,20 @@ export default class CashuStore {
      * - Popularity (recommendation count) provides a small boost
      * - Recent bad reviews will quickly tank a misbehaving mint's score
      */
+    @action
+    public restoreCachedRecommendations = (cacheKey: string): boolean => {
+        const cached = this.cachedRecommendations.get(cacheKey);
+        if (!cached) return false;
+
+        if (cacheKey === 'all') {
+            this.mintRecommendations = cached.recommendations;
+        } else {
+            this.trustedMintRecommendations = cached.recommendations;
+        }
+        this.mintReviews = cached.reviews;
+        return true;
+    };
+
     public getTopScoredMints = (
         count: number = 5,
         mode: 'zeus' | 'all' = 'zeus'
@@ -1453,6 +1474,10 @@ export default class CashuStore {
             runInAction(() => {
                 this.mintRecommendations = recommendations;
                 this.mintReviews = reviews;
+                this.cachedRecommendations.set('all', {
+                    recommendations,
+                    reviews
+                });
                 this.loading = false;
             });
 
@@ -1560,9 +1585,17 @@ export default class CashuStore {
             const { recommendations, reviews } =
                 this.processMintRecommendationEvents(events);
 
+            const cacheKey = npubInput?.trim()
+                ? `custom:${npubInput.trim()}`
+                : 'zeus';
+
             runInAction(() => {
                 this.trustedMintRecommendations = recommendations;
                 this.mintReviews = reviews;
+                this.cachedRecommendations.set(cacheKey, {
+                    recommendations,
+                    reviews
+                });
                 this.loadingTrustedMints = false;
             });
 

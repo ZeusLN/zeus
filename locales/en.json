@@ -745,6 +745,7 @@
     "views.MintDiscovery.title": "Mint discovery",
     "views.MintDiscovery.subtitle": "Choose how to discover Cashu mints",
     "views.MintDiscovery.topMints": "Top recommended mints",
+    "views.MintDiscovery.tapToReadReviews": "Tap a mint to read reviews",
     "views.MintDiscovery.fetchMints": "Find mints",
     "views.MintDiscovery.next": "Next",
     "views.MintDiscovery.chooseLater": "Choose later",

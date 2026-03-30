@@ -13,6 +13,7 @@ import { Route } from '@react-navigation/native';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import MintReviewsModal from '../../components/MintReviewsModal';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
@@ -42,6 +43,8 @@ interface MintDiscoveryState {
     customNpub: string;
     npubError: string;
     hasFetched: boolean;
+    showReviewsModal: boolean;
+    reviewsMintUrl: string;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -54,7 +57,9 @@ export default class MintDiscovery extends React.Component<
         discoverMode: 'zeus',
         customNpub: '',
         npubError: '',
-        hasFetched: false
+        hasFetched: false,
+        showReviewsModal: false,
+        reviewsMintUrl: ''
     };
 
     componentDidMount() {
@@ -89,7 +94,7 @@ export default class MintDiscovery extends React.Component<
         });
     };
 
-    handleFetchMints = () => {
+    handleFetchMints = (forceRefresh?: boolean) => {
         const { CashuStore } = this.props;
         const { discoverMode, customNpub, npubError } = this.state;
 
@@ -97,6 +102,21 @@ export default class MintDiscovery extends React.Component<
             if (npubError || !customNpub.trim()) {
                 return;
             }
+        }
+
+        // Build a cache key for this fetch
+        const cacheKey =
+            discoverMode === 'custom'
+                ? `custom:${customNpub.trim()}`
+                : discoverMode;
+
+        // Restore from cache if we already have results for this mode
+        if (
+            !forceRefresh &&
+            CashuStore.restoreCachedRecommendations(cacheKey)
+        ) {
+            this.setState({ hasFetched: true });
+            return;
         }
 
         this.setState({ hasFetched: true });
@@ -205,7 +225,14 @@ export default class MintDiscovery extends React.Component<
 
     render() {
         const { navigation, CashuStore } = this.props;
-        const { discoverMode, customNpub, npubError, hasFetched } = this.state;
+        const {
+            discoverMode,
+            customNpub,
+            npubError,
+            hasFetched,
+            showReviewsModal,
+            reviewsMintUrl
+        } = this.state;
 
         const isLater = discoverMode === 'later';
 
@@ -338,10 +365,22 @@ export default class MintDiscovery extends React.Component<
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Medium',
                                     fontSize: 16,
-                                    marginBottom: 10
+                                    marginBottom: 2
                                 }}
                             >
                                 {localeString('views.MintDiscovery.topMints')}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 12,
+                                    marginBottom: 10
+                                }}
+                            >
+                                {localeString(
+                                    'views.MintDiscovery.tapToReadReviews'
+                                )}
                             </Text>
 
                             {isLoading ? (
@@ -356,7 +395,7 @@ export default class MintDiscovery extends React.Component<
                                     const mintName = mintInfo?.name;
 
                                     return (
-                                        <View
+                                        <TouchableOpacity
                                             key={mint.url}
                                             style={[
                                                 styles.mintItem,
@@ -367,6 +406,13 @@ export default class MintDiscovery extends React.Component<
                                                     alignItems: 'center'
                                                 }
                                             ]}
+                                            onPress={() =>
+                                                this.setState({
+                                                    showReviewsModal: true,
+                                                    reviewsMintUrl: mint.url
+                                                })
+                                            }
+                                            activeOpacity={0.7}
                                         >
                                             <MintAvatar
                                                 iconUrl={iconUrl}
@@ -411,7 +457,7 @@ export default class MintDiscovery extends React.Component<
                                                     )}
                                                 </RNText>
                                             </View>
-                                        </View>
+                                        </TouchableOpacity>
                                     );
                                 })
                             ) : (
@@ -447,6 +493,17 @@ export default class MintDiscovery extends React.Component<
                         disabled={isLoading && discoverMode !== 'later'}
                     />
                 </View>
+                <MintReviewsModal
+                    isOpen={showReviewsModal}
+                    mintUrl={reviewsMintUrl}
+                    CashuStore={CashuStore}
+                    onClose={() =>
+                        this.setState({
+                            showReviewsModal: false,
+                            reviewsMintUrl: ''
+                        })
+                    }
+                />
             </Screen>
         );
     }
