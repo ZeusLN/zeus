@@ -10,6 +10,7 @@ import {
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
+    @observable public androidNfcModalIsNfcEnabled: boolean = false;
     @observable public showInfoModal: boolean = false;
     @observable public showAlertModal: boolean = false;
     @observable public showShareModal: boolean = false;
@@ -181,8 +182,14 @@ export default class ModalStore {
 
     /* Android NFC Modal */
     @action
-    public toggleAndroidNfcModal = (status: boolean) => {
+    public toggleAndroidNfcModal = (
+        status: boolean,
+        nfcEnabled: boolean = true
+    ) => {
         this.showAndroidNfcModal = status;
+        if (status) {
+            this.androidNfcModalIsNfcEnabled = nfcEnabled;
+        }
     };
 
     @action

@@ -53,7 +53,7 @@ import UTXOPicker from '../components/UTXOPicker';
 
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import NFCUtils from '../utils/NFCUtils';
+import NFCUtils, { checkNfcEnabled } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getUnformattedAmount, getAmountFromSats } from '../utils/AmountUtils';
@@ -121,6 +121,7 @@ interface SendState {
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
     validAmountToSwap: boolean;
+    nfcSupported: boolean;
 }
 
 @inject(
@@ -191,7 +192,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account: 'default',
             additionalOutputs: [],
             fundMax: false,
-            validAmountToSwap: false
+            validAmountToSwap: false,
+            nfcSupported: false
         };
     }
 
@@ -333,6 +335,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             'hardwareBackPress',
             this.backPressed.bind(this)
         );
+
+        const nfcSupported = await NfcManager.isSupported();
+        this.setState({ nfcSupported });
     }
 
     componentWillUnmount(): void {
@@ -371,6 +376,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     enableNfc = async () => {
         const { ModalStore } = this.props;
+
+        if (!(await checkNfcEnabled(ModalStore))) return;
+
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
@@ -746,7 +754,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             fundMax,
             account,
             validAmountToSwap,
-            utxos
+            utxos,
+            nfcSupported
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -846,17 +855,19 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </TouchableOpacity>
                                     </View>
                                 )}
-                            <View style={{ marginRight: 15 }}>
-                                <TouchableOpacity
-                                    onPress={() => this.enableNfc()}
-                                >
-                                    <NFC
-                                        stroke={themeColor('text')}
-                                        width={30}
-                                        height={30}
-                                    />
-                                </TouchableOpacity>
-                            </View>
+                            {nfcSupported && (
+                                <View style={{ marginRight: 15 }}>
+                                    <TouchableOpacity
+                                        onPress={() => this.enableNfc()}
+                                    >
+                                        <NFC
+                                            stroke={themeColor('text')}
+                                            width={30}
+                                            height={30}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                             <View>
                                 <TouchableOpacity
                                     onPress={() =>

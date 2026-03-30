@@ -1,3 +1,23 @@
+import NfcManager from 'react-native-nfc-manager';
+import ModalStore from '../stores/ModalStore';
+
+/**
+ * Checks whether NFC is enabled on the device.
+ * If not, shows the AndroidNfcModal with the disabled state and returns false.
+ * On iOS, NfcManager.isEnabled() always returns true, so this function
+ * only ever returns false on Android.
+ */
+export async function checkNfcEnabled(
+    modalStore: ModalStore
+): Promise<boolean> {
+    const nfcEnabled = await NfcManager.isEnabled();
+    if (!nfcEnabled) {
+        modalStore.toggleAndroidNfcModal(true, false);
+        return false;
+    }
+    return true;
+}
+
 class NFCUtils {
     nfcUtf8ArrayToStr = (data: any) => {
         const extraByteMap = [1, 1, 1, 1, 2, 2, 3, 0];
