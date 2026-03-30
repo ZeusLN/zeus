@@ -22,7 +22,7 @@ import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
-import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -182,7 +182,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                     }
                                 >
                                     <View style={styles.icon}>
-                                        <NWCIcon
+                                        <NostrichIcon
                                             fill={themeColor('text')}
                                             width={23}
                                             height={23}
@@ -560,6 +560,48 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                             }}
                                         >
                                             {localeString('views.Tools.cashu')}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {BackendUtils.supportsCashuWallet() &&
+                        settings?.ecash?.enableCashu && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('NostrKeysTools')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <NostrichIcon
+                                                fill={themeColor('text')}
+                                                width={23}
+                                                height={23}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString('nostr.keys')}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon

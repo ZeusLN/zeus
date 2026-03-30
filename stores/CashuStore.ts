@@ -32,6 +32,11 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 
 import NostrUtils from '../utils/NostrUtils';
+import {
+    deriveMintBackupKeypair,
+    backupMintsToNostr,
+    restoreMintsFromNostr
+} from '../utils/NostrMintBackup';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -218,6 +223,7 @@ export default class CashuStore {
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
     @observable dismissedUpgradeThreshold: number = 0;
+    @observable public nostrMintBackupTimestamp?: number;
 
     // CDK integration state
     @observable public cdkInitialized: boolean = false;
@@ -1804,6 +1810,9 @@ export default class CashuStore {
                 await this.setSelectedMint(mintUrl);
             }
 
+            // Backup mint list to Nostr (fire and forget)
+            this.nostrBackupMints();
+
             runInAction(() => {
                 this.loading = false;
             });
@@ -1866,10 +1875,91 @@ export default class CashuStore {
         await Storage.removeItem(`${walletId}-pubkey`);
 
         await this.calculateTotalBalance();
+
+        // Backup updated mint list to Nostr (fire and forget)
+        this.nostrBackupMints();
+
         runInAction(() => {
             this.loading = false;
         });
         return this.cashuWallets;
+    };
+
+    /**
+     * Returns the raw Cashu seed bytes, or null if unavailable.
+     */
+    public getSeed = (): Uint8Array | null => {
+        return this.ensureSeed();
+    };
+
+    /**
+     * Get the seed for Nostr mint backup key derivation.
+     * Prefers the Cashu BIP-39 seed (if available) over the v1 LND-derived
+     * seed, so the Nostr identity stays consistent across seed versions.
+     */
+    public getNostrBackupSeed = (): Uint8Array | null => {
+        if (this.seedPhrase && this.seedPhrase.length > 0) {
+            const mnemonic = this.seedPhrase.join(' ');
+            return bip39scure.mnemonicToSeedSync(mnemonic);
+        }
+        return this.ensureSeed();
+    };
+
+    /**
+     * Backs up current mint list to Nostr relays using a seed-derived
+     * keypair. Cross-compatible with cashu.me.
+     */
+    @action
+    public nostrBackupMints = async () => {
+        const seed = this.getNostrBackupSeed();
+        if (!seed || this.mintUrls.length === 0) return;
+
+        try {
+            const { privateKeyHex, publicKeyHex } =
+                deriveMintBackupKeypair(seed);
+            const timestamp = await backupMintsToNostr(
+                privateKeyHex,
+                publicKeyHex,
+                this.mintUrls,
+                DEFAULT_NOSTR_RELAYS
+            );
+            runInAction(() => {
+                this.nostrMintBackupTimestamp = timestamp;
+            });
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-nostrMintBackupTimestamp`,
+                String(timestamp)
+            );
+        } catch (e) {
+            console.warn('Nostr mint backup failed:', e);
+        }
+    };
+
+    /**
+     * Restores mint list from Nostr relays using the seed-derived keypair.
+     * Returns the list of mint URLs found, or null if none.
+     */
+    @action
+    public nostrRestoreMints = async (): Promise<string[] | null> => {
+        const seed = this.getNostrBackupSeed();
+        if (!seed) return null;
+
+        try {
+            const { privateKeyHex, publicKeyHex } =
+                deriveMintBackupKeypair(seed);
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                DEFAULT_NOSTR_RELAYS
+            );
+            if (result && result.mints.length > 0) {
+                return result.mints;
+            }
+            return null;
+        } catch (e) {
+            console.warn('Nostr mint restore failed:', e);
+            return null;
+        }
     };
 
     setTotalBalance = async (newTotalBalanceSats: number) => {
@@ -2257,9 +2347,31 @@ export default class CashuStore {
                 }
                 console.log('CDK initialized during wallet startup');
 
-                const localMintUrls = storedMintUrls
+                let localMintUrls = storedMintUrls
                     ? JSON.parse(storedMintUrls)
                     : [];
+
+                // If no mints in local storage (e.g. fresh recovery),
+                // try to restore mint list from Nostr backup
+                if (localMintUrls.length === 0) {
+                    try {
+                        const nostrMints = await this.nostrRestoreMints();
+                        if (nostrMints && nostrMints.length > 0) {
+                            localMintUrls = nostrMints;
+                            console.log(
+                                `Restored ${nostrMints.length} mint(s) from Nostr backup`
+                            );
+                            // Persist so we don't re-fetch next time
+                            await Storage.setItem(
+                                `${lndDir}-cashu-mintUrls`,
+                                JSON.stringify(localMintUrls)
+                            );
+                        }
+                    } catch (e) {
+                        console.warn('Failed to restore mints from Nostr:', e);
+                    }
+                }
+
                 const localNorm = new Set(
                     localMintUrls.map((u: string) => this.normalizeMintUrl(u))
                 );
