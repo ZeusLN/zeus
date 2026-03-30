@@ -3,7 +3,8 @@ import BigNumber from 'bignumber.js';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import {
     numberWithCommas,
-    numberWithDecimals,
+    normalizeNumberString,
+    formatBitcoinWithSpaces,
     SATS_PER_BTC
 } from './UnitsUtils';
 import type { Units } from './UnitsUtils';
@@ -24,7 +25,6 @@ export interface ValueDisplayProps {
     rtl?: boolean;
     space?: boolean;
     error?: string;
-    separatorSwap?: boolean;
 }
 
 /**
@@ -44,8 +44,7 @@ export function processSatsAmount(
     const amountStr = amount.toString();
     const hideMsats = forceMsats ? false : shouldHideMillisatoshiAmounts();
 
-    // Remove commas from the amount string for processing
-    const cleanAmountStr = amountStr.replace(/,/g, '');
+    const cleanAmountStr = normalizeNumberString(amountStr);
 
     // Always check for decimals when hideMsats is enabled
     const [, decimalPart] = cleanAmountStr.split('.');
@@ -164,8 +163,7 @@ export function getUnformattedAmount({
             }
 
             const rate = (fiatEntry && fiatEntry.rate) || 0;
-            const { symbol, space, rtl, decimalPlaces, separatorSwap } =
-                fiatStore.getSymbol();
+            const { symbol, space, rtl, decimalPlaces } = fiatStore.getSymbol();
 
             const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
 
@@ -180,8 +178,7 @@ export function getUnformattedAmount({
                 negative,
                 plural: false,
                 rtl,
-                space,
-                separatorSwap
+                space
             };
         } else {
             return {
@@ -213,12 +210,14 @@ export function getAmountFromSats(
         const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
         if (valueToProcess.includes('-')) {
             const processedValue = valueToProcess.split('-')[1];
-            return `-₿${FeeUtils.toFixed(
-                Number(processedValue) / SATS_PER_BTC
+            return `-₿${formatBitcoinWithSpaces(
+                FeeUtils.toFixed(Number(processedValue) / SATS_PER_BTC)
             )}`;
         }
 
-        return `₿${FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC)}`;
+        return `₿${formatBitcoinWithSpaces(
+            FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC)
+        )}`;
     } else if (units === 'sats') {
         const sats = `${numberWithCommas(wholeSats || value) || 0} ${
             Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
@@ -232,16 +231,16 @@ export function getAmountFromSats(
             }
             const { code } = fiatEntry;
             const rate = (fiatEntry && fiatEntry.rate) || 0;
-            const { symbol, space, rtl, separatorSwap } =
+            const { symbol, space, rtl, decimalPlaces } =
                 fiatStore.symbolLookup(code);
+
+            const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
 
             const amount = (
                 FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC) * rate
-            ).toFixed(2);
+            ).toFixed(decimals);
 
-            const formattedAmount = separatorSwap
-                ? numberWithDecimals(amount)
-                : numberWithCommas(amount);
+            const formattedAmount = numberWithCommas(amount);
 
             if (rtl) {
                 return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
@@ -273,10 +272,14 @@ export function getFormattedAmount(
         const valueToProcess = value.toString() || '0';
         if (valueToProcess.includes('-')) {
             const processedValue = valueToProcess.split('-')[1];
-            return `-₿${FeeUtils.toFixed(Number(processedValue))}`;
+            return `-₿${formatBitcoinWithSpaces(
+                FeeUtils.toFixed(Number(processedValue))
+            )}`;
         }
 
-        return `₿${FeeUtils.toFixed(Number(value || 0))}`;
+        return `₿${formatBitcoinWithSpaces(
+            FeeUtils.toFixed(Number(value || 0))
+        )}`;
     } else if (units === 'sats') {
         const [wholeSats] = value.toString().split('.');
         const sats = `${numberWithCommas(wholeSats || value) || 0} ${
@@ -290,17 +293,15 @@ export function getFormattedAmount(
                 return localeString('general.notAvailable');
             }
             const { code } = fiatEntry;
-            const { symbol, space, rtl, separatorSwap } =
+            const { symbol, space, rtl, decimalPlaces } =
                 fiatStore.symbolLookup(code);
+            const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
 
-            // handle amounts passed in with commas
-            const amount = Number(value.toString().replace(/,/g, '.')).toFixed(
-                2
+            const amount = Number(normalizeNumberString(value)).toFixed(
+                decimals
             );
 
-            const formattedAmount = separatorSwap
-                ? numberWithDecimals(amount)
-                : numberWithCommas(amount);
+            const formattedAmount = numberWithCommas(amount);
 
             if (rtl) {
                 return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
@@ -368,7 +369,7 @@ export function getSatAmount(
     const { units } = unitsStore;
     const effectiveUnits = forceUnit || units;
 
-    const value = amount ? amount.toString().replace(/,/g, '.') : 0;
+    const value = amount ? normalizeNumberString(amount) : '0';
 
     const fiatEntry =
         fiat && fiatRates
