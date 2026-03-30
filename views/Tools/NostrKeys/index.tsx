@@ -10,7 +10,6 @@ import Screen from '../../../components/Screen';
 import Text from '../../../components/Text';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import CashuStore from '../../../stores/CashuStore';
-import SettingsStore from '../../../stores/SettingsStore';
 
 import { deriveMintBackupKeypair } from '../../../utils/NostrMintBackup';
 import { localeString } from '../../../utils/LocaleUtils';
@@ -23,7 +22,6 @@ import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
 interface NostrKeysProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    SettingsStore: SettingsStore;
 }
 
 interface NostrKeysState {
@@ -32,7 +30,7 @@ interface NostrKeysState {
     revealSensitive: boolean;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore')
 @observer
 export default class NostrKeys extends React.Component<
     NostrKeysProps,

@@ -23,6 +23,7 @@ import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
+import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -589,7 +590,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 >
                                     <View style={styles.columnField}>
                                         <View style={styles.icon}>
-                                            <NWCIcon
+                                            <NostrichIcon
                                                 fill={themeColor('text')}
                                                 width={23}
                                                 height={23}
