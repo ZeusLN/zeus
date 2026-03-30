@@ -158,7 +158,7 @@ export default class NodeChoice extends React.Component<
                                     style={{
                                         fontSize: 32,
                                         fontFamily: font('marlideBold'),
-                                        color: themeColor('text'),
+                                        color: '#fff',
                                         textAlign: 'center'
                                     }}
                                 >
@@ -190,7 +190,7 @@ export default class NodeChoice extends React.Component<
                                             <Text
                                                 style={{
                                                     fontSize: 20,
-                                                    color: themeColor('text'),
+                                                    color: '#fff',
                                                     fontWeight: 'bold'
                                                 }}
                                             >
@@ -222,7 +222,7 @@ export default class NodeChoice extends React.Component<
                                             <Text
                                                 style={{
                                                     fontSize: 20,
-                                                    color: themeColor('text'),
+                                                    color: '#fff',
                                                     fontWeight: 'bold'
                                                 }}
                                             >
@@ -237,12 +237,12 @@ export default class NodeChoice extends React.Component<
                                         <View style={styles.checkingRow}>
                                             <ActivityIndicator
                                                 size="small"
-                                                color={themeColor('text')}
+                                                color="#fff"
                                             />
                                             <Text
                                                 style={{
                                                     ...styles.checkingText,
-                                                    color: themeColor('text')
+                                                    color: '#fff'
                                                 }}
                                             >
                                                 {localeString(

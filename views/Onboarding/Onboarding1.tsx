@@ -10,7 +10,6 @@ import Text from '../../components/Text';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 
 interface Onboarding1Props {
     navigation: NativeStackNavigationProp<any, any>;
@@ -36,7 +35,7 @@ export default class Onboarding1 extends React.Component<Onboarding1Props, {}> {
                                     style={{
                                         fontSize: 32,
                                         fontFamily: font('marlideBold'),
-                                        color: themeColor('text'),
+                                        color: '#fff',
                                         textAlign: 'center'
                                     }}
                                 >
