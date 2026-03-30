@@ -397,7 +397,7 @@ export const restoreChannelBackupFromOlympus = async (
     isTestnet: boolean,
     pubkey: string,
     seedArray: string
-) => {
+): Promise<boolean> => {
     try {
         // 1. Authentication for status to check for existing backup
         console.log('Authenticating for status check...');
@@ -462,7 +462,7 @@ export const restoreChannelBackupFromOlympus = async (
                     { cancelable: false }
                 );
             });
-            return;
+            return false;
         }
 
         const userConfirmed = await new Promise<boolean>((resolve) => {
@@ -491,7 +491,7 @@ export const restoreChannelBackupFromOlympus = async (
         });
 
         if (!userConfirmed) {
-            return;
+            return false;
         }
 
         // 2. Authenticatication for restoring backup
@@ -615,6 +615,8 @@ export const restoreChannelBackupFromOlympus = async (
         );
         await unzipFile(tempZipPath, destFolder);
         await RNFS.unlink(tempZipPath);
+
+        return true;
     } catch (error: any) {
         console.error('Restore Flow Failed', error);
         throw error;
