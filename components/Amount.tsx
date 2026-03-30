@@ -13,11 +13,7 @@ import LoadingIndicator from './LoadingIndicator';
 
 import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import {
-    formatBitcoinWithSpaces,
-    numberWithCommas,
-    numberWithDecimals
-} from '../utils/UnitsUtils';
+import { formatBitcoinWithSpaces, numberWithCommas } from '../utils/UnitsUtils';
 import type { Units } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
@@ -49,7 +45,6 @@ interface AmountDisplayProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     roundAmount?: boolean;
-    separatorSwap?: boolean;
     onPendingPress?: () => void;
 }
 
@@ -76,7 +71,6 @@ function AmountDisplay({
     accessible,
     accessibilityLabel,
     roundAmount = false,
-    separatorSwap = false,
     onPendingPress
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
@@ -254,11 +248,7 @@ function AmountDisplay({
                 ) : unit === 'BTC' ? (
                     formatBitcoinWithSpaces(amount)
                 ) : unit === 'fiat' ? (
-                    separatorSwap ? (
-                        numberWithDecimals(amount)
-                    ) : (
-                        numberWithCommas(amount)
-                    )
+                    numberWithCommas(amount)
                 ) : (
                     amount.toString()
                 )}
@@ -370,6 +360,48 @@ interface AmountProps {
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Amount extends React.Component<AmountProps, {}> {
+    componentDidMount() {
+        this.ensureFiatRatesAvailable();
+    }
+
+    componentDidUpdate(prevProps: Readonly<AmountProps>) {
+        if (
+            prevProps.fixedUnits !== this.props.fixedUnits ||
+            prevProps.sats !== this.props.sats ||
+            prevProps.FiatStore?.fiatRates !==
+                this.props.FiatStore?.fiatRates ||
+            prevProps.SettingsStore?.settings.fiat !==
+                this.props.SettingsStore?.settings.fiat
+        ) {
+            this.ensureFiatRatesAvailable();
+        }
+    }
+
+    ensureFiatRatesAvailable = () => {
+        const FiatStore = this.props.FiatStore!;
+        const UnitsStore = this.props.UnitsStore!;
+        const SettingsStore = this.props.SettingsStore!;
+        const units = this.props.fixedUnits || UnitsStore.units;
+        const selectedFiat = SettingsStore.settings?.fiat;
+
+        if (
+            units !== 'fiat' ||
+            !SettingsStore.settings?.fiatEnabled ||
+            !selectedFiat ||
+            FiatStore.loading
+        ) {
+            return;
+        }
+
+        const hasSelectedFiatRate = FiatStore.fiatRates?.some(
+            (entry: any) => entry.code === selectedFiat
+        );
+
+        if (!hasSelectedFiatRate) {
+            FiatStore.getFiatRates();
+        }
+    };
+
     render() {
         const {
             sats: value,

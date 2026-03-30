@@ -27,6 +27,7 @@ jest.mock('../stores/Stores', () => {
     const mockUnitsStore = { units: 'sats' };
     const mockSettingsStore = {
         settings: {
+            locale: 'en',
             display: {
                 showMillisatoshiAmounts: true,
                 removeDecimalSpaces: false,
@@ -36,7 +37,10 @@ jest.mock('../stores/Stores', () => {
         }
     };
     const mockFiatStore = {
-        symbolLookup: () => ({
+        symbolLookup: (code: string) => ({
+            symbol: code === 'EUR' ? '€' : '$',
+            space: code === 'EUR',
+            rtl: false,
             decimalPlaces: 2
         }),
         fiatRates: [
@@ -57,7 +61,6 @@ jest.mock('../stores/Stores', () => {
             symbol: '$',
             space: false,
             rtl: false,
-            separatorSwap: false,
             decimalPlaces: 2
         })
     };
@@ -72,6 +75,7 @@ describe('AmountUtils', () => {
     beforeEach(() => {
         // Reset to default state before each test
         (settingsStore as any).settings = {
+            locale: 'en',
             display: {
                 showMillisatoshiAmounts: true
             }
@@ -232,6 +236,7 @@ describe('AmountUtils', () => {
             // Reset mocks before each test
             (unitsStore as any).units = 'sats';
             (settingsStore as any).settings = {
+                locale: 'en',
                 fiat: 'USD',
                 display: {
                     removeDecimalSpaces: false,
@@ -256,7 +261,6 @@ describe('AmountUtils', () => {
                 symbol: '$',
                 space: false,
                 rtl: false,
-                separatorSwap: false,
                 decimalPlaces: 2
             });
         });
@@ -403,7 +407,6 @@ describe('AmountUtils', () => {
                     symbol: '€',
                     space: true,
                     rtl: false,
-                    separatorSwap: false,
                     decimalPlaces: 2
                 });
                 const result = getUnformattedAmount({
@@ -420,7 +423,6 @@ describe('AmountUtils', () => {
                     symbol: '¥',
                     space: false,
                     rtl: false,
-                    separatorSwap: false,
                     decimalPlaces: 0
                 });
                 const result = getUnformattedAmount({
@@ -553,7 +555,6 @@ describe('AmountUtils', () => {
                 symbol: code === 'EUR' ? '€' : '$',
                 space: code === 'EUR',
                 rtl: false,
-                separatorSwap: false,
                 decimalPlaces: 2
             });
         });
@@ -574,7 +575,7 @@ describe('AmountUtils', () => {
             it('handles small amounts correctly', () => {
                 (unitsStore as any).units = 'BTC';
                 const result = getAmountFromSats(1000);
-                expect(result).toBe('₿0.00001');
+                expect(result).toBe('₿0.00 001');
             });
 
             it('handles negative values', () => {
@@ -664,6 +665,7 @@ describe('AmountUtils', () => {
             // Reset mocks before each test
             (unitsStore as any).units = 'sats';
             (settingsStore as any).settings = {
+                locale: 'en',
                 fiat: 'USD',
                 display: {
                     removeDecimalSpaces: false,
@@ -688,7 +690,6 @@ describe('AmountUtils', () => {
                 symbol: code === 'EUR' ? '€' : '$',
                 space: code === 'EUR',
                 rtl: false,
-                separatorSwap: false,
                 decimalPlaces: 2
             });
         });
@@ -755,8 +756,7 @@ describe('AmountUtils', () => {
             it('handles amounts with commas (treats commas as decimal separators)', () => {
                 (unitsStore as any).units = 'fiat';
                 const result = getFormattedAmount('50,000');
-                // The code replaces commas with dots, so "50,000" becomes "50.000" = 50.00
-                expect(result).toBe('$50.00');
+                expect(result).toBe('$50,000.00');
             });
 
             it('handles amounts with decimals and commas', () => {
@@ -772,7 +772,7 @@ describe('AmountUtils', () => {
                 expect(result).toBe('€ 45,000.00');
             });
 
-            it('handles separatorSwap currencies correctly', () => {
+            it('formats fiat using the app locale instead of the fiat currency', () => {
                 (unitsStore as any).units = 'fiat';
                 (settingsStore as any).settings.fiat = 'ARS';
                 (fiatStore as any).fiatRates = [
@@ -787,20 +787,16 @@ describe('AmountUtils', () => {
                     symbol: code === 'ARS' ? '$' : '$',
                     space: code === 'ARS',
                     rtl: false,
-                    separatorSwap: true,
                     decimalPlaces: 2
                 });
                 const result = getFormattedAmount(50000);
-                // separatorSwap swaps commas and dots: 50000.00 becomes 50.000,00
-                expect(result).toBe('$ 50.000,00');
+                expect(result).toBe('$ 50,000.00');
             });
 
-            it('handles amounts with both commas and decimals (results in NaN)', () => {
+            it('handles amounts with both commas and decimals', () => {
                 (unitsStore as any).units = 'fiat';
                 const result = getFormattedAmount('1,234.56');
-                // Commas are replaced with dots, so "1,234.56" becomes "1.234.56" which has two dots
-                // Number("1.234.56") = NaN, so toFixed(2) = "NaN"
-                expect(result).toBe('$NaN');
+                expect(result).toBe('$1,234.56');
             });
 
             it('returns N/A when fiat rates are not available', () => {
@@ -825,6 +821,30 @@ describe('AmountUtils', () => {
                 expect(result).toBe('₿1');
             });
         });
+
+        describe('locale-driven separators', () => {
+            beforeEach(() => {
+                (settingsStore as any).settings.locale = 'de';
+            });
+
+            it('formats sats using the app locale', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getFormattedAmount(1000);
+                expect(result).toBe('1.000 sats');
+            });
+
+            it('formats fiat using the app locale', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getFormattedAmount(50000);
+                expect(result).toBe('$50.000,00');
+            });
+
+            it('formats BTC using the app locale', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getFormattedAmount(12345.6789);
+                expect(result).toBe('₿12.345,67 89');
+            });
+        });
     });
 
     describe('getSatAmount', () => {
@@ -832,6 +852,7 @@ describe('AmountUtils', () => {
             // Reset mocks before each test
             (unitsStore as any).units = 'sats';
             (settingsStore as any).settings = {
+                locale: 'en',
                 fiat: 'USD',
                 display: {
                     removeDecimalSpaces: false,
@@ -867,10 +888,10 @@ describe('AmountUtils', () => {
                 expect(result).toBe(1000);
             });
 
-            it('handles comma-separated input by converting to dots', () => {
+            it('handles locale grouping separators in English-style locales', () => {
                 (unitsStore as any).units = 'sats';
                 const result = getSatAmount('1,001');
-                expect(result).toBe(1.001);
+                expect(result).toBe(1001);
             });
         });
 
@@ -973,6 +994,24 @@ describe('AmountUtils', () => {
                 (unitsStore as any).units = 'sats';
                 const result = getSatAmount('50000', 'fiat');
                 expect(result).toBe(100000000);
+            });
+        });
+
+        describe('locale-driven parsing', () => {
+            beforeEach(() => {
+                (settingsStore as any).settings.locale = 'de';
+            });
+
+            it('treats dot as a grouping separator in European-style locales', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getSatAmount('50.000');
+                expect(result).toBe(100000000);
+            });
+
+            it('accepts the locale decimal separator in European-style locales', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getSatAmount('0,5');
+                expect(result).toBe(1000);
             });
         });
 
