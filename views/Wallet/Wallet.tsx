@@ -1147,6 +1147,24 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        // Auto-create Cashu Lightning address on first connection
+        // if Cashu was enabled during onboarding but no address exists yet
+        if (
+            connecting &&
+            settings?.ecash?.enableCashu &&
+            !lightningAddress.enabled &&
+            (settings?.ecash?.initialMintUrls?.length ?? 0) > 0 &&
+            !NodeInfoStore.testnet
+        ) {
+            try {
+                const mintUrl = settings.ecash.initialMintUrls![0];
+                await LightningAddressStore.createCashu(mintUrl);
+                LightningAddressStore.prepareToAutomaticallyAcceptCashu();
+            } catch (e) {
+                console.error('Auto Lightning address creation failed', e);
+            }
+        }
+
         // check for swaps after node info is fetched
         if (connecting) {
             SwapStore.getSwapFees();
