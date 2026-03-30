@@ -11,14 +11,12 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { font } from '../../utils/FontUtils';
 
 import ModalStore from '../../stores/ModalStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 interface ChannelBackupModalProps {
     ModalStore?: ModalStore;
-    SettingsStore?: SettingsStore;
 }
 
-@inject('ModalStore', 'SettingsStore')
+@inject('ModalStore')
 @observer
 export default class ChannelBackupModal extends React.Component<ChannelBackupModalProps> {
     render() {
