@@ -2320,6 +2320,14 @@ export default class CashuStore {
             ? Base64Utils.base64ToBytes(storedSeed)
             : undefined;
 
+        // Restore persisted Nostr backup timestamp
+        const storedNostrBackupTimestamp = await Storage.getItem(
+            `${lndDir}-cashu-nostrMintBackupTimestamp`
+        );
+        if (storedNostrBackupTimestamp) {
+            this.nostrMintBackupTimestamp = Number(storedNostrBackupTimestamp);
+        }
+
         // Run Cashu specific migrations before CDK init
         await MigrationsUtils.migrateCashuSeedVersion(this);
 
