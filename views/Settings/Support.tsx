@@ -13,7 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { openStoreForReview } from '../../utils/RatingUtils';
 
-import { nodeInfoStore } from '../../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface SupportProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -31,16 +31,26 @@ function Support(props: SupportProps) {
         />
     );
 
+    const haveActiveNode =
+        settingsStore?.settings?.nodes &&
+        settingsStore?.settings.nodes.length > 0;
+
     const ABOUT_ITEMS = [
         {
             label: localeString('views.PaymentRequest.donateToZEUS'),
             path: 'DonateToZEUS',
-            condition: nodeInfoStore.nodeInfo.isMainNet && Platform.OS !== 'ios'
+            condition:
+                haveActiveNode &&
+                nodeInfoStore?.nodeInfo?.isMainNet &&
+                Platform.OS !== 'ios'
         },
         {
             label: localeString('views.PaymentRequest.addATip'),
             path: 'ChangeDonationSettings',
-            condition: nodeInfoStore.nodeInfo.isMainNet && Platform.OS !== 'ios'
+            condition:
+                haveActiveNode &&
+                nodeInfoStore?.nodeInfo?.isMainNet &&
+                Platform.OS !== 'ios'
         },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
@@ -78,7 +88,7 @@ function Support(props: SupportProps) {
             />
             <FlatList
                 data={ABOUT_ITEMS.filter((item) =>
-                    item.condition !== undefined ? item.condition : true
+                    'condition' in item ? !!item.condition : true
                 )}
                 renderItem={({ item }) => (
                     <ListItem
