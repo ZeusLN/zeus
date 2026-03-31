@@ -693,6 +693,7 @@ export default class SeedRecovery extends React.PureComponent<
                     this.setState({
                         errorCreatingWallet: true,
                         errorMsg: e.toString(),
+                        successMsg: '',
                         loading: false
                     });
                 }
@@ -765,6 +766,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             error: e.message || e.toString()
                                         }
                                     ),
+                                    successMsg: '',
                                     loading: false
                                 });
                             }
@@ -791,13 +793,15 @@ export default class SeedRecovery extends React.PureComponent<
                     } else {
                         this.setState({
                             loading: false,
-                            errorCreatingWallet: true
+                            errorCreatingWallet: true,
+                            successMsg: ''
                         });
                     }
                 } catch (e: any) {
                     this.setState({
                         errorCreatingWallet: true,
                         errorMsg: e.toString(),
+                        successMsg: '',
                         loading: false
                     });
                 }
