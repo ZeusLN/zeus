@@ -126,7 +126,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsAccounts() && (
+                    {selectedNode && BackendUtils.supportsAccounts() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

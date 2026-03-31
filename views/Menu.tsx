@@ -604,48 +604,49 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsAddressesWithDerivationPaths() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('OnChainAddresses')
-                                }
+                    {selectedNode &&
+                        BackendUtils.supportsAddressesWithDerivationPaths() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <CoinsIcon
-                                            fill={themeColor('text')}
-                                            height={30}
-                                            width={30}
-                                        />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('OnChainAddresses')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <CoinsIcon
+                                                fill={themeColor('text')}
+                                                height={30}
+                                                width={30}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OnChainAddresses.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
                                     </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.OnChainAddresses.title'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode && BackendUtils.supportsBolt12Address() && (
                         <View
