@@ -356,12 +356,12 @@ export default class CLNRest {
     };
     connectPeer = (data: any) => {
         const [host, port] = data.addr.host.split(':');
-
-        return this.postRequest('/v1/connect', {
-            id: data.addr.pubkey,
-            host,
-            port
-        });
+        const body: any = { id: data.addr.pubkey };
+        if (host) {
+            body.host = host;
+            body.port = parseInt(port);
+        }
+        return this.postRequest('/v1/connect', body);
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.postRequest('/v1/decode', {
