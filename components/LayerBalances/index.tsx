@@ -36,10 +36,10 @@ import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
 import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
 import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
 import MintAvatar from '../MintAvatar';
-import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
-import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
-import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
+import EcashSvg from '../../components/SVG/EcashSvg';
+import OnChainSvg from '../../components/SVG/OnChainSvg';
+import LightningSvg from '../../components/SVG/LightningSvg';
+import MatiSvg from '../../components/SVG/MatiSvg';
 
 interface LayerBalancesProps {
     BalanceStore?: BalanceStore;

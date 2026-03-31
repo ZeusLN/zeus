@@ -126,7 +126,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsAccounts() && (
+                    {selectedNode && BackendUtils.supportsAccounts() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -408,7 +408,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </View>
                         )}
 
-                    {BackendUtils.supportsSweep() && (
+                    {selectedNode && BackendUtils.supportsSweep() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -571,43 +571,47 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </View>
                         )}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('NodeConfigExportImport')
-                            }
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
                         >
-                            <View style={styles.icon}>
-                                <ExportImportIcon
-                                    stroke={themeColor('text')}
-                                    width={18}
-                                    height={18}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'NodeConfigExportImport'
+                                    )
+                                }
                             >
-                                {localeString(
-                                    'views.Tools.nodeConfigExportImport.title'
-                                )}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <ExportImportIcon
+                                        stroke={themeColor('text')}
+                                        width={18}
+                                        height={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Tools.nodeConfigExportImport.title'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {BackendUtils.supportsWithdrawalRequests() && (
                         <View
@@ -651,7 +655,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsDevTools() && (
+                    {selectedNode && BackendUtils.supportsDevTools() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

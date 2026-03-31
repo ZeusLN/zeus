@@ -100,10 +100,10 @@ import {
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import LockIcon from '../assets/images/SVG/Lock.svg';
-import UnifiedSvg from '../assets/images/SVG/DynamicSVG/UnifiedSvg';
-import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
-import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
-import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
+import UnifiedSvg from '../components/SVG/UnifiedSvg';
+import LightningSvg from '../components/SVG/LightningSvg';
+import OnChainSvg from '../components/SVG/OnChainSvg';
+import AddressSvg from '../components/SVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
 import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 

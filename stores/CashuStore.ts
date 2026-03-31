@@ -92,6 +92,14 @@ interface MintRecommendation {
     url: string;
 }
 
+export interface ScoredMint {
+    url: string;
+    count: number;
+    score: number;
+    avgRating: number;
+    reviewCount: number;
+}
+
 export interface MintReviewRating {
     score: number;
     max: number;
@@ -207,9 +215,17 @@ export default class CashuStore {
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
+    @observable public cachedRecommendations: Map<
+        string,
+        {
+            recommendations: MintRecommendation[];
+            reviews: Map<string, MintReview[]>;
+        }
+    > = new Map();
     @observable public mintReviews: Map<string, MintReview[]> = new Map();
     @observable public reviewerProfiles: Map<string, ReviewerProfile> =
         new Map();
+    @observable public mintInfoCache: Map<string, any> = new Map();
     @observable public loadingTrustedMints = false;
     @observable public loadingReviews = false;
     @observable public submittingReview = false;
@@ -1318,6 +1334,116 @@ export default class CashuStore {
         return { recommendations, reviews: mintReviewsMap };
     };
 
+    /**
+     * Calculates a time-weighted score for each mint based on reviews and popularity.
+     * Returns the top N mints sorted by score descending.
+     *
+     * - Reviews with ratings are weighted by recency (exponential decay, ~90 day half-life)
+     * - Mints with no rated reviews get a neutral score of 0.5
+     * - Popularity (recommendation count) provides a small boost
+     * - Recent bad reviews will quickly tank a misbehaving mint's score
+     */
+    @action
+    public restoreCachedRecommendations = (cacheKey: string): boolean => {
+        const cached = this.cachedRecommendations.get(cacheKey);
+        if (!cached) return false;
+
+        if (cacheKey === 'all') {
+            this.mintRecommendations = cached.recommendations;
+        } else {
+            this.trustedMintRecommendations = cached.recommendations;
+        }
+        this.mintReviews = cached.reviews;
+        return true;
+    };
+
+    public getTopScoredMints = (
+        count: number = 5,
+        mode: 'zeus' | 'all' = 'zeus'
+    ): ScoredMint[] => {
+        const recommendations =
+            mode === 'all'
+                ? this.mintRecommendations
+                : this.trustedMintRecommendations;
+
+        if (!recommendations || recommendations.length === 0) return [];
+
+        const now = Date.now() / 1000;
+
+        const scored: ScoredMint[] = recommendations.map((rec) => {
+            const reviews = this.mintReviews.get(rec.url) || [];
+            const ratedReviews = reviews.filter((r) => r.rating);
+
+            let avgRating = 0.5; // neutral default for unrated mints
+
+            if (ratedReviews.length > 0) {
+                let weightedSum = 0;
+                let totalWeight = 0;
+
+                for (const review of ratedReviews) {
+                    const ageDays = (now - review.createdAt) / 86400;
+                    const weight = Math.exp(-ageDays / 90);
+                    const normalizedRating =
+                        review.rating!.score / review.rating!.max;
+
+                    weightedSum += normalizedRating * weight;
+                    totalWeight += weight;
+                }
+
+                if (totalWeight > 0) {
+                    avgRating = weightedSum / totalWeight;
+                }
+            }
+
+            const popularityBoost = Math.log2(1 + rec.count) * 0.05;
+            const finalScore = avgRating + popularityBoost;
+
+            return {
+                url: rec.url,
+                count: rec.count,
+                score: finalScore,
+                avgRating,
+                reviewCount: ratedReviews.length
+            };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, count);
+    };
+
+    /**
+     * Fetches mint info (name, icon_url, etc.) for a list of mint URLs.
+     * Results are cached in mintInfoCache. Skips already-cached URLs.
+     */
+    @action
+    public fetchMintInfoBatch = async (mintUrls: string[]) => {
+        const uncached = mintUrls.filter((url) => !this.mintInfoCache.has(url));
+        if (uncached.length === 0) return;
+
+        const results = await Promise.allSettled(
+            uncached.map(async (mintUrl) => {
+                const info = await Promise.race([
+                    CashuDevKit.fetchMintInfo(mintUrl),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout')), 10000)
+                    )
+                ]);
+                return { mintUrl, info };
+            })
+        );
+
+        runInAction(() => {
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    this.mintInfoCache.set(
+                        result.value.mintUrl,
+                        result.value.info
+                    );
+                }
+            }
+        });
+    };
+
     @action
     public fetchMints = async () => {
         try {
@@ -1348,6 +1474,10 @@ export default class CashuStore {
             runInAction(() => {
                 this.mintRecommendations = recommendations;
                 this.mintReviews = reviews;
+                this.cachedRecommendations.set('all', {
+                    recommendations,
+                    reviews
+                });
                 this.loading = false;
             });
 
@@ -1455,9 +1585,17 @@ export default class CashuStore {
             const { recommendations, reviews } =
                 this.processMintRecommendationEvents(events);
 
+            const cacheKey = npubInput?.trim()
+                ? `custom:${npubInput.trim()}`
+                : 'zeus';
+
             runInAction(() => {
                 this.trustedMintRecommendations = recommendations;
                 this.mintReviews = reviews;
+                this.cachedRecommendations.set(cacheKey, {
+                    recommendations,
+                    reviews
+                });
                 this.loadingTrustedMints = false;
             });
 
@@ -2527,6 +2665,41 @@ export default class CashuStore {
             this.loadingMsg = undefined;
             this.initializing = false;
         });
+
+        // Auto-add initial mints from onboarding
+        try {
+            const settings = this.settingsStore.settings;
+            const initialMintUrls = settings?.ecash?.initialMintUrls;
+            if (
+                initialMintUrls &&
+                initialMintUrls.length > 0 &&
+                this.mintUrls.length === 0
+            ) {
+                console.log(
+                    'Adding initial mints from onboarding:',
+                    initialMintUrls
+                );
+                for (const mintUrl of initialMintUrls) {
+                    try {
+                        await this.addMint(mintUrl);
+                    } catch (e) {
+                        console.error(
+                            `Failed to add initial mint ${mintUrl}:`,
+                            e
+                        );
+                    }
+                }
+                // Clear initialMintUrls from settings
+                await this.settingsStore.updateSettings({
+                    ecash: {
+                        ...settings.ecash,
+                        initialMintUrls: undefined
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error adding initial mints:', e);
+        }
 
         // Check status of pending items after initialization (skip when offline)
         if (!this.isOffline) {
