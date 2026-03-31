@@ -20,6 +20,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 import TresArrows from '../assets/images/SVG/TresArrows.svg';
 
@@ -100,7 +101,7 @@ export default class IntroSplash extends React.Component<
                                     alignSelf: 'center'
                                 }}
                             >
-                                <Wordmark fill="#fff" />
+                                <Wordmark />
                             </View>
                             <View style={{ height: 40 }}></View>
                             {this.state.error && (
@@ -121,8 +122,8 @@ export default class IntroSplash extends React.Component<
                                     title={locale ? localeName : 'English'}
                                     icon={
                                         <Globe
-                                            fill="#fff"
-                                            stroke="#fff"
+                                            fill={themeColor('background')}
+                                            stroke={themeColor('background')}
                                             style={{ marginRight: 5 }}
                                         />
                                     }
@@ -152,10 +153,14 @@ export default class IntroSplash extends React.Component<
                                 }}
                             >
                                 <Button
-                                    icon={<TresArrows fill="#fff" />}
+                                    icon={
+                                        <TresArrows
+                                            fill={themeColor('background')}
+                                        />
+                                    }
                                     titleStyle={{
                                         paddingLeft: 10,
-                                        color: '#fff'
+                                        color: themeColor('background')
                                     }}
                                     title={localeString(
                                         'views.Intro.getStarted'
