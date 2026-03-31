@@ -19,6 +19,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
+
     # 🔥 Free up disk space (CRITICAL for Android)
     - name: Free disk space
       run: |
