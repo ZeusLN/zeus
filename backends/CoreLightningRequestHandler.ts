@@ -134,11 +134,11 @@ export const listPeerChannels = async (data: any) => {
 // Returns a list of closed Lightning Network channels
 export const listClosedChannels = (data: any) => {
     const formattedClosedChannels = data.closedchannels.map((channel: any) => ({
-        peer_id: channel.peer_id,
+        remote_pubkey: channel.peer_id,
         capacity: Number(channel.total_msat / 1000).toString(),
         channel_id: channel.channel_id,
         short_channel_id: channel.short_channel_id,
-        alias: channel.alias?.local || '',
+        closing_txid: channel.last_commitment_txid,
         opener: channel.opener,
         closer: channel.closer,
         private: channel.private,

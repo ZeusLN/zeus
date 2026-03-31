@@ -28,11 +28,6 @@ export default class ClosedChannel extends Channel {
     }
 
     @computed
-    public get closeHeight(): number {
-        return Number(this.capacity) - Number(this.settled_balance || 0);
-    }
-
-    @computed
     public get closeType(): string {
         return typeof this.close_type === 'number'
             ? lnrpc.ChannelCloseSummary.ClosureType[this.close_type]
