@@ -42,8 +42,8 @@ body:
       label: Node interface
       description: Which node interfaces does this bug affect?
       options:
-        - Embedded LND
         - LDK Node
+        - Embedded LND
         - LND (REST)
         - LND (Lightning Node Connect)
         - Core Lightning (CLNRest)

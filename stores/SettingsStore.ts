@@ -383,8 +383,8 @@ export const INTERFACE_KEYS: {
     isHeader?: boolean;
 }[] = [
     { key: 'On-device', value: '', isHeader: true },
-    { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LDK Node', value: 'ldk-node' },
+    { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'Remote', value: '', isHeader: true },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
