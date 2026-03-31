@@ -73,6 +73,8 @@ RCT_EXTERN_METHOD(
 
 RCT_EXTERN_METHOD(
   gossipSync: (NSString *)serviceUrl
+  lndDir: (NSString *)lndDir
+  isSqlite: (BOOL)isSqlite
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )

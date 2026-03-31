@@ -41,7 +41,11 @@ export interface ILndMobile {
     writeToStream(method: string, payload: string): Promise<boolean>;
 
     // Express Graph Sync / Speedloader
-    gossipSync(serviceUrl: string): Promise<{ data: string }>;
+    gossipSync(
+        serviceUrl: string,
+        lndDir: string,
+        isSqlite: boolean
+    ): Promise<{ data: string }>;
     cancelGossipSync(): void;
 
     // Android-specific
@@ -109,6 +113,7 @@ export interface ILndMobileTools {
     saveChannelsBackup(base64Backups: string): Promise<string>;
     saveChannelBackupFile(network: string): Promise<boolean>;
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
+    DEBUG_resetGraphDb(lndDir: string, network: string): Promise<boolean>;
     DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
     DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
     deleteLndDirectory(lndDir: string): Promise<null>;
