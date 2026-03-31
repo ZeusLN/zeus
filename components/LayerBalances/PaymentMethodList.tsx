@@ -15,9 +15,9 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
-import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
+import OnChainSvg from '../../components/SVG/OnChainSvg';
+import LightningSvg from '../../components/SVG/LightningSvg';
+import EcashSvg from '../../components/SVG/EcashSvg';
 
 import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 

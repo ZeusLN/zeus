@@ -60,8 +60,8 @@ import NFCUtils from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getAmountFromSats } from '../../utils/AmountUtils';
 
-import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import AddressSvg from '../../assets/images/SVG/DynamicSVG/AddressSvg';
+import LightningSvg from '../../components/SVG/LightningSvg';
+import AddressSvg from '../../components/SVG/AddressSvg';
 import ScanSvg from '../../assets/images/SVG/Scan.svg';
 import NfcIcon from '../../assets/images/SVG/NFC-alt.svg';
 
