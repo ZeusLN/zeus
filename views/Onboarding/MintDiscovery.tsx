@@ -19,7 +19,6 @@ import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import CashuStore, { ScoredMint } from '../../stores/CashuStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -31,7 +30,6 @@ type DiscoverMode = 'zeus' | 'all' | 'custom' | 'later';
 interface MintDiscoveryProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    SettingsStore: SettingsStore;
     route: Route<
         'MintDiscovery',
         {
@@ -52,7 +50,7 @@ interface MintDiscoveryState {
     reviewsMintUrl: string;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore')
 @observer
 export default class MintDiscovery extends React.Component<
     MintDiscoveryProps,
