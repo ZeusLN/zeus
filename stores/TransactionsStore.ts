@@ -656,7 +656,8 @@ export default class TransactionsStore {
 
         const payFunc =
             (this.settingsStore.implementation === 'cln-rest' ||
-                this.settingsStore.implementation === 'embedded-lnd') &&
+                this.settingsStore.implementation === 'embedded-lnd' ||
+                this.settingsStore.implementation === 'ldk-node') &&
             pubkey
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
