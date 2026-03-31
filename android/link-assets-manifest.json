@@ -42,31 +42,31 @@
       "sha1": "021a4b2bf1926a534169d507dccb291b2d41941b"
     },
     {
-      "path": "assets/images/Alby.jpg",
+      "path": "assets/images/alby.jpg",
       "sha1": "814cb77bddb77948ae9815244ab5338dfa574484"
     },
     {
-      "path": "assets/images/AlbyHub.jpg",
+      "path": "assets/images/albyhub.jpg",
       "sha1": "317f6367937bc1aa1cc9d05ed5642bad5b30283e"
     },
     {
-      "path": "assets/images/BTCpay.jpg",
+      "path": "assets/images/btcpay.jpg",
       "sha1": "23221a4c3bdc19af2554aa5838f62f3561a4ae29"
     },
     {
-      "path": "assets/images/Cashu.jpg",
+      "path": "assets/images/cashu.jpg",
       "sha1": "80cae5dd5fa02d75095f02e386b3c81010848f7f"
     },
     {
-      "path": "assets/images/CLN.jpg",
+      "path": "assets/images/cln.jpg",
       "sha1": "7c83357dfe458cc7979b33c2b673e89428060dc7"
     },
     {
-      "path": "assets/images/errorZeus.png",
+      "path": "assets/images/errorzeus.png",
       "sha1": "9492c450ca7413437a509c820bc446a74b147a5a"
     },
     {
-      "path": "assets/images/GIF/Loading.gif",
+      "path": "assets/images/GIF/loading.gif",
       "sha1": "b0695fc4aaa609075202bb3b732f0702f260542b"
     },
     {
@@ -74,11 +74,11 @@
       "sha1": "59c3d7bcf024c6e99282185e7bf8d60f8cd9c629"
     },
     {
-      "path": "assets/images/icon-black.png",
+      "path": "assets/images/icon_black.png",
       "sha1": "26077aca412c7f1ce6c198c37be0cb8551d862fc"
     },
     {
-      "path": "assets/images/icon-white.png",
+      "path": "assets/images/icon_white.png",
       "sha1": "fbfe086a384e0d64f38564310fd92b9fdc27f80b"
     },
     {
@@ -86,15 +86,15 @@
       "sha1": "98bb6317390da80227b93ff7daa4be632e2eda07"
     },
     {
-      "path": "assets/images/lightning-black.png",
+      "path": "assets/images/lightning_black.png",
       "sha1": "72ddf440f0392a93bff4ac0367cc29d9058a6443"
     },
     {
-      "path": "assets/images/lightning-white.png",
+      "path": "assets/images/lightning_white.png",
       "sha1": "de421b5e0ef3938671e2fe6c45769263b3bfb721"
     },
     {
-      "path": "assets/images/LND.jpg",
+      "path": "assets/images/lnd.jpg",
       "sha1": "d50cbaa44114ad7575fc07335395b6d97380858a"
     },
     {
@@ -126,15 +126,15 @@
       "sha1": "0f65e27f5972ed385848bda3d784d83bc0414fcf"
     },
     {
-      "path": "assets/images/Mascot.png",
+      "path": "assets/images/mascot.png",
       "sha1": "b656e3b1c6a21d891205669f58476f2d4cdba41e"
     },
     {
-      "path": "assets/images/Nostr.jpg",
+      "path": "assets/images/nostr.jpg",
       "sha1": "4c265c993eabb61f805ec17bb1b9b6ccc4dd38fa"
     },
     {
-      "path": "assets/images/NostrWalletConnect.jpg",
+      "path": "assets/images/nostrwalletconnect.jpg",
       "sha1": "013a1350fdbe348632cc92369dc0044376b785df"
     },
     {
@@ -154,19 +154,19 @@
       "sha1": "35623b48dd1fad50c9454f4e7017526cd44f2fc9"
     },
     {
-      "path": "assets/images/onchain-black.png",
+      "path": "assets/images/onchain_black.png",
       "sha1": "14ab904f4563e24921a901a40e8f6f60ef178273"
     },
     {
-      "path": "assets/images/onchain-white.png",
+      "path": "assets/images/onchain_white.png",
       "sha1": "3a5875bac42f8b7ee14b732795f1c9c1084df0e4"
     },
     {
-      "path": "assets/images/pay-z-black.png",
+      "path": "assets/images/pay_z_black.png",
       "sha1": "c0c444ede5faeff786ae7d6e7148607e3000d688"
     },
     {
-      "path": "assets/images/pay-z-white.png",
+      "path": "assets/images/pay_z_white.png",
       "sha1": "c19a3a577840ad182ad76f478f4837eb124fd4bc"
     },
     {
@@ -674,7 +674,7 @@
       "sha1": "846a80b5f9b2bdfcec9f1ac86812f8b7d562993a"
     },
     {
-      "path": "assets/images/Untitled.png",
+      "path": "assets/images/untitled.png",
       "sha1": "9fb18e964c88961fed7274dc648392516e2e1b16"
     },
     {

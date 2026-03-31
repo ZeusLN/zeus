@@ -9,8 +9,8 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 import CollapsedQR from '../../components/CollapsedQR';
-const ZIconWhite = require('../../assets/images/icon-white.png');
-const ZIcon = require('../../assets/images/icon-black.png');
+const ZIconWhite = require('../../assets/images/icon_white.png');
+const ZIcon = require('../../assets/images/icon_black.png');
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';

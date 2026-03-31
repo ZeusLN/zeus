@@ -25,15 +25,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import handleAnything from '../utils/handleAnything';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-const ZIcon = require('../assets/images/icon-black.png');
-const LightningIcon = require('../assets/images/lightning-black.png');
-const OnChainIcon = require('../assets/images/onchain-black.png');
-const ZPayIcon = require('../assets/images/pay-z-black.png');
+const ZIcon = require('../assets/images/icon_black.png');
+const LightningIcon = require('../assets/images/lightning_black.png');
+const OnChainIcon = require('../assets/images/onchain_black.png');
+const ZPayIcon = require('../assets/images/pay_z_black.png');
 
-const ZIconWhite = require('../assets/images/icon-white.png');
-const LightningIconWhite = require('../assets/images/lightning-white.png');
-const OnChainIconWhite = require('../assets/images/onchain-white.png');
-const ZPayIconWhite = require('../assets/images/pay-z-white.png');
+const ZIconWhite = require('../assets/images/icon_white.png');
+const LightningIconWhite = require('../assets/images/lightning_white.png');
+const OnChainIconWhite = require('../assets/images/onchain_white.png');
+const ZPayIconWhite = require('../assets/images/pay_z_white.png');
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';

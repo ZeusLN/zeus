@@ -16,14 +16,14 @@ const zeusillustration6b = require('..//assets/images/zeus_illustration_6b.jpg')
 const zeusillustration7a = require('..//assets/images/zeus_illustration_7a.jpg');
 const zeusillustration7b = require('..//assets/images/zeus_illustration_7b.jpg');
 
-const Alby = require('..//assets/images/Alby.jpg');
-const AlbyHub = require('..//assets/images/AlbyHub.jpg');
-const BTCpay = require('..//assets/images/BTCpay.jpg');
-const Cashu = require('..//assets/images/Cashu.jpg');
-const CLN = require('..//assets/images/CLN.jpg');
-const LND = require('..//assets/images/LND.jpg');
-const Nostr = require('..//assets/images/Nostr.jpg');
-const NostrWalletConnect = require('..//assets/images/NostrWalletConnect.jpg');
+const Alby = require('..//assets/images/alby.jpg');
+const AlbyHub = require('..//assets/images/albyhub.jpg');
+const BTCpay = require('..//assets/images/btcpay.jpg');
+const Cashu = require('..//assets/images/cashu.jpg');
+const CLN = require('..//assets/images/cln.jpg');
+const LND = require('..//assets/images/lnd.jpg');
+const Nostr = require('..//assets/images/nostr.jpg');
+const NostrWalletConnect = require('..//assets/images/nostrwalletconnect.jpg');
 const LDK = require('..//assets/images/ldk.png');
 
 const getPhoto = (photo: string | undefined): string => {

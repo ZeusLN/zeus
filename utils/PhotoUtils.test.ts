@@ -26,7 +26,7 @@ describe('PhotoUtils', () => {
 
         it('groks out preset:// values', () => {
             expect(getPhoto('preset://lnd')).toEqual(
-                '../../../assets/images/LND.jpg'
+                '../../../assets/images/lnd.jpg'
             );
             expect(getPhoto('preset://zeusillustration1a')).toEqual(
                 '../../../assets/images/zeus_illustration_1a.jpg'

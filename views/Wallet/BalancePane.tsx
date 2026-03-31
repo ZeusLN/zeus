@@ -38,7 +38,7 @@ import AlertIcon from '../../assets/images/SVG/Alert.svg';
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
 import LockIcon from '../../assets/images/SVG/Lock.svg';
 
-const ErrorZeus = require('../../assets/images/errorZeus.png');
+const ErrorZeus = require('../../assets/images/errorzeus.png');
 
 type PendingBalanceContext = 'onchain' | 'lightning' | 'cashu';
 

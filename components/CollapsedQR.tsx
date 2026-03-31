@@ -30,8 +30,8 @@ import Turtle from '../assets/images/SVG/Turtle.svg';
 import Rabbit from '../assets/images/SVG/Rabbit.svg';
 import Gazelle from '../assets/images/SVG/Gazelle.svg';
 
-const defaultLogo = require('../assets/images/icon-black.png');
-const defaultLogoWhite = require('../assets/images/icon-white.png');
+const defaultLogo = require('../assets/images/icon_black.png');
+const defaultLogoWhite = require('../assets/images/icon_white.png');
 
 type QRCodeElement = React.ElementRef<typeof QRCode>;
 

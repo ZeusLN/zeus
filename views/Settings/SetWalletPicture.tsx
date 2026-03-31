@@ -61,23 +61,23 @@ export default class SetWalletPicture extends React.Component<
 
         // Map implementations to corresponding images
         const implementationImagesMap: { [key: string]: any[] } = {
-            lndhub: [require('../../assets/images/Alby.jpg')],
+            lndhub: [require('../../assets/images/alby.jpg')],
             'nostr-wallet-connect': [
-                require('../../assets/images/Alby.jpg'),
-                require('../../assets/images/AlbyHub.jpg'),
-                require('../../assets/images/Cashu.jpg'),
-                require('../../assets/images/Nostr.jpg'),
-                require('../../assets/images/NostrWalletConnect.jpg')
+                require('../../assets/images/alby.jpg'),
+                require('../../assets/images/albyhub.jpg'),
+                require('../../assets/images/cashu.jpg'),
+                require('../../assets/images/nostr.jpg'),
+                require('../../assets/images/nostrwalletconnect.jpg')
             ],
             lnd: [
-                require('../../assets/images/BTCpay.jpg'),
-                require('../../assets/images/LND.jpg')
+                require('../../assets/images/btcpay.jpg'),
+                require('../../assets/images/lnd.jpg')
             ],
-            'embedded-lnd': [require('../../assets/images/LND.jpg')],
-            'lightning-node-connect': [require('../../assets/images/LND.jpg')],
+            'embedded-lnd': [require('../../assets/images/lnd.jpg')],
+            'lightning-node-connect': [require('../../assets/images/lnd.jpg')],
             'cln-rest': [
-                require('../../assets/images/CLN.jpg'),
-                require('../../assets/images/BTCpay.jpg')
+                require('../../assets/images/cln.jpg'),
+                require('../../assets/images/btcpay.jpg')
             ],
             'ldk-node': [require('../../assets/images/ldk.png')]
         };

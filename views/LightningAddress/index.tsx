@@ -232,8 +232,8 @@ export default class LightningAddress extends React.Component<
                             hideText: true,
                             labelBottom: true,
                             logo: themeColor('invertQrIcons')
-                                ? require('../../assets/images/pay-z-white.png')
-                                : require('../../assets/images/pay-z-black.png')
+                                ? require('../../assets/images/pay_z_white.png')
+                                : require('../../assets/images/pay_z_black.png')
                         })
                     }
                     style={{ margin: 10 }}

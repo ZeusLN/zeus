@@ -24,9 +24,9 @@ import handleAnything from '../../utils/handleAnything';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
-const ZPayIcon = require('../../assets/images/pay-z-black.png');
+const ZPayIcon = require('../../assets/images/pay_z_black.png');
 
-const ZPayIconWhite = require('../../assets/images/pay-z-white.png');
+const ZPayIconWhite = require('../../assets/images/pay_z_white.png');
 
 import AmountInput, { getSatAmount } from '../../components/AmountInput';
 import Button from '../../components/Button';
