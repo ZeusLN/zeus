@@ -333,12 +333,7 @@ open class Lnd {
   }
   
   func cancelGossipSync(_ callback: @escaping Callback) {
-    do {
-      let stopRequest = Lnrpc_StopRequest()
-      let payload = try stopRequest.serializedData()
-      LndmobileCancelGossipSync()
-    } catch let error {
-      callback(nil, error)
-    }
+    LndmobileCancelGossipSync()
+    callback(nil, nil)
   }
 }
