@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 
 public struct LndMobileToolsError: Error {
   let msg: String
