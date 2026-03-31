@@ -43,20 +43,20 @@ export default class SetWalletPicture extends React.Component<
         super(props);
         const implementation = this.props.route.params?.implementation;
         let images: string[] = [
-            require('../../assets/images/zeus-illustration-1a.jpg'),
-            require('../../assets/images/zeus-illustration-1b.jpg'),
-            require('../../assets/images/zeus-illustration-2a.jpg'),
-            require('../../assets/images/zeus-illustration-2b.jpg'),
-            require('../../assets/images/zeus-illustration-3a.jpg'),
-            require('../../assets/images/zeus-illustration-3b.jpg'),
-            require('../../assets/images/zeus-illustration-4a.jpg'),
-            require('../../assets/images/zeus-illustration-4b.jpg'),
-            require('../../assets/images/zeus-illustration-5a.jpg'),
-            require('../../assets/images/zeus-illustration-5b.jpg'),
-            require('../../assets/images/zeus-illustration-6a.jpg'),
-            require('../../assets/images/zeus-illustration-6b.jpg'),
-            require('../../assets/images/zeus-illustration-7a.jpg'),
-            require('../../assets/images/zeus-illustration-7b.jpg')
+            require('../../assets/images/zeus_illustration_1a.jpg'),
+            require('../../assets/images/zeus_illustration_1b.jpg'),
+            require('../../assets/images/zeus_illustration_2a.jpg'),
+            require('../../assets/images/zeus_illustration_2b.jpg'),
+            require('../../assets/images/zeus_illustration_3a.jpg'),
+            require('../../assets/images/zeus_illustration_3b.jpg'),
+            require('../../assets/images/zeus_illustration_4a.jpg'),
+            require('../../assets/images/zeus_illustration_4b.jpg'),
+            require('../../assets/images/zeus_illustration_5a.jpg'),
+            require('../../assets/images/zeus_illustration_5b.jpg'),
+            require('../../assets/images/zeus_illustration_6a.jpg'),
+            require('../../assets/images/zeus_illustration_6b.jpg'),
+            require('../../assets/images/zeus_illustration_7a.jpg'),
+            require('../../assets/images/zeus_illustration_7b.jpg')
         ];
 
         // Map implementations to corresponding images

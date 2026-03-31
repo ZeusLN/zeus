@@ -1,20 +1,20 @@
 import { Image } from 'react-native';
 import RNFS from 'react-native-fs';
 
-const zeusillustration1a = require('..//assets/images/zeus-illustration-1a.jpg');
-const zeusillustration1b = require('..//assets/images/zeus-illustration-1b.jpg');
-const zeusillustration2a = require('..//assets/images/zeus-illustration-2a.jpg');
-const zeusillustration2b = require('..//assets/images/zeus-illustration-2b.jpg');
-const zeusillustration3a = require('..//assets/images/zeus-illustration-3a.jpg');
-const zeusillustration3b = require('..//assets/images/zeus-illustration-3b.jpg');
-const zeusillustration4a = require('..//assets/images/zeus-illustration-4a.jpg');
-const zeusillustration4b = require('..//assets/images/zeus-illustration-4b.jpg');
-const zeusillustration5a = require('..//assets/images/zeus-illustration-5a.jpg');
-const zeusillustration5b = require('..//assets/images/zeus-illustration-5b.jpg');
-const zeusillustration6a = require('..//assets/images/zeus-illustration-6a.jpg');
-const zeusillustration6b = require('..//assets/images/zeus-illustration-6b.jpg');
-const zeusillustration7a = require('..//assets/images/zeus-illustration-7a.jpg');
-const zeusillustration7b = require('..//assets/images/zeus-illustration-7b.jpg');
+const zeusillustration1a = require('..//assets/images/zeus_illustration_1a.jpg');
+const zeusillustration1b = require('..//assets/images/zeus_illustration_1b.jpg');
+const zeusillustration2a = require('..//assets/images/zeus_illustration_2a.jpg');
+const zeusillustration2b = require('..//assets/images/zeus_illustration_2b.jpg');
+const zeusillustration3a = require('..//assets/images/zeus_illustration_3a.jpg');
+const zeusillustration3b = require('..//assets/images/zeus_illustration_3b.jpg');
+const zeusillustration4a = require('..//assets/images/zeus_illustration_4a.jpg');
+const zeusillustration4b = require('..//assets/images/zeus_illustration_4b.jpg');
+const zeusillustration5a = require('..//assets/images/zeus_illustration_5a.jpg');
+const zeusillustration5b = require('..//assets/images/zeus_illustration_5b.jpg');
+const zeusillustration6a = require('..//assets/images/zeus_illustration_6a.jpg');
+const zeusillustration6b = require('..//assets/images/zeus_illustration_6b.jpg');
+const zeusillustration7a = require('..//assets/images/zeus_illustration_7a.jpg');
+const zeusillustration7b = require('..//assets/images/zeus_illustration_7b.jpg');
 
 const Alby = require('..//assets/images/Alby.jpg');
 const AlbyHub = require('..//assets/images/AlbyHub.jpg');

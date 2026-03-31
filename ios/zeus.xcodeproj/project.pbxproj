@@ -23,18 +23,18 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		13B56D1900B8453796EF0EDA /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8968C5A47BF6473DAAADAAB6 /* Lato-Regular.ttf */; };
-		151EEBAD78204306A3787D93 /* zeus-illustration-7b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DFF1D2DEE7664CDFBF9491AB /* zeus-illustration-7b.jpg */; };
+		151EEBAD78204306A3787D93 /* zeus_illustration_7b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DFF1D2DEE7664CDFBF9491AB /* zeus_illustration_7b.jpg */; };
 		15A1C572351D42A3AE9C3E93 /* Cloud.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9176A321EE9D4653BBE6E680 /* Cloud.svg */; };
 		17CCDCF1C18A469D89E269EE /* gift.svg in Resources */ = {isa = PBXBuildFile; fileRef = 40E6C5F2754A46DDBD65494A /* gift.svg */; };
 		1862E4DDAA75487583419E68 /* Globe.svg in Resources */ = {isa = PBXBuildFile; fileRef = D1CC4D2B22DB40E3819DD70B /* Globe.svg */; };
 		1951FF2978154A0B8B568CF7 /* OnChain.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9A761AB76F2743C4B2AB140B /* OnChain.svg */; };
-		1A6AA189E83E4DCC8842AAAF /* zeus-illustration-1a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7E8369274D1141658F86FCBE /* zeus-illustration-1a.jpg */; };
+		1A6AA189E83E4DCC8842AAAF /* zeus_illustration_1a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7E8369274D1141658F86FCBE /* zeus_illustration_1a.jpg */; };
 		1CC99F0C4B474EAC8A657317 /* Temple.svg in Resources */ = {isa = PBXBuildFile; fileRef = 494AB118C15C4E16820AD72C /* Temple.svg */; };
 		1E2D6C276B2449BEB48D0EFA /* Export.svg in Resources */ = {isa = PBXBuildFile; fileRef = 4A6B733324794E60B618DACE /* Export.svg */; };
 		22D2AE20933A4FB8BC47A730 /* Eye Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 28FAC11AA8E5479C81BE8DDA /* Eye Off.svg */; };
 		2399885DFDAB4C90B7232496 /* lightning1.json in Resources */ = {isa = PBXBuildFile; fileRef = 44AA4B9E77FB4B7E92D6E495 /* lightning1.json */; };
 		23EBC747AFA443C6AC39B815 /* TresArrows.svg in Resources */ = {isa = PBXBuildFile; fileRef = 181286498B7D40C5B0AF1621 /* TresArrows.svg */; };
-		26B4545A849B455FA3E7156B /* zeus-illustration-6b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2E486A0626B94C35A6D89D3F /* zeus-illustration-6b.jpg */; };
+		26B4545A849B455FA3E7156B /* zeus_illustration_6b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2E486A0626B94C35A6D89D3F /* zeus_illustration_6b.jpg */; };
 		2771874AE36643879456ECC6 /* Star.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8BC64AD0AA824A8E8A6A3BE7 /* Star.svg */; };
 		2A3E64BC6C0042098103ED40 /* hyper.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 437DCF69B6CF4C98AD8655B8 /* hyper.jpg */; };
 		2AF7FBD79CB24E25B2EFF443 /* Edit.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8482FEAD9AED48E49C8F2960 /* Edit.svg */; };
@@ -60,8 +60,8 @@
 		395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */ = {isa = PBXBuildFile; fileRef = D7E370054BBF42359E7A5112 /* Wallet2.svg */; };
 		39F2F35B8C274057B39CC7B5 /* Watchtower.svg in Resources */ = {isa = PBXBuildFile; fileRef = 025239BA55454B4DA98E12B5 /* Watchtower.svg */; };
 		3C00C51F32044C0584B16CB4 /* CLN.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 0BE581979450495B86FA8D7F /* CLN.jpg */; };
-		3DD8431C2C42425B8842012E /* zeus-illustration-5b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C562D2E7B1694F2D80831BFC /* zeus-illustration-5b.jpg */; };
-		3F27B2AEC00B42F18A4CF173 /* zeus-illustration-2a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 24096E86BD2D4234A2A6CF8B /* zeus-illustration-2a.jpg */; };
+		3DD8431C2C42425B8842012E /* zeus_illustration_5b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C562D2E7B1694F2D80831BFC /* zeus_illustration_5b.jpg */; };
+		3F27B2AEC00B42F18A4CF173 /* zeus_illustration_2a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 24096E86BD2D4234A2A6CF8B /* zeus_illustration_2a.jpg */; };
 		41B122855F004201ADD12DD5 /* Hourglass.svg in Resources */ = {isa = PBXBuildFile; fileRef = B4D00602022C4AE1BFA1A2C1 /* Hourglass.svg */; };
 		467B401AAA1C42708103A297 /* Coins.svg in Resources */ = {isa = PBXBuildFile; fileRef = D9B2E1C7E3624FD5A7C7A53A /* Coins.svg */; };
 		4983F905D5584DEE9306C67C /* DroidSansMono Apache License.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */; };
@@ -76,7 +76,7 @@
 		58321DE7601142C8AECD8476 /* DragDots.svg in Resources */ = {isa = PBXBuildFile; fileRef = 56234BB67AD24531A296076E /* DragDots.svg */; };
 		593DA4FEB1FE4C1CA721DDB1 /* Sweep.svg in Resources */ = {isa = PBXBuildFile; fileRef = 259C6F30DC5D40FF9E5DF839 /* Sweep.svg */; };
 		5BC6B338F0044B6CA0D45C97 /* Help Icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 77EC666A91C04742A050DEF4 /* Help Icon.svg */; };
-		5C6DCB3E504C45498A83D589 /* zeus-illustration-2b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4FEA0F67FA544C83B86C2DE3 /* zeus-illustration-2b.jpg */; };
+		5C6DCB3E504C45498A83D589 /* zeus_illustration_2b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4FEA0F67FA544C83B86C2DE3 /* zeus_illustration_2b.jpg */; };
 		5DD5F68D16D4488DA859267C /* Caret Right alt.svg in Resources */ = {isa = PBXBuildFile; fileRef = 6701DD0AA3BF42DA83D6CF9E /* Caret Right alt.svg */; };
 		5DEA8006F73F41F4BA34F13E /* Clock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 938F4C062D704F34A05B933B /* Clock.svg */; };
 		5ECDD76F848B4802B0B5D3C1 /* Loading.gif in Resources */ = {isa = PBXBuildFile; fileRef = 2D6AFC110FCE4DB693ABCF13 /* Loading.gif */; };
@@ -114,8 +114,8 @@
 		74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
 		74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */; };
 		7559993899134A458764182A /* Gear.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD64CA87612F416B940C8B7C /* Gear.svg */; };
-		7682ABAE72B940CE8DA4BD4F /* zeus-illustration-1b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 0CF3D10833D24020923868CE /* zeus-illustration-1b.jpg */; };
-		78D83D32BB1A48AEBFCF1515 /* zeus-illustration-3a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = CD61856C84E64B23AB9305C4 /* zeus-illustration-3a.jpg */; };
+		7682ABAE72B940CE8DA4BD4F /* zeus_illustration_1b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 0CF3D10833D24020923868CE /* zeus_illustration_1b.jpg */; };
+		78D83D32BB1A48AEBFCF1515 /* zeus_illustration_3a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
 		7A00D5E6149040C6ACD59F7A /* AtSign.svg in Resources */ = {isa = PBXBuildFile; fileRef = A9A528B089AC4D0B845498D5 /* AtSign.svg */; };
 		7C1ECC33275F45B0B336EA95 /* Cashu.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 6544AEC784014F60A8DA9EE9 /* Cashu.jpg */; };
@@ -143,7 +143,7 @@
 		9A781A49AA6E411DA6371028 /* Delete.svg in Resources */ = {isa = PBXBuildFile; fileRef = 67621A6F1F0042C7ACE3E84F /* Delete.svg */; };
 		9E2B346F72A34EA3807BC843 /* Copy.svg in Resources */ = {isa = PBXBuildFile; fileRef = 7ABECF711E9D4F5AB912E1C0 /* Copy.svg */; };
 		9EC3E4DE527848EDBBDFF783 /* Eye On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 023F51CB19944C63B62124C1 /* Eye On.svg */; };
-		9F5466FFEE6147BD8D2F2C36 /* zeus-illustration-7a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C393457FE2A142E5A62D8FC7 /* zeus-illustration-7a.jpg */; };
+		9F5466FFEE6147BD8D2F2C36 /* zeus_illustration_7a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C393457FE2A142E5A62D8FC7 /* zeus_illustration_7a.jpg */; };
 		A09AF727D5F84779808B2B53 /* Receive.svg in Resources */ = {isa = PBXBuildFile; fileRef = EF00F35A868F4C26B9288D74 /* Receive.svg */; };
 		A1B2C3D52D36C88800000002 /* LDKNodeFFI.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B2C3D42D36C88800000001 /* LDKNodeFFI.xcframework */; };
 		A2AAB31AF9804954A6AD6625 /* Node Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8046E6CEF39C45D4A0731EBA /* Node Off.svg */; };
@@ -177,7 +177,7 @@
 		BE9C4EEA26234DE1A725FC71 /* History.svg in Resources */ = {isa = PBXBuildFile; fileRef = 5A8A9C74C3684902903E4843 /* History.svg */; };
 		C1295FF8C68D4E7F864FFEDA /* Key Security.svg in Resources */ = {isa = PBXBuildFile; fileRef = AC67FF39FAE64370854DBAD3 /* Key Security.svg */; };
 		C192B71058804DFF8F1EAE88 /* Hidden.svg in Resources */ = {isa = PBXBuildFile; fileRef = 565C3A5DD94B417EB83A30FE /* Hidden.svg */; };
-		C1B120BF220E409BA71C7899 /* zeus-illustration-5a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3CE88FE7B3B24F39AAA8C50F /* zeus-illustration-5a.jpg */; };
+		C1B120BF220E409BA71C7899 /* zeus_illustration_5a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3CE88FE7B3B24F39AAA8C50F /* zeus_illustration_5a.jpg */; };
 		C20CFE23A61E4EB28FCEACAD /* Mint.svg in Resources */ = {isa = PBXBuildFile; fileRef = DAFA8FD2E22247F09449BA7D /* Mint.svg */; };
 		C26BE00A80C59796641EC9CD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 45A895A8D6C88724D9C5B349 /* PrivacyInfo.xcprivacy */; };
 		C2D3A88AF14D4DBAB902FD88 /* AlbyHub.jpg in Resources */ = {isa = PBXBuildFile; fileRef = E3B5C8BBBB8F44458FB67CDA /* AlbyHub.jpg */; };
@@ -207,14 +207,14 @@
 		E2C95A5F47F049229329DEC6 /* Account.svg in Resources */ = {isa = PBXBuildFile; fileRef = 89EA7B04C5FF44598EBD2738 /* Account.svg */; };
 		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
 		E4F10D0D7AD14E30BEA585E4 /* bitcoin-icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 5F108F40A81D4F8AB67FCCF8 /* bitcoin-icon.svg */; };
-		E64F6D5A50474C4BAFC57951 /* zeus-illustration-6a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FDE09436C88E4DCA980DA7DE /* zeus-illustration-6a.jpg */; };
+		E64F6D5A50474C4BAFC57951 /* zeus_illustration_6a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */; };
 		E691022067D14B198BFF83DB /* Dice.svg in Resources */ = {isa = PBXBuildFile; fileRef = CE4931FF962B4189AC3F3EEB /* Dice.svg */; };
-		E8BAB905843C49E5A8DF2F08 /* zeus-illustration-3b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7F9ACB23845C4FA8BA11CEE5 /* zeus-illustration-3b.jpg */; };
+		E8BAB905843C49E5A8DF2F08 /* zeus_illustration_3b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7F9ACB23845C4FA8BA11CEE5 /* zeus_illustration_3b.jpg */; };
 		E9BD5D97E3984D8F983CB124 /* Alby.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 7BF4E2803ED74582856B0DDC /* Alby.jpg */; };
 		E9D6C417F78D4536BA11F4C2 /* RebalanceIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 1C34D99962B64E95B7AB8125 /* RebalanceIcon.svg */; };
-		EB465B1C481448398995FFCF /* zeus-illustration-4a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 9A0EFD93FB154656AF4F21E4 /* zeus-illustration-4a.jpg */; };
+		EB465B1C481448398995FFCF /* zeus_illustration_4a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 9A0EFD93FB154656AF4F21E4 /* zeus_illustration_4a.jpg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
-		EDEF737FCB264685AD241C0D /* zeus-illustration-4b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 6106C7092F4040DFB62B4020 /* zeus-illustration-4b.jpg */; };
+		EDEF737FCB264685AD241C0D /* zeus_illustration_4b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 6106C7092F4040DFB62B4020 /* zeus_illustration_4b.jpg */; };
 		EFFAF5FEC2444A958F2BDF0A /* QR.svg in Resources */ = {isa = PBXBuildFile; fileRef = 90FC9B311888404098848E43 /* QR.svg */; };
 		F15BCD255F194C84973AB51D /* Skull.svg in Resources */ = {isa = PBXBuildFile; fileRef = B813A99762CC4756A18E0C20 /* Skull.svg */; };
 		F189DF01CACB4F7FBF073DAE /* Upgrade.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9B484D89138740CFB1DD157F /* Upgrade.svg */; };
@@ -459,7 +459,7 @@
 		095808991E764378BE2D3052 /* Send.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Send.svg; path = ../assets/images/SVG/Send.svg; sourceTree = "<group>"; };
 		0AB2FC627AB849D7B561CF98 /* Gallery.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gallery.svg; path = ../assets/images/SVG/Gallery.svg; sourceTree = "<group>"; };
 		0BE581979450495B86FA8D7F /* CLN.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = CLN.jpg; path = ../assets/images/CLN.jpg; sourceTree = "<group>"; };
-		0CF3D10833D24020923868CE /* zeus-illustration-1b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-1b.jpg"; path = "../assets/images/zeus-illustration-1b.jpg"; sourceTree = "<group>"; };
+		0CF3D10833D24020923868CE /* zeus_illustration_1b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_1b.jpg"; path = "../assets/images/zeus_illustration_1b.jpg"; sourceTree = "<group>"; };
 		0EC14DF216D694B9C5C997FE /* libPods-zeus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		139105B61AF99BAD00B5F7CC /* RCTSettings.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTSettings.xcodeproj; path = "../node_modules/react-native/Libraries/Settings/RCTSettings.xcodeproj"; sourceTree = "<group>"; };
 		139FDEE61B06529A00C62182 /* RCTWebSocket.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTWebSocket.xcodeproj; path = "../node_modules/react-native/Libraries/WebSocket/RCTWebSocket.xcodeproj"; sourceTree = "<group>"; };
@@ -483,7 +483,7 @@
 		1E37BAD14FEC4A9094A79FF5 /* lightning-pattern-full-random-loop.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "lightning-pattern-full-random-loop.json"; path = "../assets/images/Lottie/lightning-pattern-full-random-loop.json"; sourceTree = "<group>"; };
 		205957BBF0B74BDE836A1F0D /* Ecash.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ecash.svg; path = ../assets/images/SVG/Ecash.svg; sourceTree = "<group>"; };
 		22AF6FF7370740168BB11C43 /* onchain-white.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "onchain-white.png"; path = "../assets/images/onchain-white.png"; sourceTree = "<group>"; };
-		24096E86BD2D4234A2A6CF8B /* zeus-illustration-2a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-2a.jpg"; path = "../assets/images/zeus-illustration-2a.jpg"; sourceTree = "<group>"; };
+		24096E86BD2D4234A2A6CF8B /* zeus_illustration_2a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_2a.jpg"; path = "../assets/images/zeus_illustration_2a.jpg"; sourceTree = "<group>"; };
 		24EAA047DE4942C1A1C5AB5F /* LND.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = LND.jpg; path = ../assets/images/LND.jpg; sourceTree = "<group>"; };
 		255568932C014CB2BB7EB68C /* Nostrich_not-loaded.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nostrich_not-loaded.svg"; path = "../assets/images/SVG/Nostrich_not-loaded.svg"; sourceTree = "<group>"; };
 		259C6F30DC5D40FF9E5DF839 /* Sweep.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Sweep.svg; path = ../assets/images/SVG/Sweep.svg; sourceTree = "<group>"; };
@@ -495,7 +495,7 @@
 		2D16E6891FA4F8E400B85C8A /* libReact.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libReact.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D6AFC110FCE4DB693ABCF13 /* Loading.gif */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Loading.gif; path = ../assets/images/GIF/Loading.gif; sourceTree = "<group>"; };
 		2E2A98A1DA2E4F49B65E78A7 /* Nostrich_invalid.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Nostrich_invalid.svg; path = ../assets/images/SVG/Nostrich_invalid.svg; sourceTree = "<group>"; };
-		2E486A0626B94C35A6D89D3F /* zeus-illustration-6b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-6b.jpg"; path = "../assets/images/zeus-illustration-6b.jpg"; sourceTree = "<group>"; };
+		2E486A0626B94C35A6D89D3F /* zeus_illustration_6b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_6b.jpg"; path = "../assets/images/zeus_illustration_6b.jpg"; sourceTree = "<group>"; };
 		2EC02052907E453CB15DBADA /* Filter Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter Off.svg"; path = "../assets/images/SVG/Filter Off.svg"; sourceTree = "<group>"; };
 		3300E609A33E44F2B30E4E3D /* pay-z-black.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "pay-z-black.png"; path = "../assets/images/pay-z-black.png"; sourceTree = "<group>"; };
 		34845404A9F04B35ADA34F80 /* Caret Right-1.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-1.svg"; path = "../assets/images/SVG/Caret Right-1.svg"; sourceTree = "<group>"; };
@@ -503,7 +503,7 @@
 		3AE3A12ACB394280989F7018 /* Close.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Close.svg; path = ../assets/images/SVG/Close.svg; sourceTree = "<group>"; };
 		3BD89BEBA89A4B678A29E094 /* BitcoinIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BitcoinIcon.svg; path = ../assets/images/SVG/BitcoinIcon.svg; sourceTree = "<group>"; };
 		3C37D42473A54AD981B549B4 /* NFC.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = NFC.svg; path = ../assets/images/SVG/NFC.svg; sourceTree = "<group>"; };
-		3CE88FE7B3B24F39AAA8C50F /* zeus-illustration-5a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-5a.jpg"; path = "../assets/images/zeus-illustration-5a.jpg"; sourceTree = "<group>"; };
+		3CE88FE7B3B24F39AAA8C50F /* zeus_illustration_5a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_5a.jpg"; path = "../assets/images/zeus_illustration_5a.jpg"; sourceTree = "<group>"; };
 		3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = zeus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3D59A2AA7B0142ACBD9EA7D6 /* Select On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Select On.svg"; path = "../assets/images/SVG/Select On.svg"; sourceTree = "<group>"; };
 		3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "DroidSansMono Apache License.txt"; path = "../assets/fonts/DroidSansMono Apache License.txt"; sourceTree = "<group>"; };
@@ -523,7 +523,7 @@
 		4C8C38BFCA8A45C99AA6FF28 /* MaterialDesignIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialDesignIcons.ttf; path = "../node_modules/@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf"; sourceTree = "<group>"; };
 		4D6C56355DAE4697AB55E762 /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
 		4F64F2C03E764A959E6B7991 /* onchain-black.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "onchain-black.png"; path = "../assets/images/onchain-black.png"; sourceTree = "<group>"; };
-		4FEA0F67FA544C83B86C2DE3 /* zeus-illustration-2b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-2b.jpg"; path = "../assets/images/zeus-illustration-2b.jpg"; sourceTree = "<group>"; };
+		4FEA0F67FA544C83B86C2DE3 /* zeus_illustration_2b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_2b.jpg"; path = "../assets/images/zeus_illustration_2b.jpg"; sourceTree = "<group>"; };
 		5014345A129344348443D20F /* zeus-pay.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-pay.svg"; path = "../assets/images/SVG/zeus-pay.svg"; sourceTree = "<group>"; };
 		51184C7F24744DCB90D53B8C /* wordmark-black.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "wordmark-black.svg"; path = "../assets/images/SVG/wordmark-black.svg"; sourceTree = "<group>"; };
 		5134B5472EB7C1B000A6AD03 /* ShareQR.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareQR.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -540,7 +540,7 @@
 		5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTAnimation.xcodeproj; path = "../node_modules/react-native/Libraries/NativeAnimation/RCTAnimation.xcodeproj"; sourceTree = "<group>"; };
 		5F108F40A81D4F8AB67FCCF8 /* bitcoin-icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "bitcoin-icon.svg"; path = "../assets/images/SVG/bitcoin-icon.svg"; sourceTree = "<group>"; };
 		605EB40010F24A26AE43463F /* Alert.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Alert.svg; path = ../assets/images/SVG/Alert.svg; sourceTree = "<group>"; };
-		6106C7092F4040DFB62B4020 /* zeus-illustration-4b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-4b.jpg"; path = "../assets/images/zeus-illustration-4b.jpg"; sourceTree = "<group>"; };
+		6106C7092F4040DFB62B4020 /* zeus_illustration_4b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_4b.jpg"; path = "../assets/images/zeus_illustration_4b.jpg"; sourceTree = "<group>"; };
 		62458EE70D8546B7AE7F87DF /* Node On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node On.svg"; path = "../assets/images/SVG/Node On.svg"; sourceTree = "<group>"; };
 		647B3F8EC6A6487CB6606AD9 /* Switch.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Switch.svg; path = ../assets/images/SVG/Switch.svg; sourceTree = "<group>"; };
 		6544AEC784014F60A8DA9EE9 /* Cashu.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Cashu.jpg; path = ../assets/images/Cashu.jpg; sourceTree = "<group>"; };
@@ -594,8 +594,8 @@
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		7ABECF711E9D4F5AB912E1C0 /* Copy.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Copy.svg; path = ../assets/images/SVG/Copy.svg; sourceTree = "<group>"; };
 		7BF4E2803ED74582856B0DDC /* Alby.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Alby.jpg; path = ../assets/images/Alby.jpg; sourceTree = "<group>"; };
-		7E8369274D1141658F86FCBE /* zeus-illustration-1a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-1a.jpg"; path = "../assets/images/zeus-illustration-1a.jpg"; sourceTree = "<group>"; };
-		7F9ACB23845C4FA8BA11CEE5 /* zeus-illustration-3b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-3b.jpg"; path = "../assets/images/zeus-illustration-3b.jpg"; sourceTree = "<group>"; };
+		7E8369274D1141658F86FCBE /* zeus_illustration_1a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_1a.jpg"; path = "../assets/images/zeus_illustration_1a.jpg"; sourceTree = "<group>"; };
+		7F9ACB23845C4FA8BA11CEE5 /* zeus_illustration_3b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_3b.jpg"; path = "../assets/images/zeus_illustration_3b.jpg"; sourceTree = "<group>"; };
 		7FE4DFA6CD064723B106677B /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
 		8046E6CEF39C45D4A0731EBA /* Node Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node Off.svg"; path = "../assets/images/SVG/Node Off.svg"; sourceTree = "<group>"; };
 		806332CB14FC4FD5A93268B8 /* Rabbit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Rabbit.svg; path = ../assets/images/SVG/Rabbit.svg; sourceTree = "<group>"; };
@@ -639,7 +639,7 @@
 		9888056290564C60BD300E91 /* Entypo.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Entypo.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Entypo.ttf"; sourceTree = "<group>"; };
 		98C73B933E8449BCA1011C68 /* Flash On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Flash On.svg"; path = "../assets/images/SVG/Flash On.svg"; sourceTree = "<group>"; };
 		98D929A2B9454CF19AB15CC0 /* nwc-logo.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "nwc-logo.svg"; path = "../assets/images/SVG/nwc-logo.svg"; sourceTree = "<group>"; };
-		9A0EFD93FB154656AF4F21E4 /* zeus-illustration-4a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-4a.jpg"; path = "../assets/images/zeus-illustration-4a.jpg"; sourceTree = "<group>"; };
+		9A0EFD93FB154656AF4F21E4 /* zeus_illustration_4a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_4a.jpg"; path = "../assets/images/zeus_illustration_4a.jpg"; sourceTree = "<group>"; };
 		9A761AB76F2743C4B2AB140B /* OnChain.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = OnChain.svg; path = ../assets/images/SVG/OnChain.svg; sourceTree = "<group>"; };
 		9B066550A2EA4AC794CA089B /* Swap.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Swap.svg; path = ../assets/images/SVG/Swap.svg; sourceTree = "<group>"; };
 		9B296C83A5824B67B160A850 /* Pen.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pen.svg; path = ../assets/images/SVG/Pen.svg; sourceTree = "<group>"; };
@@ -675,15 +675,15 @@
 		C06B8930D07546EA8605E869 /* MintToken.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MintToken.svg; path = ../assets/images/SVG/MintToken.svg; sourceTree = "<group>"; };
 		C18B7331C6704C59A8BB7DCA /* Wrench.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wrench.svg; path = ../assets/images/SVG/Wrench.svg; sourceTree = "<group>"; };
 		C2058B1AED6D4B97A6650200 /* Contact.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Contact.svg; path = ../assets/images/SVG/Contact.svg; sourceTree = "<group>"; };
-		C393457FE2A142E5A62D8FC7 /* zeus-illustration-7a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-7a.jpg"; path = "../assets/images/zeus-illustration-7a.jpg"; sourceTree = "<group>"; };
+		C393457FE2A142E5A62D8FC7 /* zeus_illustration_7a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_7a.jpg"; path = "../assets/images/zeus_illustration_7a.jpg"; sourceTree = "<group>"; };
 		C44BB3F9DBFD465EBEEED83E /* Ionicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ionicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf"; sourceTree = "<group>"; };
-		C562D2E7B1694F2D80831BFC /* zeus-illustration-5b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-5b.jpg"; path = "../assets/images/zeus-illustration-5b.jpg"; sourceTree = "<group>"; };
+		C562D2E7B1694F2D80831BFC /* zeus_illustration_5b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_5b.jpg"; path = "../assets/images/zeus_illustration_5b.jpg"; sourceTree = "<group>"; };
 		C79E350A2A9640088B2E0231 /* tor.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = tor.png; path = ../assets/images/tor.png; sourceTree = "<group>"; };
 		C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Backspace.svg; path = ../assets/images/SVG/Backspace.svg; sourceTree = "<group>"; };
 		C901AB325C64405DB090EAD0 /* Select Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Select Off.svg"; path = "../assets/images/SVG/Select Off.svg"; sourceTree = "<group>"; };
 		C980258F5F3C44B6A1F3AE63 /* Search.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Search.svg; path = ../assets/images/SVG/Search.svg; sourceTree = "<group>"; };
 		CCFEAC399BB842A091ADB042 /* Wallet.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet.svg; path = ../assets/images/SVG/Wallet.svg; sourceTree = "<group>"; };
-		CD61856C84E64B23AB9305C4 /* zeus-illustration-3a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-3a.jpg"; path = "../assets/images/zeus-illustration-3a.jpg"; sourceTree = "<group>"; };
+		CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_3a.jpg"; path = "../assets/images/zeus_illustration_3a.jpg"; sourceTree = "<group>"; };
 		CDC0DEF02A54C2B6000927CE /* CashuDevKitModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CashuDevKitModule.swift; sourceTree = "<group>"; };
 		CDC0DEF12A54C2B6000927CE /* CashuDevKitModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CashuDevKitModule.m; sourceTree = "<group>"; };
 		CE0235666BAA4B108E838374 /* DeleteKey.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = DeleteKey.svg; path = ../assets/images/SVG/DeleteKey.svg; sourceTree = "<group>"; };
@@ -705,7 +705,7 @@
 		DAB0850D6CA542288A565578 /* Success.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.svg; path = ../assets/images/SVG/Success.svg; sourceTree = "<group>"; };
 		DAFA8FD2E22247F09449BA7D /* Mint.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mint.svg; path = ../assets/images/SVG/Mint.svg; sourceTree = "<group>"; };
 		DD64CA87612F416B940C8B7C /* Gear.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gear.svg; path = ../assets/images/SVG/Gear.svg; sourceTree = "<group>"; };
-		DFF1D2DEE7664CDFBF9491AB /* zeus-illustration-7b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-7b.jpg"; path = "../assets/images/zeus-illustration-7b.jpg"; sourceTree = "<group>"; };
+		DFF1D2DEE7664CDFBF9491AB /* zeus_illustration_7b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_7b.jpg"; path = "../assets/images/zeus_illustration_7b.jpg"; sourceTree = "<group>"; };
 		E30C8201B5B64E99A22BBCE0 /* loader.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = loader.json; path = ../assets/images/Lottie/loader.json; sourceTree = "<group>"; };
 		E3B5C8BBBB8F44458FB67CDA /* AlbyHub.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AlbyHub.jpg; path = ../assets/images/AlbyHub.jpg; sourceTree = "<group>"; };
 		E67CFE95171542C0BC19BDB4 /* BTCpay.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BTCpay.jpg; path = ../assets/images/BTCpay.jpg; sourceTree = "<group>"; };
@@ -719,7 +719,7 @@
 		F5135F84CFD648AAA73B6317 /* ErrorIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ErrorIcon.svg; path = ../assets/images/SVG/ErrorIcon.svg; sourceTree = "<group>"; };
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		F840E2B2E8BB45209B057E42 /* Filter On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter On.svg"; path = "../assets/images/SVG/Filter On.svg"; sourceTree = "<group>"; };
-		FDE09436C88E4DCA980DA7DE /* zeus-illustration-6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-illustration-6a.jpg"; path = "../assets/images/zeus-illustration-6a.jpg"; sourceTree = "<group>"; };
+		FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus_illustration_6a.jpg"; path = "../assets/images/zeus_illustration_6a.jpg"; sourceTree = "<group>"; };
 		E143BD8453E34712B3C978E3 /* Olympus.svg */ = {isa = PBXFileReference; name = "Olympus.svg"; path = "../assets/images/SVG/Olympus.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		4420998C178F40A8BF8F441D /* NFC-alt.svg */ = {isa = PBXFileReference; name = "NFC-alt.svg"; path = "../assets/images/SVG/NFC-alt.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		E7A5621B1182453EA576F259 /* Pause.svg */ = {isa = PBXFileReference; name = "Pause.svg"; path = "../assets/images/SVG/Pause.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
@@ -1246,20 +1246,20 @@
 				22AF6FF7370740168BB11C43 /* onchain-white.png */,
 				3300E609A33E44F2B30E4E3D /* pay-z-black.png */,
 				1821EDAC9D344E9E881EC74A /* pay-z-white.png */,
-				7E8369274D1141658F86FCBE /* zeus-illustration-1a.jpg */,
-				0CF3D10833D24020923868CE /* zeus-illustration-1b.jpg */,
-				24096E86BD2D4234A2A6CF8B /* zeus-illustration-2a.jpg */,
-				4FEA0F67FA544C83B86C2DE3 /* zeus-illustration-2b.jpg */,
-				CD61856C84E64B23AB9305C4 /* zeus-illustration-3a.jpg */,
-				7F9ACB23845C4FA8BA11CEE5 /* zeus-illustration-3b.jpg */,
-				9A0EFD93FB154656AF4F21E4 /* zeus-illustration-4a.jpg */,
-				6106C7092F4040DFB62B4020 /* zeus-illustration-4b.jpg */,
-				3CE88FE7B3B24F39AAA8C50F /* zeus-illustration-5a.jpg */,
-				C562D2E7B1694F2D80831BFC /* zeus-illustration-5b.jpg */,
-				FDE09436C88E4DCA980DA7DE /* zeus-illustration-6a.jpg */,
-				2E486A0626B94C35A6D89D3F /* zeus-illustration-6b.jpg */,
-				C393457FE2A142E5A62D8FC7 /* zeus-illustration-7a.jpg */,
-				DFF1D2DEE7664CDFBF9491AB /* zeus-illustration-7b.jpg */,
+				7E8369274D1141658F86FCBE /* zeus_illustration_1a.jpg */,
+				0CF3D10833D24020923868CE /* zeus_illustration_1b.jpg */,
+				24096E86BD2D4234A2A6CF8B /* zeus_illustration_2a.jpg */,
+				4FEA0F67FA544C83B86C2DE3 /* zeus_illustration_2b.jpg */,
+				CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */,
+				7F9ACB23845C4FA8BA11CEE5 /* zeus_illustration_3b.jpg */,
+				9A0EFD93FB154656AF4F21E4 /* zeus_illustration_4a.jpg */,
+				6106C7092F4040DFB62B4020 /* zeus_illustration_4b.jpg */,
+				3CE88FE7B3B24F39AAA8C50F /* zeus_illustration_5a.jpg */,
+				C562D2E7B1694F2D80831BFC /* zeus_illustration_5b.jpg */,
+				FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */,
+				2E486A0626B94C35A6D89D3F /* zeus_illustration_6b.jpg */,
+				C393457FE2A142E5A62D8FC7 /* zeus_illustration_7a.jpg */,
+				DFF1D2DEE7664CDFBF9491AB /* zeus_illustration_7b.jpg */,
 				3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */,
 				E3B5C8BBBB8F44458FB67CDA /* AlbyHub.jpg */,
 				6544AEC784014F60A8DA9EE9 /* Cashu.jpg */,
@@ -1820,21 +1820,21 @@
 				867F1C5EEDEB4EF7A9A0E92F /* onchain-white.png in Resources */,
 				5722C18075C14AB294BA9AF2 /* pay-z-black.png in Resources */,
 				AB5FA5F2F8004F38A35818D3 /* pay-z-white.png in Resources */,
-				1A6AA189E83E4DCC8842AAAF /* zeus-illustration-1a.jpg in Resources */,
+				1A6AA189E83E4DCC8842AAAF /* zeus_illustration_1a.jpg in Resources */,
 				749E81B02D55D70800A2A7C0 /* DroidSansMono.ttf in Resources */,
-				7682ABAE72B940CE8DA4BD4F /* zeus-illustration-1b.jpg in Resources */,
-				3F27B2AEC00B42F18A4CF173 /* zeus-illustration-2a.jpg in Resources */,
-				5C6DCB3E504C45498A83D589 /* zeus-illustration-2b.jpg in Resources */,
-				78D83D32BB1A48AEBFCF1515 /* zeus-illustration-3a.jpg in Resources */,
-				E8BAB905843C49E5A8DF2F08 /* zeus-illustration-3b.jpg in Resources */,
-				EB465B1C481448398995FFCF /* zeus-illustration-4a.jpg in Resources */,
-				EDEF737FCB264685AD241C0D /* zeus-illustration-4b.jpg in Resources */,
-				C1B120BF220E409BA71C7899 /* zeus-illustration-5a.jpg in Resources */,
-				3DD8431C2C42425B8842012E /* zeus-illustration-5b.jpg in Resources */,
-				E64F6D5A50474C4BAFC57951 /* zeus-illustration-6a.jpg in Resources */,
-				26B4545A849B455FA3E7156B /* zeus-illustration-6b.jpg in Resources */,
-				9F5466FFEE6147BD8D2F2C36 /* zeus-illustration-7a.jpg in Resources */,
-				151EEBAD78204306A3787D93 /* zeus-illustration-7b.jpg in Resources */,
+				7682ABAE72B940CE8DA4BD4F /* zeus_illustration_1b.jpg in Resources */,
+				3F27B2AEC00B42F18A4CF173 /* zeus_illustration_2a.jpg in Resources */,
+				5C6DCB3E504C45498A83D589 /* zeus_illustration_2b.jpg in Resources */,
+				78D83D32BB1A48AEBFCF1515 /* zeus_illustration_3a.jpg in Resources */,
+				E8BAB905843C49E5A8DF2F08 /* zeus_illustration_3b.jpg in Resources */,
+				EB465B1C481448398995FFCF /* zeus_illustration_4a.jpg in Resources */,
+				EDEF737FCB264685AD241C0D /* zeus_illustration_4b.jpg in Resources */,
+				C1B120BF220E409BA71C7899 /* zeus_illustration_5a.jpg in Resources */,
+				3DD8431C2C42425B8842012E /* zeus_illustration_5b.jpg in Resources */,
+				E64F6D5A50474C4BAFC57951 /* zeus_illustration_6a.jpg in Resources */,
+				26B4545A849B455FA3E7156B /* zeus_illustration_6b.jpg in Resources */,
+				9F5466FFEE6147BD8D2F2C36 /* zeus_illustration_7a.jpg in Resources */,
+				151EEBAD78204306A3787D93 /* zeus_illustration_7b.jpg in Resources */,
 				4983F905D5584DEE9306C67C /* DroidSansMono Apache License.txt in Resources */,
 				C2D3A88AF14D4DBAB902FD88 /* AlbyHub.jpg in Resources */,
 				7C1ECC33275F45B0B336EA95 /* Cashu.jpg in Resources */,

@@ -29,7 +29,7 @@ describe('PhotoUtils', () => {
                 '../../../assets/images/LND.jpg'
             );
             expect(getPhoto('preset://zeusillustration1a')).toEqual(
-                '../../../assets/images/zeus-illustration-1a.jpg'
+                '../../../assets/images/zeus_illustration_1a.jpg'
             );
         });
 
