@@ -23,7 +23,6 @@ import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
 import UpgradeIcon from '../assets/images/SVG/Upgrade.svg';
-import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import SwapsIcon from '../assets/images/SVG/Swap.svg';
@@ -848,42 +847,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             stroke={forwardArrowColor}
                                         />
                                     </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {false && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Nostr')}
-                            >
-                                <View style={styles.icon}>
-                                    <NostrichIcon
-                                        fill={themeColor('text')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Nostr
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
