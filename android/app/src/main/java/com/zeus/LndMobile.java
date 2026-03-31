@@ -588,7 +588,7 @@ class LndMobile extends ReactContextBaseJavaModule {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
-    ArrayList<String> seedList = new ArrayList();
+    ArrayList<String> seedList = new ArrayList<>();
     for (int i = 0; i < seed.size(); i++) {
       if (seed.getType(i) == ReadableType.String) {
         seedList.add(seed.getString(i));

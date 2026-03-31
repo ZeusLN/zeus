@@ -54,7 +54,7 @@ class LdkNodeService : Service() {
         if (intent?.action != null) {
             when (intent.action) {
                 ACTION_STOP -> {
-                    stopForeground(true)
+                    stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     return START_NOT_STICKY
                 }
@@ -100,7 +100,7 @@ class LdkNodeService : Service() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         if (!getPersistentLdkNodeServicesEnabled(this)) {
-            stopForeground(true)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
         return false
@@ -108,7 +108,7 @@ class LdkNodeService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         if (!getPersistentLdkNodeServicesEnabled(this)) {
-            stopForeground(true)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
         super.onTaskRemoved(rootIntent)
@@ -145,7 +145,7 @@ class LdkNodeService : Service() {
             .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .addAction(0, getLocalizedString("androidNotification.shutdown"), stopPendingIntent)
+            .addAction(Notification.Action.Builder(null, getLocalizedString("androidNotification.shutdown"), stopPendingIntent).build())
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)

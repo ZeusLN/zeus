@@ -10,7 +10,12 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Proxy;
 import java.security.cert.X509Certificate
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import app.zeusln.zeus.AndroidCallback
 
@@ -18,8 +23,15 @@ import lndmobile.Lndmobile;
 
 class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
+  private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
   override fun getName(): String {
     return "LncModule"
+  }
+
+  override fun invalidate() {
+    super.invalidate()
+    scope.cancel()
   }
 
   @ReactMethod
@@ -162,7 +174,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       promise: Promise
    ) {
       // Launch a coroutine in the background to avoid blocking the main thread
-      GlobalScope.launch(Dispatchers.IO) {
+      scope.launch {
          try {
                // Perform the long-running task
                val response = Lndmobile.sweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish ?: false, isTestnet ?: false)
@@ -190,8 +202,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
          Lndmobile.createClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce)
          promise.resolve(null)
      } catch (e: Exception) {
-         val exceptionAsString = e.toString()
-         promise.reject(exceptionAsString)
+         promise.reject("CREATE_CLAIM_ERROR", e.toString())
      }
   }
 
@@ -203,8 +214,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
          Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet ?: false)
          promise.resolve(null)
      } catch (e: Exception) {
-         val exceptionAsString = e.toString()
-         promise.reject(exceptionAsString)
+         promise.reject("CREATE_REVERSE_CLAIM_ERROR", e.toString())
      }
   }
 
@@ -216,8 +226,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
          var txid = Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, isTestnet ?: false)
          promise.resolve(txid)
      } catch (e: Exception) {
-         val exceptionAsString = e.toString()
-         promise.reject(exceptionAsString)
+         promise.reject("CREATE_REFUND_ERROR", e.toString())
      }
   }
 }
