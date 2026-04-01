@@ -544,11 +544,19 @@ export default class CashuStore {
             if (mintInfo) {
                 runInAction(() => {
                     this.mintInfos[mintUrl] = mintInfo;
+                    if (this.cashuWallets[mintUrl]) {
+                        this.cashuWallets[mintUrl].errorConnecting = false;
+                    }
                 });
             }
             return mintInfo;
         } catch (e) {
             console.error(`CDK: Failed to fetch mint info for ${mintUrl}:`, e);
+            runInAction(() => {
+                if (this.cashuWallets[mintUrl]) {
+                    this.cashuWallets[mintUrl].errorConnecting = true;
+                }
+            });
             return null;
         }
     };
