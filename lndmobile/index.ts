@@ -2,7 +2,6 @@ import { NativeModules } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
-import sha from 'sha.js';
 
 import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
@@ -16,7 +15,6 @@ import { getChanInfo, listPrivateChannels } from './channel';
 const { LndMobile, LndMobileTools } = NativeModules;
 
 // const TLV_KEYSEND = 5482373484;
-const TLV_RECORD_NAME = 128101;
 // const TLV_WHATSAT_MESSAGE = 34349334;
 
 /**
@@ -296,43 +294,6 @@ export const getInfo = async (): Promise<lnrpc.GetInfoResponse> => {
     return response;
 };
 
-/**
- *
- * @throws
- * @param paymentRequest BOLT11-encoded payment request
- * @params name TLV record for sender name
- *
- */
-export const sendPaymentSync = async (
-    payment_request: string,
-    amount?: Long,
-    tlv_record_name?: string | null
-): Promise<lnrpc.SendResponse> => {
-    const options: lnrpc.ISendRequest = {
-        payment_request
-    };
-    if (tlv_record_name && tlv_record_name.length > 0) {
-        options.dest_custom_records = {
-            [TLV_RECORD_NAME]: Base64Utils.utf8ToBytes(tlv_record_name)
-        };
-    }
-    if (amount) {
-        options.amt = amount;
-    }
-
-    const response = await sendCommand<
-        lnrpc.ISendRequest,
-        lnrpc.SendRequest,
-        lnrpc.SendResponse
-    >({
-        request: lnrpc.SendRequest,
-        response: lnrpc.SendResponse,
-        method: 'SendPaymentSync',
-        options
-    });
-    return response;
-};
-
 export const sendPaymentV2Sync = async (
     sendPaymentReq: any
 ): Promise<lnrpc.Payment> => {
@@ -345,7 +306,7 @@ export const sendPaymentV2Sync = async (
         dest_custom_records,
         max_parts,
         cltv_limit,
-        outgoing_chan_id,
+        outgoing_chan_ids,
         max_shard_size_msat,
         payment_hash,
         amp,
@@ -363,7 +324,7 @@ export const sendPaymentV2Sync = async (
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,
         last_hop_pubkey,
-        outgoing_chan_id,
+        outgoing_chan_ids,
         max_shard_size_msat,
         dest_custom_records,
         amt,
@@ -505,81 +466,6 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
             false
         );
         console.log(response);
-    });
-};
-
-export const sendKeysendPayment = async (
-    destination_pub_key: string,
-    sat: Long,
-    pre_image: Uint8Array,
-    route_hints: lnrpc.IRouteHint[],
-    tlv_record_name_str: string
-): Promise<lnrpc.SendResponse | null> => {
-    try {
-        const responseQueryRoutes = await sendCommand<
-            lnrpc.IQueryRoutesRequest,
-            lnrpc.QueryRoutesRequest,
-            lnrpc.QueryRoutesResponse
-        >({
-            request: lnrpc.QueryRoutesRequest,
-            response: lnrpc.QueryRoutesResponse,
-            method: 'QueryRoutes',
-            options: {
-                pub_key: destination_pub_key,
-                amt: sat,
-                route_hints,
-                dest_custom_records: {
-                    // Custom records are injected in a hacky way below
-                    // because of a bug in protobufjs
-                    // [TLV_RECORD_NAME]: Base64Utils.stringToUint8Array(tlv_record_name_str),
-                    // 5482373484 is the record for lnd
-                    // keysend payments as described in
-                    // https://github.com/lightningnetwork/lnd/releases/tag/v0.9.0-beta
-                    // "5482373484": preImage,
-                },
-                dest_features: [lnrpc.FeatureBit.TLV_ONION_REQ]
-            }
-        });
-
-        for (const route of responseQueryRoutes.routes) {
-            try {
-                const lastHop = route.hops!.length - 1;
-
-                route.hops![lastHop].custom_records!['5482373484'] = pre_image;
-                if (tlv_record_name_str && tlv_record_name_str.length > 0) {
-                    route.hops![lastHop].custom_records![TLV_RECORD_NAME] =
-                        Base64Utils.stringToUint8Array(tlv_record_name_str);
-                }
-
-                const response = await sendCommand<
-                    lnrpc.ISendToRouteRequest,
-                    lnrpc.SendToRouteRequest,
-                    lnrpc.SendResponse
-                >({
-                    request: lnrpc.SendToRouteRequest,
-                    response: lnrpc.SendResponse,
-                    method: 'SendToRouteSync',
-                    options: {
-                        payment_hash: sha('sha256').update(pre_image).digest(),
-                        route
-                    }
-                });
-                return response;
-            } catch (e) {
-                console.log(e);
-            }
-        }
-    } catch (e: any) {
-        console.log('QueryRoutes Error', e.message);
-    }
-    return null;
-};
-
-// TODO error handling
-export const decodePaymentStatus = (data: string): routerrpc.PaymentStatus => {
-    return decodeStreamResult<routerrpc.PaymentStatus>({
-        response: routerrpc.PaymentStatus,
-        base64Result: data
     });
 };
 

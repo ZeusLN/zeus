@@ -31,7 +31,6 @@ import {
     lookupInvoice,
     listPeers,
     readLndLog,
-    sendPaymentSync,
     sendPaymentV2Sync,
     IReadLndLogResponse,
     listPayments,
@@ -211,11 +210,6 @@ export interface ILndMobileInjections {
         listPeers: () => Promise<lnrpc.ListPeersResponse>;
         listInvoices: () => Promise<lnrpc.ListInvoiceResponse>;
         readLndLog: () => Promise<IReadLndLogResponse>;
-        sendPaymentSync: (
-            paymentRequest: string,
-            amount?: Long,
-            tlvRecordName?: string | null
-        ) => Promise<lnrpc.SendResponse>;
         sendPaymentV2Sync: ({
             payment_request,
             amt,
@@ -225,7 +219,7 @@ export interface ILndMobileInjections {
             last_hop_pubkey,
             message,
             cltv_limit,
-            outgoing_chan_id,
+            outgoing_chan_ids,
             allow_self_payment,
             multi_path,
             route_hints,
@@ -242,7 +236,7 @@ export interface ILndMobileInjections {
             last_hop_pubkey?: string;
             message?: string;
             cltv_limit?: any;
-            outgoing_chan_id?: string;
+            outgoing_chan_ids?: string[];
             allow_self_payment?: boolean;
             multi_path?: boolean;
             route_hints?: lnrpc.IRouteHint[];
@@ -670,7 +664,6 @@ export default {
         lookupInvoice,
         listPeers,
         readLndLog,
-        sendPaymentSync,
         sendPaymentV2Sync,
         queryRoutes,
         listPayments,
