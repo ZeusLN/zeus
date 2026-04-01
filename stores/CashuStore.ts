@@ -2437,43 +2437,44 @@ export default class CashuStore {
                                     `CDK: Migrated mint from local storage: ${mintUrl}`
                                 );
                             }
+                        } catch (e) {
+                            console.warn(
+                                `CDK: Failed to add mint ${mintUrl}:`,
+                                e
+                            );
+                            continue;
+                        }
 
-                            // Restore any existing funds for this mint
+                        // Restore any existing funds for this mint.
+                        // Failures here are non-fatal — the mint is already
+                        // added to CDK and will be available on next restart.
+                        if (this.originalSeedVersion === 'v1') {
                             runInAction(() => {
                                 this.loadingMsg = localeString(
-                                    'stores.CashuStore.restoringFunds'
+                                    'stores.CashuStore.restoringV1Funds'
                                 );
                             });
-
-                            if (this.originalSeedVersion === 'v1') {
-                                // CDK's restore can't find v1 proofs (wrong
-                                // mnemonic). Use cashu-ts to scan the mint
-                                // with the original v1 seed, then receive
-                                // the recovered proofs into CDK.
-                                runInAction(() => {
-                                    this.loadingMsg = localeString(
-                                        'stores.CashuStore.restoringV1Funds'
-                                    );
-                                });
-                                try {
-                                    const v1Restored =
-                                        await this.restoreV1Proofs(mintUrl);
-                                    if (v1Restored > 0) {
-                                        await this.syncCDKBalances();
-                                        if (__DEV__) {
-                                            console.log(
-                                                `CDK: v1 restore recovered ${v1Restored} sats from ${mintUrl}`
-                                            );
-                                        }
+                            try {
+                                const v1Restored = await this.restoreV1Proofs(
+                                    mintUrl
+                                );
+                                if (v1Restored > 0) {
+                                    await this.syncCDKBalances();
+                                    if (__DEV__) {
+                                        console.log(
+                                            `CDK: v1 restore recovered ${v1Restored} sats from ${mintUrl}`
+                                        );
                                     }
-                                } catch (v1Err) {
-                                    console.warn(
-                                        `CDK: v1 restore failed for ${mintUrl}:`,
-                                        v1Err
-                                    );
                                 }
+                            } catch (v1Err) {
+                                console.warn(
+                                    `CDK: v1 restore failed for ${mintUrl}:`,
+                                    v1Err
+                                );
                             }
+                        }
 
+                        try {
                             // Also run CDK restore (picks up any v2-bip39
                             // proofs, e.g. from a partially migrated state)
                             const restored = await CashuDevKit.restore(mintUrl);
@@ -2484,7 +2485,7 @@ export default class CashuStore {
                             }
                         } catch (e) {
                             console.warn(
-                                `CDK: Failed to migrate mint ${mintUrl}:`,
+                                `CDK: Restore failed for ${mintUrl}:`,
                                 e
                             );
                         }
