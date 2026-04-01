@@ -16,9 +16,9 @@ import Slider from '@react-native-community/slider';
 import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
+import FormAccordion from '../../components/FormAccordion';
 import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
-import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
@@ -40,8 +40,6 @@ import Channel from '../../models/Channel';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 
 import SyncIcon from '../../assets/images/SVG/Sync.svg';
-import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import CloseIcon from '../../assets/images/SVG/Close.svg';
 
 const REBALANCE_CONSTANTS = {
@@ -153,7 +151,6 @@ interface RebalanceState {
     maxAmount: number;
     feeLimit: string;
     timeoutSeconds: string;
-    showAdvanced: boolean;
     executing: boolean;
     projectedSourceBalance: number;
     projectedDestinationBalance: number;
@@ -190,7 +187,6 @@ export default class Rebalance extends React.Component<
             maxAmount: 0,
             feeLimit: REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
             timeoutSeconds: REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
-            showAdvanced: false,
             executing: false,
             projectedSourceBalance: 0,
             projectedDestinationBalance: 0,
@@ -1465,62 +1461,32 @@ export default class Rebalance extends React.Component<
 
     // Advanced settings
     private renderAdvancedSettings = (): React.ReactElement => {
-        const { showAdvanced, feeLimit, timeoutSeconds } = this.state;
+        const { feeLimit, timeoutSeconds } = this.state;
 
         return (
-            <>
-                <TouchableOpacity
-                    onPress={() =>
-                        this.setState({ showAdvanced: !showAdvanced })
-                    }
-                >
-                    <View style={{ marginBottom: 10 }}>
-                        <Row justify="space-between">
-                            <View style={{ flex: 1 }}>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'general.advancedSettings'
-                                    )}
-                                />
-                            </View>
-                            {showAdvanced ? (
-                                <CaretDown
-                                    fill={themeColor('text')}
-                                    width="20"
-                                    height="20"
-                                />
-                            ) : (
-                                <CaretRight
-                                    fill={themeColor('text')}
-                                    width="20"
-                                    height="20"
-                                />
-                            )}
-                        </Row>
-                    </View>
-                </TouchableOpacity>
-
-                {showAdvanced && (
-                    <>
-                        {this.renderNumericInput(
-                            localeString('views.PaymentRequest.feeLimit') +
-                                ' (' +
-                                localeString('general.sats') +
-                                ')',
-                            feeLimit,
-                            REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
-                            (text: string) => this.setState({ feeLimit: text })
-                        )}
-                        {this.renderNumericInput(
-                            localeString('views.PaymentRequest.timeout'),
-                            timeoutSeconds.toString(),
-                            REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
-                            (text: string) =>
-                                this.setState({ timeoutSeconds: text })
-                        )}
-                    </>
-                )}
-            </>
+            <FormAccordion
+                id="rebalance-advanced"
+                title={localeString('general.advancedSettings')}
+            >
+                <>
+                    {this.renderNumericInput(
+                        localeString('views.PaymentRequest.feeLimit') +
+                            ' (' +
+                            localeString('general.sats') +
+                            ')',
+                        feeLimit,
+                        REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
+                        (text: string) => this.setState({ feeLimit: text })
+                    )}
+                    {this.renderNumericInput(
+                        localeString('views.PaymentRequest.timeout'),
+                        timeoutSeconds.toString(),
+                        REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
+                        (text: string) =>
+                            this.setState({ timeoutSeconds: text })
+                    )}
+                </>
+            </FormAccordion>
         );
     };
 
@@ -1711,7 +1677,6 @@ export default class Rebalance extends React.Component<
             maxAmount: this.state.maxAmount,
             feeLimit: this.state.feeLimit,
             timeoutSeconds: this.state.timeoutSeconds,
-            showAdvanced: this.state.showAdvanced,
             executing: false, // Reset executing state
             projectedSourceBalance: this.state.projectedSourceBalance,
             projectedDestinationBalance: this.state.projectedDestinationBalance,

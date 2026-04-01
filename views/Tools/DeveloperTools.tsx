@@ -34,6 +34,8 @@ interface DeveloperToolsState {
     loading: boolean;
     response: string | null;
     error: string | null;
+    /** Which Developer Tools category accordions are expanded (key = category title) */
+    categoryAccordionOpen: Record<string, boolean>;
     showScrollTop: boolean;
     showScrollBottom: boolean;
     contentHeight: number;
@@ -49,7 +51,8 @@ interface CategoryProps {
         param?: string | Array<string | boolean | undefined>
     ) => Promise<void>;
     implementation: Implementations;
-    onClose: () => void;
+    open: boolean;
+    onAccordionToggle: (next: boolean) => void;
 }
 
 interface CommandProps {
@@ -554,7 +557,14 @@ class Command extends React.Component<CommandProps, CommandState> {
 
 class Category extends React.Component<CategoryProps> {
     render() {
-        const { title, commands, onCommand, implementation } = this.props;
+        const {
+            title,
+            commands,
+            onCommand,
+            implementation,
+            open,
+            onAccordionToggle
+        } = this.props;
 
         const filteredCommands = commands.filter((c) =>
             c.compatibleImplementations.includes(implementation)
@@ -563,6 +573,7 @@ class Category extends React.Component<CategoryProps> {
         return (
             <Accordion
                 title={title}
+                open={open}
                 spacing="none"
                 containerStyle={{
                     backgroundColor: themeColor('secondary')
@@ -572,9 +583,7 @@ class Category extends React.Component<CategoryProps> {
                     ...styles.categoryTitle,
                     color: themeColor('text')
                 }}
-                onToggle={(next) => {
-                    if (!next) this.props.onClose();
-                }}
+                onToggle={onAccordionToggle}
             >
                 {filteredCommands.map((command) => (
                     <Command
@@ -602,10 +611,25 @@ export default class DeveloperTools extends React.Component<
         loading: false,
         response: null,
         error: null,
+        categoryAccordionOpen: {} as Record<string, boolean>,
         showScrollTop: false,
         showScrollBottom: false,
         contentHeight: 0,
         scrollViewHeight: 0
+    };
+
+    handleCategoryAccordionToggle = (categoryTitle: string, next: boolean) => {
+        this.setState((prev) => {
+            const categoryAccordionOpen = {
+                ...prev.categoryAccordionOpen,
+                [categoryTitle]: next
+            };
+            const anyOpen = Object.values(categoryAccordionOpen).some(Boolean);
+            return {
+                categoryAccordionOpen,
+                response: anyOpen ? prev.response : null
+            };
+        });
     };
 
     handleScroll = (event: any) => {
@@ -720,14 +744,16 @@ export default class DeveloperTools extends React.Component<
                                 onCommand={this.handleCommand}
                                 selectedCommand={this.state.selectedCommand}
                                 implementation={SettingsStore.implementation}
-                                onClose={() =>
-                                    this.setState({
-                                        response: null,
-                                        error: null,
-                                        selectedCommand: null,
-                                        showScrollTop: false,
-                                        showScrollBottom: false
-                                    })
+                                open={
+                                    this.state.categoryAccordionOpen[
+                                        category.title
+                                    ] ?? false
+                                }
+                                onAccordionToggle={(next) =>
+                                    this.handleCategoryAccordionToggle(
+                                        category.title,
+                                        next
+                                    )
                                 }
                             />
                         ))}
