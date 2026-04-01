@@ -939,7 +939,10 @@ class MigrationsUtils {
         // cashuStore is passed as 'any' to avoid circular dependency issues
         // but it's an instance of CashuStore
         // TODO fix circular dependency
-        if (cashuStore.seedVersion === undefined) {
+        if (
+            cashuStore.settingsStore?.implementation === 'embedded-lnd' &&
+            cashuStore.seedVersion === undefined
+        ) {
             console.log('Migrating Cashu seed version to v1');
             cashuStore.seedVersion = 'v1';
             try {

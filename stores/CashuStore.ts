@@ -2373,17 +2373,21 @@ export default class CashuStore {
 
         // Load or capture the original seed version so we know how to derive
         // the P2PK key for v1 users even after CDK overwrites seedVersion.
-        const storedOriginalSeedVersion = await Storage.getItem(
-            `${lndDir}-cashu-original-seed-version`
-        );
-        if (storedOriginalSeedVersion) {
-            this.originalSeedVersion = storedOriginalSeedVersion;
-        } else if (this.seedVersion) {
-            this.originalSeedVersion = this.seedVersion;
-            await Storage.setItem(
-                `${lndDir}-cashu-original-seed-version`,
-                this.seedVersion
+        // Only relevant for embedded-lnd nodes which had the aezeed-to-BIP39
+        // seed format transition (v1 → v2-bip39).
+        if (this.settingsStore.implementation === 'embedded-lnd') {
+            const storedOriginalSeedVersion = await Storage.getItem(
+                `${lndDir}-cashu-original-seed-version`
             );
+            if (storedOriginalSeedVersion) {
+                this.originalSeedVersion = storedOriginalSeedVersion;
+            } else if (this.seedVersion) {
+                this.originalSeedVersion = this.seedVersion;
+                await Storage.setItem(
+                    `${lndDir}-cashu-original-seed-version`,
+                    this.seedVersion
+                );
+            }
         }
 
         // Initialize CDK and use it as the source of truth for mints/balances

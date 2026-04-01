@@ -263,6 +263,7 @@ describe('MigrationUtils', () => {
         it('should set seedVersion to "v1" and save to Storage if undefined', async () => {
             const mockCashuStore: any = {
                 seedVersion: undefined,
+                settingsStore: { implementation: 'embedded-lnd' },
                 getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
@@ -286,6 +287,7 @@ describe('MigrationUtils', () => {
         it('should not change seedVersion or call Storage.setItem if seedVersion is already "v1"', async () => {
             const mockCashuStore: any = {
                 seedVersion: 'v1',
+                settingsStore: { implementation: 'embedded-lnd' },
                 getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
@@ -302,6 +304,7 @@ describe('MigrationUtils', () => {
         it('should not change seedVersion or call Storage.setItem if seedVersion is already defined with another value', async () => {
             const mockCashuStore: any = {
                 seedVersion: 'v2-bip39',
+                settingsStore: { implementation: 'embedded-lnd' },
                 getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
@@ -318,6 +321,7 @@ describe('MigrationUtils', () => {
             );
             const mockCashuStore: any = {
                 seedVersion: undefined,
+                settingsStore: { implementation: 'embedded-lnd' },
                 getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
