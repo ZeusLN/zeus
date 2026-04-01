@@ -12,12 +12,11 @@ import { ButtonGroup, Icon } from '@rneui/themed';
 import Slider from '@react-native-community/slider';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import History from '../../assets/images/SVG/History.svg';
 import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../components/Button';
+import FormAccordion from '../../components/FormAccordion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -63,8 +62,6 @@ interface LSPS1State {
     token: any;
     refundOnchainAddress: any;
     announceChannel: boolean;
-    showInfo: boolean;
-    advancedSettings: boolean;
 }
 
 @inject('LSPStore', 'ChannelsStore', 'SettingsStore', 'NodeInfoStore')
@@ -82,8 +79,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             expirationIndex: 0,
             token: props.SettingsStore.settings?.lsps1Token || '',
             refundOnchainAddress: '',
-            showInfo: false,
-            advancedSettings: false,
             announceChannel: false
         };
     }
@@ -275,8 +270,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const { navigation, LSPStore, NodeInfoStore, SettingsStore } =
             this.props;
         const {
-            showInfo,
-            advancedSettings,
             lspBalanceSat,
             clientBalanceSat,
             channelExpiryBlocks,
@@ -464,98 +457,50 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     <>
                                         {Object.keys(getInfoData).length >
                                             0 && (
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    this.setState({
-                                                        showInfo: !showInfo
-                                                    });
-                                                }}
-                                            >
-                                                <View
-                                                    style={{
-                                                        marginBottom: 10
-                                                    }}
-                                                >
+                                            <FormAccordion
+                                                id="lsps1-service-info"
+                                                title={localeString(
+                                                    'views.LSPS1.serviceInfo'
+                                                )}
+                                                renderHeaderContent={() => (
                                                     <Row justify="space-between">
+                                                        {isOlympus && (
+                                                            <View
+                                                                style={{
+                                                                    width: '15%'
+                                                                }}
+                                                            >
+                                                                <OlympusSVG
+                                                                    fill={themeColor(
+                                                                        'highlight'
+                                                                    )}
+                                                                />
+                                                            </View>
+                                                        )}
                                                         <View
-                                                            style={{ flex: 1 }}
+                                                            style={{
+                                                                width: '85%'
+                                                            }}
                                                         >
-                                                            <Row justify="space-between">
-                                                                {isOlympus && (
-                                                                    <View
-                                                                        style={{
-                                                                            width: '15%'
-                                                                        }}
-                                                                    >
-                                                                        <OlympusSVG
-                                                                            fill={themeColor(
-                                                                                'highlight'
-                                                                            )}
-                                                                        />
-                                                                    </View>
+                                                            <KeyValue
+                                                                keyValue={localeString(
+                                                                    'views.LSPS1.serviceInfo'
                                                                 )}
-                                                                <View
-                                                                    style={{
-                                                                        width: '85%'
-                                                                    }}
-                                                                >
-                                                                    <KeyValue
-                                                                        keyValue={localeString(
-                                                                            'views.LSPS1.serviceInfo'
-                                                                        )}
-                                                                    />
-                                                                </View>
-                                                            </Row>
+                                                            />
                                                         </View>
-                                                        {showInfo ? (
-                                                            <CaretDown
-                                                                fill={themeColor(
-                                                                    'text'
-                                                                )}
-                                                                width="20"
-                                                                height="20"
-                                                            />
-                                                        ) : (
-                                                            <CaretRight
-                                                                fill={themeColor(
-                                                                    'text'
-                                                                )}
-                                                                width="20"
-                                                                height="20"
-                                                            />
-                                                        )}
                                                     </Row>
-                                                </View>
-                                            </TouchableOpacity>
-                                        )}
-
-                                        {showInfo &&
-                                            getInfoData &&
-                                            Object.keys(createOrderResponse)
-                                                .length == 0 &&
-                                            Object.keys(getInfoData).length >
-                                                0 &&
-                                            info && (
-                                                <View
-                                                    style={{ marginBottom: 20 }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontSize: 16,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book',
-                                                            marginBottom: 10
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.LSPS1.serviceInfoText1'
-                                                        )}
-                                                    </Text>
-                                                    {flowServiceAvailable && (
-                                                        <>
+                                                )}
+                                            >
+                                                {getInfoData &&
+                                                    Object.keys(
+                                                        createOrderResponse
+                                                    ).length == 0 &&
+                                                    info && (
+                                                        <View
+                                                            style={{
+                                                                marginBottom: 20
+                                                            }}
+                                                        >
                                                             <Text
                                                                 style={{
                                                                     fontSize: 16,
@@ -568,177 +513,198 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 }}
                                                             >
                                                                 {localeString(
-                                                                    'views.LSPS1.serviceInfoText2'
+                                                                    'views.LSPS1.serviceInfoText1'
                                                                 )}
                                                             </Text>
+                                                            {flowServiceAvailable && (
+                                                                <>
+                                                                    <Text
+                                                                        style={{
+                                                                            fontSize: 16,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            ),
+                                                                            fontFamily:
+                                                                                'PPNeueMontreal-Book',
+                                                                            marginBottom: 10
+                                                                        }}
+                                                                    >
+                                                                        {localeString(
+                                                                            'views.LSPS1.serviceInfoText2'
+                                                                        )}
+                                                                    </Text>
 
-                                                            <View
-                                                                style={{
-                                                                    marginTop: 10,
-                                                                    marginBottom: 20
-                                                                }}
-                                                            >
-                                                                <Button
-                                                                    title={localeString(
-                                                                        'views.LSPS1.useJit'
-                                                                    )}
-                                                                    onPress={() => {
-                                                                        navigation.navigate(
-                                                                            'Receive'
-                                                                        );
-                                                                    }}
-                                                                />
-                                                            </View>
-                                                        </>
-                                                    )}
+                                                                    <View
+                                                                        style={{
+                                                                            marginTop: 10,
+                                                                            marginBottom: 20
+                                                                        }}
+                                                                    >
+                                                                        <Button
+                                                                            title={localeString(
+                                                                                'views.LSPS1.useJit'
+                                                                            )}
+                                                                            onPress={() => {
+                                                                                navigation.navigate(
+                                                                                    'Receive'
+                                                                                );
+                                                                            }}
+                                                                        />
+                                                                    </View>
+                                                                </>
+                                                            )}
 
-                                                    <KeyValue
-                                                        keyValue="LSP"
-                                                        value={lspDisplay}
-                                                    />
-
-                                                    {info?.max_channel_balance_sat &&
-                                                        info?.min_channel_balance_sat && (
                                                             <KeyValue
-                                                                keyValue={`${localeString(
-                                                                    'views.Channel.channelBalance'
-                                                                )}`}
-                                                                value={`${numberWithCommas(
-                                                                    info?.min_channel_balance_sat
-                                                                )} - ${numberWithCommas(
-                                                                    info?.max_channel_balance_sat
-                                                                )} ${localeString(
-                                                                    'general.sats'
-                                                                )}`}
-                                                            />
-                                                        )}
-                                                    {info?.max_initial_lsp_balance_sat &&
-                                                        info?.min_initial_lsp_balance_sat && (
-                                                            <KeyValue
-                                                                keyValue={`${localeString(
-                                                                    'views.LSPS1.initialLSPBalance'
-                                                                )}`}
-                                                                value={`${numberWithCommas(
-                                                                    info?.min_initial_lsp_balance_sat
-                                                                )} - ${numberWithCommas(
-                                                                    info?.max_initial_lsp_balance_sat
-                                                                )} ${localeString(
-                                                                    'general.sats'
-                                                                )}`}
-                                                            />
-                                                        )}
-                                                    {info?.max_initial_client_balance_sat &&
-                                                        info?.min_initial_client_balance_sat && (
-                                                            <KeyValue
-                                                                keyValue={`${localeString(
-                                                                    'views.LSPS1.initialClientBalance'
-                                                                )}`}
+                                                                keyValue="LSP"
                                                                 value={
-                                                                    info?.max_initial_client_balance_sat ===
-                                                                    info?.min_initial_client_balance_sat
-                                                                        ? `${
-                                                                              info?.min_initial_client_balance_sat
-                                                                          } ${localeString(
-                                                                              'general.sats'
-                                                                          )}`
-                                                                        : `${
-                                                                              info?.min_initial_client_balance_sat
-                                                                          } - ${
-                                                                              info?.max_initial_client_balance_sat
-                                                                          } ${localeString(
-                                                                              'general.sats'
-                                                                          )}`
+                                                                    lspDisplay
                                                                 }
                                                             />
-                                                        )}
-                                                    {info?.max_channel_expiry_blocks && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.maxChannelExpiryBlocks'
+
+                                                            {info?.max_channel_balance_sat &&
+                                                                info?.min_channel_balance_sat && (
+                                                                    <KeyValue
+                                                                        keyValue={`${localeString(
+                                                                            'views.Channel.channelBalance'
+                                                                        )}`}
+                                                                        value={`${numberWithCommas(
+                                                                            info?.min_channel_balance_sat
+                                                                        )} - ${numberWithCommas(
+                                                                            info?.max_channel_balance_sat
+                                                                        )} ${localeString(
+                                                                            'general.sats'
+                                                                        )}`}
+                                                                    />
+                                                                )}
+                                                            {info?.max_initial_lsp_balance_sat &&
+                                                                info?.min_initial_lsp_balance_sat && (
+                                                                    <KeyValue
+                                                                        keyValue={`${localeString(
+                                                                            'views.LSPS1.initialLSPBalance'
+                                                                        )}`}
+                                                                        value={`${numberWithCommas(
+                                                                            info?.min_initial_lsp_balance_sat
+                                                                        )} - ${numberWithCommas(
+                                                                            info?.max_initial_lsp_balance_sat
+                                                                        )} ${localeString(
+                                                                            'general.sats'
+                                                                        )}`}
+                                                                    />
+                                                                )}
+                                                            {info?.max_initial_client_balance_sat &&
+                                                                info?.min_initial_client_balance_sat && (
+                                                                    <KeyValue
+                                                                        keyValue={`${localeString(
+                                                                            'views.LSPS1.initialClientBalance'
+                                                                        )}`}
+                                                                        value={
+                                                                            info?.max_initial_client_balance_sat ===
+                                                                            info?.min_initial_client_balance_sat
+                                                                                ? `${
+                                                                                      info?.min_initial_client_balance_sat
+                                                                                  } ${localeString(
+                                                                                      'general.sats'
+                                                                                  )}`
+                                                                                : `${
+                                                                                      info?.min_initial_client_balance_sat
+                                                                                  } - ${
+                                                                                      info?.max_initial_client_balance_sat
+                                                                                  } ${localeString(
+                                                                                      'general.sats'
+                                                                                  )}`
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            {info?.max_channel_expiry_blocks && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.maxChannelExpiryBlocks'
+                                                                    )}
+                                                                    value={numberWithCommas(
+                                                                        info?.max_channel_expiry_blocks
+                                                                    )}
+                                                                />
                                                             )}
-                                                            value={numberWithCommas(
-                                                                info?.max_channel_expiry_blocks
+                                                            {info?.min_channel_confirmations && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.minChannelConfirmations'
+                                                                    )}
+                                                                    value={
+                                                                        info?.min_channel_confirmations
+                                                                    }
+                                                                />
                                                             )}
-                                                        />
-                                                    )}
-                                                    {info?.min_channel_confirmations && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.minChannelConfirmations'
+                                                            {info?.min_onchain_payment_confirmations && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.minOnchainPaymentConfirmations'
+                                                                    )}
+                                                                    value={
+                                                                        info?.min_onchain_payment_confirmations
+                                                                    }
+                                                                />
                                                             )}
-                                                            value={
-                                                                info?.min_channel_confirmations
-                                                            }
-                                                        />
-                                                    )}
-                                                    {info?.min_onchain_payment_confirmations && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.minOnchainPaymentConfirmations'
+                                                            {info?.min_onchain_payment_size_sat && (
+                                                                <KeyValue
+                                                                    keyValue={`${localeString(
+                                                                        'views.LSPS1.minOnchainPaymentSize'
+                                                                    )} (${localeString(
+                                                                        'general.sats'
+                                                                    )})`}
+                                                                    value={
+                                                                        info?.min_onchain_payment_size_sat
+                                                                    }
+                                                                />
                                                             )}
-                                                            value={
-                                                                info?.min_onchain_payment_confirmations
-                                                            }
-                                                        />
-                                                    )}
-                                                    {info?.min_onchain_payment_size_sat && (
-                                                        <KeyValue
-                                                            keyValue={`${localeString(
-                                                                'views.LSPS1.minOnchainPaymentSize'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={
-                                                                info?.min_onchain_payment_size_sat
-                                                            }
-                                                        />
-                                                    )}
-                                                    {info?.min_funding_confirms_within_blocks && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.minFundingConfirmWithingBlocks'
+                                                            {info?.min_funding_confirms_within_blocks && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.minFundingConfirmWithingBlocks'
+                                                                    )}
+                                                                    value={
+                                                                        info?.min_funding_confirms_within_blocks
+                                                                    }
+                                                                />
                                                             )}
-                                                            value={
-                                                                info?.min_funding_confirms_within_blocks
-                                                            }
-                                                        />
-                                                    )}
-                                                    {info?.min_required_channel_confirmations && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.minRequiredChannelConfirmations'
+                                                            {info?.min_required_channel_confirmations && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.minRequiredChannelConfirmations'
+                                                                    )}
+                                                                    value={
+                                                                        info?.min_required_channel_confirmations
+                                                                    }
+                                                                />
                                                             )}
-                                                            value={
-                                                                info?.min_required_channel_confirmations
-                                                            }
-                                                        />
-                                                    )}
-                                                    {info?.supports_zero_channel_reserve !==
-                                                        null && (
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.LSPS1.supportZeroChannelReserve'
+                                                            {info?.supports_zero_channel_reserve !==
+                                                                null && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.LSPS1.supportZeroChannelReserve'
+                                                                    )}
+                                                                    value={
+                                                                        info?.supports_zero_channel_reserve
+                                                                            ? 'True'
+                                                                            : 'False'
+                                                                    }
+                                                                    color={
+                                                                        info?.supports_zero_channel_reserve
+                                                                            ? 'green'
+                                                                            : '#808000'
+                                                                    }
+                                                                />
                                                             )}
-                                                            value={
-                                                                info?.supports_zero_channel_reserve
-                                                                    ? 'True'
-                                                                    : 'False'
-                                                            }
-                                                            color={
-                                                                info?.supports_zero_channel_reserve
-                                                                    ? 'green'
-                                                                    : '#808000'
-                                                            }
-                                                        />
+                                                            <KeyValue
+                                                                keyValue={localeString(
+                                                                    'views.LSPS1.spec'
+                                                                )}
+                                                                value="LSPS1"
+                                                            />
+                                                        </View>
                                                     )}
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.LSPS1.spec'
-                                                        )}
-                                                        value="LSPS1"
-                                                    />
-                                                </View>
-                                            )}
+                                            </FormAccordion>
+                                        )}
                                     </>
                                     <Text
                                         style={{
@@ -897,307 +863,281 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         </View>
                                     </>
                                     {Object.keys(getInfoData).length > 0 && (
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    advancedSettings:
-                                                        !advancedSettings
-                                                });
-                                            }}
+                                        <FormAccordion
+                                            id="lsps1-advanced-settings"
+                                            title={localeString(
+                                                'general.advancedSettings'
+                                            )}
                                         >
-                                            <View
-                                                style={{
-                                                    marginBottom: 10
-                                                }}
-                                            >
-                                                <Row justify="space-between">
-                                                    <View style={{ flex: 1 }}>
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'general.advancedSettings'
-                                                            )}
+                                            <>
+                                                {info?.max_initial_client_balance_sat !==
+                                                    '0' && (
+                                                    <>
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {`${localeString(
+                                                                'views.LSPS1.initialClientBalance'
+                                                            )} (${localeString(
+                                                                'general.sats'
+                                                            )})`}
+                                                        </Text>
+                                                        <TextInput
+                                                            placeholder={`${localeString(
+                                                                'views.LSPS1.clientBalance'
+                                                            )} (${localeString(
+                                                                'general.sats'
+                                                            )})`}
+                                                            value={numberWithCommas(
+                                                                clientBalanceSat
+                                                            ).toString()}
+                                                            onChangeText={(
+                                                                text: any
+                                                            ) => {
+                                                                const value =
+                                                                    text.replace(
+                                                                        /,/g,
+                                                                        ''
+                                                                    );
+                                                                this.setState({
+                                                                    clientBalanceSat:
+                                                                        value
+                                                                });
+                                                            }}
+                                                            keyboardType="numeric"
                                                         />
-                                                    </View>
-                                                    {advancedSettings ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
+                                                        <Row
+                                                            justify="space-between"
+                                                            style={{
+                                                                marginVertical: 10
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {numberWithCommas(
+                                                                    info?.min_initial_client_balance_sat
+                                                                )}
+                                                            </Text>
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {numberWithCommas(
+                                                                    info?.max_initial_client_balance_sat
+                                                                )}
+                                                            </Text>
+                                                        </Row>
+                                                        <Slider
+                                                            style={{
+                                                                width: '100%',
+                                                                height: 40
+                                                            }}
+                                                            minimumValue={parseInt(
+                                                                info?.min_initial_client_balance_sat
                                                             )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
+                                                            maximumValue={parseInt(
+                                                                info?.max_initial_client_balance_sat
                                                             )}
-                                                            width="20"
-                                                            height="20"
+                                                            minimumTrackTintColor={themeColor(
+                                                                'highlight'
+                                                            )}
+                                                            maximumTrackTintColor="black"
+                                                            thumbTintColor={themeColor(
+                                                                'highlight'
+                                                            )}
+                                                            value={parseInt(
+                                                                clientBalanceSat.toString()
+                                                            )}
+                                                            onValueChange={(
+                                                                value: number
+                                                            ) =>
+                                                                this.setState({
+                                                                    clientBalanceSat:
+                                                                        value
+                                                                })
+                                                            }
+                                                            step={10000}
                                                         />
+                                                    </>
+                                                )}
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        marginTop: 10
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.LSPS1.requiredChannelConfirmations'
                                                     )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'views.LSPS1.requiredChannelConfirmations'
+                                                    )}
+                                                    value={
+                                                        this.state
+                                                            .requiredChannelConfirmations
+                                                    }
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            requiredChannelConfirmations:
+                                                                text
+                                                        })
+                                                    }
+                                                    style={styles.textInput}
+                                                    keyboardType="numeric"
+                                                />
 
-                                    {advancedSettings && (
-                                        <>
-                                            {info?.max_initial_client_balance_sat !==
-                                                '0' && (
-                                                <>
-                                                    <Text
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.LSPS1.confirmWithinBlocks'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'views.LSPS1.confirmWithinBlocks'
+                                                    )}
+                                                    value={
+                                                        this.state
+                                                            .confirmsWithinBlocks
+                                                    }
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            confirmsWithinBlocks:
+                                                                text
+                                                        })
+                                                    }
+                                                    style={styles.textInput}
+                                                    keyboardType="numeric"
+                                                />
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'general.discountCode'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'general.discountCode'
+                                                    )}
+                                                    value={this.state.token}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            token: text
+                                                        })
+                                                    }
+                                                    style={styles.textInput}
+                                                    autoCapitalize="none"
+                                                />
+
+                                                {info?.min_onchain_payment_confirmations && (
+                                                    <>
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {localeString(
+                                                                'views.LSPS1.refundOnchainAddress'
+                                                            )}
+                                                        </Text>
+                                                        <TextInput
+                                                            placeholder={localeString(
+                                                                'views.LSPS1.refundOnchainAddress'
+                                                            )}
+                                                            value={
+                                                                this.state
+                                                                    .refundOnchainAddress
+                                                            }
+                                                            onChangeText={(
+                                                                text: string
+                                                            ) =>
+                                                                this.setState({
+                                                                    refundOnchainAddress:
+                                                                        text
+                                                                })
+                                                            }
+                                                            style={
+                                                                styles.textInput
+                                                            }
+                                                        />
+                                                    </>
+                                                )}
+                                                {!isOlympus && (
+                                                    <View
                                                         style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'views.LSPS1.initialClientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                    </Text>
-                                                    <TextInput
-                                                        placeholder={`${localeString(
-                                                            'views.LSPS1.clientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
-                                                        value={numberWithCommas(
-                                                            clientBalanceSat
-                                                        ).toString()}
-                                                        onChangeText={(
-                                                            text: any
-                                                        ) => {
-                                                            const value =
-                                                                text.replace(
-                                                                    /,/g,
-                                                                    ''
-                                                                );
-                                                            this.setState({
-                                                                clientBalanceSat:
-                                                                    value
-                                                            });
-                                                        }}
-                                                        keyboardType="numeric"
-                                                    />
-                                                    <Row
-                                                        justify="space-between"
-                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            justifyContent:
+                                                                'space-between',
+                                                            alignItems:
+                                                                'center',
                                                             marginVertical: 10
                                                         }}
                                                     >
                                                         <Text
                                                             style={{
+                                                                fontSize: 16,
                                                                 color: themeColor(
-                                                                    'text'
+                                                                    'secondaryText'
                                                                 )
                                                             }}
                                                         >
-                                                            {numberWithCommas(
-                                                                info?.min_initial_client_balance_sat
+                                                            {localeString(
+                                                                'views.OpenChannel.announceChannel'
                                                             )}
                                                         </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
+                                                        <Switch
+                                                            value={
+                                                                this.state
+                                                                    .announceChannel
+                                                            }
+                                                            onValueChange={async () => {
+                                                                this.setState({
+                                                                    announceChannel:
+                                                                        !this
+                                                                            .state
+                                                                            .announceChannel
+                                                                });
                                                             }}
-                                                        >
-                                                            {numberWithCommas(
-                                                                info?.max_initial_client_balance_sat
-                                                            )}
-                                                        </Text>
-                                                    </Row>
-                                                    <Slider
-                                                        style={{
-                                                            width: '100%',
-                                                            height: 40
-                                                        }}
-                                                        minimumValue={parseInt(
-                                                            info?.min_initial_client_balance_sat
-                                                        )}
-                                                        maximumValue={parseInt(
-                                                            info?.max_initial_client_balance_sat
-                                                        )}
-                                                        minimumTrackTintColor={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                        maximumTrackTintColor="black"
-                                                        thumbTintColor={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                        value={parseInt(
-                                                            clientBalanceSat.toString()
-                                                        )}
-                                                        onValueChange={(
-                                                            value: number
-                                                        ) =>
-                                                            this.setState({
-                                                                clientBalanceSat:
-                                                                    value
-                                                            })
-                                                        }
-                                                        step={10000}
-                                                    />
-                                                </>
-                                            )}
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    marginTop: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                        />
+                                                    </View>
                                                 )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.requiredChannelConfirmations'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .requiredChannelConfirmations
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        requiredChannelConfirmations:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.LSPS1.confirmWithinBlocks'
-                                                )}
-                                                value={
-                                                    this.state
-                                                        .confirmsWithinBlocks
-                                                }
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        confirmsWithinBlocks:
-                                                            text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                keyboardType="numeric"
-                                            />
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'general.discountCode'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'general.discountCode'
-                                                )}
-                                                value={this.state.token}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        token: text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                autoCapitalize="none"
-                                            />
-
-                                            {info?.min_onchain_payment_confirmations && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                    </Text>
-                                                    <TextInput
-                                                        placeholder={localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                        value={
-                                                            this.state
-                                                                .refundOnchainAddress
-                                                        }
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) =>
-                                                            this.setState({
-                                                                refundOnchainAddress:
-                                                                    text
-                                                            })
-                                                        }
-                                                        style={styles.textInput}
-                                                    />
-                                                </>
-                                            )}
-                                            {!isOlympus && (
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        justifyContent:
-                                                            'space-between',
-                                                        alignItems: 'center',
-                                                        marginVertical: 10
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontSize: 16,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.OpenChannel.announceChannel'
-                                                        )}
-                                                    </Text>
-                                                    <Switch
-                                                        value={
-                                                            this.state
-                                                                .announceChannel
-                                                        }
-                                                        onValueChange={async () => {
-                                                            this.setState({
-                                                                announceChannel:
-                                                                    !this.state
-                                                                        .announceChannel
-                                                            });
-                                                        }}
-                                                    />
-                                                </View>
-                                            )}
-                                        </>
+                                            </>
+                                        </FormAccordion>
                                     )}
                                 </ScrollView>
                             )}

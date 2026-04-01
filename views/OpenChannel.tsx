@@ -12,11 +12,11 @@ import AmountInput from '../components/AmountInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
 import DropdownSetting from '../components/DropdownSetting';
+import FormAccordion from '../components/FormAccordion';
 import Header from '../components/Header';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
 import LightningIndicator from '../components/LightningIndicator';
-import { Row } from '../components/layout/Row';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
@@ -43,8 +43,6 @@ import UTXOsStore from '../stores/UTXOsStore';
 
 import { AdditionalChannel } from '../models/OpenChannelRequest';
 
-import CaretDown from '../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 import ToggleButton from '../components/ToggleButton';
@@ -79,7 +77,6 @@ interface OpenChannelState {
     utxos: Array<string>;
     utxoBalance: number;
     connectPeerOnly: boolean;
-    advancedSettingsToggle: boolean;
     // external account funding
     account: string;
     additionalChannels: Array<AdditionalChannel>;
@@ -123,7 +120,6 @@ export default class OpenChannel extends React.Component<
             utxoBalance: 0,
             connectPeerOnly:
                 props.ChannelsStore.channelsView === ChannelsView.Peers,
-            advancedSettingsToggle: false,
             account: 'default',
             additionalChannels: [],
             isNodePubkeyValid: true,
@@ -288,7 +284,6 @@ export default class OpenChannel extends React.Component<
             scidAlias,
             simpleTaprootChannel,
             connectPeerOnly,
-            advancedSettingsToggle,
             additionalChannels,
             isNodePubkeyValid,
             isNodeHostValid,
@@ -1048,49 +1043,12 @@ export default class OpenChannel extends React.Component<
                                         />
                                     </View>
 
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                advancedSettingsToggle:
-                                                    !advancedSettingsToggle
-                                            });
-                                        }}
+                                    <FormAccordion
+                                        id="open-channel-advanced"
+                                        title={localeString(
+                                            'general.advancedSettings'
+                                        )}
                                     >
-                                        <View
-                                            style={{
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'general.advancedSettings'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {advancedSettingsToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    {advancedSettingsToggle && (
                                         <>
                                             {BackendUtils.supportsChannelCoinControl() && (
                                                 <View
@@ -1266,7 +1224,7 @@ export default class OpenChannel extends React.Component<
                                                 </>
                                             )}
                                         </>
-                                    )}
+                                    </FormAccordion>
                                 </>
                             )}
 
