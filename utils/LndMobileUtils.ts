@@ -72,8 +72,8 @@ const IOS_PROCESS_CLEANUP_DELAY_MS = 2000; // iOS process cleanup delay
 const GEN_SEED_STOP_DELAY_MS = 3000; // Delay after stopping LND before wallet creation restart attempts
 const GEN_SEED_MAX_RETRIES = 10; // Max retries when LND unlocks too quickly during wallet creation
 const GEN_SEED_RETRY_DELAY_MS = 500; // Delay between genSeed retry attempts (ms)
-const STOP_LND_MAX_RETRIES = 10; // Stop LND: max polling attempts to verify shutdown
-const STOP_LND_POLL_DELAY_MS = 500; // Stop LND: delay between polling attempts (ms)
+export const STOP_LND_MAX_RETRIES = 10; // Stop LND: max polling attempts to verify shutdown
+export const STOP_LND_POLL_DELAY_MS = 500; // Stop LND: delay between polling attempts (ms)
 const MAX_START_LND_RETRIES = 10; // Maximum start attempts for LND
 const LND_READY_TIMEOUT_MS = 60000; // Max wait for LND to reach ready state (wallet/RPC)
 

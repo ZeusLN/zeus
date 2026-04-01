@@ -52,7 +52,9 @@ import {
     createLndWallet,
     optimizeNeutrinoPeers,
     stopLnd,
-    waitForRpcReady
+    waitForRpcReady,
+    STOP_LND_MAX_RETRIES,
+    STOP_LND_POLL_DELAY_MS
 } from '../../utils/LndMobileUtils';
 
 import {
@@ -608,6 +610,12 @@ export default class SeedRecovery extends React.PureComponent<
         );
 
         const restore = async () => {
+            this.setState({
+                errorCreatingWallet: false,
+                errorMsg: '',
+                successMsg: ''
+            });
+
             // Validate all seed words against BIP39 wordlist before attempting restore
             const invalidWords: number[] = [];
             seedArray.forEach((word: string, i: number) => {
@@ -699,7 +707,13 @@ export default class SeedRecovery extends React.PureComponent<
                 }
             } else {
                 // Embedded LND restore
-                await stopLnd();
+                try {
+                    await stopLnd(
+                        STOP_LND_MAX_RETRIES,
+                        STOP_LND_POLL_DELAY_MS,
+                        true
+                    );
+                } catch (e: any) {}
 
                 await optimizeNeutrinoPeers(network === 'testnet');
 
