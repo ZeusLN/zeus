@@ -89,7 +89,7 @@ class CashuDevKitModule: RCTEventEmitter {
         // Hash the mnemonic to create a unique, deterministic filename per wallet
         let data = Data(mnemonic.utf8)
         var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes { CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash) }
+        _ = data.withUnsafeBytes { CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash) }
         let hashHex = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
 
         let dbPath = appSupport.appendingPathComponent("cashu_wallet_\(hashHex).db")
@@ -241,7 +241,7 @@ class CashuDevKitModule: RCTEventEmitter {
     }
 
     private func encodeProof(_ proof: Proof) -> [String: Any] {
-        var result: [String: Any] = [
+        let result: [String: Any] = [
             "amount": proof.amount.value,
             "secret": proof.secret,
             "c": proof.c,
@@ -907,7 +907,7 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             defer {
                 // Always clean up prepared send, whether success or failure
-                walletQueue.sync {
+                _ = walletQueue.sync {
                     self.preparedSends.removeValue(forKey: preparedSendId)
                 }
             }
@@ -937,7 +937,7 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             defer {
                 // Always clean up prepared send, whether success or failure
-                walletQueue.sync {
+                _ = walletQueue.sync {
                     self.preparedSends.removeValue(forKey: preparedSendId)
                 }
             }
@@ -973,7 +973,7 @@ class CashuDevKitModule: RCTEventEmitter {
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let keys = parsed["p2pk_signing_keys"] as? [String] {
                         p2pkSigningKeys = keys.compactMap {
-                            try? SecretKey(hex: $0)
+                            SecretKey(hex: $0)
                         }
                     }
                     if let imgs = parsed["preimages"] as? [String] {
@@ -1152,7 +1152,7 @@ class CashuDevKitModule: RCTEventEmitter {
                         stateStr = "Pending"
                     case .spent:
                         stateStr = "Spent"
-                    @unknown default:
+                    default:
                         stateStr = "Unknown"
                     }
                     return ["state": stateStr]
@@ -1242,7 +1242,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func listTransactions(_ direction: String?,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
-        guard isInitialized, let wallet = wallet, let db = db else {
+        guard isInitialized, let _ = wallet, let db = db else {
             reject("NO_WALLET", "Wallet not initialized", nil)
             return
         }
@@ -1348,8 +1348,8 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let ys = try yStrings.map { hex -> CashuDevKit.PublicKey in
-                    try CashuDevKit.PublicKey(hex: hex)
+                let ys = yStrings.map { hex -> CashuDevKit.PublicKey in
+                    CashuDevKit.PublicKey(hex: hex)
                 }
 
                 try await db.updateProofs(added: [], removedYs: ys)

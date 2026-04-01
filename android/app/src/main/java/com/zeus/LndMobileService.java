@@ -14,6 +14,7 @@ import android.os.IBinder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
@@ -553,13 +554,13 @@ public class LndMobileService extends Service {
     if (intent != null && intent.getAction() != null) {
       if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP")) {
         Log.i(TAG, "Received stopForeground Intent");
-        stopForeground(true);
+        stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
         return START_NOT_STICKY;
       } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.GRACEFUL_STOP")) {
-        Handler handler = new Handler(msg -> {
+        Handler handler = new Handler(Looper.getMainLooper(), msg -> {
           if (msg.what == MSG_STOP_LND_RESULT) {
-            stopForeground(true);
+            stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             Process.killProcess(Process.myPid());
             return true;
@@ -601,7 +602,7 @@ public class LndMobileService extends Service {
       }
     } else {
       try {
-        stopForeground(true);
+        stopForeground(STOP_FOREGROUND_REMOVE);
       } catch (Exception e) {
         Log.e(TAG, "Error stopping foreground service", e);
         if (notificationManager != null) {
@@ -634,7 +635,7 @@ public class LndMobileService extends Service {
         .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
         .setContentIntent(pendingIntent)
         .setOngoing(true)
-        .addAction(0, getLocalizedString("androidNotification.shutdown"), stopPendingIntent);
+        .addAction(new Notification.Action.Builder(null, getLocalizedString("androidNotification.shutdown"), stopPendingIntent).build());
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         notificationBuilder.setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
       }
@@ -692,7 +693,7 @@ public class LndMobileService extends Service {
   public void onTaskRemoved(Intent rootIntent) {
     if (!getPersistentServicesEnabled(this)) {
       try {
-        stopForeground(true);
+        stopForeground(STOP_FOREGROUND_REMOVE);
       } catch (Exception e) {
         Log.e(TAG, "Error stopping foreground service", e);
         if (notificationManager != null) {

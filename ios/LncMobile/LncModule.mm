@@ -207,7 +207,7 @@ RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
         @"looprpc.SwapClient.Monitor",
         @"poolrpc.ChannelAuctioneer.SubscribeBatchAuction",
         @"poolrpc.ChannelAuctioneer.SubscribeSidecar",
-        @"poolrpc.HashMail.RecvStream"
+        @"poolrpc.HashMail.RecvStream",
         @"routerrpc.Router.HtlcInterceptor",
         @"routerrpc.Router.SendPayment",
         @"routerrpc.Router.SendPaymentV2",

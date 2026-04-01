@@ -1605,8 +1605,6 @@ class LdkNodeModule: RCTEventEmitter {
                 "counterpartyNodeId": counterpartyNodeId,
                 "abandonedFundingTxo": abandonedFundingTxo.map { ["txid": $0.txid, "vout": $0.vout] } as Any
             ]
-        default:
-            return ["type": "unknown"]
         }
     }
 
@@ -1984,7 +1982,7 @@ class LdkNodeModule: RCTEventEmitter {
     // MARK: - LSPS7 Serialization Helpers
 
     private func serializeLsps7OrderResponse(_ response: Lsps7OrderResponse) -> [String: Any] {
-        var result: [String: Any] = [
+        let result: [String: Any] = [
             "orderId": response.orderId,
             "orderState": serializeLsps7OrderState(response.orderState),
             "channelExtensionExpiryBlocks": response.channelExtensionExpiryBlocks,

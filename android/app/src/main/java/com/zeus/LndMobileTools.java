@@ -5,7 +5,9 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ActivityManager;
+import android.os.Build;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.FileObserver;
 import android.os.Process;
@@ -350,8 +352,17 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getIntentNfcData(Promise promise) {
     // https://code.tutsplus.com/tutorials/reading-nfc-tags-with-android--mobile-17278
-    Tag tag = getReactApplicationContext()
-      .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+    Activity activity = getReactApplicationContext().getCurrentActivity();
+    if (activity == null) {
+      promise.resolve(null);
+      return;
+    }
+    Tag tag;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      tag = activity.getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+    } else {
+      tag = activity.getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+    }
     if (tag == null) {
       promise.resolve(null);
       return;
