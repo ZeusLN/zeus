@@ -52,6 +52,8 @@ export interface AccordionProps {
     renderIcon?: (isOpen: boolean) => React.ReactNode;
     /** Called with the new open state whenever the accordion is toggled */
     onToggle?: (isOpen: boolean) => void;
+    /** When true, the header does not toggle the section */
+    disabled?: boolean;
 }
 
 export function AccordionItem({
@@ -117,7 +119,8 @@ export function Accordion({
     id,
     renderHeader,
     renderIcon,
-    onToggle
+    onToggle,
+    disabled = false
 }: AccordionProps) {
     const isControlled = open != null;
     const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
@@ -151,16 +154,18 @@ export function Accordion({
     }, [containerStyle, spacing, variant]);
 
     const toggle = useCallback(() => {
+        if (disabled) return;
         const next = !isOpen.value;
         isOpen.value = next;
         if (!isControlled) setUncontrolledOpen(next);
         onToggle?.(next);
-    }, [isControlled, isOpen, onToggle]);
+    }, [disabled, isControlled, isOpen, onToggle]);
 
     return (
         <View style={resolvedContainerStyle}>
             <TouchableOpacity
                 activeOpacity={0.75}
+                disabled={disabled}
                 onPress={toggle}
                 style={[
                     renderHeader ? styles.customHeader : styles.header,
@@ -169,6 +174,7 @@ export function Accordion({
                 accessibilityRole="button"
                 accessibilityLabel={title}
                 accessibilityHint="Toggles accordion section"
+                accessibilityState={{ disabled }}
             >
                 {renderHeader ? (
                     renderHeader(currentOpen)
@@ -249,7 +255,7 @@ const styles = StyleSheet.create({
     },
     body: {
         paddingHorizontal: 16,
-        paddingTop: 4,
+        paddingTop: 0,
         paddingBottom: 16
     }
 });
