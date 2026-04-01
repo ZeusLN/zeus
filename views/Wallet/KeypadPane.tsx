@@ -134,19 +134,19 @@ export default class KeypadPane extends React.PureComponent<
         );
     }
 
-    componentDidUpdate(
-        _prevProps: KeypadPaneProps,
-        prevState: KeypadPaneState
-    ) {
+    componentDidUpdate(prevProps: KeypadPaneProps, prevState: KeypadPaneState) {
         if (prevState.amount !== this.state.amount) {
             this.amountInput = this.state.amount;
         }
 
-        // Switch out of ecash mode when channels become available
+        // Switch out of ecash mode when channels first become available
+        const prevChannelCount = prevProps.ChannelsStore?.channels?.length ?? 0;
+        const currChannelCount =
+            this.props.ChannelsStore?.channels?.length ?? 0;
         if (
             this.state.ecashMode &&
-            this.props.ChannelsStore?.channels &&
-            this.props.ChannelsStore.channels.length > 0
+            prevChannelCount === 0 &&
+            currChannelCount > 0
         ) {
             this.setState({ ecashMode: false });
         }
