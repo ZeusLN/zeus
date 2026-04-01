@@ -434,7 +434,6 @@ export default class LdkNode {
         }
 
         // Collect sweep entries by channelId for non-active channels.
-        // Collect sweep entries by channelId for non-active channels.
         // Track channels whose sweeps have fully confirmed on-chain so
         // they can be moved to the closed list instead of pending.
         const channelSweeps = new Map<
@@ -467,6 +466,9 @@ export default class LdkNode {
         // Cooperative closes with balance entries (claimableAwaitingConfirmations
         // with source: coopClose)
         channelLightningBalances.forEach((lbs, channelId) => {
+            // Skip channels whose sweeps have already confirmed
+            if (confirmedSweepChannelIds.has(channelId)) return;
+
             const isCoopClose = lbs.every(
                 (lb) =>
                     lb.type === 'claimableAwaitingConfirmations' &&
@@ -503,6 +505,9 @@ export default class LdkNode {
 
         // Force closes with pending lightning balances
         channelLightningBalances.forEach((lbs, channelId) => {
+            // Skip channels whose sweeps have already confirmed
+            if (confirmedSweepChannelIds.has(channelId)) return;
+
             // Skip coop closes (already handled above)
             const isCoopClose = lbs.every(
                 (lb) =>
@@ -638,9 +643,16 @@ export default class LdkNode {
             // Force closes with non-zero local balance but no balance
             // entries: commitment tx may not have been broadcast yet.
             // Skip if sweeps already confirmed — funds are recovered.
+            // Also skip if the closure reason already indicates the
+            // commitment tx confirmed on-chain — if LDK reports no
+            // remaining balances, the sweep has fully settled.
+            const commitmentConfirmed =
+                cc.closureReason?.type === 'commitmentTxConfirmed' ||
+                cc.closureReason?.type === 'counterpartyForceClosed';
             if (
                 localBalanceSats > 0 &&
-                !confirmedSweepChannelIds.has(cc.channelId)
+                !confirmedSweepChannelIds.has(cc.channelId) &&
+                !commitmentConfirmed
             ) {
                 pendingForceClosing.push({
                     channel: {
@@ -764,12 +776,18 @@ export default class LdkNode {
             // Force closes with non-zero local balance but no balance
             // entries may have unbroadcast commitment transactions —
             // keep them in pending until funds are recovered.
-            // Allow through if sweeps already confirmed on-chain.
+            // Allow through if sweeps already confirmed on-chain,
+            // or if the closure reason indicates the commitment tx
+            // already confirmed (funds fully settled by LDK).
+            const commitmentConfirmed =
+                cc.closureReason?.type === 'commitmentTxConfirmed' ||
+                cc.closureReason?.type === 'counterpartyForceClosed';
             if (
                 !isCoop &&
                 cc.lastLocalBalanceMsat &&
                 cc.lastLocalBalanceMsat > 0 &&
-                !confirmedSweepChannelIds.has(cc.channelId)
+                !confirmedSweepChannelIds.has(cc.channelId) &&
+                !commitmentConfirmed
             ) {
                 continue;
             }
