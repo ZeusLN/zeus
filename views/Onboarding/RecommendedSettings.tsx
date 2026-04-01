@@ -81,10 +81,13 @@ export default class RecommendedSettings extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation, CashuStore, SettingsStore } = this.props;
+        const { navigation, CashuStore, SettingsStore, route } = this.props;
 
-        // Restore cached results or fetch mints with default mode (ZEUS' contacts)
-        if (!CashuStore.restoreCachedRecommendations('zeus')) {
+        this.syncFromRouteParams();
+
+        // Mint discovery is only needed for ecash (Cashu); skip fetch for self-custody onboarding
+        const prefetchMints = route.params?.enableCashu ?? true;
+        if (prefetchMints && !CashuStore.restoreCachedRecommendations('zeus')) {
             CashuStore.fetchMintsFromFollows();
         }
 
@@ -471,7 +474,8 @@ export default class RecommendedSettings extends React.Component<
                                 navigation.navigate('MintDiscovery', {
                                     returnTo: 'RecommendedSettings',
                                     enableCashu: true,
-                                    discoverMode
+                                    discoverMode,
+                                    implementation
                                 })
                             }
                         >
@@ -553,7 +557,8 @@ export default class RecommendedSettings extends React.Component<
                         onPress={() =>
                             navigation.navigate('WalletSettings', {
                                 returnTo: 'RecommendedSettings',
-                                enableCashu
+                                enableCashu,
+                                implementation
                             })
                         }
                     >
@@ -601,7 +606,8 @@ export default class RecommendedSettings extends React.Component<
                         onPress={() =>
                             navigation.navigate('WalletSettings', {
                                 returnTo: 'RecommendedSettings',
-                                enableCashu
+                                enableCashu,
+                                implementation
                             })
                         }
                     >
@@ -646,7 +652,7 @@ export default class RecommendedSettings extends React.Component<
                             'views.RecommendedSettings.createWallet'
                         )}
                         onPress={this.handleCreateWallet}
-                        disabled={isLoadingMints}
+                        disabled={enableCashu && isLoadingMints}
                     />
                 </View>
             </Screen>
