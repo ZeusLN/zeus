@@ -20,6 +20,7 @@ import Button from '../components/Button';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
+import FormAccordion from '../components/FormAccordion';
 import Header from '../components/Header';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
@@ -94,7 +95,6 @@ interface InvoiceState {
     timeoutSeconds: string;
     outgoingChanId: string | any;
     lastHopPubkey: string | any;
-    settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
@@ -138,7 +138,6 @@ export default class PaymentRequest extends React.Component<
         timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
-        settingsToggle: false,
         zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
@@ -490,7 +489,6 @@ export default class PaymentRequest extends React.Component<
             feeOption,
             customAmount,
             zaplockerToggle,
-            settingsToggle,
             timeoutSeconds,
             lightningReadyToSend,
             slideToPayThreshold,
@@ -1015,342 +1013,356 @@ export default class PaymentRequest extends React.Component<
 
                                 {(BackendUtils.supportsCustomFeeLimit() ||
                                     isCLightning) && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                settingsToggle: !settingsToggle
-                                            });
+                                    <FormAccordion
+                                        id="payment-request-fee-settings"
+                                        title={localeString(
+                                            'views.Settings.title'
+                                        )}
+                                        headerStyle={{
+                                            marginTop: 10,
+                                            marginBottom: 10
                                         }}
                                     >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Settings.title'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {settingsToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
+                                        <>
+                                            <FeeLimit
+                                                satAmount={
+                                                    isNoAmountInvoice
+                                                        ? customAmount
+                                                        : requestAmount || 0
+                                                }
+                                                onFeeLimitSatChange={(
+                                                    value: string
+                                                ) =>
+                                                    this.setState({
+                                                        feeLimitSat: value
+                                                    })
+                                                }
+                                                onMaxFeePercentChange={(
+                                                    value: string
+                                                ) =>
+                                                    this.setState({
+                                                        maxFeePercent: value
+                                                    })
+                                                }
+                                                feeOption={feeOption}
+                                                SettingsStore={SettingsStore}
+                                                InvoicesStore={InvoicesStore}
+                                                displayFeeRecommendation
+                                                hide={false}
+                                            />
+                                            {!!pay_req &&
+                                                BackendUtils.supportsHopPicking() && (
+                                                    <>
+                                                        {
+                                                            <HopPicker
+                                                                onValueChange={(
+                                                                    channels
+                                                                ) =>
+                                                                    this.setState(
+                                                                        {
+                                                                            outgoingChanId:
+                                                                                channels[0]
+                                                                                    ?.channelId
+                                                                        }
+                                                                    )
+                                                                }
+                                                                title={localeString(
+                                                                    'views.PaymentRequest.firstHop'
+                                                                )}
+                                                                ChannelsStore={
+                                                                    ChannelsStore
+                                                                }
+                                                                UnitsStore={
+                                                                    UnitsStore
+                                                                }
+                                                            />
+                                                        }
+                                                        {
+                                                            <HopPicker
+                                                                onValueChange={(
+                                                                    channels
+                                                                ) =>
+                                                                    this.setState(
+                                                                        {
+                                                                            lastHopPubkey:
+                                                                                channels[0]
+                                                                                    ?.remotePubkey
+                                                                        }
+                                                                    )
+                                                                }
+                                                                title={localeString(
+                                                                    'views.PaymentRequest.lastHop'
+                                                                )}
+                                                                ChannelsStore={
+                                                                    ChannelsStore
+                                                                }
+                                                                UnitsStore={
+                                                                    UnitsStore
+                                                                }
+                                                            />
+                                                        }
+                                                    </>
                                                 )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
 
-                                <FeeLimit
-                                    satAmount={
-                                        isNoAmountInvoice
-                                            ? customAmount
-                                            : requestAmount || 0
-                                    }
-                                    onFeeLimitSatChange={(value: string) =>
-                                        this.setState({
-                                            feeLimitSat: value
-                                        })
-                                    }
-                                    onMaxFeePercentChange={(value: string) =>
-                                        this.setState({
-                                            maxFeePercent: value
-                                        })
-                                    }
-                                    feeOption={feeOption}
-                                    SettingsStore={SettingsStore}
-                                    InvoicesStore={InvoicesStore}
-                                    displayFeeRecommendation
-                                    hide={!settingsToggle}
-                                />
+                                            {!!pay_req &&
+                                                BackendUtils.supportsMPP() &&
+                                                !enableTor && (
+                                                    <View
+                                                        style={{
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            marginTop: 25
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                ...styles.label,
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.PaymentRequest.mpp.explainer1'
+                                                                ),
+                                                                localeString(
+                                                                    'views.PaymentRequest.mpp.explainer2'
+                                                                )
+                                                            ]}
+                                                        >
+                                                            {localeString(
+                                                                'views.PaymentRequest.mpp'
+                                                            )}
+                                                        </Text>
+                                                        <View
+                                                            style={{
+                                                                flex: 1,
+                                                                justifyContent:
+                                                                    'flex-end'
+                                                            }}
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    enableMultiPathPayment
+                                                                }
+                                                                onValueChange={() => {
+                                                                    const enable =
+                                                                        !enableMultiPathPayment;
+                                                                    this.setState(
+                                                                        {
+                                                                            enableMultiPathPayment:
+                                                                                enable,
+                                                                            enableAtomicMultiPathPayment:
+                                                                                enableMultiPathPayment
+                                                                                    ? false
+                                                                                    : true
+                                                                        }
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                )}
 
-                                {settingsToggle && (
-                                    <>
-                                        {!!pay_req &&
-                                            BackendUtils.supportsHopPicking() && (
+                                            {!!pay_req &&
+                                                BackendUtils.supportsAMP() && (
+                                                    <View
+                                                        style={{
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            marginTop: 25,
+                                                            marginBottom: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                ...styles.label,
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.PaymentRequest.amp.explainer1'
+                                                                ),
+                                                                localeString(
+                                                                    'views.PaymentRequest.amp.explainer2'
+                                                                )
+                                                            ]}
+                                                            infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                        >
+                                                            {localeString(
+                                                                'views.PaymentRequest.amp'
+                                                            )}
+                                                        </Text>
+                                                        <View
+                                                            style={{
+                                                                flex: 1,
+                                                                justifyContent:
+                                                                    'flex-end'
+                                                            }}
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    enableAmp
+                                                                }
+                                                                onValueChange={() => {
+                                                                    const enable =
+                                                                        !enableAtomicMultiPathPayment;
+                                                                    this.setState(
+                                                                        {
+                                                                            enableAtomicMultiPathPayment:
+                                                                                enable,
+                                                                            enableMultiPathPayment:
+                                                                                enable ||
+                                                                                enableMultiPathPayment
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                disabled={
+                                                                    lockAtomicMultiPathPayment
+                                                                }
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                )}
+
+                                            {ampOrMppEnabled && (
+                                                <React.Fragment>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.PaymentRequest.maxParts'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        keyboardType="numeric"
+                                                        value={maxParts}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                maxParts: text
+                                                            })
+                                                        }
+                                                    />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.labelSecondary,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.PaymentRequest.maxPartsDescription'
+                                                        )}
+                                                    </Text>
+                                                </React.Fragment>
+                                            )}
+
+                                            {ampOrMppEnabled && (
+                                                <React.Fragment>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {`${localeString(
+                                                            'views.PaymentRequest.maxShardAmt'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )}) (${localeString(
+                                                            'general.optional'
+                                                        )})`}
+                                                    </Text>
+                                                    <TextInput
+                                                        keyboardType="numeric"
+                                                        value={maxShardAmt}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                maxShardAmt:
+                                                                    text
+                                                            })
+                                                        }
+                                                    />
+                                                </React.Fragment>
+                                            )}
+
+                                            {(BackendUtils.supportsCustomFeeLimit() ||
+                                                implementation ===
+                                                    'cln-rest') && (
                                                 <>
-                                                    {
-                                                        <HopPicker
-                                                            onValueChange={(
-                                                                channels
-                                                            ) =>
-                                                                this.setState({
-                                                                    outgoingChanId:
-                                                                        channels[0]
-                                                                            ?.channelId
-                                                                })
-                                                            }
-                                                            title={localeString(
-                                                                'views.PaymentRequest.firstHop'
-                                                            )}
-                                                            ChannelsStore={
-                                                                ChannelsStore
-                                                            }
-                                                            UnitsStore={
-                                                                UnitsStore
-                                                            }
-                                                        />
-                                                    }
-                                                    {
-                                                        <HopPicker
-                                                            onValueChange={(
-                                                                channels
-                                                            ) =>
-                                                                this.setState({
-                                                                    lastHopPubkey:
-                                                                        channels[0]
-                                                                            ?.remotePubkey
-                                                                })
-                                                            }
-                                                            title={localeString(
-                                                                'views.PaymentRequest.lastHop'
-                                                            )}
-                                                            ChannelsStore={
-                                                                ChannelsStore
-                                                            }
-                                                            UnitsStore={
-                                                                UnitsStore
-                                                            }
-                                                        />
-                                                    }
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.Payments.timeoutSeconds'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        keyboardType="numeric"
+                                                        value={timeoutSeconds}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                timeoutSeconds:
+                                                                    text
+                                                            })
+                                                        }
+                                                    />
                                                 </>
                                             )}
-
-                                        {!!pay_req &&
-                                            BackendUtils.supportsMPP() &&
-                                            !enableTor && (
-                                                <View
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row',
-                                                        marginTop: 25
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            ...styles.label,
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.PaymentRequest.mpp.explainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.PaymentRequest.mpp.explainer2'
-                                                            )
-                                                        ]}
-                                                    >
-                                                        {localeString(
-                                                            'views.PaymentRequest.mpp'
-                                                        )}
-                                                    </Text>
-                                                    <View
-                                                        style={{
-                                                            flex: 1,
-                                                            justifyContent:
-                                                                'flex-end'
-                                                        }}
-                                                    >
-                                                        <Switch
-                                                            value={
-                                                                enableMultiPathPayment
-                                                            }
-                                                            onValueChange={() => {
-                                                                const enable =
-                                                                    !enableMultiPathPayment;
-                                                                this.setState({
-                                                                    enableMultiPathPayment:
-                                                                        enable,
-                                                                    enableAtomicMultiPathPayment:
-                                                                        enableMultiPathPayment
-                                                                            ? false
-                                                                            : true
-                                                                });
-                                                            }}
-                                                        />
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                        {!!pay_req &&
-                                            BackendUtils.supportsAMP() && (
-                                                <View
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row',
-                                                        marginTop: 25,
-                                                        marginBottom: 15
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            ...styles.label,
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.PaymentRequest.amp.explainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.PaymentRequest.amp.explainer2'
-                                                            )
-                                                        ]}
-                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
-                                                    >
-                                                        {localeString(
-                                                            'views.PaymentRequest.amp'
-                                                        )}
-                                                    </Text>
-                                                    <View
-                                                        style={{
-                                                            flex: 1,
-                                                            justifyContent:
-                                                                'flex-end'
-                                                        }}
-                                                    >
-                                                        <Switch
-                                                            value={enableAmp}
-                                                            onValueChange={() => {
-                                                                const enable =
-                                                                    !enableAtomicMultiPathPayment;
-                                                                this.setState({
-                                                                    enableAtomicMultiPathPayment:
-                                                                        enable,
-                                                                    enableMultiPathPayment:
-                                                                        enable ||
-                                                                        enableMultiPathPayment
-                                                                });
-                                                            }}
-                                                            disabled={
-                                                                lockAtomicMultiPathPayment
-                                                            }
-                                                        />
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                        {ampOrMppEnabled && (
-                                            <React.Fragment>
-                                                <Text
-                                                    style={{
-                                                        ...styles.label,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.PaymentRequest.maxParts'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    keyboardType="numeric"
-                                                    value={maxParts}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            maxParts: text
-                                                        })
-                                                    }
-                                                />
-                                                <Text
-                                                    style={{
-                                                        ...styles.labelSecondary,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.PaymentRequest.maxPartsDescription'
-                                                    )}
-                                                </Text>
-                                            </React.Fragment>
-                                        )}
-
-                                        {ampOrMppEnabled && (
-                                            <React.Fragment>
-                                                <Text
-                                                    style={{
-                                                        ...styles.label,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {`${localeString(
-                                                        'views.PaymentRequest.maxShardAmt'
-                                                    )} (${localeString(
-                                                        'general.sats'
-                                                    )}) (${localeString(
-                                                        'general.optional'
-                                                    )})`}
-                                                </Text>
-                                                <TextInput
-                                                    keyboardType="numeric"
-                                                    value={maxShardAmt}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            maxShardAmt: text
-                                                        })
-                                                    }
-                                                />
-                                            </React.Fragment>
-                                        )}
-
-                                        {(BackendUtils.supportsCustomFeeLimit() ||
-                                            implementation === 'cln-rest') && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.label,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.Payments.timeoutSeconds'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    keyboardType="numeric"
-                                                    value={timeoutSeconds}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            timeoutSeconds: text
-                                                        })
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                    </>
+                                        </>
+                                    </FormAccordion>
+                                )}
+                                {!(
+                                    BackendUtils.supportsCustomFeeLimit() ||
+                                    isCLightning
+                                ) && (
+                                    <FeeLimit
+                                        satAmount={
+                                            isNoAmountInvoice
+                                                ? customAmount
+                                                : requestAmount || 0
+                                        }
+                                        onFeeLimitSatChange={(value: string) =>
+                                            this.setState({
+                                                feeLimitSat: value
+                                            })
+                                        }
+                                        onMaxFeePercentChange={(
+                                            value: string
+                                        ) =>
+                                            this.setState({
+                                                maxFeePercent: value
+                                            })
+                                        }
+                                        feeOption={feeOption}
+                                        SettingsStore={SettingsStore}
+                                        InvoicesStore={InvoicesStore}
+                                        displayFeeRecommendation
+                                        hide
+                                    />
                                 )}
                                 {enableDonations &&
                                     NodeInfoStore!.nodeInfo.isMainNet && (

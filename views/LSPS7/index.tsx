@@ -6,12 +6,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
 
-import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import History from '../../assets/images/SVG/History.svg';
 import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../components/Button';
+import FormAccordion from '../../components/FormAccordion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -59,8 +58,6 @@ interface LSPS7State {
     expirationIndex: number;
     token: any;
     refundOnchainAddress: any;
-    showInfo: boolean;
-    advancedSettings: boolean;
     chanId: string;
     maxExtensionInBlocks: number;
     expirationBlock: number;
@@ -93,8 +90,6 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             expirationIndex,
             token: props.SettingsStore.settings?.lsps1Token || '',
             refundOnchainAddress: '',
-            showInfo: false,
-            advancedSettings: false,
             chanId,
             maxExtensionInBlocks,
             expirationBlock
@@ -143,8 +138,6 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     render() {
         const { navigation, LSPStore, NodeInfoStore } = this.props;
         const {
-            showInfo,
-            advancedSettings,
             channelExtensionBlocks,
             expirationIndex,
             chanId,
@@ -345,101 +338,68 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                         paddingHorizontal: 22
                                     }}
                                 >
-                                    <>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    showInfo: !showInfo
-                                                });
-                                            }}
-                                        >
-                                            <View
+                                    <FormAccordion
+                                        id="lsps7-service-info"
+                                        title={localeString(
+                                            'views.LSPS1.serviceInfo'
+                                        )}
+                                        renderHeaderContent={() => (
+                                            <Row justify="space-between">
+                                                {isOlympus && (
+                                                    <View
+                                                        style={{
+                                                            width: '15%'
+                                                        }}
+                                                    >
+                                                        <OlympusSVG
+                                                            fill={themeColor(
+                                                                'highlight'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                )}
+                                                <View
+                                                    style={{
+                                                        width: '85%'
+                                                    }}
+                                                >
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.LSPS1.serviceInfo'
+                                                        )}
+                                                    />
+                                                </View>
+                                            </Row>
+                                        )}
+                                    >
+                                        <View style={{ marginBottom: 20 }}>
+                                            <Text
                                                 style={{
+                                                    fontSize: 16,
+                                                    color: themeColor('text'),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
                                                     marginBottom: 10
                                                 }}
                                             >
-                                                <Row justify="space-between">
-                                                    <View style={{ flex: 1 }}>
-                                                        <Row justify="space-between">
-                                                            {isOlympus && (
-                                                                <View
-                                                                    style={{
-                                                                        width: '15%'
-                                                                    }}
-                                                                >
-                                                                    <OlympusSVG
-                                                                        fill={themeColor(
-                                                                            'highlight'
-                                                                        )}
-                                                                    />
-                                                                </View>
-                                                            )}
-                                                            <View
-                                                                style={{
-                                                                    width: '85%'
-                                                                }}
-                                                            >
-                                                                <KeyValue
-                                                                    keyValue={localeString(
-                                                                        'views.LSPS1.serviceInfo'
-                                                                    )}
-                                                                />
-                                                            </View>
-                                                        </Row>
-                                                    </View>
-                                                    {showInfo ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
+                                                {localeString(
+                                                    'views.LSPS7.serviceInfoText1'
+                                                )}
+                                            </Text>
 
-                                        {showInfo && (
-                                            <View style={{ marginBottom: 20 }}>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 16,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book',
-                                                        marginBottom: 10
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.LSPS7.serviceInfoText1'
-                                                    )}
-                                                </Text>
+                                            <KeyValue
+                                                keyValue="LSP"
+                                                value={lspDisplay}
+                                            />
 
-                                                <KeyValue
-                                                    keyValue="LSP"
-                                                    value={lspDisplay}
-                                                />
-
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'views.LSPS1.spec'
-                                                    )}
-                                                    value="LSPS7"
-                                                />
-                                            </View>
-                                        )}
-                                    </>
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.LSPS1.spec'
+                                                )}
+                                                value="LSPS7"
+                                            />
+                                        </View>
+                                    </FormAccordion>
 
                                     <View
                                         style={{
@@ -567,49 +527,12 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             />
                                         </View>
                                     </>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                advancedSettings:
-                                                    !advancedSettings
-                                            });
-                                        }}
+                                    <FormAccordion
+                                        id="lsps7-advanced-settings"
+                                        title={localeString(
+                                            'general.advancedSettings'
+                                        )}
                                     >
-                                        <View
-                                            style={{
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'general.advancedSettings'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {advancedSettings ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    {advancedSettings && (
                                         <>
                                             <Text
                                                 style={{
@@ -673,7 +596,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 </>
                                             )}
                                         </>
-                                    )}
+                                    </FormAccordion>
                                 </ScrollView>
                             )}
                         </ScrollView>

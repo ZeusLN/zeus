@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-    View,
-    StyleSheet,
-    ScrollView,
-    Text,
-    Platform,
-    TouchableOpacity
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +9,7 @@ import Slider from '@react-native-community/slider';
 import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 
 import Screen from '../../../components/Screen';
+import FormAccordion from '../../../components/FormAccordion';
 import Header from '../../../components/Header';
 import { Body } from '../../../components/text/Body';
 import Button from '../../../components/Button';
@@ -73,8 +67,6 @@ interface AddOrEditNWCConnectionState {
     customExpiryUnit: TimeUnit;
     budgetValue: number;
     maxBudgetLimit: number;
-    showAdvancedSettings: boolean;
-    showCustomPermissions: boolean;
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -102,9 +94,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue: null,
             customExpiryUnit: NostrConnectUtils.TIME_UNITS[1],
             budgetValue: 0,
-            maxBudgetLimit: 0,
-            showAdvancedSettings: false,
-            showCustomPermissions: false
+            maxBudgetLimit: 0
         };
     }
 
@@ -191,9 +181,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
-                maxBudgetLimit: Math.max(0, maxBudgetLimit),
-                showAdvancedSettings: false,
-                showCustomPermissions: false
+                maxBudgetLimit: Math.max(0, maxBudgetLimit)
             });
         }
     };
@@ -327,7 +315,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             this.updateStateWithChangeTracking({
                 selectedPermissionType: null,
                 selectedPermissions: [],
-                showCustomPermissions: false,
                 budgetValue: 0
             });
             return;
@@ -345,7 +332,6 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.updateStateWithChangeTracking({
             selectedPermissionType: permissionType,
             selectedPermissions: permissions,
-            showCustomPermissions: false,
             ...(shouldResetBudget && { budgetValue: 0 })
         });
     };
@@ -695,71 +681,92 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionTypeItem = (permissionType: PermissionOption) => {
-        const { selectedPermissionType, showCustomPermissions } = this.state;
+        const { selectedPermissionType } = this.state;
         const isCustom = permissionType.key === PermissionType.Custom;
-
-        let isSelected: boolean;
-        if (isCustom) {
-            isSelected = showCustomPermissions;
-        } else {
-            isSelected = selectedPermissionType === permissionType.key;
-        }
 
         if (isCustom) {
             return (
-                <View key={permissionType.key} style={{ marginTop: 20 }}>
-                    <TouchableOpacity
-                        onPress={() => {
-                            this.setState({
-                                showCustomPermissions: !showCustomPermissions
-                            });
-                        }}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                        }}
-                    >
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontWeight: '400'
-                                }}
-                            >
-                                {permissionType.title}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontSize: 14,
-                                    marginTop: 4,
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {permissionType.description}
-                            </Text>
+                <FormAccordion
+                    key={`nwc-custom-${String(selectedPermissionType)}`}
+                    id="nwc-custom-permissions"
+                    title={permissionType.title}
+                    containerStyle={{ marginTop: 20 }}
+                    renderHeader={(isOpen) => (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontWeight: '400'
+                                    }}
+                                >
+                                    {permissionType.title}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 14,
+                                        marginTop: 4,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {permissionType.description}
+                                </Text>
+                            </View>
+                            <View style={{ marginLeft: 10 }}>
+                                <ForwardIcon
+                                    stroke={themeColor('text')}
+                                    style={{
+                                        transform: [
+                                            {
+                                                rotate: isOpen
+                                                    ? '90deg'
+                                                    : '0deg'
+                                            }
+                                        ]
+                                    }}
+                                />
+                            </View>
                         </View>
-                        <View style={{ marginLeft: 10 }}>
-                            <ForwardIcon
-                                stroke={themeColor('text')}
-                                style={{
-                                    transform: [
-                                        {
-                                            rotate: isSelected
-                                                ? '90deg'
-                                                : '0deg'
-                                        }
-                                    ]
-                                }}
-                            />
+                    )}
+                    headerStyle={{
+                        paddingHorizontal: 0,
+                        paddingVertical: 0,
+                        marginBottom: 0
+                    }}
+                >
+                    <View style={{ marginTop: 8 }}>
+                        <View
+                            style={[
+                                styles.sectionTitleContainer,
+                                { marginHorizontal: 0 }
+                            ]}
+                        >
+                            <Body bold>
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.authorizeAppTo'
+                                )}
+                            </Body>
                         </View>
-                    </TouchableOpacity>
-                </View>
+                        <View>
+                            {NostrConnectUtils.getAvailablePermissions().map(
+                                this.renderPermissionItem
+                            )}
+                        </View>
+                    </View>
+                </FormAccordion>
             );
         }
+
+        const isSelected = selectedPermissionType === permissionType.key;
 
         return (
             <View
@@ -805,10 +812,8 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionItem = (permission: IndividualPermissionOption) => {
-        const { selectedPermissions, showCustomPermissions } = this.state;
+        const { selectedPermissions } = this.state;
         const isSelected = selectedPermissions.includes(permission.key);
-
-        if (!showCustomPermissions) return null;
 
         return (
             <View
@@ -888,7 +893,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             error,
             loading,
             maxBudgetLimit,
-            showAdvancedSettings,
             showCustomExpiryInput,
             customExpiryValue,
             customExpiryUnit,
@@ -1167,24 +1171,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         </View>
 
-                        {/* Individual Permissions (only when custom section is expanded) */}
-                        {this.state.showCustomPermissions && (
-                            <View style={styles.section}>
-                                <View style={styles.sectionTitleContainer}>
-                                    <Body bold>
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.authorizeAppTo'
-                                        )}
-                                    </Body>
-                                </View>
-                                <View style={{ marginHorizontal: 15 }}>
-                                    {NostrConnectUtils.getAvailablePermissions().map(
-                                        this.renderPermissionItem
-                                    )}
-                                </View>
-                            </View>
-                        )}
-
                         {NostrConnectUtils.shouldShowBudget(
                             this.state.selectedPermissionType,
                             this.state.selectedPermissions
@@ -1341,47 +1327,52 @@ export default class AddOrEditNWCConnection extends React.Component<
 
                         {/* Advanced Settings */}
                         <View style={styles.section}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    this.setState({
-                                        showAdvancedSettings:
-                                            !showAdvancedSettings
-                                    });
-                                }}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginHorizontal: 15,
-                                    paddingVertical: 10
+                            <FormAccordion
+                                id="nwc-advanced-settings"
+                                title={localeString('general.advancedSettings')}
+                                renderHeader={(isOpen) => (
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            marginHorizontal: 15,
+                                            paddingVertical: 10
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 17,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontWeight: '400'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'general.advancedSettings'
+                                            )}
+                                        </Text>
+                                        <ForwardIcon
+                                            stroke={themeColor('text')}
+                                            style={{
+                                                transform: [
+                                                    {
+                                                        rotate: isOpen
+                                                            ? '90deg'
+                                                            : '0deg'
+                                                    }
+                                                ]
+                                            }}
+                                        />
+                                    </View>
+                                )}
+                                headerStyle={{
+                                    paddingHorizontal: 0,
+                                    paddingVertical: 0,
+                                    marginBottom: 0
                                 }}
                             >
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontWeight: '400'
-                                    }}
-                                >
-                                    {localeString('general.advancedSettings')}
-                                </Text>
-                                <ForwardIcon
-                                    stroke={themeColor('text')}
-                                    style={{
-                                        transform: [
-                                            {
-                                                rotate: this.state
-                                                    .showAdvancedSettings
-                                                    ? '90deg'
-                                                    : '0deg'
-                                            }
-                                        ]
-                                    }}
-                                />
-                            </TouchableOpacity>
-
-                            {showAdvancedSettings && (
                                 <>
                                     {/* Budget Renewal */}
                                     {NostrConnectUtils.shouldShowBudget(
@@ -1561,7 +1552,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                         )}
                                     </View>
                                 </>
-                            )}
+                            </FormAccordion>
                         </View>
                     </ScrollView>
 
