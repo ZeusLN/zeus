@@ -251,7 +251,24 @@ export default class SeedRecovery extends React.PureComponent<
             return;
         }
 
-        if (nodes.length === 1 || this.state.channelDbUri) {
+        if (this.state.channelDbUri) {
+            Alert.alert(
+                localeString('views.Tools.migration.import.restoreComplete'),
+                localeString(
+                    'views.Tools.migration.import.restoreComplete.text'
+                ),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+            return;
+        }
+
+        if (nodes.length === 1) {
             setConnectingStatus(true);
             SettingsStore.triggerSettingsRefresh = true;
             navigation.popTo('Wallet');
