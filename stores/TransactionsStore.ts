@@ -625,7 +625,7 @@ export default class TransactionsStore {
 
         // first hop
         if (outgoing_chan_id) {
-            data.outgoing_chan_id = outgoing_chan_id;
+            data.outgoing_chan_ids = [outgoing_chan_id];
         }
         // last hop
         if (last_hop_pubkey) {
