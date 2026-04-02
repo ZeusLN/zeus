@@ -14,8 +14,8 @@ describe('ClientInfoUtils', () => {
         });
 
         it('leaves version without prefix unchanged', () => {
-            expect(stripVersionPrefix('0.13.0-prealpha')).toBe(
-                '0.13.0-prealpha'
+            expect(stripVersionPrefix('13.0.0-prealpha')).toBe(
+                '13.0.0-prealpha'
             );
         });
 
