@@ -144,35 +144,37 @@ export default class NostrMintSync extends React.Component<
                         }
                         navigation={navigation}
                     />
+                    {backupSuccess && (
+                        <SuccessMessage
+                            message={localeString(
+                                'views.Tools.NostrKeys.backupSuccess'
+                            )}
+                            dismissable
+                        />
+                    )}
+                    {backupError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Tools.NostrKeys.backupError'
+                            )}
+                            dismissable
+                        />
+                    )}
+                    {restoreError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Tools.NostrKeys.restoreError'
+                            )}
+                            dismissable
+                        />
+                    )}
                     <ScrollView
                         style={{ flex: 1 }}
-                        contentContainerStyle={{ padding: 15 }}
+                        contentContainerStyle={{
+                            paddingHorizontal: 15,
+                            paddingBottom: 15
+                        }}
                     >
-                        {backupSuccess && (
-                            <SuccessMessage
-                                message={localeString(
-                                    'views.Tools.NostrKeys.backupSuccess'
-                                )}
-                                dismissable
-                            />
-                        )}
-                        {backupError && (
-                            <ErrorMessage
-                                message={localeString(
-                                    'views.Tools.NostrKeys.backupError'
-                                )}
-                                dismissable
-                            />
-                        )}
-                        {restoreError && (
-                            <ErrorMessage
-                                message={localeString(
-                                    'views.Tools.NostrKeys.restoreError'
-                                )}
-                                dismissable
-                            />
-                        )}
-
                         <Text
                             style={{
                                 ...styles.description,
