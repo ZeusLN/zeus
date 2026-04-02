@@ -2078,6 +2078,7 @@ export default class CashuStore {
             );
         } catch (e) {
             console.warn('Nostr mint backup failed:', e);
+            throw e;
         }
     };
 
