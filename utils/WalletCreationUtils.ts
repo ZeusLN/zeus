@@ -124,7 +124,8 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                     embeddedLndNetwork: 'Mainnet',
                     implementation: 'embedded-lnd',
                     nickname: localeString('general.defaultNodeNickname'),
-                    lndDir
+                    lndDir,
+                    isSqlite: true
                 }
             ];
 
