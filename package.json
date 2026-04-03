@@ -124,7 +124,7 @@
     "react-native-gesture-handler": "2.30.0",
     "react-native-get-random-values": "1.9.0",
     "react-native-haptic-feedback": "2.3.3",
-    "react-native-hce": "0.1.2",
+    "react-native-hce": "0.3.0",
     "react-native-image-picker": "8.2.1",
     "react-native-keychain": "10.0.0",
     "react-native-nfc-manager": "3.17.2",
