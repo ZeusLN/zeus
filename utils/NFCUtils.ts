@@ -51,6 +51,14 @@ export async function scanNfcTag(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
         NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: TagEvent) => {
+            if (!tag.ndefMessage?.[0]?.payload) {
+                if (Platform.OS === 'android')
+                    modalStore.toggleAndroidNfcModal(false);
+                resolve(undefined);
+                NfcManager.unregisterTagEvent().catch(() => 0);
+                return;
+            }
+
             tagFound = tag;
             if (!tag.ndefMessage?.[0]?.payload) return;
             const bytes = new Uint8Array(tag.ndefMessage[0].payload);
