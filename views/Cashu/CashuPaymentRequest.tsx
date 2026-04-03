@@ -190,8 +190,13 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { CashuStore, LnurlPayStore, navigation } = this.props;
-        const { satAmount, multiMintEnabled } = this.state;
+        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
+            this.props;
+        const { satAmount, multiMintEnabled, donationAmount } = this.state;
+
+        const enableDonations =
+            Platform.OS !== 'ios' &&
+            SettingsStore.settings?.payments?.enableDonations;
 
         const isMultiMint =
             multiMintEnabled &&
@@ -200,7 +205,12 @@ export default class CashuPaymentRequest extends React.Component<
 
         if (isMultiMint) {
             navigation.navigate('MultimintPayment', {
-                paymentAmount: satAmount ? satAmount.toString() : undefined
+                paymentAmount: satAmount ? satAmount.toString() : undefined,
+                enableDonations,
+                ...(enableDonations &&
+                    donationAmount > 0 && {
+                        donationAmount: donationAmount.toString()
+                    })
             });
             return;
         }

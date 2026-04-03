@@ -22,12 +22,14 @@ import Screen from '../../components/Screen';
 import { sendingStyles } from '../../components/sendingStyles';
 
 import CashuStore from '../../stores/CashuStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import {
     MintPaymentStatus,
     MintProgressInfo,
     MultinutPaymentStep
 } from '../../utils/CashuUtils';
+import { loadDonationLnurl } from '../../utils/DonationUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -38,8 +40,16 @@ import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
 interface MultimintPaymentProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'MultimintPayment', { paymentAmount?: string }>;
+    route: Route<
+        'MultimintPayment',
+        {
+            paymentAmount?: string;
+            donationAmount?: string;
+            enableDonations?: boolean;
+        }
+    >;
     CashuStore?: CashuStore;
+    NodeInfoStore?: NodeInfoStore;
 }
 
 interface MultimintPaymentState {
@@ -52,7 +62,7 @@ interface MultimintPaymentState {
     storedNotes: string;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'NodeInfoStore')
 @observer
 export default class MultimintPayment extends React.Component<
     MultimintPaymentProps,
@@ -164,7 +174,7 @@ export default class MultimintPayment extends React.Component<
     };
 
     executePayment = async () => {
-        const { CashuStore, route } = this.props;
+        const { CashuStore, NodeInfoStore, route } = this.props;
 
         try {
             this.setState((prev) => ({
@@ -199,6 +209,15 @@ export default class MultimintPayment extends React.Component<
                 isProcessing: false,
                 error: undefined
             });
+
+            const { donationAmount, enableDonations } = route.params || {};
+            if (
+                NodeInfoStore?.nodeInfo?.isMainNet &&
+                enableDonations &&
+                donationAmount
+            ) {
+                void this.handleDonationPayment(donationAmount);
+            }
         } catch (error: any) {
             this.setState({
                 step: MultinutPaymentStep.FAILED,
@@ -207,6 +226,26 @@ export default class MultimintPayment extends React.Component<
                     error?.message ||
                     localeString('stores.CashuStore.errorPayingInvoice')
             });
+        }
+    };
+
+    handleDonationPayment = async (donationAmount: string) => {
+        const { CashuStore } = this.props;
+
+        try {
+            const paymentRequest = await loadDonationLnurl(donationAmount);
+            if (!paymentRequest) {
+                return;
+            }
+
+            const isDonationPayment = true;
+            await CashuStore?.getPayReq(paymentRequest, isDonationPayment);
+            await CashuStore?.payLnInvoiceFromEcash({
+                amount: donationAmount,
+                isDonationPayment
+            });
+        } catch (error) {
+            console.error('Failed to pay donation invoice:', error);
         }
     };
 
