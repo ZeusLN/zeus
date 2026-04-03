@@ -649,6 +649,30 @@ export default class SeedRecovery extends React.PureComponent<
                 return;
             }
 
+            // Check for duplicate embedded-lnd wallet with same seed
+            const { SettingsStore } = this.props;
+            const { settings } = SettingsStore;
+            const existingNodes = settings.nodes || [];
+            const seedWords = seedArray
+                .map((w: string) => w?.toLowerCase()?.trim())
+                .join(' ');
+            const duplicateNode = existingNodes.find(
+                (node: any) =>
+                    node.implementation === 'embedded-lnd' &&
+                    node.seedPhrase &&
+                    node.seedPhrase
+                        .map((w: string) => w?.toLowerCase()?.trim())
+                        .join(' ') === seedWords
+            );
+            if (duplicateNode) {
+                this.setState({
+                    errorMsg: localeString(
+                        'views.Settings.SeedRecovery.duplicateWallet'
+                    )
+                });
+                return;
+            }
+
             this.setState({ loading: true });
 
             if (implementation === 'ldk-node') {
