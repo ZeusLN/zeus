@@ -3829,7 +3829,9 @@ export default class CashuStore {
                 normalizedMultiMintPaymentAmt === undefined
             ) {
                 throw new Error(
-                    'Invalid multimint payment amount. Please use a whole sat amount.'
+                    localeString(
+                        'stores.CashuStore.invalidMultimintPaymentAmount'
+                    )
                 );
             }
 
@@ -3979,8 +3981,9 @@ export default class CashuStore {
                 if (paymentAmt === undefined) {
                     runInAction(() => {
                         this.paymentError = true;
-                        this.paymentErrorMsg =
-                            'Invalid multimint payment amount. Please use a whole sat amount.';
+                        this.paymentErrorMsg = localeString(
+                            'stores.CashuStore.invalidMultimintPaymentAmount'
+                        );
                         this.loading = false;
                     });
                     return;
@@ -3998,7 +4001,9 @@ export default class CashuStore {
             if (!this.meltQuote) {
                 runInAction(() => {
                     this.paymentError = true;
-                    this.paymentErrorMsg = 'No melt quote available';
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.noMeltQuoteAvailable'
+                    );
                     this.loading = false;
                 });
                 return;
@@ -4105,11 +4110,15 @@ export default class CashuStore {
         const plannedMeltQuotes = [...this.meltQuotes];
 
         if (!paymentRequest) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = 'No payment request available';
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.noPaymentRequestAvailable'
+                    );
+                    this.loading = false;
+                });
+            }
             onProgress?.({
                 step: MultinutPaymentStep.FAILED,
                 mints: emptyMints,
@@ -4120,13 +4129,15 @@ export default class CashuStore {
         }
 
         if (plannedMeltQuotes.length === 0) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.notEnoughFunds'
+                    );
+                    this.loading = false;
+                });
+            }
             onProgress?.({
                 step: MultinutPaymentStep.FAILED,
                 mints: emptyMints,
@@ -4140,13 +4151,15 @@ export default class CashuStore {
             this.getTotalAllocatedFromMeltQuotes(plannedMeltQuotes);
 
         if (totalPlannedAmount < paymentAmt) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.notEnoughFunds'
+                    );
+                    this.loading = false;
+                });
+            }
             onProgress?.({
                 step: MultinutPaymentStep.FAILED,
                 mints: emptyMints,
@@ -4343,11 +4356,10 @@ export default class CashuStore {
                 this.paymentFee = totalFeePaid;
                 this.noteKey = segmentPayments[0]?.getNoteKey;
                 this.loading = false;
-            }
-
-            if (this.paymentStartTime) {
-                this.paymentDuration =
-                    (Date.now() - this.paymentStartTime) / 1000;
+                if (this.paymentStartTime) {
+                    this.paymentDuration =
+                        (Date.now() - this.paymentStartTime) / 1000;
+                }
             }
         });
 
