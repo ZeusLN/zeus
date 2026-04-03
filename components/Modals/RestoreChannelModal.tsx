@@ -12,13 +12,13 @@ import { font } from '../../utils/FontUtils';
 
 import ModalStore from '../../stores/ModalStore';
 
-interface ChannelBackupModalProps {
+interface RestoreChannelModalProps {
     ModalStore?: ModalStore;
 }
 
 @inject('ModalStore')
 @observer
-export default class ChannelBackupModal extends React.Component<ChannelBackupModalProps> {
+export default class RestoreChannelModal extends React.Component<RestoreChannelModalProps> {
     render() {
         const { ModalStore } = this.props;
         const {

@@ -1053,7 +1053,7 @@
     "views.Tools.migration.import.olympus": "Check Olympus for backup",
     "views.Tools.migration.import.local": "Import backup from local file",
     "views.Tools.migration.import.noBackup": "Continue without backup",
-    "views.Tools.migration.import.invalidExtension": "Invalid file type. Please select a .zip or .db file.",
+    "views.Tools.migration.import.invalidExtension": "Invalid file type. Please select a .zip file.",
     "views.Tools.migration.import.emptyFile": "The selected file is empty.",
     "views.Tools.migration.import.fileNotFound": "Could not read the selected file.",
     "views.Tools.migration.export.existingBackupFound": "Existing Backup Found",
