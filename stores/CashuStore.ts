@@ -1015,13 +1015,15 @@ export default class CashuStore {
                 continue;
             }
 
-            // Split proportionally to each mint's share of total
-            // balance, instead of maxing out each mint sequentially.
-            // Use ceil to avoid losing sats to rounding — the
-            // Math.min with remainingAmount prevents over-allocation
-            const proportionalShare = Math.ceil(
-                amountToPay * (mintBalance / totalUsableBalance)
-            );
+            // Prefer a single mint when it can cover remainingAmount.
+            // Otherwise split proportionally to each mint's share of total
+            // balance. Use ceil to avoid losing sats to rounding —
+            // Math.min with remainingAmount and mintBalance prevents
+            // over-allocation.
+            const canCover = mintBalance >= remainingAmount;
+            const proportionalShare = canCover
+                ? remainingAmount
+                : Math.ceil(amountToPay * (mintBalance / totalUsableBalance));
             const initialAllocation = Math.min(
                 remainingAmount,
                 proportionalShare > 0 ? proportionalShare : remainingAmount,
