@@ -65,15 +65,14 @@ export {
 // Timing constants
 // ---------------------------------------------------------------------------
 const STATE_SUBSCRIPTION_SETTLE_MS = 500; // Delay to allow state subscription to settle after LND start
-const LISTENER_REGISTRATION_MS = 100; // Delay to allow event listener to fully register before subscribing
 const LND_RETRY_DELAY_MS = 3000; // Base delay between LND start retry attempts
 const ANDROID_PROCESS_CLEANUP_DELAY_MS = 4000; // Extra time Android needs for process cleanup (slower than iOS)
 const IOS_PROCESS_CLEANUP_DELAY_MS = 2000; // iOS process cleanup delay
 const GEN_SEED_STOP_DELAY_MS = 3000; // Delay after stopping LND before wallet creation restart attempts
 const GEN_SEED_MAX_RETRIES = 10; // Max retries when LND unlocks too quickly during wallet creation
 const GEN_SEED_RETRY_DELAY_MS = 500; // Delay between genSeed retry attempts (ms)
-export const STOP_LND_MAX_RETRIES = 10; // Stop LND: max polling attempts to verify shutdown
-export const STOP_LND_POLL_DELAY_MS = 500; // Stop LND: delay between polling attempts (ms)
+/** Max time to wait for SubscribeState EOF after stop/kill (event-driven shutdown). */
+export const STOP_LND_TIMEOUT_MS = 5000;
 const MAX_START_LND_RETRIES = 10; // Maximum start attempts for LND
 const LND_READY_TIMEOUT_MS = 60000; // Max wait for LND to reach ready state (wallet/RPC)
 
@@ -416,16 +415,71 @@ export async function initializeLnd({
 }
 
 /**
- * Stops the LND process gracefully with retry mechanism
- * @param maxRetries - Maximum number of polling attempts to verify shutdown (default: 10)
- * @param delayMs - Delay between polling attempts in milliseconds (default: 500)
+ * Resolves when the SubscribeState gRPC stream emits EOF (LND stopped).
+ * Must be called before initiating shutdown to avoid missing the event.
+ * Falls back to resolving after timeoutMs if the EOF already passed.
+ */
+function waitForSubscribeStateEOF(timeoutMs: number): {
+    promise: Promise<void>;
+    cancel: () => void;
+} {
+    let settled = false;
+    let listener: ReturnType<typeof LndMobileEventEmitter.addListener> | null =
+        null;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const promise = new Promise<void>((resolve) => {
+        const settle = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            listener?.remove();
+            listener = null;
+            resolve();
+        };
+
+        // Resolve (not reject) on timeout — LND is presumed stopped after stopLnd + killLnd.
+        timer = setTimeout(() => {
+            log.d('LND shutdown EOF timeout — assuming daemon stopped');
+            settle();
+        }, timeoutMs);
+
+        listener = LndMobileEventEmitter.addListener(
+            'SubscribeState',
+            (event: any) => {
+                const err = checkLndStreamErrorResponse(
+                    'SubscribeState',
+                    event
+                );
+                if (err === 'EOF') {
+                    log.d(
+                        'SubscribeState EOF received — LND daemon fully stopped'
+                    );
+                    settle();
+                }
+            }
+        );
+    });
+
+    return {
+        promise,
+        cancel: () => {
+            settled = true;
+            clearTimeout(timer);
+            listener?.remove();
+            listener = null;
+        }
+    };
+}
+
+/**
+ * Stops the LND process gracefully using an event-driven approach.
+ * @param timeoutMs - Max time to wait for the SubscribeState EOF shutdown signal (default: 5000ms)
  * @param forceStop - If true, skip status check and always call stopDaemon. Use when Go layer
  *   reports "already started" but Java checkStatus says not running (state mismatch).
- * @throws Error if LND fails to stop after max retries (unexpected errors only)
  */
 export async function stopLnd(
-    maxRetries = STOP_LND_MAX_RETRIES,
-    delayMs = STOP_LND_POLL_DELAY_MS,
+    timeoutMs = STOP_LND_TIMEOUT_MS,
     forceStop = false
 ) {
     const { checkStatus, stopLnd } = lndMobile.index;
@@ -445,6 +499,11 @@ export async function stopLnd(
             throw error;
         }
     };
+
+    // Hoisted so catch can cancel it on early error.
+    let shutdownWaiter: ReturnType<typeof waitForSubscribeStateEOF> | null =
+        null;
+
     try {
         if (!forceStop) {
             // Check if LND is currently running
@@ -475,7 +534,9 @@ export async function stopLnd(
         } else {
             log.d('Force stop: skipping status check (Go state mismatch)');
         }
-        // Initiate graceful shutdown - proceed to killLnd even if stopLnd fails
+        // Register before stop/kill so we do not miss an early SubscribeState EOF.
+        shutdownWaiter = waitForSubscribeStateEOF(timeoutMs);
+        // Initiate graceful shutdown - both can throw; continue even if one fails
         log.d('Stopping LND...');
         try {
             await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
@@ -503,38 +564,12 @@ export async function stopLnd(
         }
         settingsStore.embeddedLndStarted = false;
 
-        // Poll until LND process has fully stopped
-        await retry({
-            fn: async () => {
-                const currentStatus = await runWithExpectedErrorHandling(
-                    () => checkStatus(),
-                    'poll'
-                );
-                if (currentStatus === null) {
-                    log.d('LND stopped (status check returned expected error)');
-                    return;
-                }
-                const stillRunning =
-                    (currentStatus &
-                        ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
-                    ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
-                if (!stillRunning) {
-                    log.d('LND stopped successfully');
-                    return;
-                }
-                throw new Error(
-                    `LND failed to stop after ${maxRetries} attempts`
-                );
-            },
-            maxRetries,
-            delayMs,
-            onRetry: (attempt) => {
-                log.d(
-                    `Stop polling attempt ${attempt}/${maxRetries}, LND still running`
-                );
-            }
-        });
+        // Wait for Go to close the gRPC server (EOF) — no polling needed.
+        log.d('Waiting for LND shutdown confirmation (SubscribeState EOF)...');
+        await shutdownWaiter.promise;
+        log.d('LND shutdown confirmed');
     } catch (error) {
+        shutdownWaiter?.cancel();
         const errorMessage = getErrorMessage(error);
         if (isStopLndExpectedError(errorMessage)) {
             log.d(`LND stop completed with expected state: ${errorMessage}`);
@@ -567,7 +602,7 @@ export async function startLnd({
     isTestnet: boolean;
     isRecovery?: boolean;
 }) {
-    const { startLnd, decodeState, subscribeState } = lndMobile.index;
+    const { startLnd, decodeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
     // Check if LND folder exists before starting (iOS issue: keychain data persists after uninstall)
@@ -598,6 +633,18 @@ export async function startLnd({
         settingsStore.embeddedLndStarted = true;
     }
 
+    // Register the SubscribeState listener before native startLnd fires.
+    // On both platforms, native startLnd starts the SubscribeState stream inside
+    // its own callback before resolving the JS promise, so the first state event
+    // may arrive before or alongside the resolved promise.  Registering first
+    // guarantees we never miss it.  The JS subscribeState() call is a no-op
+    // because "SubscribeState" is already tracked natively (streamsStarted /
+    // activeStreams), preventing a duplicate subscription.
+    const readyPromise = waitForLndReady({
+        decodeState,
+        walletPassword,
+        unlockWallet
+    });
     await startLndWithRetry({
         startLnd,
         lndDir,
@@ -606,14 +653,7 @@ export async function startLnd({
         walletPassword,
         unlockWallet
     });
-    // Wait for state subscription to be ready
-    await sleep(STATE_SUBSCRIPTION_SETTLE_MS);
-    await waitForLndReady({
-        decodeState,
-        subscribeState,
-        walletPassword,
-        unlockWallet
-    });
+    await readyPromise;
 }
 
 /**
@@ -656,40 +696,7 @@ async function startLndWithRetry({
             matchesLndErrorCode(errorMessage, LndErrorCode.LND_ALREADY_RUNNING)
         ) {
             log.d('LND already started - force stop (Go thinks running)');
-            const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
-            for (let attempt = 1; ; attempt++) {
-                try {
-                    await stopLnd(
-                        STOP_LND_MAX_RETRIES,
-                        STOP_LND_POLL_DELAY_MS,
-                        true
-                    );
-                    break;
-                } catch (stopError: unknown) {
-                    const stopMsg = getErrorMessage(stopError);
-                    if (
-                        matchesLndErrorCode(
-                            stopMsg,
-                            LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
-                        )
-                    ) {
-                        if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
-                            log.e(
-                                `Wallet recovery still in progress after ${attempt} attempts, giving up`
-                            );
-                            throw createLndError(
-                                LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
-                            );
-                        }
-                        log.d(
-                            `Wallet recovery in progress, waiting 5s before retry (attempt ${attempt}/${MAX_RECOVERY_WAIT_ATTEMPTS})...`
-                        );
-                        await sleep(5000);
-                        continue;
-                    }
-                    throw stopError;
-                }
-            }
+            await stopLnd(STOP_LND_TIMEOUT_MS, true);
             const delayMs =
                 Platform.OS === 'android'
                     ? ANDROID_PROCESS_CLEANUP_DELAY_MS
@@ -754,11 +761,7 @@ async function retryStartLnd({
             }
             if (matchesLndErrorCode(msg, LndErrorCode.LND_ALREADY_RUNNING)) {
                 log.d(`LND still running (attempt ${attempt}) - force stop`);
-                await stopLnd(
-                    STOP_LND_MAX_RETRIES,
-                    STOP_LND_POLL_DELAY_MS,
-                    true
-                );
+                await stopLnd(STOP_LND_TIMEOUT_MS, true);
                 await sleep(
                     Platform.OS === 'android'
                         ? ANDROID_PROCESS_CLEANUP_DELAY_MS
@@ -786,12 +789,10 @@ async function retryStartLnd({
 
 async function waitForLndReady({
     decodeState,
-    subscribeState,
     walletPassword,
     unlockWallet
 }: {
     decodeState: (data: string) => lnrpc.SubscribeStateResponse;
-    subscribeState: () => Promise<string>;
     walletPassword: string;
     unlockWallet: (password: string) => Promise<void>;
 }): Promise<boolean> {
@@ -914,16 +915,13 @@ async function waitForLndReady({
             LndMobileEventEmitter.addListener('SubscribeState', stateHandler);
         });
 
-    // Register listener BEFORE subscribeState() - native emits events immediately
-    // when the stream starts; calling waitForState() first ensures we don't get
-    // "Sending SubscribeState with no listeners registered"
+    // Register before native startLnd so we never miss the initial state event.
     const statePromise = waitForState();
 
-    await sleep(LISTENER_REGISTRATION_MS);
-
-    log.d('Starting state subscription');
-    await subscribeState();
-    log.d('State subscription started successfully');
+    // Both platforms start the SubscribeState stream natively inside the
+    // startLnd callback, before the JS promise resolves, so no explicit
+    // subscribeState() call or guard sleep is needed here.
+    log.d('SubscribeState stream started natively — skipping JS subscribe');
 
     return statePromise;
 }
@@ -1114,7 +1112,7 @@ async function restartLndForWalletCreation(
     lndDir: string,
     isTestnet: boolean
 ): Promise<void> {
-    const { startLnd, decodeState, subscribeState } = lndMobile.index;
+    const { startLnd, decodeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
     await stopLnd();
@@ -1123,18 +1121,18 @@ async function restartLndForWalletCreation(
     try {
         await retry({
             fn: async () => {
+                const readyPromise = waitForLndReady({
+                    decodeState,
+                    walletPassword: '',
+                    unlockWallet
+                });
                 await startLnd({
                     args: '',
                     lndDir,
                     isTorEnabled: false,
                     isTestnet
                 });
-                await waitForLndReady({
-                    decodeState,
-                    subscribeState,
-                    walletPassword: '',
-                    unlockWallet
-                });
+                await readyPromise;
             },
             maxRetries: MAX_START_LND_RETRIES,
             delayMs: 0,
@@ -1285,7 +1283,7 @@ export async function createLndWallet({
         if (setStatus)
             setStatus(localeString('views.Tools.migration.export.stoppingLnd'));
         try {
-            await stopLnd(STOP_LND_MAX_RETRIES, STOP_LND_POLL_DELAY_MS, true);
+            await stopLnd(STOP_LND_TIMEOUT_MS, true);
             await sleep(5000);
         } catch (e: any) {
             if (e?.message?.includes?.('closed')) {

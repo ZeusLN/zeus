@@ -53,8 +53,7 @@ import {
     optimizeNeutrinoPeers,
     stopLnd,
     waitForRpcReady,
-    STOP_LND_MAX_RETRIES,
-    STOP_LND_POLL_DELAY_MS
+    STOP_LND_TIMEOUT_MS
 } from '../../utils/LndMobileUtils';
 
 import {
@@ -787,11 +786,7 @@ export default class SeedRecovery extends React.PureComponent<
             } else {
                 // Embedded LND restore
                 try {
-                    await stopLnd(
-                        STOP_LND_MAX_RETRIES,
-                        STOP_LND_POLL_DELAY_MS,
-                        true
-                    );
+                    await stopLnd(STOP_LND_TIMEOUT_MS, true);
                 } catch (e: any) {}
 
                 await optimizeNeutrinoPeers(network === 'testnet');
