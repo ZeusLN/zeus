@@ -36,6 +36,20 @@ target 'zeus' do
       # :ccache_enabled => true
     )
 
+    # Fix fmt consteval errors with Apple Clang 21+ (Xcode 26+)
+    Dir.glob(File.join(installer.sandbox.root, '**/fmt/base.h')).each do |base_h|
+      next if File.symlink?(base_h)
+      content = File.read(base_h)
+      unless content.include?('FMT_CONSTEVAL_APPLE_CLANG_WORKAROUND')
+        content.gsub!(
+          '#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L',
+          "#elif defined(__apple_build_version__) // FMT_CONSTEVAL_APPLE_CLANG_WORKAROUND"
+        )
+        File.chmod(0644, base_h)
+        File.write(base_h, content)
+      end
+    end
+
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         # Disable arm64 builds for the simulator
