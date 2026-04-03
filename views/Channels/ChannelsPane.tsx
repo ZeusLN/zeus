@@ -6,13 +6,11 @@ import {
     Text,
     TouchableHighlight,
     TouchableOpacity,
-    ScrollView,
-    Platform
+    ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
@@ -49,8 +47,6 @@ import Channel from '../../models/Channel';
 import { Status, ExpirationStatus } from '../../models/Status';
 import ClosedChannel from '../../models/ClosedChannel';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import ModalStore from '../../stores/ModalStore';
-import nfcUtils from '../../utils/NFCUtils';
 import handleAnything from '../../utils/handleAnything';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Peer from '../../models/Peer';
@@ -69,7 +65,6 @@ interface ChannelsProps {
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
-    ModalStore?: ModalStore;
 }
 
 interface ChannelsState {
@@ -142,55 +137,6 @@ export default class ChannelsPane extends React.PureComponent<
             this.disposeReaction();
         }
     }
-
-    disableNfc = () => {
-        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-    };
-
-    enableNfc = async () => {
-        const { ModalStore } = this.props;
-        this.disableNfc();
-        await NfcManager.start();
-
-        return new Promise((resolve: any) => {
-            let tagFound: TagEvent | null = null;
-
-            // enable NFC
-            if (Platform.OS === 'android')
-                ModalStore?.toggleAndroidNfcModal(true);
-
-            NfcManager.setEventListener(
-                NfcEvents.DiscoverTag,
-                (tag: TagEvent) => {
-                    tagFound = tag;
-                    const bytes = new Uint8Array(
-                        tagFound.ndefMessage[0].payload
-                    );
-                    const str = nfcUtils.nfcUtf8ArrayToStr(bytes) || '';
-
-                    // close NFC
-                    if (Platform.OS === 'android')
-                        ModalStore?.toggleAndroidNfcModal(false);
-
-                    resolve(this.validateNodeUri(str));
-                    NfcManager.unregisterTagEvent().catch(() => 0);
-                }
-            );
-
-            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
-                // close NFC
-                if (Platform.OS === 'android')
-                    ModalStore?.toggleAndroidNfcModal(false);
-
-                if (!tagFound) {
-                    resolve();
-                }
-            });
-
-            NfcManager.registerTagEvent();
-        });
-    };
 
     initFromProps(props: ChannelsProps) {
         const { NodeInfoStore, SettingsStore } = props;
