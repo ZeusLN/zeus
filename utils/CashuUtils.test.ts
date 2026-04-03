@@ -226,6 +226,16 @@ describe('CashuUtils', () => {
             ).toBe(7);
         });
 
+        it('sums string proof amounts as numbers', () => {
+            expect(
+                CashuUtils.sumProofsValue([
+                    { amount: '64' },
+                    { amount: '32' },
+                    { amount: '4' }
+                ])
+            ).toBe(100);
+        });
+
         it('returns 0 for empty/null', () => {
             expect(CashuUtils.sumProofsValue([])).toBe(0);
             expect(CashuUtils.sumProofsValue(null)).toBe(0);
