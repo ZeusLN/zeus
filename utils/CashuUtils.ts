@@ -139,7 +139,8 @@ class CashuUtils {
             return 0;
         }
         return proofs.reduce((r: number, c: any) => {
-            return r + c.amount;
+            const amount = Number(c?.amount) || 0;
+            return r + amount;
         }, 0);
     };
 
