@@ -31,6 +31,7 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import Storage from '../../storage';
 
 import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
@@ -48,6 +49,7 @@ interface MultimintPaymentState {
     isProcessing: boolean;
     error?: string;
     showPaymentDetails: boolean;
+    storedNotes: string;
 }
 
 @inject('CashuStore')
@@ -56,6 +58,8 @@ export default class MultimintPayment extends React.Component<
     MultimintPaymentProps,
     MultimintPaymentState
 > {
+    private focusListener: (() => void) | undefined;
+
     constructor(props: MultimintPaymentProps) {
         super(props);
 
@@ -101,13 +105,37 @@ export default class MultimintPayment extends React.Component<
                 : hasInsufficientBalance
                 ? localeString('stores.CashuStore.notEnoughFunds')
                 : undefined,
-            showPaymentDetails: false
+            showPaymentDetails: false,
+            storedNotes: ''
         };
     }
 
     componentDidMount(): void {
+        const { navigation, CashuStore } = this.props;
+
+        this.focusListener = navigation.addListener('focus', () => {
+            const noteKey = CashuStore?.noteKey;
+            if (!noteKey) {
+                this.setState({ storedNotes: '' });
+                return;
+            }
+            Storage.getItem(noteKey)
+                .then((storedNotes) => {
+                    this.setState({ storedNotes: storedNotes || '' });
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
+
         if (this.state.step !== MultinutPaymentStep.FAILED) {
             this.executePayment();
+        }
+    }
+
+    componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
         }
     }
 
@@ -325,8 +353,14 @@ export default class MultimintPayment extends React.Component<
 
     render() {
         const { navigation, CashuStore, route } = this.props;
-        const { mints, totalSelectedBalance, step, error, showPaymentDetails } =
-            this.state;
+        const {
+            mints,
+            totalSelectedBalance,
+            step,
+            error,
+            showPaymentDetails,
+            storedNotes
+        } = this.state;
         const windowSize = Dimensions.get('window');
 
         const paymentAmount =
@@ -521,9 +555,15 @@ export default class MultimintPayment extends React.Component<
 
                     {isComplete && !hasError && CashuStore?.noteKey && (
                         <Button
-                            title={localeString(
-                                'views.SendingLightning.AddANote'
-                            )}
+                            title={
+                                storedNotes
+                                    ? localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                    : localeString(
+                                          'views.SendingLightning.AddANote'
+                                      )
+                            }
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
                                     noteKey: CashuStore.noteKey
