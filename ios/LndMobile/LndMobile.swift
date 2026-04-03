@@ -122,14 +122,44 @@ class LndMobile: RCTEventEmitter {
 
   @objc(startLnd:lndDir:isTorEnabled:isTestnet:resolver:rejecter:)
   func startLnd(_ args: String, lndDir: String, isTorEnabled: Bool, isTestnet: Bool, resolve: @escaping RCTPromiseResolveBlock, rejecter reject:@escaping RCTPromiseRejectBlock) {
-    Lnd.shared.startLnd(args, lndDir: lndDir, isTorEnabled: isTorEnabled, isTestnet: isTestnet) { (data, error) in
+    Lnd.shared.startLnd(args, lndDir: lndDir, isTorEnabled: isTorEnabled, isTestnet: isTestnet) { [weak self] (data, error) in
       if let e = error {
         reject("error", e.localizedDescription, e)
         return
       }
+      // Begin the SubscribeState stream immediately after the LND process
+      // starts, before resolving the JS promise.  JS registers its listener
+      // before calling startLnd, so the first state event is guaranteed to
+      // arrive after the listener is in place — no sleep/poll needed.
+      self?.startStateSubscription()
       resolve([
         "data": data?.base64EncodedString()
       ])
+    }
+  }
+
+  /// Starts the SubscribeState stream via the native Lnd singleton and forwards
+  /// every event to JS through the RCTEventEmitter machinery.
+  /// This is called automatically inside startLnd so JS never needs to initiate
+  /// the subscription during startup.
+  private func startStateSubscription() {
+    Lnd.shared.subscribeToStateChanges { [weak self] (data, error) in
+      guard let self = self else { return }
+      if let e = error {
+        let fullError = e.localizedDescription
+        var errorCode = "Error"
+        var errorDesc = fullError
+        if let codeRange = fullError.range(of: "code = "),
+           let descRange = fullError.range(of: " desc = ") {
+          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
+          errorDesc  = String(fullError[descRange.upperBound..<fullError.endIndex])
+        }
+        self.sendEvent(withName: "SubscribeState",
+                       body: ["error_code": errorCode, "error_desc": errorDesc])
+      } else {
+        self.sendEvent(withName: "SubscribeState",
+                       body: ["data": data?.base64EncodedString()])
+      }
     }
   }
 

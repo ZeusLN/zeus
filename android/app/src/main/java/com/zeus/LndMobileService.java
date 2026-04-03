@@ -391,6 +391,49 @@ public class LndMobileService extends Service {
     }
   }
 
+  /**
+   * Stream callback for the native-started SubscribeState subscription.
+   * Unlike LndStreamCallback it removes "SubscribeState" from streamsStarted
+   * when the stream closes so a future LND restart can subscribe again.
+   */
+  class LndStateStreamCallback implements lndmobile.RecvStream {
+    private final Messenger recipient;
+
+    LndStateStreamCallback(Messenger recipient) {
+      this.recipient = recipient;
+    }
+
+    private void sendResult(Bundle bundle) {
+      bundle.putString("method", "SubscribeState");
+      Message msg = Message.obtain(null, MSG_GRPC_STREAM_RESULT, 0, 0);
+      msg.setData(bundle);
+      sendToClient(recipient, msg);
+    }
+
+    @Override
+    public void onError(Exception e) {
+      // Allow re-subscription on the next LND start.
+      streamsStarted.remove("SubscribeState");
+      Bundle bundle = new Bundle();
+      String message = e.getMessage();
+      if (message != null && message.contains("code = ") && message.contains("desc = ")) {
+        bundle.putString("error_code", message.substring(message.indexOf("code = ") + 7, message.indexOf(" desc = ")));
+        bundle.putString("error_desc", message.substring(message.indexOf("desc = ") + 7));
+      } else {
+        bundle.putString("error_code", "Error");
+        bundle.putString("error_desc", message != null ? message : "unknown");
+      }
+      sendResult(bundle);
+    }
+
+    @Override
+    public void onResponse(byte[] bytes) {
+      Bundle bundle = new Bundle();
+      bundle.putByteArray("response", bytes);
+      sendResult(bundle);
+    }
+  }
+
   void gossipSync(Messenger recipient, String serviceUrl, String lndDir, boolean isSqlite, int request) {
     Runnable gossipSync = new Runnable() {
       public void run() {
@@ -462,14 +505,27 @@ public class LndMobileService extends Service {
           @Override
           public void onResponse(byte[] bytes) {
             lndStarted = true;
-            Message msg = Message.obtain(null, MSG_START_LND_RESULT, request, 0);
 
+            // Start SubscribeState before resolving the JS promise so JS can
+            // register its listener first and never miss the initial state event.
+            if (!streamsStarted.contains("SubscribeState")) {
+              streamsStarted.add("SubscribeState");
+              try {
+                Method m = streamMethods.get("SubscribeState");
+                if (m != null) {
+                  m.invoke(null, new byte[0], new LndStateStreamCallback(recipient));
+                }
+              } catch (Exception e) {
+                Log.e(TAG, "Failed to start native SubscribeState stream", e);
+                streamsStarted.remove("SubscribeState");
+              }
+            }
+
+            Message msg = Message.obtain(null, MSG_START_LND_RESULT, request, 0);
             Bundle bundle = new Bundle();
             bundle.putByteArray("response", bytes);
             msg.setData(bundle);
-
             sendToClient(recipient, msg);
-            // sendToClients(msg);
           }
         });
       }
