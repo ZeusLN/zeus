@@ -956,15 +956,6 @@ export default class CashuStore {
             this.mintSupportsMpp(mintUrl)
         );
 
-        console.log(
-            'prepareMultiMintMeltQuotesCDK: selected=',
-            uniqueSelectedMints.length,
-            'mppSupported=',
-            supportedMints.length,
-            'amountToPay=',
-            amountToPay
-        );
-
         const balances = await CashuDevKit.getBalances();
         const normalizedBalances = Object.entries(balances).reduce(
             (acc, [mintUrl, balance]) => {
@@ -984,13 +975,6 @@ export default class CashuStore {
             }))
             .filter(({ balance }) => balance > 0)
             .sort((a, b) => b.balance - a.balance);
-
-        console.log(
-            'prepareMultiMintMeltQuotesCDK: balances=',
-            JSON.stringify(normalizedBalances),
-            'mintsWithBalance=',
-            mintsByLargestBalance.length
-        );
 
         if (mintsByLargestBalance.length === 0 || amountToPay <= 0) {
             this.meltQuotes = [];
@@ -1029,13 +1013,7 @@ export default class CashuStore {
                 proportionalShare > 0 ? proportionalShare : remainingAmount,
                 mintBalance
             );
-            console.log(
-                `prepareMultiMintMeltQuotesCDK: [START] mint=${mintUrl} balance=${mintBalance} remaining=${remainingAmount} proportionalShare=${proportionalShare} initialAllocation=${initialAllocation}`
-            );
             if (initialAllocation <= 0) {
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} initialAllocation<=0`
-                );
                 continue;
             }
 
@@ -1047,9 +1025,6 @@ export default class CashuStore {
                 // which doesn't reflect per-mint MPP fees
                 const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
                 const mppAmountMsat = initialAllocation * 1000;
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: [QUOTE] mint=${mintUrl} requesting mpp amount=${initialAllocation} sats (${mppAmountMsat} msats)`
-                );
                 const quoteResponse = await fetch(
                     `${normalizedMintUrl}/v1/melt/quote/bolt11`,
                     {
@@ -1068,40 +1043,22 @@ export default class CashuStore {
                 );
 
                 if (!quoteResponse.ok) {
-                    const errBody = await quoteResponse.text().catch(() => '');
-                    console.log(
-                        `prepareMultiMintMeltQuotesCDK: [QUOTE FAILED] mint=${mintUrl} HTTP ${quoteResponse.status}: ${errBody}`
-                    );
                     continue;
                 }
 
                 const quote = await quoteResponse.json();
-                const quoteAmount = Number(quote.amount) || 0;
                 const actualFee = Number(quote.fee_reserve) || 0;
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: [QUOTE OK] mint=${mintUrl} quote.amount=${quoteAmount} quote.fee_reserve=${actualFee} quote.quote=${quote.quote}`
-                );
 
                 let allocationAmount = initialAllocation;
                 let totalNeeded = allocationAmount + actualFee;
-
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: [CHECK] mint=${mintUrl} allocationAmount=${allocationAmount} + actualFee=${actualFee} = totalNeeded=${totalNeeded} vs balance=${mintBalance}`
-                );
 
                 if (totalNeeded > mintBalance) {
                     // Reduce allocation to fit within balance, then
                     // re-query the mint for the actual fee at the
                     // reduced amount
                     let reducedAllocation = mintBalance - actualFee;
-                    console.log(
-                        `prepareMultiMintMeltQuotesCDK: [REDUCE] mint=${mintUrl} totalNeeded=${totalNeeded} > balance=${mintBalance}, reducing to ${reducedAllocation}`
-                    );
 
                     if (reducedAllocation <= 0) {
-                        console.log(
-                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} allocation <= 0 after fee`
-                        );
                         continue;
                     }
 
@@ -1131,24 +1088,15 @@ export default class CashuStore {
                     );
 
                     if (!reQuoteResponse.ok) {
-                        console.log(
-                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} re-quote failed`
-                        );
                         continue;
                     }
 
                     const reQuote = await reQuoteResponse.json();
                     const reFee = Number(reQuote.fee_reserve) || 0;
                     const reNeeded = reducedAllocation + reFee;
-                    console.log(
-                        `prepareMultiMintMeltQuotesCDK: [RE-QUOTE] mint=${mintUrl} reducedAlloc=${reducedAllocation} reFee=${reFee} reNeeded=${reNeeded} balance=${mintBalance}`
-                    );
 
                     if (reNeeded > mintBalance) {
                         // Still doesn't fit, skip this mint
-                        console.log(
-                            `prepareMultiMintMeltQuotesCDK: [SKIP] mint=${mintUrl} still exceeds balance after re-quote`
-                        );
                         continue;
                     }
 
@@ -1158,11 +1106,6 @@ export default class CashuStore {
                 }
 
                 const finalFee = Number(quote.fee_reserve) || 0;
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: [RESULT] mint=${mintUrl} finalAllocation=${allocationAmount} fee=${finalFee} totalNeeded=${
-                        allocationAmount + finalFee
-                    } balance=${mintBalance}`
-                );
 
                 const adjustedQuote = {
                     ...quote,
@@ -1178,12 +1121,7 @@ export default class CashuStore {
                     0,
                     remainingAmount - allocationAmount
                 );
-            } catch (error: any) {
-                console.log(
-                    `prepareMultiMintMeltQuotesCDK: error for mint ${mintUrl}: ${
-                        error?.message || error
-                    }`
-                );
+            } catch {
                 continue;
             }
         }
@@ -3999,7 +3937,6 @@ export default class CashuStore {
         const paymentRequest = this.paymentRequest;
         const emptyMints: MintProgressInfo[] = [];
         const plannedMeltQuotes = [...this.meltQuotes];
-        console.log('planned', JSON.stringify(plannedMeltQuotes));
 
         if (!paymentRequest) {
             runInAction(() => {
