@@ -83,7 +83,7 @@ export default class RestoreChannelBackups extends React.Component<
                                     })
                                 }
                                 multiline
-                                placeholder="XxmvSDaQNk3mRvKYFyX4yGceQpOwXF1rS..."
+                                placeholder="Base64 or hex encoded SCB data..."
                                 style={styles.textInput}
                             />
                             <Button
