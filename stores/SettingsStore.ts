@@ -1369,7 +1369,9 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
     'wss://relay.damus.io',
     'wss://nostr.land',
-    'wss://nostr.wine'
+    'wss://nostr.wine',
+    'wss://relay.8333.space',
+    'wss://relay.primal.net'
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
