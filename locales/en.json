@@ -2374,6 +2374,7 @@
     "views.Swaps.rescueKey.delete": "Delete rescue key",
     "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
     "views.Swaps.fetchFeesFailed": "Failed to fetch swap fees. Please check your connection and try again.",
+    "views.Swaps.updatingCurrentFees": "Updating fees...",
     "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Are you sure you want to delete the rescue key? All swaps will also be deleted from your swap history. Please back up your keys before proceeding, as you can use them later to recover those swaps.",
     "views.SwapDetails.title": "Swap Details",

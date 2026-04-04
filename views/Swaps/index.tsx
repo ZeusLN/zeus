@@ -105,6 +105,7 @@ interface SwapState {
     showRescueKeyBtn: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
+    refreshingFees: boolean;
 }
 
 @inject(
@@ -145,7 +146,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         isIntroModalVisible: false,
         showRescueKeyBtn: false,
         enableLSP: true,
-        flowLspNotConfigured: true
+        flowLspNotConfigured: true,
+        refreshingFees: false
     };
 
     private isNavigatingAway = false;
@@ -154,16 +156,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     checkIsValid = () => {
         const { reverse, invoice, inputSats, outputSats } = this.state;
         const { SwapStore } = this.props;
+        const { subInfo, reverseInfo } = SwapStore;
+        const info: any = reverse ? reverseInfo : subInfo;
 
-        if (SwapStore.loading || !SwapStore.subInfo || !SwapStore.reverseInfo) {
+        if (SwapStore.loading || Object.keys(info || {}).length === 0) {
             if (this.state.isValid) {
                 this.setState({ isValid: false });
             }
-            return;
+            return false;
         }
-
-        const { subInfo, reverseInfo } = SwapStore;
-        const info: any = reverse ? reverseInfo : subInfo;
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFeeBigNum = this.state.reverse
@@ -226,6 +227,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         if (this.state.isValid !== newIsValid) {
             this.setState({ isValid: newIsValid });
         }
+
+        return newIsValid;
     };
 
     async componentDidMount() {
@@ -516,6 +519,53 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         }
     }
 
+    initiateSwap = async () => {
+        const { SwapStore, navigation } = this.props;
+        const { reverse, invoice, inputSats, fee } = this.state;
+
+        this.setState({ refreshingFees: true, error: '' });
+
+        let canInitiateSwap = false;
+        try {
+            await SwapStore.getSwapFees();
+
+            if (SwapStore.apiError) {
+                this.setState({
+                    error:
+                        SwapStore.apiError ||
+                        localeString('views.Swaps.fetchFeesFailed')
+                });
+                return;
+            }
+
+            canInitiateSwap = this.checkIsValid();
+        } catch (error) {
+            console.error('Error refreshing swap fees:', error);
+            this.setState({
+                error: localeString('views.Swaps.fetchFeesFailed')
+            });
+            return;
+        } finally {
+            this.setState({ refreshingFees: false });
+        }
+
+        if (!canInitiateSwap) {
+            return;
+        }
+
+        if (reverse) {
+            SwapStore.createReverseSwap(
+                invoice,
+                Number(inputSats),
+                fee,
+                navigation
+            );
+            return;
+        }
+
+        SwapStore.createSubmarineSwap(invoice, navigation);
+    };
+
     componentWillUnmount() {
         this._unsubscribe?.();
     }
@@ -761,7 +811,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             feeSettingToggle,
             showRescueKeyBtn,
             enableLSP,
-            flowLspNotConfigured
+            flowLspNotConfigured,
+            refreshingFees
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
@@ -856,6 +907,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             currentInputSats.isGreaterThan(max);
         const errorOutput = new BigNumber(outputSats || 0).isLessThan(0);
         const errorMsg = errorInput || errorOutput;
+        const showSwapLoading = loading || refreshingFees;
 
         return (
             <Screen>
@@ -899,8 +951,28 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         keyboardShouldPersistTaps="handled"
                     >
                         <View style={{ flex: 1, margin: 10 }}>
-                            {loading && <LoadingIndicator />}
-                            {!loading && (
+                            {showSwapLoading && (
+                                <View style={{ alignItems: 'center' }}>
+                                    <LoadingIndicator />
+                                    {refreshingFees && (
+                                        <Text
+                                            style={{
+                                                marginTop: 10,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Swaps.updatingCurrentFees'
+                                            )}
+                                        </Text>
+                                    )}
+                                </View>
+                            )}
+                            {!showSwapLoading && (
                                 <>
                                     {(error || apiError) && (
                                         <ErrorMessage
@@ -2274,22 +2346,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             title={localeString(
                                                 'views.Swaps.initiate'
                                             )}
-                                            onPress={() => {
-                                                reverse
-                                                    ? SwapStore?.createReverseSwap(
-                                                          invoice,
-                                                          Number(
-                                                              this.state
-                                                                  .inputSats
-                                                          ),
-                                                          this.state.fee,
-                                                          navigation
-                                                      )
-                                                    : SwapStore?.createSubmarineSwap(
-                                                          invoice,
-                                                          navigation
-                                                      );
-                                            }}
+                                            onPress={this.initiateSwap}
                                             {...(!reverse
                                                 ? {
                                                       containerStyle: {
@@ -2297,7 +2354,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                       }
                                                   }
                                                 : {})}
-                                            disabled={!isValid}
+                                            disabled={
+                                                !isValid ||
+                                                loading ||
+                                                fetchingInvoice ||
+                                                refreshingFees
+                                            }
                                         />
                                     </View>
                                 </>
