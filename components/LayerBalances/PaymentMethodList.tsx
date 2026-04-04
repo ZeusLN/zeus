@@ -11,6 +11,7 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
+import Channel from '../../models/Channel';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -19,7 +20,13 @@ import OnChainSvg from '../../components/SVG/OnChainSvg';
 import LightningSvg from '../../components/SVG/LightningSvg';
 import EcashSvg from '../../components/SVG/EcashSvg';
 
-import { nodeInfoStore, settingsStore } from '../../stores/Stores';
+import BigNumber from 'bignumber.js';
+
+import {
+    channelsStore,
+    nodeInfoStore,
+    settingsStore
+} from '../../stores/Stores';
 
 interface PaymentMethodListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -33,6 +40,7 @@ interface PaymentMethodListProps {
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
+    onchainReserve?: number;
     ecashBalance?: number | string;
     accounts?: Array<{
         name: string;
@@ -51,6 +59,7 @@ type DataRow = {
     subtitle?: string;
     disabled?: boolean;
     balance?: number | string;
+    reserve?: number;
     account?: string;
     hidden?: boolean;
     satAmount?: number;
@@ -81,13 +90,19 @@ const LayerIcon = ({ layer }: { layer: string }) => {
 
 const hasInsufficientBalance = (
     balance: number | string | undefined,
-    satAmount: number | undefined
-) =>
-    Number(balance) === 0 ||
-    (satAmount !== undefined && satAmount > Number(balance));
+    satAmount: number | undefined,
+    reserve: number = 0
+) => {
+    const spendable = Number(balance ?? 0) - reserve;
+    return spendable <= 0 || (satAmount !== undefined && satAmount > spendable);
+};
 
 const Row = ({ item }: { item: DataRow }) => {
-    const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient = hasInsufficientBalance(
+        item.balance,
+        item.satAmount,
+        item.reserve
+    );
     const layerLabel = LAYER_LOCALE_MAP[item.layer]
         ? localeString(LAYER_LOCALE_MAP[item.layer])
         : item.layer;
@@ -142,7 +157,13 @@ const Row = ({ item }: { item: DataRow }) => {
                 {item.balance !== undefined && (
                     <View style={styles.balanceContainer}>
                         <Amount
-                            sats={item.balance}
+                            sats={
+                                item.reserve && item.reserve > 0
+                                    ? new BigNumber(item.balance)
+                                          .minus(item.reserve)
+                                          .toNumber()
+                                    : item.balance
+                            }
                             sensitive
                             colorOverride={
                                 insufficient
@@ -150,6 +171,32 @@ const Row = ({ item }: { item: DataRow }) => {
                                     : themeColor('buttonText')
                             }
                         />
+                        {item.reserve != null && item.reserve > 0 && (
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('buttonText'),
+                                        fontSize: 10,
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginRight: 2
+                                    }}
+                                >
+                                    {`${localeString('general.reserve')}:`}
+                                </Text>
+                                <Amount
+                                    sats={item.reserve}
+                                    sensitive
+                                    colorOverride={themeColor('buttonText')}
+                                    fontSize={10}
+                                />
+                            </View>
+                        )}
                     </View>
                 )}
             </LinearGradient>
@@ -179,7 +226,11 @@ const SwipeableRow = ({
     offer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
-    const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient = hasInsufficientBalance(
+        item.balance,
+        item.satAmount,
+        item.reserve
+    );
     const rowDisabled = item.disabled || insufficient;
     if (item.layer === 'Lightning') {
         return (
@@ -266,16 +317,24 @@ export default class PaymentMethodList extends Component<
             lnurlParams,
             lightningBalance,
             onchainBalance,
+            onchainReserve,
             ecashBalance,
             accounts
         } = this.props;
         let DATA: DataRow[] = [];
+
+        const lightningChannelReserve = channelsStore.channels.reduce(
+            (sum: number, channel: Channel) =>
+                sum + Number(channel.localReserveBalance || 0),
+            0
+        );
 
         if (lightning || lnurlParams) {
             DATA.push({
                 layer: 'Lightning',
                 subtitle: lightning ?? lnurlParams?.tag,
                 balance: lightningBalance,
+                reserve: lightningChannelReserve,
                 disabled: false,
                 satAmount
             });
@@ -299,6 +358,7 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning address',
                 subtitle: lightningAddress,
                 balance: lightningBalance,
+                reserve: lightningChannelReserve,
                 disabled: false,
                 satAmount
             });
@@ -310,6 +370,7 @@ export default class PaymentMethodList extends Component<
                 subtitle: offer,
                 disabled: !nodeInfoStore.supportsOffers,
                 balance: lightningBalance,
+                reserve: lightningChannelReserve,
                 satAmount
             });
         }
@@ -321,6 +382,7 @@ export default class PaymentMethodList extends Component<
                 subtitle: value,
                 disabled: !BackendUtils.supportsOnchainSends(),
                 balance: onchainBalance,
+                reserve: onchainReserve,
                 account: 'default',
                 satAmount
             });
