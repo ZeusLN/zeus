@@ -1652,6 +1652,7 @@ export default class SettingsStore {
     @observable public ldkRgsServer?: string;
     @observable public ldkVssServer?: string;
     @observable public ldkNodeSyncing: boolean = false;
+    @observable public isChannelMigrating: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
     // Favorite currencies
@@ -1692,6 +1693,11 @@ export default class SettingsStore {
 
     public setLndFolderMissing = (status: boolean) => {
         this.lndFolderMissing = status;
+    };
+
+    @action
+    public setChannelMigrating = (status: boolean) => {
+        this.isChannelMigrating = status;
     };
 
     public fetchBTCPayConfig = (data: string) => {

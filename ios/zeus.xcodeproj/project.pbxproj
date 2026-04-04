@@ -65,6 +65,7 @@
 		4983F905D5584DEE9306C67C /* DroidSansMono Apache License.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */; };
 		4A9A9C2189D54ED78D4029E2 /* Wrench.svg in Resources */ = {isa = PBXBuildFile; fileRef = C18B7331C6704C59A8BB7DCA /* Wrench.svg */; };
 		4F7B0DD5ACBD432DB04374DC /* Speedometer.svg in Resources */ = {isa = PBXBuildFile; fileRef = 4B58C327668640C881703E94 /* Speedometer.svg */; };
+		5100FA362F75348D009D640A /* ZipUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 5100FA352F75348D009D640A /* ZipUtils.m */; };
 		5134B5512EB7C1B000A6AD03 /* ShareQR.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5134B5472EB7C1B000A6AD03 /* ShareQR.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		51BF29FE2ED5FC770044B4FB /* ShareBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 51BF29FC2ED5FB940044B4FB /* ShareBridge.m */; };
 		541A24C3CF314FAF9DAFEE06 /* Arrow_down.svg in Resources */ = {isa = PBXBuildFile; fileRef = 16305D1EA8FA48288C57F6A7 /* Arrow_down.svg */; };
@@ -510,6 +511,8 @@
 		4F64F2C03E764A959E6B7991 /* onchain_black.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = onchain_black.png; path = ../assets/images/onchain_black.png; sourceTree = "<group>"; };
 		4FEA0F67FA544C83B86C2DE3 /* zeus_illustration_2b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_2b.jpg; path = ../assets/images/zeus_illustration_2b.jpg; sourceTree = "<group>"; };
 		5014345A129344348443D20F /* zeus-pay.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "zeus-pay.svg"; path = "../assets/images/SVG/zeus-pay.svg"; sourceTree = "<group>"; };
+		5100FA342F75348D009D640A /* ZipUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZipUtils.h; sourceTree = "<group>"; };
+		5100FA352F75348D009D640A /* ZipUtils.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ZipUtils.m; sourceTree = "<group>"; };
 		51184C7F24744DCB90D53B8C /* wordmark-black.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "wordmark-black.svg"; path = "../assets/images/SVG/wordmark-black.svg"; sourceTree = "<group>"; };
 		5134B5472EB7C1B000A6AD03 /* ShareQR.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareQR.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		51BF29FB2ED5FB940044B4FB /* ShareBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShareBridge.h; sourceTree = "<group>"; };
@@ -844,6 +847,8 @@
 		13B07FAE1A68108700A75B9A /* zeus */ = {
 			isa = PBXGroup;
 			children = (
+				5100FA342F75348D009D640A /* ZipUtils.h */,
+				5100FA352F75348D009D640A /* ZipUtils.m */,
 				51BF29FB2ED5FB940044B4FB /* ShareBridge.h */,
 				51BF29FC2ED5FB940044B4FB /* ShareBridge.m */,
 				B1C2D3E42D36C99900000001 /* LdkNodeMobile */,
@@ -1957,6 +1962,7 @@
 				74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */,
 				745388492A54C2B6000927CE /* walletunlocker.pb.swift in Sources */,
 				7453884A2A54C2B6000927CE /* LndMobileTools.m in Sources */,
+				5100FA362F75348D009D640A /* ZipUtils.m in Sources */,
 				745388472A54C2B6000927CE /* LndMobileScheduledSync.m in Sources */,
 				745388462A54C2B6000927CE /* LndMobile.m in Sources */,
 				7453884B2A54C2B6000927CE /* Lnd.swift in Sources */,

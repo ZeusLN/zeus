@@ -396,8 +396,13 @@ export default class WalletHeader extends React.Component<
         } = this.props;
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
-        const { settings, posStatus, setPosStatus, implementation } =
-            SettingsStore!;
+        const {
+            settings,
+            posStatus,
+            setPosStatus,
+            implementation,
+            isChannelMigrating
+        } = SettingsStore!;
         const { loading: nwcloading } = NostrWalletConnectStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
@@ -613,23 +618,26 @@ export default class WalletHeader extends React.Component<
                     leftComponent={
                         <Row style={{ flex: 1 }}>
                             <MenuBadge navigation={navigation} />
-                            {!connecting && paid && paid.length > 0 && (
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'LightningAddress',
-                                            { skipStatus: true }
-                                        )
-                                    }
-                                    style={{ marginLeft: 20 }}
-                                >
-                                    {redeemingAll ? (
-                                        <ZeusPayAnimated />
-                                    ) : (
-                                        <ZeusPay />
-                                    )}
-                                </TouchableOpacity>
-                            )}
+                            {!isChannelMigrating &&
+                                !connecting &&
+                                paid &&
+                                paid.length > 0 && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'LightningAddress',
+                                                { skipStatus: true }
+                                            )
+                                        }
+                                        style={{ marginLeft: 20 }}
+                                    >
+                                        {redeemingAll ? (
+                                            <ZeusPayAnimated />
+                                        ) : (
+                                            <ZeusPay />
+                                        )}
+                                    </TouchableOpacity>
+                                )}
                         </Row>
                     }
                     centerComponent={
@@ -671,7 +679,11 @@ export default class WalletHeader extends React.Component<
                         )
                     }
                     rightComponent={
-                        posStatus === 'active' ? (
+                        isChannelMigrating ? (
+                            <View>
+                                <NodeButton />
+                            </View>
+                        ) : posStatus === 'active' ? (
                             <Row>
                                 {!connecting && (
                                     <>
@@ -758,7 +770,7 @@ export default class WalletHeader extends React.Component<
                     }
                 />
 
-                {this.props.peers && (
+                {this.props.peers && !isChannelMigrating && (
                     <View style={{ paddingTop: 10 }}>
                         <ToggleButton
                             options={[

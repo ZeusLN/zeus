@@ -42,7 +42,8 @@ function Support(props: SupportProps) {
             condition:
                 haveActiveNode &&
                 nodeInfoStore?.nodeInfo?.isMainNet &&
-                Platform.OS !== 'ios'
+                Platform.OS !== 'ios' &&
+                !settingsStore.isChannelMigrating
         },
         {
             label: localeString('views.PaymentRequest.addATip'),
@@ -50,7 +51,8 @@ function Support(props: SupportProps) {
             condition:
                 haveActiveNode &&
                 nodeInfoStore?.nodeInfo?.isMainNet &&
-                Platform.OS !== 'ios'
+                Platform.OS !== 'ios' &&
+                !settingsStore.isChannelMigrating
         },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
