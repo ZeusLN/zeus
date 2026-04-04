@@ -369,6 +369,8 @@ export default class WalletHeader extends React.Component<
                     clipboard
                 });
             }
+        } else {
+            this.setState({ clipboard: '' });
         }
     };
 
