@@ -1045,21 +1045,10 @@ export default class Receive extends React.Component<
 
                     // Check if this is the invoice we're watching
                     if (rHash && event.paymentHash === rHash) {
-                        setWatchedInvoicePaid(amountSat);
-                        BalanceStore.getCombinedBalance();
-
-                        if (orderId) {
-                            PosStore.recordPayment({
-                                orderId,
-                                orderTotal,
-                                orderTip,
-                                exchangeRate,
-                                rate,
-                                type: 'ln',
-                                tx: event.paymentHash
-                            });
-                            PosStore.clearOrderInvoice(orderId);
-                        }
+                        this.handlePaymentReceived(amountSat, {
+                            type: 'ln',
+                            tx: event.paymentHash
+                        });
 
                         if (this.ldkUnsubscribe) {
                             this.ldkUnsubscribe();
