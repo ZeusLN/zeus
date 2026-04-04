@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 
 public struct LndMobileToolsError: Error {
   let msg: String
@@ -123,7 +124,7 @@ class LndMobileTools: RCTEventEmitter {
         .appendingPathComponent("data", isDirectory: true)
         .appendingPathComponent("chain", isDirectory: true)
         .appendingPathComponent("bitcoin", isDirectory: true)
-        .appendingPathComponent(network ?? "mainnet", isDirectory: true)
+        .appendingPathComponent(network, isDirectory: true)
         .appendingPathComponent("channel.backup", isDirectory: false)
 #if os(iOS)
       do {
@@ -369,7 +370,7 @@ class LndMobileTools: RCTEventEmitter {
     let url = paths[0].appendingPathComponent(lndDir, isDirectory: true)
                       .appendingPathComponent("logs", isDirectory: true)
                       .appendingPathComponent("bitcoin", isDirectory: true)
-                      .appendingPathComponent(network ?? "mainnet", isDirectory: true)
+                      .appendingPathComponent(network, isDirectory: true)
                       .appendingPathComponent("lnd.log", isDirectory: false)
 
     do {
@@ -392,7 +393,7 @@ class LndMobileTools: RCTEventEmitter {
     let url = paths[0].appendingPathComponent(lndDir, isDirectory: true)
                       .appendingPathComponent("logs", isDirectory: true)
                       .appendingPathComponent("bitcoin", isDirectory: true)
-                      .appendingPathComponent(network ?? "mainnet", isDirectory: true)
+                      .appendingPathComponent(network, isDirectory: true)
                       .appendingPathComponent("lnd.log", isDirectory: false)
     let fileHandle = FileHandle(forReadingAtPath: url.path)
 
