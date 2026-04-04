@@ -30,7 +30,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import handleAnything from '../utils/handleAnything';
-import NFCUtils from '../utils/NFCUtils';
+import NFCUtils, { checkNfcEnabled } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
 import ValidationUtils from '../utils/ValidationUtils';
@@ -91,6 +91,7 @@ interface OpenChannelState {
     additionalChannels: Array<AdditionalChannel>;
     isNodePubkeyValid: boolean;
     isNodeHostValid: boolean;
+    nfcSupported: boolean;
 }
 
 @inject(
@@ -132,7 +133,8 @@ export default class OpenChannel extends React.Component<
             account: 'default',
             additionalChannels: [],
             isNodePubkeyValid: true,
-            isNodeHostValid: true
+            isNodeHostValid: true,
+            nfcSupported: false
         };
     }
 
@@ -173,6 +175,9 @@ export default class OpenChannel extends React.Component<
         if (this.props.ChannelsStore.channelsView === ChannelsView.Peers) {
             this.setState({ connectPeerOnly: true });
         }
+
+        const nfcSupported = await NfcManager.isSupported();
+        this.setState({ nfcSupported });
     }
 
     disableNfc = () => {
@@ -182,6 +187,9 @@ export default class OpenChannel extends React.Component<
 
     enableNfc = async () => {
         const { ModalStore } = this.props;
+
+        if (!(await checkNfcEnabled(ModalStore))) return;
+
         this.disableNfc();
         await NfcManager.start();
 
@@ -336,7 +344,8 @@ export default class OpenChannel extends React.Component<
             advancedSettingsToggle,
             additionalChannels,
             isNodePubkeyValid,
-            isNodeHostValid
+            isNodeHostValid,
+            nfcSupported
         } = this.state;
         const { implementation } = SettingsStore;
 
@@ -1361,21 +1370,25 @@ export default class OpenChannel extends React.Component<
                                 />
                             </View>
 
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString('general.enableNfc')}
-                                    icon={
-                                        <NfcIcon
-                                            stroke={themeColor('highlight')}
-                                            width={25}
-                                            height={25}
-                                            style={{ marginRight: 10 }}
-                                        />
-                                    }
-                                    onPress={() => this.enableNfc()}
-                                    secondary
-                                />
-                            </View>
+                            {nfcSupported && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'general.enableNfc'
+                                        )}
+                                        icon={
+                                            <NfcIcon
+                                                stroke={themeColor('highlight')}
+                                                width={25}
+                                                height={25}
+                                                style={{ marginRight: 10 }}
+                                            />
+                                        }
+                                        onPress={() => this.enableNfc()}
+                                        secondary
+                                    />
+                                </View>
+                            )}
                         </View>
                     </ScrollView>
                 )}
