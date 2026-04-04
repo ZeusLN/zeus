@@ -1,4 +1,4 @@
-import { action, observable, computed, runInAction, reaction } from 'mobx';
+import { action, observable, computed, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -48,11 +48,6 @@ export default class SwapStore {
         this.settingsStore = settingsStore;
         initEccLib(ecc);
         this.ECPair = ECPairFactory(ecc);
-
-        reaction(
-            () => this.getHost,
-            () => this.getSwapFees()
-        );
     }
 
     @action
