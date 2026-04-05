@@ -88,21 +88,6 @@ const Dark: { [key: string]: any } = {
     buttonText: '#FFF'
 };
 
-const Junkie: { [key: string]: any } = {
-    generalStyle: 'dark',
-    background: 'rgb(51, 51, 51)',
-    secondary: 'rgb(191, 0, 28)',
-    modalBackground: 'rgb(51, 51, 51)',
-    text: 'white',
-    secondaryText: 'lightgray',
-    highlight: 'rgb(249, 212, 0)',
-    error: '#992600',
-    separator: 'darkgray',
-    outbound: '#FFD93F',
-    inbound: '#FFF0CA',
-    delete: '#FFD699'
-};
-
 const BPM: { [key: string]: any } = {
     generalStyle: 'light',
     background: '#fff',
@@ -164,23 +149,6 @@ const Scarlet: { [key: string]: any } = {
     modalBackground: '#8A1538',
     separator: '#8A1538',
     highlight: '#ffd24b'
-};
-
-const Purple: { [key: string]: any } = {
-    generalStyle: 'light',
-    background: '#dbd0e1',
-    secondary: '#ba9cbf',
-    modalBackground: '#dbd0e1',
-    text: '#776d86',
-    secondaryText: '#6f7286',
-    highlight: '#ffd24b',
-    error: '#C9592D',
-    separator: '##9fa3bf',
-    outbound: '#FFD93F',
-    inbound: '#FFF0CA',
-    success: '#46BE43',
-    warning: '#E14C4C',
-    bitcoin: '#FFB040'
 };
 
 const Blueberry: { [key: string]: any } = {
@@ -393,6 +361,312 @@ const Radioactive: { [key: string]: any } = {
     action: '#FFF'
 };
 
+const Dracula: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#282A36',
+    secondary: '#44475A',
+    modalBackground: '#44475A',
+    text: '#F8F8F2',
+    secondaryText: '#6272A4',
+    highlight: '#BD93F9',
+    error: '#FF5555',
+    separator: '#44475A',
+    outbound: '#BD93F9',
+    inbound: '#8BE9FD',
+    outboundReserve: '#6272A4',
+    inboundReserve: '#44475A',
+    success: '#50FA7B',
+    warning: '#FF5555',
+    warningReserve: '#FF6E6E',
+    bitcoin: '#FFB86C',
+    delete: '#FF5555',
+    bolt: '#F8F8F2',
+    chain: '#F8F8F2',
+    disabled: '#6272A4',
+    buttonBackground: '#BD93F9',
+    buttonGradient: ['#BD93F9', '#FF79C6'],
+    buttonText: '#282A36',
+    buttonTextSecondary: '#6272A4',
+    qr: '#282A36',
+    qrBackground: '#BD93F9',
+    qrLogoBackground: '#BD93F9',
+    qrFrame: '#FF79C6',
+    invertQrIcons: false,
+    action: '#F8F8F2'
+};
+
+const SolarizedDark: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#002B36',
+    secondary: '#073642',
+    modalBackground: '#073642',
+    text: '#839496',
+    secondaryText: '#586E75',
+    highlight: '#B58900',
+    error: '#DC322F',
+    separator: '#073642',
+    outbound: '#B58900',
+    inbound: '#2AA198',
+    outboundReserve: '#586E75',
+    inboundReserve: '#073642',
+    success: '#859900',
+    warning: '#DC322F',
+    warningReserve: '#CB4B16',
+    bitcoin: '#CB4B16',
+    delete: '#DC322F',
+    bolt: '#839496',
+    chain: '#839496',
+    disabled: '#586E75',
+    buttonBackground: '#B58900',
+    buttonGradient: ['#B58900', '#CB4B16'],
+    buttonText: '#002B36',
+    buttonTextSecondary: '#586E75',
+    qr: '#002B36',
+    qrBackground: '#B58900',
+    qrLogoBackground: '#B58900',
+    qrFrame: '#2AA198',
+    invertQrIcons: false,
+    action: '#839496'
+};
+
+const SolarizedLight: { [key: string]: any } = {
+    generalStyle: 'light',
+    background: '#FDF6E3',
+    secondary: '#EEE8D5',
+    modalBackground: '#EEE8D5',
+    text: '#657B83',
+    secondaryText: '#93A1A1',
+    highlight: '#B58900',
+    error: '#DC322F',
+    separator: '#EEE8D5',
+    outbound: '#B58900',
+    inbound: '#2AA198',
+    outboundReserve: '#93A1A1',
+    inboundReserve: '#EEE8D5',
+    success: '#859900',
+    warning: '#DC322F',
+    warningReserve: '#CB4B16',
+    bitcoin: '#CB4B16',
+    delete: '#DC322F',
+    bolt: '#657B83',
+    chain: '#657B83',
+    disabled: '#93A1A1',
+    buttonBackground: '#B58900',
+    buttonGradient: ['#B58900', '#CB4B16'],
+    buttonText: '#FDF6E3',
+    buttonTextSecondary: '#93A1A1',
+    qr: '#657B83',
+    qrBackground: '#FDF6E3',
+    qrLogoBackground: '#B58900',
+    qrFrame: '#2AA198',
+    invertQrIcons: false,
+    action: '#657B83'
+};
+
+const Gruvbox: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#282828',
+    secondary: '#3C3836',
+    modalBackground: '#3C3836',
+    text: '#EBDBB2',
+    secondaryText: '#A89984',
+    highlight: '#FABD2F',
+    error: '#FB4934',
+    separator: '#3C3836',
+    outbound: '#FABD2F',
+    inbound: '#8EC07C',
+    outboundReserve: '#A89984',
+    inboundReserve: '#504945',
+    success: '#B8BB26',
+    warning: '#FB4934',
+    warningReserve: '#FE8019',
+    bitcoin: '#FE8019',
+    delete: '#FB4934',
+    bolt: '#EBDBB2',
+    chain: '#EBDBB2',
+    disabled: '#A89984',
+    buttonBackground: '#FABD2F',
+    buttonGradient: ['#FABD2F', '#FE8019'],
+    buttonText: '#282828',
+    buttonTextSecondary: '#A89984',
+    qr: '#282828',
+    qrBackground: '#FABD2F',
+    qrLogoBackground: '#FABD2F',
+    qrFrame: '#FE8019',
+    invertQrIcons: false,
+    action: '#EBDBB2'
+};
+
+const Nord: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#2E3440',
+    secondary: '#3B4252',
+    modalBackground: '#3B4252',
+    text: '#ECEFF4',
+    secondaryText: '#D8DEE9',
+    highlight: '#88C0D0',
+    error: '#BF616A',
+    separator: '#3B4252',
+    outbound: '#88C0D0',
+    inbound: '#A3BE8C',
+    outboundReserve: '#D8DEE9',
+    inboundReserve: '#434C5E',
+    success: '#A3BE8C',
+    warning: '#BF616A',
+    warningReserve: '#D08770',
+    bitcoin: '#EBCB8B',
+    delete: '#BF616A',
+    bolt: '#ECEFF4',
+    chain: '#ECEFF4',
+    disabled: '#4C566A',
+    buttonBackground: '#88C0D0',
+    buttonGradient: ['#88C0D0', '#81A1C1'],
+    buttonText: '#2E3440',
+    buttonTextSecondary: '#4C566A',
+    qr: '#2E3440',
+    qrBackground: '#88C0D0',
+    qrLogoBackground: '#88C0D0',
+    qrFrame: '#81A1C1',
+    invertQrIcons: false,
+    action: '#ECEFF4'
+};
+
+const Monokai: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#272822',
+    secondary: '#3E3D32',
+    modalBackground: '#3E3D32',
+    text: '#F8F8F2',
+    secondaryText: '#75715E',
+    highlight: '#F92672',
+    error: '#F92672',
+    separator: '#3E3D32',
+    outbound: '#E6DB74',
+    inbound: '#A6E22E',
+    outboundReserve: '#75715E',
+    inboundReserve: '#3E3D32',
+    success: '#A6E22E',
+    warning: '#F92672',
+    warningReserve: '#FD5FF0',
+    bitcoin: '#FD971F',
+    delete: '#F92672',
+    bolt: '#F8F8F2',
+    chain: '#F8F8F2',
+    disabled: '#75715E',
+    buttonBackground: '#F92672',
+    buttonGradient: ['#F92672', '#FD971F'],
+    buttonText: '#F8F8F2',
+    buttonTextSecondary: '#75715E',
+    qr: '#272822',
+    qrBackground: '#F92672',
+    qrLogoBackground: '#F92672',
+    qrFrame: '#A6E22E',
+    invertQrIcons: false,
+    action: '#F8F8F2'
+};
+
+const OneDark: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#282C34',
+    secondary: '#21252B',
+    modalBackground: '#21252B',
+    text: '#ABB2BF',
+    secondaryText: '#5C6370',
+    highlight: '#61AFEF',
+    error: '#E06C75',
+    separator: '#21252B',
+    outbound: '#61AFEF',
+    inbound: '#98C379',
+    outboundReserve: '#5C6370',
+    inboundReserve: '#2C313A',
+    success: '#98C379',
+    warning: '#E06C75',
+    warningReserve: '#BE5046',
+    bitcoin: '#D19A66',
+    delete: '#E06C75',
+    bolt: '#ABB2BF',
+    chain: '#ABB2BF',
+    disabled: '#5C6370',
+    buttonBackground: '#61AFEF',
+    buttonGradient: ['#61AFEF', '#C678DD'],
+    buttonText: '#282C34',
+    buttonTextSecondary: '#5C6370',
+    qr: '#282C34',
+    qrBackground: '#61AFEF',
+    qrLogoBackground: '#61AFEF',
+    qrFrame: '#C678DD',
+    invertQrIcons: false,
+    action: '#ABB2BF'
+};
+
+const TokyoNight: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#1A1B26',
+    secondary: '#24283B',
+    modalBackground: '#24283B',
+    text: '#C0CAF5',
+    secondaryText: '#565F89',
+    highlight: '#7AA2F7',
+    error: '#F7768E',
+    separator: '#24283B',
+    outbound: '#7AA2F7',
+    inbound: '#9ECE6A',
+    outboundReserve: '#565F89',
+    inboundReserve: '#292E42',
+    success: '#9ECE6A',
+    warning: '#F7768E',
+    warningReserve: '#FF9E64',
+    bitcoin: '#FF9E64',
+    delete: '#F7768E',
+    bolt: '#C0CAF5',
+    chain: '#C0CAF5',
+    disabled: '#565F89',
+    buttonBackground: '#7AA2F7',
+    buttonGradient: ['#7AA2F7', '#BB9AF7'],
+    buttonText: '#1A1B26',
+    buttonTextSecondary: '#565F89',
+    qr: '#1A1B26',
+    qrBackground: '#7AA2F7',
+    qrLogoBackground: '#7AA2F7',
+    qrFrame: '#BB9AF7',
+    invertQrIcons: false,
+    action: '#C0CAF5'
+};
+
+const Synthwave: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#262335',
+    secondary: '#34294F',
+    modalBackground: '#34294F',
+    text: '#F0E4FC',
+    secondaryText: '#848BBD',
+    highlight: '#FF7EDB',
+    error: '#FE4450',
+    separator: '#34294F',
+    outbound: '#FF7EDB',
+    inbound: '#72F1B8',
+    outboundReserve: '#848BBD',
+    inboundReserve: '#3B3260',
+    success: '#72F1B8',
+    warning: '#FE4450',
+    warningReserve: '#FF8B39',
+    bitcoin: '#FEDE5D',
+    delete: '#FE4450',
+    bolt: '#F0E4FC',
+    chain: '#F0E4FC',
+    disabled: '#495495',
+    buttonBackground: '#FF7EDB',
+    buttonGradient: ['#FF7EDB', '#36F9F6'],
+    buttonText: '#262335',
+    buttonTextSecondary: '#495495',
+    qr: '#262335',
+    qrBackground: '#FF7EDB',
+    qrLogoBackground: '#FF7EDB',
+    qrFrame: '#36F9F6',
+    invertQrIcons: false,
+    action: '#F0E4FC'
+};
+
 export function themeColor(themeString: string): any {
     const { settings } = settingsStore;
     const theme = settings.display && settings.display.theme;
@@ -402,8 +676,6 @@ export function themeColor(themeString: string): any {
             return Kyriaki[themeString] || Dark[themeString];
         case 'light':
             return Light[themeString] || Dark[themeString];
-        case 'junkie':
-            return Junkie[themeString] || Dark[themeString];
         case 'bpm':
             return BPM[themeString] || Light[themeString];
         case 'orange':
@@ -412,8 +684,6 @@ export function themeColor(themeString: string): any {
             return BlackedOut[themeString] || Dark[themeString];
         case 'scarlet':
             return Scarlet[themeString] || Dark[themeString];
-        case 'purple':
-            return Purple[themeString] || Light[themeString];
         case 'blueberry':
             return Blueberry[themeString] || Dark[themeString];
         case 'deep-purple':
@@ -442,6 +712,24 @@ export function themeColor(themeString: string): any {
             return Watermelon[themeString] || Dark[themeString];
         case 'radioactive':
             return Radioactive[themeString] || Dark[themeString];
+        case 'dracula':
+            return Dracula[themeString] || Dark[themeString];
+        case 'solarized-dark':
+            return SolarizedDark[themeString] || Dark[themeString];
+        case 'solarized-light':
+            return SolarizedLight[themeString] || Light[themeString];
+        case 'gruvbox':
+            return Gruvbox[themeString] || Dark[themeString];
+        case 'nord':
+            return Nord[themeString] || Dark[themeString];
+        case 'monokai':
+            return Monokai[themeString] || Dark[themeString];
+        case 'one-dark':
+            return OneDark[themeString] || Dark[themeString];
+        case 'tokyo-night':
+            return TokyoNight[themeString] || Dark[themeString];
+        case 'synthwave':
+            return Synthwave[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
