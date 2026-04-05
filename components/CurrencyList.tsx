@@ -13,7 +13,7 @@ import FiatStore from '../stores/FiatStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { numberWithCommas, numberWithDecimals } from '../utils/UnitsUtils';
+import { SATS_PER_BTC, numberWithCommas } from '../utils/UnitsUtils';
 
 import BitcoinIcon from '../assets/images/SVG/bitcoin-icon.svg';
 import Star from '../assets/images/SVG/Star.svg';
@@ -128,7 +128,9 @@ export default class CurrencyList extends React.Component<
                                             fontSize: 12
                                         }}
                                     >
-                                        100,000,000 sats = 1 BTC
+                                        {`${numberWithCommas(
+                                            SATS_PER_BTC
+                                        )} sats = 1 BTC`}
                                     </ListItem.Subtitle>
                                 )}
                             </ListItem.Content>
@@ -198,11 +200,10 @@ export default class CurrencyList extends React.Component<
                             (r) => r.code === item.value
                         );
                         if (!rateEntry) return null;
-                        const { symbol, space, rtl, separatorSwap } =
-                            FiatStore!.symbolLookup(item.value);
-                        const formattedRate = separatorSwap
-                            ? numberWithDecimals(rateEntry.rate)
-                            : numberWithCommas(rateEntry.rate);
+                        const { symbol, space, rtl } = FiatStore!.symbolLookup(
+                            item.value
+                        );
+                        const formattedRate = numberWithCommas(rateEntry.rate);
                         const rateDisplay = rtl
                             ? `${formattedRate}${
                                   space ? ' ' : ''

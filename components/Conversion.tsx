@@ -12,6 +12,7 @@ import UnitsStore from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
+import { normalizeNumberString } from '../utils/UnitsUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
@@ -70,9 +71,10 @@ export default class Conversion extends React.Component<
         if (sats) {
             satAmount = sats;
         } else {
-            satAmount = Number.isNaN(Number(amount))
+            const normalizedAmount = normalizeNumberString(amount ?? 0);
+            satAmount = Number.isNaN(Number(normalizedAmount))
                 ? 0
-                : getSatAmount(amount ?? 0, forceUnit);
+                : getSatAmount(normalizedAmount, forceUnit);
         }
 
         if (!fiatEnabled || (!amount && !sats)) return;
