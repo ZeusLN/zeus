@@ -3,12 +3,13 @@ import { Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { Icon, ListItem } from '@rneui/themed';
+
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import AmountInput from '../../components/AmountInput';
 
-import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
@@ -132,14 +133,6 @@ export default class EcashSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    <Pill
-                        title={localeString(
-                            'general.experimental'
-                        ).toUpperCase()}
-                        textColor={themeColor('warning')}
-                        borderColor={themeColor('warning')}
-                        width={'100%'}
-                    />
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View
                             style={{
@@ -273,6 +266,33 @@ export default class EcashSettings extends React.Component<
                             secondary
                         />
                     </View>
+
+                    {enableCashu && (
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: 'transparent',
+                                paddingHorizontal: 0,
+                                marginTop: 25
+                            }}
+                            onPress={() => navigation.navigate('Mints')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('cashu.cashuMints')}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                    )}
 
                     {hasOpenChannels && enableCashu && (
                         <View style={{ marginTop: 20 }}>
