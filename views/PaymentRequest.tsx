@@ -98,7 +98,6 @@ interface InvoiceState {
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
-    validAmountToSwap: boolean;
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
@@ -142,7 +141,6 @@ export default class PaymentRequest extends React.Component<
         zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
-        validAmountToSwap: false,
         donationsToggle: false,
         donationPercentage: 0,
         donationAmount: 0,
@@ -177,7 +175,6 @@ export default class PaymentRequest extends React.Component<
             }
         }
 
-        const validAmountToSwap = this.isAmountValidToSwap();
         const donationPercentageOptions = [5, 10, 20];
 
         const donationAmount = calculateDonationAmount(
@@ -195,12 +192,13 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            validAmountToSwap,
             donationPercentage:
                 settings?.payments?.defaultDonationPercentage || 0,
             donationAmount,
             selectedIndex: index
         });
+
+        this.props.SwapStore.getSwapFees();
 
         if (implementation === 'embedded-lnd') {
             this.checkIfLndReady();
@@ -636,9 +634,9 @@ export default class PaymentRequest extends React.Component<
             </TouchableOpacity>
         );
 
-        const SwapButton = () => {
-            const { validAmountToSwap } = this.state;
+        const validAmountToSwap = this.isAmountValidToSwap();
 
+        const SwapButton = () => {
             if (!validAmountToSwap) return null;
 
             return (
