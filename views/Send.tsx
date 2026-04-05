@@ -115,7 +115,6 @@ interface SendState {
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
-    validAmountToSwap: boolean;
     nfcSupported: boolean;
 }
 
@@ -187,12 +186,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             account: 'default',
             additionalOutputs: [],
             fundMax: false,
-            validAmountToSwap: false,
             nfcSupported: false
         };
     }
 
-    async componentDidUpdate(prevProps: SendProps, prevState: SendState) {
+    async componentDidUpdate(prevProps: SendProps) {
         const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
@@ -208,6 +206,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
             if (transactionType === 'Lightning') {
                 InvoicesStore.getPayReq(destination);
+            }
+
+            if (transactionType === 'On-chain') {
+                this.props.SwapStore.getSwapFees();
             }
 
             const stateUpdate: Partial<SendState> = {
@@ -228,33 +230,13 @@ export default class Send extends React.Component<SendProps, SendState> {
             }
             this.setState(stateUpdate as SendState);
         }
-
-        const { SwapStore } = this.props;
-
-        if (
-            this.state.satAmount !== prevState.satAmount &&
-            this.state.satAmount !== '0'
-        ) {
-            const reverseInfo: any = SwapStore.reverseInfo;
-
-            const validAmountToSwap = this.isAmountValidToSwap(
-                reverseInfo,
-                this.state.satAmount
-            );
-
-            if (validAmountToSwap !== this.state.validAmountToSwap) {
-                this.setState({
-                    validAmountToSwap
-                });
-            }
-        }
     }
 
     isAmountValidToSwap(
         reverseInfo: any,
         requestAmount: number | string | null
     ): boolean {
-        if (!reverseInfo) {
+        if (!reverseInfo || Object.keys(reverseInfo).length === 0) {
             return false;
         }
         const serviceFeePct = reverseInfo?.fees?.percentage || 0;
@@ -694,7 +676,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             additionalOutputs,
             fundMax,
             account,
-            validAmountToSwap,
             utxos,
             nfcSupported
         } = this.state;
@@ -762,7 +743,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                             )}
                             {transactionType === 'On-chain' &&
                                 BackendUtils.supportsOnchainSends() &&
-                                validAmountToSwap && (
+                                this.isAmountValidToSwap(
+                                    this.props.SwapStore.reverseInfo,
+                                    satAmount
+                                ) && (
                                     <View
                                         style={{
                                             marginRight: 15
