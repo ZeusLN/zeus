@@ -118,7 +118,7 @@ export default class KeyValue extends React.Component<
                                 : themeColor('text')
                     }}
                 >
-                    {indicatorColor ? ` ${keyValue}` : keyValue}
+                    {indicatorColor ? `  ${keyValue}` : keyValue}
                 </Text>
                 {infoModalText && (
                     <Text
