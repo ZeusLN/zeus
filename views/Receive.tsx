@@ -14,11 +14,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
-import NfcManager, {
-    NfcEvents,
-    TagEvent,
-    Ndef
-} from 'react-native-nfc-manager';
+import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -79,7 +75,7 @@ import BalanceStore from '../stores/BalanceStore';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
-import NFCUtils, { checkNfcEnabled } from '../utils/NFCUtils';
+import { scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
@@ -674,63 +670,9 @@ export default class Receive extends React.Component<
         });
     };
 
-    disableNfc = () => {
-        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-    };
-
-    enableNfc = async () => {
-        const { ModalStore } = this.props;
-
-        if (!(await checkNfcEnabled(ModalStore))) return;
-
-        this.disableNfc();
-        await NfcManager.start().catch((e) => console.warn(e.message));
-
-        return new Promise((resolve: any) => {
-            let tagFound: TagEvent | null = null;
-
-            // enable NFC
-            if (Platform.OS === 'android')
-                ModalStore.toggleAndroidNfcModal(true);
-
-            NfcManager.setEventListener(
-                NfcEvents.DiscoverTag,
-                (tag: TagEvent) => {
-                    tagFound = tag;
-                    const bytes = new Uint8Array(
-                        tagFound.ndefMessage[0].payload
-                    );
-
-                    let str;
-                    const decoded = Ndef.text.decodePayload(bytes);
-                    if (decoded.match(/^(https?|lnurl)/)) {
-                        str = decoded;
-                    } else {
-                        str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
-                    }
-
-                    // close NFC
-                    if (Platform.OS === 'android')
-                        ModalStore.toggleAndroidNfcModal(false);
-
-                    resolve(this.validateAddress(str));
-                    NfcManager.unregisterTagEvent().catch(() => 0);
-                }
-            );
-
-            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
-                // close NFC
-                if (Platform.OS === 'android')
-                    ModalStore.toggleAndroidNfcModal(false);
-
-                if (!tagFound) {
-                    resolve();
-                }
-            });
-
-            NfcManager.registerTagEvent();
-        });
+    scanNfc = async () => {
+        const str = await scanNfcTag(this.props.ModalStore);
+        if (str) this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
@@ -2354,7 +2296,7 @@ export default class Receive extends React.Component<
                                                                         />
                                                                     }
                                                                     onPress={() =>
-                                                                        this.enableNfc()
+                                                                        this.scanNfc()
                                                                     }
                                                                     secondary
                                                                 />

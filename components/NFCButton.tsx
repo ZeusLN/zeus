@@ -3,7 +3,11 @@ import { Platform, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { checkNfcEnabled } from '../utils/NFCUtils';
 
-import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
+import {
+    HCESession,
+    NFCTagType4,
+    NFCTagType4NDEFContentType
+} from 'react-native-hce';
 
 import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 
@@ -69,12 +73,20 @@ export default class NFCButton extends React.Component<
     };
 
     startSimulation = async () => {
-        const tag = new NFCTagType4(NFCContentType.Text, this.props.value);
-        this.simulation = await new HCESession(tag).start();
+        const tag = new NFCTagType4({
+            type: NFCTagType4NDEFContentType.Text,
+            content: this.props.value,
+            writable: false
+        });
+        this.simulation = await HCESession.getInstance();
+        await this.simulation.setApplication(tag);
+        await this.simulation.setEnabled(true);
     };
 
     stopSimulation = async () => {
-        await this.simulation.terminate();
+        if (this.simulation) {
+            await this.simulation.setEnabled(false);
+        }
     };
 
     render() {

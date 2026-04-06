@@ -1,5 +1,23 @@
-import NfcManager from 'react-native-nfc-manager';
+import { Platform } from 'react-native';
+import NfcManager, {
+    NfcEvents,
+    TagEvent,
+    Ndef
+} from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
+
+export function decodeNdefTextPayload(data: Uint8Array): string | null {
+    if (data.length === 0) return '';
+    const langCodeLen = data[0] & 0x3f;
+    const textData = data.slice(1 + langCodeLen);
+    try {
+        return new global.TextDecoder('utf-8', { fatal: true }).decode(
+            textData
+        );
+    } catch {
+        return null;
+    }
+}
 
 /**
  * Checks whether NFC is enabled on the device.
@@ -18,37 +36,55 @@ export async function checkNfcEnabled(
     return true;
 }
 
-class NFCUtils {
-    nfcUtf8ArrayToStr = (data: any) => {
-        const extraByteMap = [1, 1, 1, 1, 2, 2, 3, 0];
-        const count = data.length;
-        let str = '';
+export async function scanNfcTag(
+    modalStore: ModalStore
+): Promise<string | undefined> {
+    if (!(await checkNfcEnabled(modalStore))) return undefined;
 
-        for (let index = 0; index < count; ) {
-            let ch = data[index++];
-            if (ch & 0x80) {
-                let extra = extraByteMap[(ch >> 3) & 0x07];
-                if (!(ch & 0x40) || !extra || index + extra > count) {
-                    return null;
-                }
+    NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+    NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    await NfcManager.start().catch((e) => console.warn(e.message));
 
-                ch = ch & (0x3f >> extra);
-                for (; extra > 0; extra -= 1) {
-                    const chx = data[index++];
-                    if ((chx & 0xc0) !== 0x80) {
-                        return null;
-                    }
+    return new Promise((resolve) => {
+        let tagFound: TagEvent | null = null;
 
-                    ch = (ch << 6) | (chx & 0x3f);
-                }
+        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
+
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: TagEvent) => {
+            if (!tag.ndefMessage?.[0]?.payload) {
+                if (Platform.OS === 'android')
+                    modalStore.toggleAndroidNfcModal(false);
+                resolve(undefined);
+                NfcManager.unregisterTagEvent().catch(() => 0);
+                return;
             }
 
-            str += String.fromCharCode(ch);
-        }
+            tagFound = tag;
+            if (!tag.ndefMessage?.[0]?.payload) return;
+            const bytes = new Uint8Array(tag.ndefMessage[0].payload);
 
-        return str.slice(3);
-    };
+            let str: string;
+            const decoded = Ndef.text.decodePayload(bytes);
+            if (decoded.match(/^(https?|lnurl)/)) {
+                str = decoded;
+            } else {
+                str = decodeNdefTextPayload(bytes) || '';
+            }
+
+            if (Platform.OS === 'android')
+                modalStore.toggleAndroidNfcModal(false);
+
+            resolve(str);
+            NfcManager.unregisterTagEvent().catch(() => 0);
+        });
+
+        NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+            if (Platform.OS === 'android')
+                modalStore.toggleAndroidNfcModal(false);
+
+            if (!tagFound) resolve(undefined);
+        });
+
+        NfcManager.registerTagEvent();
+    });
 }
-
-const nfcUtils = new NFCUtils();
-export default nfcUtils;
