@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { TextLayoutEvent } from 'react-native';
 import {
     Dimensions,
     Image,
@@ -73,6 +74,18 @@ function ValueText({ value, truncateLongValue, valueStyle }: ValueTextProps) {
     const [state, setState] = React.useState<{
         numberOfValueLines: number | undefined;
     }>({ numberOfValueLines: truncateLongValue ? 3 : undefined });
+    const [isSingleLine, setIsSingleLine] = React.useState(false);
+
+    const computedStyle = {
+        ...styles.value,
+        ...valueStyle,
+        color: themeColor('secondaryText'),
+        textAlign: isSingleLine ? ('center' as const) : ('left' as const)
+    };
+
+    const onTextLayout = (e: TextLayoutEvent) =>
+        setIsSingleLine(e.nativeEvent.lines.length === 1);
+
     return truncateLongValue ? (
         <Touchable
             touch={() =>
@@ -83,24 +96,15 @@ function ValueText({ value, truncateLongValue, valueStyle }: ValueTextProps) {
             highlight={false}
         >
             <Text
-                style={{
-                    ...styles.value,
-                    ...valueStyle,
-                    color: themeColor('secondaryText')
-                }}
+                style={computedStyle}
                 numberOfLines={state.numberOfValueLines}
+                onTextLayout={onTextLayout}
             >
                 {value}
             </Text>
         </Touchable>
     ) : (
-        <Text
-            style={{
-                ...styles.value,
-                ...valueStyle,
-                color: themeColor('secondaryText')
-            }}
-        >
+        <Text style={computedStyle} onTextLayout={onTextLayout}>
             {value}
         </Text>
     );
@@ -428,7 +432,8 @@ export default class CollapsedQR extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            gap: 40
                         }}
                     >
                         <CopyButton
@@ -552,7 +557,7 @@ export default class CollapsedQR extends React.Component<
 const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
-        paddingLeft: 20,
+        paddingHorizontal: 20,
         fontFamily: 'PPNeueMontreal-Book'
     },
     qrPadding: {

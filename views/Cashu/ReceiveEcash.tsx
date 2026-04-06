@@ -736,9 +736,6 @@ export default class ReceiveEcash extends React.Component<
                                                             lightningAddress
                                                         }
                                                         iconOnly={true}
-                                                        iconContainerStyle={{
-                                                            marginRight: 40
-                                                        }}
                                                         showShare={true}
                                                         expanded
                                                         textBottom
@@ -776,9 +773,6 @@ export default class ReceiveEcash extends React.Component<
                                                             lnInvoiceCopyValue
                                                         }
                                                         iconOnly={true}
-                                                        iconContainerStyle={{
-                                                            marginRight: 40
-                                                        }}
                                                         showShare={true}
                                                         expanded
                                                         textBottom

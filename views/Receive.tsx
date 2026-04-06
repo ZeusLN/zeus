@@ -2075,9 +2075,6 @@ export default class Receive extends React.Component<
                                                 <CollapsedQR
                                                     value={unifiedInvoice || ''}
                                                     iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
                                                     showShare={true}
                                                     expanded
                                                     textBottom
@@ -2104,9 +2101,6 @@ export default class Receive extends React.Component<
                                                         lnInvoiceCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
                                                     showShare={true}
                                                     expanded
                                                     textBottom
@@ -2133,9 +2127,6 @@ export default class Receive extends React.Component<
                                                         btcAddressCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
                                                     showShare={true}
                                                     expanded
                                                     textBottom
@@ -2187,9 +2178,6 @@ export default class Receive extends React.Component<
                                                     value={`lightning:${lightningAddress}`}
                                                     copyValue={lightningAddress}
                                                     iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
                                                     showShare={true}
                                                     expanded
                                                     textBottom
@@ -2226,9 +2214,6 @@ export default class Receive extends React.Component<
                                                         lnInvoiceCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
                                                     showShare={true}
                                                     expanded
                                                     textBottom
