@@ -30,6 +30,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
+import Accordion from '../../components/Accordion';
 
 import { LSPOrderState } from '../../models/LSP';
 import { SwapState } from '../../models/Swap';
@@ -269,12 +270,16 @@ export default class ActivityFilter extends React.Component<
     };
 
     toggleSection = (
-        sectionName: keyof ActivityFilterState['expandedSections']
+        sectionName: keyof ActivityFilterState['expandedSections'],
+        next?: boolean
     ) => {
         this.setState((prevState) => ({
             expandedSections: {
                 ...prevState.expandedSections,
-                [sectionName]: !prevState.expandedSections[sectionName]
+                [sectionName]:
+                    next !== undefined
+                        ? next
+                        : !prevState.expandedSections[sectionName]
             }
         }));
     };
@@ -705,79 +710,87 @@ export default class ActivityFilter extends React.Component<
                             if (item.type === 'Services') {
                                 return (
                                     <React.Fragment key={item.label}>
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                this.toggleSection('services')
+                                        <Accordion
+                                            id="activityfilter-services"
+                                            title={item.label}
+                                            open={expandedSections.services}
+                                            onToggle={(next) =>
+                                                this.toggleSection(
+                                                    'services',
+                                                    next
+                                                )
                                             }
-                                        >
-                                            <ListItem
-                                                containerStyle={{
-                                                    borderBottomWidth: 0,
-                                                    backgroundColor:
-                                                        'transparent'
-                                                }}
-                                            >
-                                                <View
-                                                    style={{
-                                                        marginRight: 0,
-                                                        justifyContent: 'center'
+                                            embedded
+                                            renderHeader={(isOpen) => (
+                                                <ListItem
+                                                    containerStyle={{
+                                                        borderBottomWidth: 0,
+                                                        backgroundColor:
+                                                            'transparent'
                                                     }}
                                                 >
-                                                    {expandedSections.services ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width={24}
-                                                            height={24}
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width={24}
-                                                            height={24}
-                                                        />
-                                                    )}
-                                                </View>
-                                                <ListItem.Content>
-                                                    <ListItem.Title
+                                                    <View
                                                         style={{
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book'
+                                                            marginRight: 0,
+                                                            justifyContent:
+                                                                'center'
                                                         }}
                                                     >
-                                                        {item.label}
-                                                    </ListItem.Title>
-                                                </ListItem.Content>
-                                                <Switch
-                                                    value={
-                                                        servicesState !== 'off'
-                                                    }
-                                                    trackEnabledColor={
-                                                        servicesState ===
-                                                        'partial'
-                                                            ? themeColor(
-                                                                  'secondaryText'
-                                                              )
-                                                            : themeColor(
-                                                                  'highlight'
-                                                              )
-                                                    }
-                                                    onValueChange={() =>
-                                                        this.handleToggle(
-                                                            'services'
-                                                        )
-                                                    }
-                                                />
-                                            </ListItem>
-                                        </TouchableOpacity>
-
-                                        {expandedSections.services && (
+                                                        {isOpen ? (
+                                                            <CaretDown
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width={24}
+                                                                height={24}
+                                                            />
+                                                        ) : (
+                                                            <CaretRight
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width={24}
+                                                                height={24}
+                                                            />
+                                                        )}
+                                                    </View>
+                                                    <ListItem.Content>
+                                                        <ListItem.Title
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book'
+                                                            }}
+                                                        >
+                                                            {item.label}
+                                                        </ListItem.Title>
+                                                    </ListItem.Content>
+                                                    <Switch
+                                                        value={
+                                                            servicesState !==
+                                                            'off'
+                                                        }
+                                                        trackEnabledColor={
+                                                            servicesState ===
+                                                            'partial'
+                                                                ? themeColor(
+                                                                      'secondaryText'
+                                                                  )
+                                                                : themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                        }
+                                                        onValueChange={() =>
+                                                            this.handleToggle(
+                                                                'services'
+                                                            )
+                                                        }
+                                                    />
+                                                </ListItem>
+                                            )}
+                                        >
                                             <View style={{ paddingLeft: 20 }}>
                                                 {this.renderSeparator()}
                                                 {item.children?.map(
@@ -804,92 +817,105 @@ export default class ActivityFilter extends React.Component<
                                                                         child.var
                                                                     }
                                                                 >
-                                                                    <TouchableOpacity
-                                                                        onPress={() =>
+                                                                    <Accordion
+                                                                        id="activityfilter-swaps"
+                                                                        title={
+                                                                            child.label
+                                                                        }
+                                                                        open={
+                                                                            expandedSections.swaps
+                                                                        }
+                                                                        onToggle={(
+                                                                            next
+                                                                        ) =>
                                                                             this.toggleSection(
-                                                                                'swaps'
+                                                                                'swaps',
+                                                                                next
                                                                             )
                                                                         }
-                                                                    >
-                                                                        <ListItem
-                                                                            containerStyle={{
-                                                                                borderBottomWidth: 0,
-                                                                                backgroundColor:
-                                                                                    'transparent'
-                                                                            }}
-                                                                        >
-                                                                            <View
-                                                                                style={{
-                                                                                    marginRight: 0,
-                                                                                    justifyContent:
-                                                                                        'center'
+                                                                        embedded
+                                                                        renderHeader={(
+                                                                            isOpen
+                                                                        ) => (
+                                                                            <ListItem
+                                                                                containerStyle={{
+                                                                                    borderBottomWidth: 0,
+                                                                                    backgroundColor:
+                                                                                        'transparent'
                                                                                 }}
                                                                             >
-                                                                                {isChildExpanded ? (
-                                                                                    <CaretDown
-                                                                                        fill={themeColor(
-                                                                                            'text'
-                                                                                        )}
-                                                                                        width={
-                                                                                            24
-                                                                                        }
-                                                                                        height={
-                                                                                            24
-                                                                                        }
-                                                                                    />
-                                                                                ) : (
-                                                                                    <CaretRight
-                                                                                        fill={themeColor(
-                                                                                            'text'
-                                                                                        )}
-                                                                                        width={
-                                                                                            24
-                                                                                        }
-                                                                                        height={
-                                                                                            24
-                                                                                        }
-                                                                                    />
-                                                                                )}
-                                                                            </View>
-                                                                            <ListItem.Content>
-                                                                                <ListItem.Title
+                                                                                <View
                                                                                     style={{
-                                                                                        color: themeColor(
-                                                                                            'text'
-                                                                                        ),
-                                                                                        fontFamily:
-                                                                                            'PPNeueMontreal-Book'
+                                                                                        marginRight: 0,
+                                                                                        justifyContent:
+                                                                                            'center'
                                                                                     }}
                                                                                 >
-                                                                                    {
-                                                                                        child.label
+                                                                                    {isOpen ? (
+                                                                                        <CaretDown
+                                                                                            fill={themeColor(
+                                                                                                'text'
+                                                                                            )}
+                                                                                            width={
+                                                                                                24
+                                                                                            }
+                                                                                            height={
+                                                                                                24
+                                                                                            }
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <CaretRight
+                                                                                            fill={themeColor(
+                                                                                                'text'
+                                                                                            )}
+                                                                                            width={
+                                                                                                24
+                                                                                            }
+                                                                                            height={
+                                                                                                24
+                                                                                            }
+                                                                                        />
+                                                                                    )}
+                                                                                </View>
+                                                                                <ListItem.Content>
+                                                                                    <ListItem.Title
+                                                                                        style={{
+                                                                                            color: themeColor(
+                                                                                                'text'
+                                                                                            ),
+                                                                                            fontFamily:
+                                                                                                'PPNeueMontreal-Book'
+                                                                                        }}
+                                                                                    >
+                                                                                        {
+                                                                                            child.label
+                                                                                        }
+                                                                                    </ListItem.Title>
+                                                                                </ListItem.Content>
+                                                                                <Switch
+                                                                                    value={
+                                                                                        childSwitchState !==
+                                                                                        'off'
                                                                                     }
-                                                                                </ListItem.Title>
-                                                                            </ListItem.Content>
-                                                                            <Switch
-                                                                                value={
-                                                                                    childSwitchState !==
-                                                                                    'off'
-                                                                                }
-                                                                                trackEnabledColor={
-                                                                                    childSwitchState ===
-                                                                                    'partial'
-                                                                                        ? themeColor(
-                                                                                              'secondaryText'
-                                                                                          )
-                                                                                        : themeColor(
-                                                                                              'highlight'
-                                                                                          )
-                                                                                }
-                                                                                onValueChange={() =>
-                                                                                    this.handleToggle(
-                                                                                        'swaps'
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </ListItem>
-                                                                    </TouchableOpacity>
-                                                                    {isChildExpanded && (
+                                                                                    trackEnabledColor={
+                                                                                        childSwitchState ===
+                                                                                        'partial'
+                                                                                            ? themeColor(
+                                                                                                  'secondaryText'
+                                                                                              )
+                                                                                            : themeColor(
+                                                                                                  'highlight'
+                                                                                              )
+                                                                                    }
+                                                                                    onValueChange={() =>
+                                                                                        this.handleToggle(
+                                                                                            'swaps'
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </ListItem>
+                                                                        )}
+                                                                    >
                                                                         <View
                                                                             style={{
                                                                                 paddingLeft: 20
@@ -927,90 +953,103 @@ export default class ActivityFilter extends React.Component<
                                                                                                 subItem.section
                                                                                             }
                                                                                         >
-                                                                                            <TouchableOpacity
-                                                                                                onPress={() =>
+                                                                                            <Accordion
+                                                                                                id={`activityfilter-${subItem.section}`}
+                                                                                                title={
+                                                                                                    subItem.label
+                                                                                                }
+                                                                                                open={
+                                                                                                    isSubItemExpanded
+                                                                                                }
+                                                                                                onToggle={(
+                                                                                                    next
+                                                                                                ) =>
                                                                                                     this.toggleSection(
-                                                                                                        subItem.section
+                                                                                                        subItem.section,
+                                                                                                        next
                                                                                                     )
                                                                                                 }
-                                                                                            >
-                                                                                                <ListItem
-                                                                                                    containerStyle={{
-                                                                                                        borderBottomWidth: 0,
-                                                                                                        backgroundColor:
-                                                                                                            'transparent'
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <View
-                                                                                                        style={{
-                                                                                                            marginRight: 5,
-                                                                                                            justifyContent:
-                                                                                                                'center'
+                                                                                                embedded
+                                                                                                renderHeader={(
+                                                                                                    isOpen
+                                                                                                ) => (
+                                                                                                    <ListItem
+                                                                                                        containerStyle={{
+                                                                                                            borderBottomWidth: 0,
+                                                                                                            backgroundColor:
+                                                                                                                'transparent'
                                                                                                         }}
                                                                                                     >
-                                                                                                        {isSubItemExpanded ? (
-                                                                                                            <CaretDown
-                                                                                                                fill={themeColor(
-                                                                                                                    'text'
-                                                                                                                )}
-                                                                                                                width={
-                                                                                                                    24
-                                                                                                                }
-                                                                                                                height={
-                                                                                                                    24
-                                                                                                                }
-                                                                                                            />
-                                                                                                        ) : (
-                                                                                                            <CaretRight
-                                                                                                                fill={themeColor(
-                                                                                                                    'text'
-                                                                                                                )}
-                                                                                                                width={
-                                                                                                                    24
-                                                                                                                }
-                                                                                                                height={
-                                                                                                                    24
-                                                                                                                }
-                                                                                                            />
-                                                                                                        )}
-                                                                                                    </View>
-                                                                                                    <ListItem.Content>
-                                                                                                        <ListItem.Title
+                                                                                                        <View
                                                                                                             style={{
-                                                                                                                color: themeColor(
-                                                                                                                    'text'
-                                                                                                                )
+                                                                                                                marginRight: 5,
+                                                                                                                justifyContent:
+                                                                                                                    'center'
                                                                                                             }}
                                                                                                         >
-                                                                                                            {
-                                                                                                                subItem.label
+                                                                                                            {isOpen ? (
+                                                                                                                <CaretDown
+                                                                                                                    fill={themeColor(
+                                                                                                                        'text'
+                                                                                                                    )}
+                                                                                                                    width={
+                                                                                                                        24
+                                                                                                                    }
+                                                                                                                    height={
+                                                                                                                        24
+                                                                                                                    }
+                                                                                                                />
+                                                                                                            ) : (
+                                                                                                                <CaretRight
+                                                                                                                    fill={themeColor(
+                                                                                                                        'text'
+                                                                                                                    )}
+                                                                                                                    width={
+                                                                                                                        24
+                                                                                                                    }
+                                                                                                                    height={
+                                                                                                                        24
+                                                                                                                    }
+                                                                                                                />
+                                                                                                            )}
+                                                                                                        </View>
+                                                                                                        <ListItem.Content>
+                                                                                                            <ListItem.Title
+                                                                                                                style={{
+                                                                                                                    color: themeColor(
+                                                                                                                        'text'
+                                                                                                                    )
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    subItem.label
+                                                                                                                }
+                                                                                                            </ListItem.Title>
+                                                                                                        </ListItem.Content>
+                                                                                                        <Switch
+                                                                                                            value={
+                                                                                                                subItemSwitchState !==
+                                                                                                                'off'
                                                                                                             }
-                                                                                                        </ListItem.Title>
-                                                                                                    </ListItem.Content>
-                                                                                                    <Switch
-                                                                                                        value={
-                                                                                                            subItemSwitchState !==
-                                                                                                            'off'
-                                                                                                        }
-                                                                                                        trackEnabledColor={
-                                                                                                            subItemSwitchState ===
-                                                                                                            'partial'
-                                                                                                                ? themeColor(
-                                                                                                                      'secondaryText'
-                                                                                                                  )
-                                                                                                                : themeColor(
-                                                                                                                      'highlight'
-                                                                                                                  )
-                                                                                                        }
-                                                                                                        onValueChange={() =>
-                                                                                                            this.handleToggle(
-                                                                                                                subItem.section
-                                                                                                            )
-                                                                                                        }
-                                                                                                    />
-                                                                                                </ListItem>
-                                                                                            </TouchableOpacity>
-                                                                                            {isSubItemExpanded && (
+                                                                                                            trackEnabledColor={
+                                                                                                                subItemSwitchState ===
+                                                                                                                'partial'
+                                                                                                                    ? themeColor(
+                                                                                                                          'secondaryText'
+                                                                                                                      )
+                                                                                                                    : themeColor(
+                                                                                                                          'highlight'
+                                                                                                                      )
+                                                                                                            }
+                                                                                                            onValueChange={() =>
+                                                                                                                this.handleToggle(
+                                                                                                                    subItem.section
+                                                                                                                )
+                                                                                                            }
+                                                                                                        />
+                                                                                                    </ListItem>
+                                                                                                )}
+                                                                                            >
                                                                                                 <View
                                                                                                     style={{
                                                                                                         paddingLeft: 20
@@ -1078,7 +1117,7 @@ export default class ActivityFilter extends React.Component<
                                                                                                         )
                                                                                                     )}
                                                                                                 </View>
-                                                                                            )}
+                                                                                            </Accordion>
                                                                                             {subIndex <
                                                                                                 child
                                                                                                     .children
@@ -1090,7 +1129,7 @@ export default class ActivityFilter extends React.Component<
                                                                                 }
                                                                             )}
                                                                         </View>
-                                                                    )}
+                                                                    </Accordion>
                                                                     {childIndex <
                                                                         item
                                                                             .children
@@ -1105,93 +1144,106 @@ export default class ActivityFilter extends React.Component<
                                                             <React.Fragment
                                                                 key={child.var}
                                                             >
-                                                                <TouchableOpacity
-                                                                    onPress={() =>
+                                                                <Accordion
+                                                                    id={`activityfilter-${child.section}`}
+                                                                    title={
+                                                                        child.label
+                                                                    }
+                                                                    open={
+                                                                        isChildExpanded
+                                                                    }
+                                                                    onToggle={(
+                                                                        next
+                                                                    ) =>
                                                                         this.toggleSection(
-                                                                            child.section as any
+                                                                            child.section as any,
+                                                                            next
                                                                         )
                                                                     }
-                                                                >
-                                                                    <ListItem
-                                                                        containerStyle={{
-                                                                            borderBottomWidth: 0,
-                                                                            backgroundColor:
-                                                                                'transparent'
-                                                                        }}
-                                                                    >
-                                                                        <View
-                                                                            style={{
-                                                                                marginRight: 0,
-                                                                                justifyContent:
-                                                                                    'center'
+                                                                    embedded
+                                                                    renderHeader={(
+                                                                        isOpen
+                                                                    ) => (
+                                                                        <ListItem
+                                                                            containerStyle={{
+                                                                                borderBottomWidth: 0,
+                                                                                backgroundColor:
+                                                                                    'transparent'
                                                                             }}
                                                                         >
-                                                                            {isChildExpanded ? (
-                                                                                <CaretDown
-                                                                                    fill={themeColor(
-                                                                                        'text'
-                                                                                    )}
-                                                                                    width={
-                                                                                        24
-                                                                                    }
-                                                                                    height={
-                                                                                        24
-                                                                                    }
-                                                                                />
-                                                                            ) : (
-                                                                                <CaretRight
-                                                                                    fill={themeColor(
-                                                                                        'text'
-                                                                                    )}
-                                                                                    width={
-                                                                                        24
-                                                                                    }
-                                                                                    height={
-                                                                                        24
-                                                                                    }
-                                                                                />
-                                                                            )}
-                                                                        </View>
-                                                                        <ListItem.Content>
-                                                                            <ListItem.Title
+                                                                            <View
                                                                                 style={{
-                                                                                    color: themeColor(
-                                                                                        'text'
-                                                                                    ),
-                                                                                    fontFamily:
-                                                                                        'PPNeueMontreal-Book'
+                                                                                    marginRight: 0,
+                                                                                    justifyContent:
+                                                                                        'center'
                                                                                 }}
                                                                             >
-                                                                                {
-                                                                                    child.label
-                                                                                }
-                                                                            </ListItem.Title>
-                                                                        </ListItem.Content>
+                                                                                {isOpen ? (
+                                                                                    <CaretDown
+                                                                                        fill={themeColor(
+                                                                                            'text'
+                                                                                        )}
+                                                                                        width={
+                                                                                            24
+                                                                                        }
+                                                                                        height={
+                                                                                            24
+                                                                                        }
+                                                                                    />
+                                                                                ) : (
+                                                                                    <CaretRight
+                                                                                        fill={themeColor(
+                                                                                            'text'
+                                                                                        )}
+                                                                                        width={
+                                                                                            24
+                                                                                        }
+                                                                                        height={
+                                                                                            24
+                                                                                        }
+                                                                                    />
+                                                                                )}
+                                                                            </View>
+                                                                            <ListItem.Content>
+                                                                                <ListItem.Title
+                                                                                    style={{
+                                                                                        color: themeColor(
+                                                                                            'text'
+                                                                                        ),
+                                                                                        fontFamily:
+                                                                                            'PPNeueMontreal-Book'
+                                                                                    }}
+                                                                                >
+                                                                                    {
+                                                                                        child.label
+                                                                                    }
+                                                                                </ListItem.Title>
+                                                                            </ListItem.Content>
 
-                                                                        <Switch
-                                                                            value={
-                                                                                childSwitchState !==
-                                                                                'off'
-                                                                            }
-                                                                            trackEnabledColor={
-                                                                                childSwitchState ===
-                                                                                'partial'
-                                                                                    ? themeColor(
-                                                                                          'secondaryText'
-                                                                                      )
-                                                                                    : themeColor(
-                                                                                          'highlight'
-                                                                                      )
-                                                                            }
-                                                                            onValueChange={() =>
-                                                                                this.handleToggle(
-                                                                                    child.var as string
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                    </ListItem>
-                                                                </TouchableOpacity>
-                                                                {isChildExpanded && (
+                                                                            <Switch
+                                                                                value={
+                                                                                    childSwitchState !==
+                                                                                    'off'
+                                                                                }
+                                                                                trackEnabledColor={
+                                                                                    childSwitchState ===
+                                                                                    'partial'
+                                                                                        ? themeColor(
+                                                                                              'secondaryText'
+                                                                                          )
+                                                                                        : themeColor(
+                                                                                              'highlight'
+                                                                                          )
+                                                                                }
+                                                                                onValueChange={() =>
+                                                                                    this.handleToggle(
+                                                                                        child.var as string
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </ListItem>
+                                                                    )}
+                                                                >
                                                                     <View
                                                                         style={{
                                                                             paddingLeft: 20
@@ -1270,7 +1322,7 @@ export default class ActivityFilter extends React.Component<
                                                                             )
                                                                         )}
                                                                     </View>
-                                                                )}
+                                                                </Accordion>
                                                                 {childIndex <
                                                                     item
                                                                         .children
@@ -1282,7 +1334,7 @@ export default class ActivityFilter extends React.Component<
                                                     }
                                                 )}
                                             </View>
-                                        )}
+                                        </Accordion>
                                         {this.renderSeparator()}
                                     </React.Fragment>
                                 );
