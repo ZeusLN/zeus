@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Dimensions,
     FlatList,
+    ListRenderItemInfo,
     StyleSheet,
     View,
     Text,
@@ -93,18 +94,23 @@ export default class UTXOPicker extends React.Component<
 
     private async loadLabels() {
         const { utxos } = this.props.UTXOsStore;
+        const results = await Promise.all(
+            utxos.map(async (utxo) => {
+                const key = utxo.getOutpoint;
+                if (!key) return null;
+                const label = await storage.getItem(key);
+                return label ? { key, label } : null;
+            })
+        );
+        if (!this._isMounted) return;
+
         const utxoLabels: Record<string, string> = {};
-        for (const utxo of utxos) {
-            const key = utxo.getOutpoint;
-            if (!key) continue;
-            const label = await storage.getItem(key);
-            if (label) {
-                utxoLabels[key] = label;
+        for (const res of results) {
+            if (res) {
+                utxoLabels[res.key] = res.label;
             }
         }
-        if (this._isMounted) {
-            this.setState({ utxoLabels });
-        }
+        this.setState({ utxoLabels });
     }
 
     openPicker() {
@@ -217,6 +223,76 @@ export default class UTXOPicker extends React.Component<
         });
     }
 
+    private renderUtxoItem = ({ item }: ListRenderItemInfo<Utxo>) => {
+        const selectedSet = new Set(this.state.utxosSelected);
+        const key = item.getOutpoint;
+        if (!key) {
+            return null;
+        }
+        const message = this.state.utxoLabels[key];
+
+        return (
+            <ListItem
+                containerStyle={{
+                    flex: 1,
+                    flexDirection: 'column',
+                    backgroundColor: themeColor('background')
+                }}
+                onPress={() => this.toggleItem(item)}
+            >
+                <View style={styles.rowTop}>
+                    <Text
+                        style={{
+                            flex: 1,
+                            alignSelf: 'flex-start',
+                            color: selectedSet.has(key)
+                                ? themeColor('highlight')
+                                : themeColor('text')
+                        }}
+                    >
+                        {key}
+                    </Text>
+                    {selectedSet.has(key) && (
+                        <Text
+                            style={{
+                                color: themeColor('highlight'),
+                                paddingLeft: 10,
+                                fontSize: 16,
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            ✓
+                        </Text>
+                    )}
+                </View>
+                <View
+                    style={{
+                        alignSelf: 'flex-start'
+                    }}
+                >
+                    <Amount
+                        sats={item.getAmount}
+                        sensitive={true}
+                        color={
+                            selectedSet.has(key) ? 'highlight' : 'secondaryText'
+                        }
+                    />
+                </View>
+                {message && (
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontSize: 13,
+                            alignSelf: 'flex-start'
+                        }}
+                    >
+                        {`${localeString('general.label')}: ${message}`}
+                    </Text>
+                )}
+            </ListItem>
+        );
+    };
+
     render() {
         const { title, onValueChange, UTXOsStore } = this.props;
         const {
@@ -227,8 +303,6 @@ export default class UTXOPicker extends React.Component<
             account
         } = this.state;
         const { utxos, loading, getUTXOs, accounts } = UTXOsStore;
-
-        const selectedSet = new Set(utxosSelected);
 
         return (
             <React.Fragment>
@@ -363,95 +437,7 @@ export default class UTXOPicker extends React.Component<
                                     data={utxos}
                                     contentContainerStyle={styles.listContent}
                                     extraData={utxosSelected}
-                                    renderItem={({ item }) => {
-                                        const key = item.getOutpoint;
-                                        if (!key) {
-                                            return null;
-                                        }
-                                        const message =
-                                            this.state.utxoLabels[key];
-
-                                        return (
-                                            <ListItem
-                                                containerStyle={{
-                                                    flex: 1,
-                                                    flexDirection: 'column',
-                                                    backgroundColor:
-                                                        themeColor('background')
-                                                }}
-                                                onPress={() =>
-                                                    this.toggleItem(item)
-                                                }
-                                            >
-                                                <View style={styles.rowTop}>
-                                                    <Text
-                                                        style={{
-                                                            flex: 1,
-                                                            alignSelf:
-                                                                'flex-start',
-                                                            color: selectedSet.has(
-                                                                key
-                                                            )
-                                                                ? themeColor(
-                                                                      'highlight'
-                                                                  )
-                                                                : themeColor(
-                                                                      'text'
-                                                                  )
-                                                        }}
-                                                    >
-                                                        {key}
-                                                    </Text>
-                                                    {selectedSet.has(key) && (
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'highlight'
-                                                                ),
-                                                                paddingLeft: 10,
-                                                                fontSize: 16,
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book'
-                                                            }}
-                                                        >
-                                                            ✓
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                                <View
-                                                    style={{
-                                                        alignSelf: 'flex-start'
-                                                    }}
-                                                >
-                                                    <Amount
-                                                        sats={item.getAmount}
-                                                        sensitive={true}
-                                                        color={
-                                                            selectedSet.has(key)
-                                                                ? 'highlight'
-                                                                : 'secondaryText'
-                                                        }
-                                                    />
-                                                </View>
-                                                {message && (
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontSize: 13,
-                                                            alignSelf:
-                                                                'flex-start'
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'general.label'
-                                                        )}: ${message}`}
-                                                    </Text>
-                                                )}
-                                            </ListItem>
-                                        );
-                                    }}
+                                    renderItem={this.renderUtxoItem}
                                     keyExtractor={(item: Utxo) =>
                                         item.getOutpoint ??
                                         `${item.txid}:${String(item.output)}`
