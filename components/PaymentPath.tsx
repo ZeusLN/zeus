@@ -32,17 +32,15 @@ const Hop = (props: any) => {
                 style={{
                     backgroundColor: themeColor('secondary'),
                     borderRadius: 6,
-                    margin: 10,
+                    marginTop: 10,
                     marginBottom: 20,
                     width: '100%',
-                    left: -10,
                     paddingLeft: 5,
-                    paddingTop: 10,
-                    paddingBottom: 10
+                    paddingVertical: 20
                 }}
             >
-                <Row align="flex-end">
-                    <View style={{ top: -8, left: 4 }}>
+                <Row>
+                    <View style={{ marginLeft: 4 }}>
                         {expanded.get(index) ? (
                             <CaretDown
                                 fill={themeColor('text')}
@@ -59,18 +57,20 @@ const Hop = (props: any) => {
                     </View>
                     <Text
                         style={{
+                            flex: 1,
                             fontSize: 17,
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Medium',
-                            margin: 10
+                            marginLeft: 10,
+                            paddingRight: 55
                         }}
                     >
                         {title}
                     </Text>
                     <View
                         style={{
-                            height: 40, //any of height
-                            width: 40, //any of width
+                            height: 40,
+                            width: 40,
                             justifyContent: 'center',
                             borderRadius: 20,
                             backgroundColor: themeColor('highlight'),
@@ -106,29 +106,16 @@ const ExpandedHop = (props: any) => {
     });
 
     return (
-        <View
-            key={pathIndex}
-            style={{
-                left: 20,
-                marginRight: 20,
-                borderStyle: 'dotted',
-                borderLeftWidth: 3,
-                borderColor: isDestination
-                    ? 'transparent'
-                    : themeColor('secondaryText')
-            }}
-        >
-            <Row>
+        <Row style={{ alignItems: 'stretch' }}>
+            <View style={{ width: 44, alignItems: 'center' }}>
                 <View
                     style={{
-                        height: 44, //any of height
-                        width: 44, //any of width
-                        justifyContent: 'center',
+                        height: 44,
+                        width: 44,
                         borderRadius: 22,
                         backgroundColor: themeColor('highlight'),
-                        alignSelf: 'center',
-                        alignItems: 'center',
-                        left: -25
+                        justifyContent: 'center',
+                        alignItems: 'center'
                     }}
                 >
                     <Text
@@ -141,80 +128,90 @@ const ExpandedHop = (props: any) => {
                         {`${pathIndex + 1}`}
                     </Text>
                 </View>
-                <TouchableOpacity
-                    onPress={() => {
-                        if (!hop.pubKey) return;
-                        UrlUtils.goToBlockExplorerPubkey(
-                            hop.pubKey,
-                            nodeInfoStore.testnet
-                        );
-                    }}
-                >
-                    {loading ? (
-                        <LoadingIndicator />
-                    ) : (
-                        <Text
-                            style={{
-                                fontSize: 15,
-                                color: themeColor('highlight'),
-                                fontFamily: 'PPNeueMontreal-Medium'
-                            }}
-                        >
-                            {`${
-                                isOrigin
-                                    ? localeString('views.Channel.yourNode')
-                                    : aliasMap.get(hop.pubKey)
-                                    ? pubkeyValue
-                                    : typeof hop.node === 'string' &&
-                                      hop.node.length >= 66
-                                    ? `${
-                                          typeof nodeValue === 'string'
-                                              ? (nodeValue as string).slice(
-                                                    0,
-                                                    14
-                                                )
-                                              : ''
-                                      }...${
-                                          typeof nodeValue === 'string'
-                                              ? (nodeValue as string).slice(-14)
-                                              : ''
-                                      }`
-                                    : typeof nodeValue === 'string'
-                                    ? nodeValue
-                                    : ''
-                            }`}
-                        </Text>
-                    )}
-                </TouchableOpacity>
-            </Row>
-
-            <View style={{ marginLeft: 50, marginBottom: 15 }}>
-                {hop.sent ? (
-                    <KeyValue
-                        keyValue={localeString('general.sent')}
-                        value={<Amount sats={hop.sent} toggleable />}
-                        sensitive
-                    />
-                ) : (
-                    <KeyValue
-                        keyValue={
-                            isDestination
-                                ? localeString('general.received')
-                                : localeString('models.Payment.forwarded')
-                        }
-                        value={<Amount sats={hop.forwarded} toggleable />}
-                        sensitive
-                    />
-                )}
-                {!isOrigin && !isDestination && (
-                    <KeyValue
-                        keyValue={localeString('models.Payment.fee')}
-                        value={<Amount sats={hop.fee} toggleable />}
-                        sensitive
+                {!isDestination && (
+                    <View
+                        style={{
+                            flex: 1,
+                            borderStyle: 'dotted',
+                            borderLeftWidth: 3,
+                            borderColor: themeColor('secondaryText')
+                        }}
                     />
                 )}
             </View>
-        </View>
+            <View style={{ flex: 1, marginLeft: 20 }}>
+                <View style={{ height: 44, justifyContent: 'center' }}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (!hop.pubKey) return;
+                            UrlUtils.goToBlockExplorerPubkey(
+                                hop.pubKey,
+                                nodeInfoStore.testnet
+                            );
+                        }}
+                    >
+                        {loading ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <Text
+                                style={{
+                                    fontSize: 15,
+                                    color: themeColor('highlight'),
+                                    fontFamily: 'PPNeueMontreal-Medium'
+                                }}
+                            >
+                                {isOrigin
+                                    ? localeString('views.Channel.yourNode')
+                                    : aliasMap.get(hop.pubKey)
+                                    ? pubkeyValue
+                                    : typeof nodeValue === 'string'
+                                    ? typeof hop.node === 'string' &&
+                                      hop.node.length >= 66
+                                        ? `${nodeValue.slice(
+                                              0,
+                                              14
+                                          )}...${nodeValue.slice(-14)}`
+                                        : nodeValue
+                                    : ''}
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                <View style={{ marginBottom: 15 }}>
+                    {hop.sent ? (
+                        <KeyValue
+                            keyValue={localeString('general.sent')}
+                            value={
+                                <Amount sats={hop.sent} toggleable sensitive />
+                            }
+                        />
+                    ) : (
+                        <KeyValue
+                            keyValue={
+                                isDestination
+                                    ? localeString('general.received')
+                                    : localeString('models.Payment.forwarded')
+                            }
+                            value={
+                                <Amount
+                                    sats={hop.forwarded}
+                                    toggleable
+                                    sensitive
+                                />
+                            }
+                        />
+                    )}
+                    {!isOrigin && !isDestination && (
+                        <KeyValue
+                            keyValue={localeString('models.Payment.fee')}
+                            value={
+                                <Amount sats={hop.fee} toggleable sensitive />
+                            }
+                        />
+                    )}
+                </View>
+            </View>
+        </Row>
     );
 };
 
