@@ -5,7 +5,7 @@
         "iosSha256": "3757ec91f5ea4b26f256bd1a03fb43494adb333f664d96f1b5436f85ac34e8bb"
     },
     "ldk-node": {
-        "version": "v0.7.0-zeus-close-fee-fix",
+        "version": "v0.7.0-zeus",
         "iosSha256": "8d163b3dc297151bc00d567f744b632c10b4ab311307935187e699e992e5517a"
     },
     "cdk": {
