@@ -699,6 +699,7 @@ export default class ReceiveEcash extends React.Component<
                                                             overrideMintUrl={
                                                                 lastInvoiceMintUrl
                                                             }
+                                                            isReceiveView
                                                             navigation={
                                                                 navigation
                                                             }
@@ -859,6 +860,7 @@ export default class ReceiveEcash extends React.Component<
                                             >
                                                 <EcashMintPicker
                                                     hideAmount
+                                                    isReceiveView
                                                     navigation={navigation}
                                                 />
                                             </View>

@@ -70,6 +70,41 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         )
     }
 
+    private fun readPositiveLong(json: JSONObject, key: String): Long {
+        return when (val raw = json.opt(key)) {
+            is Number -> raw.toLong()
+            is String -> raw.toLongOrNull() ?: 0L
+            else -> 0L
+        }.coerceAtLeast(0L)
+    }
+
+    private fun parseMeltOptions(optionsJson: String?): MeltOptions? {
+        if (optionsJson.isNullOrBlank()) return null
+
+        return try {
+            val parsed = JSONObject(optionsJson)
+
+            parsed.optJSONObject("mpp")?.let { mpp ->
+                val amount = readPositiveLong(mpp, "amount")
+                if (amount > 0) {
+                    return MeltOptions.Mpp(Amount(amount.toULong()))
+                }
+            }
+
+            parsed.optJSONObject("amountless")?.let { amountless ->
+                val amountMsat = readPositiveLong(amountless, "amount_msat")
+                if (amountMsat > 0) {
+                    return MeltOptions.Amountless(Amount(amountMsat.toULong()))
+                }
+            }
+
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "parseMeltOptions: invalid options JSON", e)
+            null
+        }
+    }
+
     /**
      * Returns the initialized wallet or rejects with NO_WALLET error and returns null
      */
@@ -816,7 +851,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val url = MintUrl(mintUrl)
-                val quote = wallet!!.meltQuote(url, request, null)
+                val options = parseMeltOptions(optionsJson)
+                val quote = wallet!!.meltQuote(url, request, options)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -885,6 +921,86 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.e(TAG, "melt error", e)
                 withContext(Dispatchers.Main) {
                     promise.reject("MELT_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun meltMpp(bolt11: String, optionsJson: String?, maxFee: Double, promise: Promise) {
+        val wallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                val options = parseMeltOptions(optionsJson)
+                val fee = if (maxFee > 0) Amount(maxFee.toULong()) else null
+                val melted = wallet!!.melt(bolt11, options, fee)
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodeMelted(melted).toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "meltMpp error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "meltMpp error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("MELT_MPP_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun meltPartial(mintUrl: String, bolt11: String, mppAmountMsat: Double, promise: Promise) {
+        val wallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                val url = MintUrl(mintUrl)
+                val mppAmount = Amount(mppAmountMsat.toLong().toULong())
+                val normalizedUrl = mintUrl.trimEnd('/')
+
+                // Step 1: Create melt quote via CDK with MPP options
+                val options = MeltOptions.Mpp(mppAmount)
+                val quote = wallet!!.meltQuote(url, bolt11, options)
+
+                // Step 2: Get all proofs for this mint
+                val allProofs = wallet!!.listProofs()
+                val mintProofs = mutableListOf<org.cashudevkit.Proof>()
+                for ((key, proofs) in allProofs) {
+                    if (key.trimEnd('/') == normalizedUrl) {
+                        mintProofs.addAll(proofs)
+                        break
+                    }
+                }
+
+                if (mintProofs.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("NO_PROOFS", "No proofs found for mint $mintUrl")
+                    }
+                    return@launch
+                }
+
+                // Step 3: Try CDK's meltProofs (keeps proof DB in sync)
+                val melted = wallet!!.meltProofs(url, quote.id, mintProofs)
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodeMelted(melted).toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "meltPartial error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "meltPartial error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("MELT_PARTIAL_ERROR", e.message, e)
                 }
             }
         }
@@ -1332,7 +1448,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val url = MintUrl(mintUrl)
-                val quote = wallet!!.meltQuote(url, request, null)
+                val options = parseMeltOptions(optionsJson)
+                val quote = wallet!!.meltQuote(url, request, options)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())

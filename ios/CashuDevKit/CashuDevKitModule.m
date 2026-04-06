@@ -105,6 +105,18 @@ RCT_EXTERN_METHOD(melt:(NSString *)mintUrl
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(meltMpp:(NSString *)bolt11
+                  optionsJson:(NSString * _Nullable)optionsJson
+                  maxFee:(nonnull NSNumber *)maxFee
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(meltPartial:(NSString *)mintUrl
+                  bolt11:(NSString *)bolt11
+                  mppAmountMsat:(nonnull NSNumber *)mppAmountMsat
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Token Operations
 RCT_EXTERN_METHOD(prepareSend:(NSString *)mintUrl
                   amount:(nonnull NSNumber *)amount
