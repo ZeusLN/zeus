@@ -192,7 +192,7 @@ export default class WalletConfiguration extends React.Component<
         index: null as number | null,
         active: false,
         newEntry: false,
-        implementation: 'embedded-lnd',
+        implementation: 'ldk-node',
         certVerification: false,
         enableTor: false,
         existingAccount: false,
