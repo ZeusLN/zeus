@@ -150,6 +150,27 @@ export async function pingPeer(
     return { ms: Math.round(global.performance.now() - start), reachable };
 }
 
+/** Ping every host concurrently; each peer uses its own fetch + timeout budget. */
+async function pingNeutrinoHosts(
+    hosts: string[]
+): Promise<{ peer: string; ms: number | string }[]> {
+    return Promise.all(
+        hosts.map(async (peer) => {
+            try {
+                const result = await pingPeer(peer);
+                console.log(`# ${peer} - ${result.ms}`);
+                return {
+                    peer,
+                    ms: result.reachable ? result.ms : 'Unreachable'
+                };
+            } catch (e) {
+                console.log('e', e);
+                return { peer, ms: 'Timed out' };
+            }
+        })
+    );
+}
+
 // ~4GB
 const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
 
@@ -334,66 +355,65 @@ export async function deleteLndWallet(lndDir: string) {
 }
 
 export async function expressGraphSync() {
-    return await new Promise(async (resolve) => {
-        syncStore.setExpressGraphSyncStatus(true);
-        const start = new Date();
+    syncStore.setExpressGraphSyncStatus(true);
+    const start = new Date();
 
-        syncStore.waitForExpressGraphSyncEnd().then(() => {
-            // call cancellation to LND here
-            console.log('Express graph sync cancelling...');
-            cancelGossipSync();
-            console.log('Express graph sync cancelled...');
-            resolve(true);
-        });
-
-        if (settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
-            log.d('Clearing speedloader files');
-            try {
-                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
-                await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
-            } catch (error) {
-                log.e('Gossip files deletion failed', [error]);
-            }
-
-            if (settingsStore?.isSqlite) {
-                log.d('Resetting native SQL graph database');
-                try {
-                    const lndDir = settingsStore?.lndDir || 'lnd';
-                    const network =
-                        settingsStore?.embeddedLndNetwork === 'Mainnet'
-                            ? 'mainnet'
-                            : 'testnet';
-                    await NativeModules.LndMobileTools.DEBUG_resetGraphDb(
-                        lndDir,
-                        network
-                    );
-                } catch (error) {
-                    log.e('Graph database reset failed', [error]);
-                }
-            }
-        }
-
-        try {
-            const gossipStatus = await gossipSync(
-                settingsStore?.settings?.speedloader === 'Custom'
-                    ? settingsStore?.settings?.customSpeedloader
-                    : settingsStore?.settings?.speedloader ||
-                          DEFAULT_SPEEDLOADER,
-                settingsStore?.lndDir || 'lnd',
-                settingsStore?.isSqlite || false
-            );
-
-            const completionTime =
-                (new Date().getTime() - start.getTime()) / 1000 + 's';
-            console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
-            syncStore.setExpressGraphSyncStatus(false);
-            resolve(true);
-        } catch (e) {
-            log.e('GossipSync exception!', [e]);
-            syncStore.setExpressGraphSyncStatus(false);
-            resolve(true);
-        }
+    const cancelOnEnd = syncStore.waitForExpressGraphSyncEnd().then(() => {
+        console.log('Express graph sync cancelling...');
+        cancelGossipSync();
+        console.log('Express graph sync cancelled...');
     });
+
+    if (settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
+        log.d('Clearing speedloader files');
+        try {
+            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
+            await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderDgraphDirectory();
+        } catch (error) {
+            log.e('Gossip files deletion failed', [error]);
+        }
+
+        if (settingsStore?.isSqlite) {
+            log.d('Resetting native SQL graph database');
+            try {
+                const lndDir = settingsStore?.lndDir || 'lnd';
+                const network =
+                    settingsStore?.embeddedLndNetwork === 'Mainnet'
+                        ? 'mainnet'
+                        : 'testnet';
+                await NativeModules.LndMobileTools.DEBUG_resetGraphDb(
+                    lndDir,
+                    network
+                );
+            } catch (error) {
+                log.e('Graph database reset failed', [error]);
+            }
+        }
+    }
+
+    const gossipWork = (async () => {
+        const gossipStatus = await gossipSync(
+            settingsStore?.settings?.speedloader === 'Custom'
+                ? settingsStore?.settings?.customSpeedloader
+                : settingsStore?.settings?.speedloader || DEFAULT_SPEEDLOADER,
+            settingsStore?.lndDir || 'lnd',
+            settingsStore?.isSqlite || false
+        );
+
+        const completionTime =
+            (new Date().getTime() - start.getTime()) / 1000 + 's';
+        console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
+    })();
+
+    try {
+        await Promise.race([gossipWork, cancelOnEnd]);
+    } catch (e) {
+        log.e('GossipSync exception!', [e]);
+    } finally {
+        syncStore.setExpressGraphSyncStatus(false);
+    }
+
+    return true;
 }
 
 export async function initializeLnd({
@@ -802,7 +822,7 @@ async function waitForLndReady({
         await waitForRpcReady();
         if (walletPassword && !syncStore.isSyncing) {
             log.d('Starting sync');
-            syncStore.startSyncing();
+            void syncStore.startSyncing().catch(() => {});
         }
         if (settingsStore?.settings?.rescan) {
             syncStore.startRescanTracking(0);
@@ -936,27 +956,7 @@ export async function optimizeNeutrinoPeers(
         : DEFAULT_NEUTRINO_PEERS_MAINNET;
 
     const results: { peer: string; ms: number | string }[] = [];
-    for (let i = 0; i < peers.length; i++) {
-        const peer = peers[i];
-        await new Promise(async (resolve) => {
-            try {
-                const result = await pingPeer(peer);
-                console.log(`# ${peer} - ${result.ms}`);
-                results.push({
-                    peer,
-                    ms: result.reachable ? result.ms : 'Unreachable'
-                });
-                resolve(true);
-            } catch (e) {
-                console.log('e', e);
-                results.push({
-                    peer,
-                    ms: 'Timed out'
-                });
-                resolve(true);
-            }
-        });
-    }
+    results.push(...(await pingNeutrinoHosts(peers)));
 
     // Optimal
 
@@ -1039,27 +1039,7 @@ export async function optimizeNeutrinoPeers(
             if (selectedPeers.length < peerTargetCount) {
                 peers = SECONDARY_NEUTRINO_PEERS_MAINNET[j];
                 console.log('Trying peers', peers);
-                for (let i = 0; i < peers.length; i++) {
-                    const peer = peers[i];
-                    await new Promise(async (resolve) => {
-                        try {
-                            const result = await pingPeer(peer);
-                            console.log(`# ${peer} - ${result.ms}`);
-                            results.push({
-                                peer,
-                                ms: result.reachable ? result.ms : 'Unreachable'
-                            });
-                            resolve(true);
-                        } catch (e) {
-                            console.log('e', e);
-                            results.push({
-                                peer,
-                                ms: 'Timed out'
-                            });
-                            resolve(true);
-                        }
-                    });
-                }
+                results.push(...(await pingNeutrinoHosts(peers)));
             }
         }
 
