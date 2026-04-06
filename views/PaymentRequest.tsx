@@ -20,7 +20,7 @@ import Button from '../components/Button';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
-import FormAccordion from '../components/FormAccordion';
+import Accordion from '../components/Accordion';
 import Header from '../components/Header';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
@@ -1013,7 +1013,8 @@ export default class PaymentRequest extends React.Component<
 
                                 {(BackendUtils.supportsCustomFeeLimit() ||
                                     isCLightning) && (
-                                    <FormAccordion
+                                    <Accordion
+                                        headerLayout="form"
                                         id="payment-request-fee-settings"
                                         title={localeString(
                                             'views.Settings.title'
@@ -1333,7 +1334,7 @@ export default class PaymentRequest extends React.Component<
                                                 </>
                                             )}
                                         </>
-                                    </FormAccordion>
+                                    </Accordion>
                                 )}
                                 {!(
                                     BackendUtils.supportsCustomFeeLimit() ||

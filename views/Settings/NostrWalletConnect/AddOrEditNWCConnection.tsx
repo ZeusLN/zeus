@@ -9,7 +9,7 @@ import Slider from '@react-native-community/slider';
 import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 
 import Screen from '../../../components/Screen';
-import FormAccordion from '../../../components/FormAccordion';
+import Accordion from '../../../components/Accordion';
 import Header from '../../../components/Header';
 import { Body } from '../../../components/text/Body';
 import Button from '../../../components/Button';
@@ -686,7 +686,8 @@ export default class AddOrEditNWCConnection extends React.Component<
 
         if (isCustom) {
             return (
-                <FormAccordion
+                <Accordion
+                    headerLayout="form"
                     key={`nwc-custom-${String(selectedPermissionType)}`}
                     id="nwc-custom-permissions"
                     title={permissionType.title}
@@ -762,7 +763,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             )}
                         </View>
                     </View>
-                </FormAccordion>
+                </Accordion>
             );
         }
 
@@ -1327,7 +1328,8 @@ export default class AddOrEditNWCConnection extends React.Component<
 
                         {/* Advanced Settings */}
                         <View style={styles.section}>
-                            <FormAccordion
+                            <Accordion
+                                headerLayout="form"
                                 id="nwc-advanced-settings"
                                 title={localeString('general.advancedSettings')}
                                 renderHeader={(isOpen) => (
@@ -1552,7 +1554,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                         )}
                                     </View>
                                 </>
-                            </FormAccordion>
+                            </Accordion>
                         </View>
                     </ScrollView>
 
