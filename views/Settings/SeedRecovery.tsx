@@ -1374,6 +1374,10 @@ export default class SeedRecovery extends React.PureComponent<
                                             );
 
                                             navigation.goBack();
+                                        } else if (
+                                            implementation === 'ldk-node'
+                                        ) {
+                                            restore();
                                         } else {
                                             this.askForChannelBackupFirst(
                                                 restore
