@@ -354,13 +354,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
-                console.log(
-                    `[Wallet] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
-                );
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
-                this.getSettingsAndNavigate();
+                if (this._navigating) {
+                    console.log(
+                        '[Wallet] handleAppStateChange(active): skipping — getSettingsAndNavigate already in flight'
+                    );
+                } else {
+                    console.log(
+                        `[Wallet] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
+                    );
+                    this._navigating = true;
+                    this.getSettingsAndNavigate().finally(() => {
+                        this._navigating = false;
+                    });
+                }
             }
         }
     };
