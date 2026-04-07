@@ -33,6 +33,7 @@ class LdkNodeModule: RCTEventEmitter {
     private var storedVssUrl: String?
     private var storedVssStoreId: String?
     private var storedVssHeaders: [String: String] = [:]
+    private var storedVssBuildTimeout: TimeInterval = 30
 
     @objc
     override static func moduleName() -> String! {
@@ -90,6 +91,7 @@ class LdkNodeModule: RCTEventEmitter {
         storedVssUrl = nil
         storedVssStoreId = nil
         storedVssHeaders = [:]
+        storedVssBuildTimeout = 30
     }
 
     // MARK: - Builder Methods
@@ -190,6 +192,13 @@ class LdkNodeModule: RCTEventEmitter {
         } else {
             self.storedVssHeaders = [:]
         }
+        resolve(["status": "ok"])
+    }
+
+    @objc(setVssBuildTimeout:resolver:rejecter:)
+    func setVssBuildTimeout(_ timeoutSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        self.storedVssBuildTimeout = timeoutSeconds.doubleValue
+        NSLog("LdkNodeModule: VSS build timeout set to \(self.storedVssBuildTimeout)s")
         resolve(["status": "ok"])
     }
 
@@ -379,13 +388,20 @@ class LdkNodeModule: RCTEventEmitter {
                     var buildResult: Node?
                     var buildError: Error?
                     var timedOut = false
+                    let dualStoreStart = CFAbsoluteTimeGetCurrent()
 
                     let workItem = DispatchWorkItem {
+                        let ffiStart = CFAbsoluteTimeGetCurrent()
+                        NSLog("LdkNodeModule: [timing] FFI buildWithDualStore starting")
                         do {
                             let dualBuilder = Builder.fromConfig(config: config)
                             self.applyBuilderSettings(dualBuilder)
                             buildResult = try dualBuilder.buildWithDualStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: self.storedVssHeaders)
+                            let ffiMs = Int((CFAbsoluteTimeGetCurrent() - ffiStart) * 1000)
+                            NSLog("LdkNodeModule: [timing] FFI buildWithDualStore completed in \(ffiMs)ms")
                         } catch {
+                            let ffiMs = Int((CFAbsoluteTimeGetCurrent() - ffiStart) * 1000)
+                            NSLog("LdkNodeModule: [timing] FFI buildWithDualStore failed in \(ffiMs)ms: \(error)")
                             buildError = error
                         }
                         semaphore.signal()
@@ -393,36 +409,43 @@ class LdkNodeModule: RCTEventEmitter {
                         // If we timed out, the caller already moved on to the
                         // fallback. Stop the orphaned node so it doesn't leak resources.
                         if timedOut, let orphan = buildResult {
-                            NSLog("LdkNodeModule: Stopping orphaned dual-store node after timeout")
+                            let totalMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
+                            NSLog("LdkNodeModule: [timing] Stopping orphaned dual-store node after timeout (FFI actually finished in \(totalMs)ms)")
                             do { try orphan.stop() } catch {}
                         }
                     }
 
                     DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
-                    let timeout = semaphore.wait(timeout: .now() + 15)
+                    let timeout = semaphore.wait(timeout: .now() + self.storedVssBuildTimeout)
 
                     if timeout == .timedOut {
                         timedOut = true
                         workItem.cancel()
-                        vssError = "VSS server at \(vssUrl) did not respond within 15s"
-                        NSLog("LdkNodeModule: \(vssError!)")
+                        let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
+                        vssError = "VSS server at \(vssUrl) did not respond within \(Int(self.storedVssBuildTimeout))s"
+                        NSLog("LdkNodeModule: [timing] Dual store timed out at \(elapsedMs)ms — \(vssError!)")
                     } else if let error = buildError {
+                        let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         vssError = "Dual store setup failed: \(error.localizedDescription)"
-                        NSLog("LdkNodeModule: \(vssError!)")
+                        NSLog("LdkNodeModule: [timing] Dual store failed at \(elapsedMs)ms — \(vssError!)")
                     } else {
+                        let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         self.setNode(buildResult)
-                        NSLog("LdkNodeModule: Node built with dual store successfully")
+                        NSLog("LdkNodeModule: [timing] Node built with dual store successfully in \(elapsedMs)ms")
                     }
                 }
 
                 // Fall back to local SQLite store if dual store failed or VSS was not configured
                 if self.getNode() == nil {
                     if vssError != nil {
-                        NSLog("LdkNodeModule: Falling back to local SQLite store")
+                        NSLog("LdkNodeModule: [timing] Falling back to local SQLite store")
                     }
+                    let localStart = CFAbsoluteTimeGetCurrent()
                     let localBuilder = Builder.fromConfig(config: config)
                     self.applyBuilderSettings(localBuilder)
                     self.setNode(try localBuilder.build(nodeEntropy: nodeEntropy))
+                    let localMs = Int((CFAbsoluteTimeGetCurrent() - localStart) * 1000)
+                    NSLog("LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
                 }
 
                 self.builder = nil // Builder is consumed

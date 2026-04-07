@@ -452,6 +452,8 @@ export interface ILdkNodeModule {
         headers?: Record<string, string> | null
     ): Promise<void>;
 
+    setVssBuildTimeout(timeoutSeconds: number): Promise<void>;
+
     // Crypto Methods
     mnemonicToSeed(
         mnemonic: string,
