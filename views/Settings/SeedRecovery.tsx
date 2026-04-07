@@ -189,20 +189,32 @@ export default class SeedRecovery extends React.PureComponent<
         };
     }
 
+    private expectedMnemonicWordCount(
+        params: SeedRecoveryProps['route']['params']
+    ): 12 | 24 {
+        const implementation = params?.implementation ?? 'embedded-lnd';
+        const shortMnemonicFlow =
+            implementation === 'ldk-node' ||
+            params?.restoreSwaps === true ||
+            params?.restoreRescueKey === true;
+        return shortMnemonicFlow ? 12 : 24;
+    }
+
     async componentDidMount() {
         await this.initFromProps(this.props);
 
-        const { SettingsStore } = this.props;
+        const { SettingsStore, route } = this.props;
         const { settings } = SettingsStore;
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
+            const clipboardWords = clipboard.trim().split(/\s+/);
+            const expectedWords = this.expectedMnemonicWordCount(route.params);
 
-            const clipboardSeedArray = clipboard.trim().split(/\s+/);
-            if (clipboardSeedArray.length === 24) {
+            if (clipboardWords.length === expectedWords) {
                 this.setState({
                     showClipboardPrompt: true,
-                    clipboardSeedArray
+                    clipboardSeedArray: clipboardWords
                 });
             }
         }
