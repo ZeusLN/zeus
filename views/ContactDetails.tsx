@@ -310,8 +310,14 @@ export default class ContactDetails extends React.Component<
                 .map((address) => `${prefix}${address}`);
 
         const QRButton = () => {
-            const { lnAddress, onchainAddress, pubkey, nostrNpub, nip05 } =
-                contact;
+            const {
+                lnAddress,
+                onchainAddress,
+                pubkey,
+                nostrNpub,
+                nip05,
+                cashuPubkey
+            } = contact;
             return (
                 <TouchableOpacity
                     onPress={() => {
@@ -340,6 +346,10 @@ export default class ContactDetails extends React.Component<
                                     'lightning:'
                                 ),
                                 ...addPrefixToAddresses(pubkey, 'lightning:'),
+                                ...addPrefixToAddresses(
+                                    cashuPubkey,
+                                    'lightning:'
+                                ),
                                 ...addPrefixToAddresses(
                                     onchainAddress,
                                     'bitcoin:'
