@@ -273,7 +273,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // call completes, causing duplicate node builds.
             if (this._navigating) {
                 console.log(
-                    '[LDK startup] handleFocus: skipping — getSettingsAndNavigate already in flight'
+                    '[Wallet] handleFocus: skipping — getSettingsAndNavigate already in flight'
                 );
             } else {
                 // Trigger getSettingsAndNavigate() in three scenarios:
@@ -281,7 +281,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // 2. When exiting POS to handle potential lockscreen navigation
                 // 3. When any settings are updated to refresh the UI state
                 console.log(
-                    `[LDK startup] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
+                    `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
                 );
                 this._navigating = true;
                 this.getSettingsAndNavigate(shareIntentData).finally(() => {
@@ -355,7 +355,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 this.props.navigation.navigate('Lockscreen');
             } else {
                 console.log(
-                    `[LDK startup] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
+                    `[Wallet] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
                 );
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
@@ -1245,7 +1245,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting && start != null) {
             console.log(
-                '[LDK startup] connect time: ' +
+                '[Wallet] connect time: ' +
                     (new Date().getTime() - start) / 1000 +
                     's'
             );
