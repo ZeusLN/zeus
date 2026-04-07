@@ -95,7 +95,9 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                 margin: 10
                             }}
                             onPress={() =>
-                                UrlUtils.goToUrl('https://zeusln.com/sponsor')
+                                UrlUtils.goToUrl(
+                                    'https://zeusln.com/wallet/sponsor'
+                                )
                             }
                         />
                     </>

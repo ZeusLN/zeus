@@ -95,7 +95,9 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                 margin: 10
                             }}
                             onPress={() =>
-                                UrlUtils.goToUrl('https://zeusln.com/sponsor')
+                                UrlUtils.goToUrl(
+                                    'https://zeusln.com/wallet/sponsor'
+                                )
                             }
                         />
                     </>
