@@ -3788,6 +3788,13 @@ export default class CashuStore {
                 !!this.settingsStore.settings?.ecash?.enableMultiMint &&
                 Array.isArray(this.multiMintSelectedUrls) &&
                 this.multiMintSelectedUrls.length > 1;
+            const singleSelectedMintUrl =
+                !!this.settingsStore.settings?.ecash?.enableMultiMint &&
+                Array.isArray(this.multiMintSelectedUrls) &&
+                this.multiMintSelectedUrls.length === 1
+                    ? this.multiMintSelectedUrls[0]
+                    : undefined;
+            const activeMintUrl = singleSelectedMintUrl || this.selectedMintUrl;
 
             const normalizedMultiMintPaymentAmt =
                 this.normalizeMultimintPaymentAmount(rawPaymentAmt);
@@ -3853,7 +3860,7 @@ export default class CashuStore {
                 }
 
                 const cdkQuote = await this.createMeltQuoteCDK(
-                    this.selectedMintUrl,
+                    activeMintUrl,
                     bolt11Invoice
                 );
 
@@ -3872,6 +3879,22 @@ export default class CashuStore {
                     expiry: cdkQuote.expiry,
                     payment_preimage: cdkQuote.payment_preimage
                 };
+
+                const mintBalance = Number(
+                    this.mintBalances[activeMintUrl] ||
+                        this.mintBalances[
+                            this.normalizeMintUrl(activeMintUrl)
+                        ] ||
+                        0
+                );
+                const totalNeeded =
+                    (Number(singleMeltQuote.amount) || 0) +
+                    (Number(singleMeltQuote.fee_reserve) || 0);
+
+                this.getPayReqError =
+                    mintBalance < totalNeeded
+                        ? localeString('stores.CashuStore.notEnoughFunds')
+                        : undefined;
 
                 totalFeeEstimate = Number(singleMeltQuote.fee_reserve) || 0;
                 this.meltQuotes = [];
@@ -3931,8 +3954,6 @@ export default class CashuStore {
             this.paymentStartTime = Date.now();
         }
 
-        const mintUrl = this.selectedMintUrl;
-
         try {
             const rawPaymentAmt = this.payReq?.getRequestAmount
                 ? this.payReq?.getRequestAmount
@@ -3964,6 +3985,14 @@ export default class CashuStore {
                     onProgress
                 });
             }
+
+            const singleSelectedMintUrl =
+                !!this.settingsStore.settings?.ecash?.enableMultiMint &&
+                Array.isArray(this.multiMintSelectedUrls) &&
+                this.multiMintSelectedUrls.length === 1
+                    ? this.multiMintSelectedUrls[0]
+                    : undefined;
+            const mintUrl = singleSelectedMintUrl || this.selectedMintUrl;
 
             const paymentAmt = rawPaymentAmt;
 
