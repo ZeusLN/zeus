@@ -46,10 +46,10 @@ interface NostrContactsProps {
 
 interface NostrContactsState {
     account: string;
-    contactsData: any[];
+    contactsData: NostrContact[];
     loading: boolean;
     isSelectionMode: boolean;
-    selectedContacts: any[];
+    selectedContacts: SelectedContact[];
     isValid: boolean;
     isValidNpub: boolean;
     isValidNip05: boolean;
@@ -58,25 +58,29 @@ interface NostrContactsState {
 
 const CHECKBOX_WIDTH = 40;
 
+interface NostrContact {
+    name: string;
+    display_name: string;
+    picture: string;
+    lud06: string;
+    lud16: string;
+    banner: string;
+    npub?: string;
+}
+
+type SelectedContact = NostrContact & { isSelected: boolean };
+
 const truncateString = (str: string, maxLength: number) => {
     if (str.length <= maxLength) return str;
     return `${str.substring(0, 6)}...${str.substring(str.length - 6)}`;
 };
 
 interface ContactItemProps {
-    item: {
-        name: string;
-        display_name: string;
-        picture: string;
-        lud06: string;
-        lud16: string;
-        banner: string;
-        npub?: string;
-    };
+    item: NostrContact;
     isSelected: boolean;
     checkboxTranslateX: Animated.AnimatedInterpolation<string | number>;
-    onItemPress: (item: any) => void;
-    onToggleSelection: (item: any) => void;
+    onItemPress: (item: NostrContact) => void;
+    onToggleSelection: (item: NostrContact) => void;
 }
 
 const ContactItem = React.memo(
@@ -276,7 +280,7 @@ export default class NostrContacts extends React.Component<
                         console.log(`connected to ${relay.url}`);
                     });
 
-                    relay.on('error', (): any => {
+                    relay.on('error', (): void => {
                         console.log(`failed to connect to ${relay.url}`);
                     });
 
@@ -322,9 +326,13 @@ export default class NostrContacts extends React.Component<
                 const profileEvents = profilesEventsArrays
                     .flat()
                     .filter((event) => event !== undefined);
-                const newContactDataIndexByName: any = {};
-                const newContactDataIndexByPubkey: any = {};
-                const newContactsData: any[] = [];
+                const newContactDataIndexByName: Record<string, NostrContact> =
+                    {};
+                const newContactDataIndexByPubkey: Record<
+                    string,
+                    { content: NostrContact; timestamp: number }
+                > = {};
+                const newContactsData: NostrContact[] = [];
 
                 profileEvents.forEach((item: any) => {
                     try {
@@ -374,7 +382,7 @@ export default class NostrContacts extends React.Component<
             });
     }
 
-    toggleContactSelection = (contact: any) => {
+    toggleContactSelection = (contact: NostrContact) => {
         this.setState((prevState) => {
             const selectedContacts = [...prevState.selectedContacts];
             const index = selectedContacts.findIndex(
@@ -393,7 +401,7 @@ export default class NostrContacts extends React.Component<
         });
     };
 
-    onItemPress = async (item: any) => {
+    onItemPress = async (item: NostrContact) => {
         if (this.state.isSelectionMode) {
             this.toggleContactSelection(item);
         } else {
@@ -407,12 +415,12 @@ export default class NostrContacts extends React.Component<
         }
     };
 
-    renderContactItem = ({ item }: { item: any }) => {
+    renderContactItem = ({ item }: { item: NostrContact }) => {
         if (!item?.name && !item?.display_name) return null;
         if (!item.picture) return null;
 
         const isSelected = this.state.selectedContacts.some(
-            (c: any) => c.npub === item.npub && c.isSelected
+            (c: SelectedContact) => c.npub === item.npub && c.isSelected
         );
 
         return (
@@ -461,7 +469,9 @@ export default class NostrContacts extends React.Component<
             );
 
             // Retrieve existing contacts from Encrypted storage
-            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
+            const contactsString: string | null = await Storage.getItem(
+                CONTACTS_KEY
+            );
             const existingContacts: any = contactsString
                 ? JSON.parse(contactsString)
                 : [];
