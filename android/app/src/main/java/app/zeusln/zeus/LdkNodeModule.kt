@@ -42,6 +42,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var storedVssUrl: String? = null
     private var storedVssStoreId: String? = null
     private var storedVssHeaders: Map<String, String> = emptyMap()
+    private var storedVssBuildTimeoutSeconds: Long = 30
 
     override fun getName(): String {
         return "LdkNodeModule"
@@ -71,6 +72,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedVssUrl = null
         storedVssStoreId = null
         storedVssHeaders = emptyMap()
+        storedVssBuildTimeoutSeconds = 30
     }
 
     // Extract clean error message from NodeException or other exceptions
@@ -255,6 +257,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun setVssBuildTimeout(timeoutSeconds: Double, promise: Promise) {
+        this.storedVssBuildTimeoutSeconds = timeoutSeconds.toLong()
+        Log.d("LdkNodeModule", "VSS build timeout set to ${this.storedVssBuildTimeoutSeconds}s")
+        promise.resolve(null)
+    }
+
     // Crypto Methods
 
     /**
@@ -377,11 +386,16 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         var dualBuildError: Exception? = null
                         val latch = java.util.concurrent.CountDownLatch(1)
                         val dualTimedOut = java.util.concurrent.atomic.AtomicBoolean(false)
+                        val dualStoreStartMs = System.currentTimeMillis()
 
                         val dualThread = Thread {
+                            val ffiStartMs = System.currentTimeMillis()
+                            Log.d("LdkNodeModule", "[timing] FFI buildWithDualStore starting")
                             try {
                                 dualNode = dualBuilder.buildWithDualStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, this@LdkNodeModule.storedVssHeaders)
+                                Log.d("LdkNodeModule", "[timing] FFI buildWithDualStore completed in ${System.currentTimeMillis() - ffiStartMs}ms")
                             } catch (e: Exception) {
+                                Log.e("LdkNodeModule", "[timing] FFI buildWithDualStore failed in ${System.currentTimeMillis() - ffiStartMs}ms: ${e.message}")
                                 dualBuildError = e
                             }
                             latch.countDown()
@@ -389,22 +403,25 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                             // If we timed out, the caller already moved on to the
                             // fallback. Stop the orphaned node so it doesn't leak resources.
                             if (dualTimedOut.get() && dualNode != null) {
-                                Log.w("LdkNodeModule", "Stopping orphaned dual-store node after timeout")
+                                val totalMs = System.currentTimeMillis() - dualStoreStartMs
+                                Log.w("LdkNodeModule", "[timing] Stopping orphaned dual-store node after timeout (FFI actually finished in ${totalMs}ms)")
                                 try { dualNode?.stop() } catch (_: Exception) {}
                             }
                         }
                         dualThread.start()
 
-                        val completed = latch.await(15, java.util.concurrent.TimeUnit.SECONDS)
+                        val completed = latch.await(this@LdkNodeModule.storedVssBuildTimeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
                         if (!completed) {
                             dualTimedOut.set(true)
-                            vssError = "VSS server at $vssUrl did not respond within 15s"
-                            Log.e("LdkNodeModule", "buildNode: $vssError")
+                            val elapsedMs = System.currentTimeMillis() - dualStoreStartMs
+                            vssError = "VSS server at $vssUrl did not respond within ${this@LdkNodeModule.storedVssBuildTimeoutSeconds}s"
+                            Log.e("LdkNodeModule", "[timing] Dual store timed out at ${elapsedMs}ms — $vssError")
                         } else if (dualBuildError != null) {
                             throw dualBuildError!!
                         } else {
+                            val elapsedMs = System.currentTimeMillis() - dualStoreStartMs
                             synchronized(nodeLock) { this@LdkNodeModule.node = dualNode }
-                            Log.d("LdkNodeModule", "Node built with dual store successfully")
+                            Log.d("LdkNodeModule", "[timing] Node built with dual store successfully in ${elapsedMs}ms")
                         }
                     } catch (e: Exception) {
                         vssError = "Dual store setup failed: ${e.message}"
@@ -415,13 +432,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 // Fall back to local SQLite store if dual store failed or VSS was not configured
                 if (this@LdkNodeModule.node == null) {
                     if (vssError != null) {
-                        Log.w("LdkNodeModule", "Falling back to local SQLite store")
+                        Log.w("LdkNodeModule", "[timing] Falling back to local SQLite store")
                     }
+                    val localStartMs = System.currentTimeMillis()
                     val localBuilder = Builder.fromConfig(config)
                     applyBuilderSettings(localBuilder)
                     synchronized(nodeLock) {
                         this@LdkNodeModule.node = localBuilder.build(nodeEntropy)
                     }
+                    Log.d("LdkNodeModule", "[timing] Local-only build completed in ${System.currentTimeMillis() - localStartMs}ms")
                 }
 
                 this@LdkNodeModule.builder = null // Builder is consumed

@@ -4,6 +4,7 @@
  */
 
 import { NativeModules } from 'react-native';
+import RNFS from 'react-native-fs';
 import { generateVssAuthHeaders } from '../utils/VssAuthUtils';
 import type {
     Network,
@@ -112,6 +113,10 @@ const setVssServer = async (
     headers?: Record<string, string>
 ): Promise<void> => {
     return await LdkNodeModule.setVssServer(vssUrl, storeId, headers ?? null);
+};
+
+const setVssBuildTimeout = async (timeoutSeconds: number): Promise<void> => {
+    return await LdkNodeModule.setVssBuildTimeout(timeoutSeconds);
 };
 
 // ============================================================================
@@ -783,13 +788,17 @@ const initializeNode = async ({
     };
     vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
 }): Promise<{ vssError?: string }> => {
+    const t0 = Date.now();
+    const elapsed = () => `${Date.now() - t0}ms`;
     console.log('LDK Node: Initializing...');
     await createBuilder();
     await setNetwork(network);
-    console.log(`LDK Node: Network set to ${network}`);
+    console.log(`LDK Node: [${elapsed()}] Network set to ${network}`);
     await setStorageDirPath(storagePath);
     await setEsploraServer(esploraServerUrl);
-    console.log(`LDK Node: Esplora server set to ${esploraServerUrl}`);
+    console.log(
+        `LDK Node: [${elapsed()}] Esplora server set to ${esploraServerUrl}`
+    );
 
     if (rgsServerUrl) {
         await setGossipSourceRgs(rgsServerUrl);
@@ -854,26 +863,66 @@ const initializeNode = async ({
     if (vssConfig && vssConfig.url && vssConfig.storeId) {
         let vssHeaders: Record<string, string> | undefined;
         try {
+            const tAuth = Date.now();
             // Pass pre-derived keypair to avoid a second PBKDF2 (~3.4s)
             vssHeaders = generateVssAuthHeaders(
                 mnemonic,
                 passphrase ?? undefined,
                 vssKey
             );
-            console.log('LDK Node: VSS auth header generated');
+            console.log(
+                `LDK Node: [${elapsed()}] VSS auth header generated (${
+                    Date.now() - tAuth
+                }ms)`
+            );
         } catch (e) {
-            console.warn('LDK Node: Failed to generate VSS auth header:', e);
+            console.warn(
+                `LDK Node: [${elapsed()}] Failed to generate VSS auth header:`,
+                e
+            );
         }
+        const tVssSet = Date.now();
         await setVssServer(vssConfig.url, vssConfig.storeId, vssHeaders);
-        console.log(`LDK Node: VSS server set to ${vssConfig.url}`);
+        console.log(
+            `LDK Node: [${elapsed()}] VSS server set to ${vssConfig.url} (${
+                Date.now() - tVssSet
+            }ms)`
+        );
     }
 
+    // Use a longer timeout for restore-from-seed (no local DB yet) since
+    // every read falls through to VSS sequentially. Even existing nodes
+    // may have an incomplete local DB (e.g. after a previous fallback
+    // build), so the default is generous to avoid false alerts.
+    const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
+    const hasLocalDb = await RNFS.exists(localDbPath);
+    const vssBuildTimeout = hasLocalDb ? 30 : 60;
+    await setVssBuildTimeout(vssBuildTimeout);
+    console.log(
+        `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
+            hasLocalDb ? 'existing node' : 'restore / first run'
+        })`
+    );
+
+    console.log(`LDK Node: [${elapsed()}] Starting buildNode...`);
+    const tBuild = Date.now();
     const buildResult = await buildNode(mnemonic, passphrase);
+    const buildDuration = Date.now() - tBuild;
     const vssError = buildResult?.vssError;
     if (vssError) {
-        console.warn(`LDK Node: VSS failed (${vssError}), using local storage`);
+        console.warn(
+            `LDK Node: [${elapsed()}] VSS failed after ${buildDuration}ms (${vssError}), using local storage`
+        );
+    } else {
+        console.log(
+            `LDK Node: [${elapsed()}] buildNode completed in ${buildDuration}ms`
+        );
     }
-    console.log('LDK Node: Build complete');
+    console.log(
+        `LDK Node: [${elapsed()}] Build complete — total init time ${
+            Date.now() - t0
+        }ms`
+    );
     return { vssError };
 };
 
@@ -906,6 +955,7 @@ export interface ILdkNodeInjections {
             storeId: string,
             headers?: Record<string, string>
         ) => Promise<void>;
+        setVssBuildTimeout: (timeoutSeconds: number) => Promise<void>;
     };
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
@@ -1145,7 +1195,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         setLiquiditySourceLsps1,
         setLiquiditySourceLsps2,
         setTrustedPeers0conf,
-        setVssServer
+        setVssServer,
+        setVssBuildTimeout
     },
     mnemonic: {
         generateMnemonic

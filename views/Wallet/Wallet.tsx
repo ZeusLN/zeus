@@ -186,6 +186,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
+    private _navigating = false;
 
     constructor(props: WalletProps) {
         super(props);
@@ -267,14 +268,26 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.posWasEnabled ||
             SettingsStore.triggerSettingsRefresh
         ) {
-            // Trigger getSettingsAndNavigate() in three scenarios:
-            // 1. On initial wallet load to ensure proper initialization
-            // 2. When exiting POS to handle potential lockscreen navigation
-            // 3. When any settings are updated to refresh the UI state
-            console.log(
-                `[LDK startup] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
-            );
-            this.getSettingsAndNavigate(shareIntentData);
+            // Guard against concurrent getSettingsAndNavigate calls — the
+            // focus event can fire multiple times before the first async
+            // call completes, causing duplicate node builds.
+            if (this._navigating) {
+                console.log(
+                    '[Wallet] handleFocus: skipping — getSettingsAndNavigate already in flight'
+                );
+            } else {
+                // Trigger getSettingsAndNavigate() in three scenarios:
+                // 1. On initial wallet load to ensure proper initialization
+                // 2. When exiting POS to handle potential lockscreen navigation
+                // 3. When any settings are updated to refresh the UI state
+                console.log(
+                    `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
+                );
+                this._navigating = true;
+                this.getSettingsAndNavigate(shareIntentData).finally(() => {
+                    this._navigating = false;
+                });
+            }
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
         }
@@ -341,13 +354,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
-                console.log(
-                    `[LDK startup] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
-                );
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
-                this.getSettingsAndNavigate();
+                if (this._navigating) {
+                    console.log(
+                        '[Wallet] handleAppStateChange(active): skipping — getSettingsAndNavigate already in flight'
+                    );
+                } else {
+                    console.log(
+                        `[Wallet] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
+                    );
+                    this._navigating = true;
+                    this.getSettingsAndNavigate().finally(() => {
+                        this._navigating = false;
+                    });
+                }
             }
         }
     };
@@ -1232,7 +1254,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting && start != null) {
             console.log(
-                '[LDK startup] connect time: ' +
+                '[Wallet] connect time: ' +
                     (new Date().getTime() - start) / 1000 +
                     's'
             );
