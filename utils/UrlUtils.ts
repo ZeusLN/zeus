@@ -95,8 +95,17 @@ const goToBlockExplorerPubkey = (pubKey: string, testnet?: boolean) =>
 const goToUrl = (url: string) => {
     modalStore.setUrl(url);
     modalStore.setClipboardValue(url);
+    modalStore.setIsEmail(false);
     modalStore.toggleExternalLinkModal(true);
     modalStore.setAction(() => leaveZeus(url));
+};
+
+const goToEmailAddress = (email: string) => {
+    modalStore.setUrl(email);
+    modalStore.setClipboardValue(email);
+    modalStore.setIsEmail(true);
+    modalStore.toggleExternalLinkModal(true);
+    modalStore.setAction(() => leaveZeus(`mailto:${email}`));
 };
 
 const leaveZeus = (url: string) => {
@@ -118,5 +127,6 @@ export default {
     goToBlockExplorerBlockHash,
     goToBlockExplorerChannelId,
     goToBlockExplorerPubkey,
-    goToUrl
+    goToUrl,
+    goToEmailAddress
 };

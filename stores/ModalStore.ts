@@ -23,6 +23,7 @@ export default class ModalStore {
         totalAmount: number;
     };
     @observable public modalUrl: string;
+    @observable public modalIsEmail: boolean = false;
     @observable public clipboardValue: string;
     @observable public infoModalTitle: string | undefined;
     @observable public infoModalText: string | Array<string> | undefined;
@@ -174,6 +175,11 @@ export default class ModalStore {
     @action
     public setUrl = (text: string) => {
         this.modalUrl = text;
+    };
+
+    @action
+    public setIsEmail = (value: boolean) => {
+        this.modalIsEmail = value;
     };
 
     @action
