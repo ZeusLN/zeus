@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Linking, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -67,14 +67,7 @@ function Help(props: HelpProps) {
                         }}
                         onPress={() => {
                             if (item.email) {
-                                const url = `mailto:${item.email}`;
-                                Linking.canOpenURL(url).then(
-                                    (supported: boolean) => {
-                                        if (supported) {
-                                            Linking.openURL(url);
-                                        }
-                                    }
-                                );
+                                UrlUtils.goToEmailAddress(item.email);
                             }
                             if (item.url) UrlUtils.goToUrl(item.url);
                         }}

@@ -28,6 +28,7 @@ export default class ExternalLinkModal extends React.Component<
         const {
             showExternalLinkModal,
             modalUrl,
+            modalIsEmail,
             toggleExternalLinkModal,
             onPress
         } = ModalStore;
@@ -72,9 +73,13 @@ export default class ExternalLinkModal extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString(
-                                'components.ExternalLinkModal.externalLink'
-                            ).replace('Zeus', 'ZEUS')}
+                            {modalIsEmail
+                                ? localeString(
+                                      'components.ExternalLinkModal.emailAddress'
+                                  )
+                                : localeString(
+                                      'components.ExternalLinkModal.externalLink'
+                                  ).replace('Zeus', 'ZEUS')}
                         </Text>
                         <Text
                             style={{
@@ -84,13 +89,19 @@ export default class ExternalLinkModal extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString(
-                                'components.ExternalLinkModal.proceed'
-                            )}
+                            {modalIsEmail
+                                ? localeString(
+                                      'components.ExternalLinkModal.sendEmail'
+                                  )
+                                : localeString(
+                                      'components.ExternalLinkModal.proceed'
+                                  )}
                         </Text>
                         <CopyBox
                             heading={localeString(
-                                'components.ExternalLinkModal.copyLink'
+                                modalIsEmail
+                                    ? 'components.ExternalLinkModal.copyEmail'
+                                    : 'components.ExternalLinkModal.copyLink'
                             )}
                             URL={modalUrl}
                             headingCopied={localeString(
