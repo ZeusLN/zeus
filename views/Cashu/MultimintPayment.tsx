@@ -664,14 +664,6 @@ export default class MultimintPayment extends React.Component<
                         isComplete && { marginTop: 15 }
                     ]}
                 >
-                    {step === MultinutPaymentStep.PROCESSING && !hasError && (
-                        <Button
-                            title={localeString('general.cancel')}
-                            onPress={() => navigation.goBack()}
-                            noUppercase
-                        />
-                    )}
-
                     {isComplete && !hasError && CashuStore?.noteKey && (
                         <Button
                             title={
