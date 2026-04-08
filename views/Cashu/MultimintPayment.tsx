@@ -14,6 +14,8 @@ import { Icon, ListItem } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
+import DonationGiftIcon from '../../components/DonationGiftIcon';
+import DonationInfoModal from '../../components/DonationInfoModal';
 import Header from '../../components/Header';
 import MintAvatar from '../../components/MintAvatar';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
@@ -60,6 +62,12 @@ interface MultimintPaymentState {
     error?: string;
     showPaymentDetails: boolean;
     storedNotes: string;
+    paymentType: 'main' | 'donation';
+    payingDonation: boolean;
+    donationHandled: boolean;
+    showDonationInfo: boolean;
+    donationPreimage: string;
+    amountDonated: number | null;
 }
 
 @inject('CashuStore', 'NodeInfoStore')
@@ -69,6 +77,8 @@ export default class MultimintPayment extends React.Component<
     MultimintPaymentState
 > {
     private focusListener: (() => void) | undefined;
+    private paymentAmountSat: number = 0;
+    private paymentHash?: string;
 
     constructor(props: MultimintPaymentProps) {
         super(props);
@@ -102,6 +112,9 @@ export default class MultimintPayment extends React.Component<
         const hasInsufficientBalance =
             totalNeeded > totalSelectedBalance && totalSelectedBalance > 0;
 
+        this.paymentAmountSat = requestAmount;
+        this.paymentHash = CashuStore?.payReq?.payment_hash;
+
         this.state = {
             mints: effectiveMints,
             totalSelectedBalance,
@@ -116,7 +129,13 @@ export default class MultimintPayment extends React.Component<
                 ? localeString('stores.CashuStore.notEnoughFunds')
                 : undefined,
             showPaymentDetails: false,
-            storedNotes: ''
+            storedNotes: '',
+            paymentType: 'main',
+            payingDonation: false,
+            donationHandled: false,
+            showDonationInfo: false,
+            donationPreimage: '',
+            amountDonated: null
         };
     }
 
@@ -210,6 +229,12 @@ export default class MultimintPayment extends React.Component<
                 error: undefined
             });
 
+            this.paymentAmountSat =
+                CashuStore?.payReq?.getRequestAmount ||
+                Number(route.params?.paymentAmount || 0);
+            this.paymentHash =
+                CashuStore?.payReq?.payment_hash || this.paymentHash;
+
             const { donationAmount, enableDonations } = route.params || {};
             if (
                 NodeInfoStore?.nodeInfo?.isMainNet &&
@@ -232,20 +257,58 @@ export default class MultimintPayment extends React.Component<
     handleDonationPayment = async (donationAmount: string) => {
         const { CashuStore } = this.props;
 
+        this.setState({ payingDonation: true, paymentType: 'donation' });
+
         try {
             const paymentRequest = await loadDonationLnurl(donationAmount);
             if (!paymentRequest) {
+                this.setState({
+                    donationHandled: false,
+                    amountDonated: parseFloat(donationAmount)
+                });
                 return;
             }
 
             const isDonationPayment = true;
             await CashuStore?.getPayReq(paymentRequest, isDonationPayment);
-            await CashuStore?.payLnInvoiceFromEcash({
+            const donationPayment = await CashuStore?.payLnInvoiceFromEcash({
                 amount: donationAmount,
                 isDonationPayment
             });
+
+            const payment = Array.isArray(donationPayment)
+                ? donationPayment[0]
+                : donationPayment;
+
+            const donationState = (
+                payment?.meltResponse?.quote?.state ||
+                payment?.meltResponse?.state
+            )
+                ?.toString()
+                ?.toUpperCase();
+
+            if (!payment || donationState !== 'PAID') {
+                this.setState({
+                    donationHandled: false,
+                    amountDonated: parseFloat(donationAmount)
+                });
+                return;
+            }
+
+            this.setState({
+                donationHandled: true,
+                amountDonated:
+                    Number(payment?.amount) || parseFloat(donationAmount),
+                donationPreimage: payment?.payment_preimage || ''
+            });
         } catch (error) {
             console.error('Failed to pay donation invoice:', error);
+            this.setState({
+                donationHandled: false,
+                amountDonated: parseFloat(donationAmount)
+            });
+        } finally {
+            this.setState({ payingDonation: false });
         }
     };
 
@@ -391,20 +454,21 @@ export default class MultimintPayment extends React.Component<
     };
 
     render() {
-        const { navigation, CashuStore, route } = this.props;
+        const { navigation, CashuStore } = this.props;
         const {
             mints,
             totalSelectedBalance,
             step,
             error,
             showPaymentDetails,
-            storedNotes
+            storedNotes,
+            paymentType,
+            payingDonation,
+            donationHandled
         } = this.state;
         const windowSize = Dimensions.get('window');
 
-        const paymentAmount =
-            CashuStore?.payReq?.getRequestAmount ||
-            Number(route.params?.paymentAmount || 0);
+        const paymentAmount = this.paymentAmountSat;
 
         const hasError =
             step === MultinutPaymentStep.FAILED ||
@@ -415,6 +479,24 @@ export default class MultimintPayment extends React.Component<
 
         return (
             <Screen>
+                <DonationInfoModal
+                    isOpen={this.state.showDonationInfo}
+                    onClose={() => this.setState({ showDonationInfo: false })}
+                    donationHandled={donationHandled}
+                    amountDonated={this.state.amountDonated}
+                    donationPreimage={this.state.donationPreimage}
+                />
+
+                {isComplete && !hasError && paymentType === 'donation' && (
+                    <DonationGiftIcon
+                        payingDonation={payingDonation}
+                        donationHandled={donationHandled}
+                        onPress={() =>
+                            this.setState({ showDonationInfo: true })
+                        }
+                    />
+                )}
+
                 {!isComplete && (
                     <Header
                         leftComponent="Back"
@@ -555,9 +637,7 @@ export default class MultimintPayment extends React.Component<
                         paymentAmount={paymentAmount}
                         feeAmount={CashuStore?.paymentFee}
                         paymentDuration={CashuStore?.paymentDuration}
-                        paymentHash={
-                            CashuStore?.payReq?.payment_hash || undefined
-                        }
+                        paymentHash={this.paymentHash || undefined}
                         paymentPreimage={CashuStore?.paymentPreimage}
                         mintPayments={mints
                             .filter(
