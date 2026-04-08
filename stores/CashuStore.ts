@@ -2156,7 +2156,7 @@ export default class CashuStore {
         this.clearInvoice();
 
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-selectedMintUrl`,
+            `${this.getNodeDir()}-cashu-selectedMintUrl`,
             mintUrl
         );
 
@@ -2226,7 +2226,7 @@ export default class CashuStore {
         const uniqueMintUrls = Array.from(new Set(mintUrls));
 
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            `${this.getNodeDir()}-cashu-selectedMintUrls`,
             JSON.stringify(uniqueMintUrls)
         );
 
@@ -2241,7 +2241,7 @@ export default class CashuStore {
 
         if (this.selectedMintUrl) {
             await Storage.setItem(
-                `${this.getLndDir()}-cashu-selectedMintUrl`,
+                `${this.getNodeDir()}-cashu-selectedMintUrl`,
                 this.selectedMintUrl
             );
         }
@@ -2272,7 +2272,7 @@ export default class CashuStore {
         const uniqueMintUrls = Array.from(new Set(mintUrls));
 
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-multiMintSelectedUrls`,
+            `${this.getNodeDir()}-cashu-multiMintSelectedUrls`,
             JSON.stringify(uniqueMintUrls)
         );
 
@@ -2446,7 +2446,7 @@ export default class CashuStore {
                 ? [this.selectedMintUrl]
                 : [];
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            `${this.getNodeDir()}-cashu-selectedMintUrls`,
             JSON.stringify(this.selectedMintUrls)
         );
 
@@ -2458,7 +2458,7 @@ export default class CashuStore {
         );
         this.multiMintSelectedUrls = filteredMultiMint;
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-multiMintSelectedUrls`,
+            `${this.getNodeDir()}-cashu-multiMintSelectedUrls`,
             JSON.stringify(this.multiMintSelectedUrls)
         );
 
@@ -2834,6 +2834,7 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
+        await MigrationsUtils.migrateLegacyCashuKeysToNodeDir(this);
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -4335,7 +4336,7 @@ export default class CashuStore {
 
         this.payments?.push(...segmentPayments);
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-payments`,
+            `${this.getNodeDir()}-cashu-payments`,
             this.payments
         );
 
