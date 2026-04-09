@@ -557,6 +557,7 @@ export interface ILndMobileInjections {
             lockupAddress,
             destinationAddress,
             feeRate,
+            receiveAmount,
             isTestnet
         }: {
             endpoint: string;
@@ -570,6 +571,7 @@ export interface ILndMobileInjections {
             lockupAddress: string;
             destinationAddress: string;
             feeRate: number;
+            receiveAmount: number;
             isTestnet?: boolean;
         }) => Promise<string>;
         createRefundTransaction: ({
