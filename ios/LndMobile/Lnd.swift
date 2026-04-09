@@ -309,7 +309,15 @@ open class Lnd {
     }
 
     let writeStream = block?(LndmobileReceiveStream(method: method, callback: callback))
-    writeStreams.updateValue(writeStream as! LndmobileSendStream, forKey: method)
+    guard let sendStream = writeStream as? LndmobileSendStream else {
+      NSLog("Failed to create write stream for " + method)
+      if streamOnlyOnce {
+        self.activeStreams.removeAll { $0 == method }
+      }
+      callback(nil, LndError(msg: "Failed to create write stream for: " + method))
+      return
+    }
+    writeStreams.updateValue(sendStream, forKey: method)
   }
 
   func writeToStream(_ method: String, payload: String, callback: @escaping StreamCallback) {
