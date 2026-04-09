@@ -306,6 +306,15 @@ export default class LSPStore {
                 'ChannelAcceptor',
                 async (event: any) => {
                     try {
+                        if (event?.error_code || event?.error_desc) {
+                            console.error(
+                                'ChannelAcceptor stream error, will retry on next fetch'
+                            );
+                            this.channelAcceptor?.remove();
+                            this.channelAcceptor = null;
+                            return;
+                        }
+
                         if (!event?.data) return;
 
                         const channelAcceptRequest =
