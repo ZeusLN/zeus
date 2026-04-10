@@ -325,14 +325,7 @@ export default class CashuPaymentRequest extends React.Component<
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
-        const notEnoughFundsMessage = localeString(
-            'stores.CashuStore.notEnoughFunds'
-        );
-        const hasInsufficientFundsError =
-            typeof getPayReqError === 'string' &&
-            getPayReqError
-                .toLowerCase()
-                .includes(notEnoughFundsMessage.toLowerCase());
+        const hasPayReqError = !!getPayReqError;
 
         const enableDonations =
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
@@ -1007,7 +1000,7 @@ export default class CashuPaymentRequest extends React.Component<
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold &&
                             !SettingsStore.settingsUpdateInProgress &&
-                            !hasInsufficientFundsError ? (
+                            !hasPayReqError ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -1046,7 +1039,7 @@ export default class CashuPaymentRequest extends React.Component<
                                         onPress={this.triggerPayment}
                                         disabled={
                                             SettingsStore.settingsUpdateInProgress ||
-                                            hasInsufficientFundsError
+                                            hasPayReqError
                                         }
                                     />
                                 </View>
