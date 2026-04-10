@@ -142,18 +142,26 @@ export default class CashuPaymentRequest extends React.Component<
         );
 
         const { paymentRequest, getPayReq } = CashuStore;
+        const enabledBySetting = !!settings?.ecash?.enableMultiMint;
+        const hasMultipleSelectedMints =
+            Array.isArray(CashuStore.multiMintSelectedUrls) &&
+            CashuStore.multiMintSelectedUrls.length > 1;
 
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            multiMintEnabled: !!settings?.ecash?.enableMultiMint
+            multiMintEnabled: enabledBySetting && hasMultipleSelectedMints
         });
 
         // Reset state when screen comes into focus (e.g., after navigating back)
         this.focusListener = this.props.navigation.addListener('focus', () => {
             getPayReq(paymentRequest!!);
-            this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
-            });
+            this.setState((prevState) => ({
+                swipeButtonKey: prevState.swipeButtonKey + 1,
+                multiMintEnabled:
+                    !!SettingsStore.settings?.ecash?.enableMultiMint &&
+                    Array.isArray(CashuStore.multiMintSelectedUrls) &&
+                    CashuStore.multiMintSelectedUrls.length > 1
+            }));
         });
     }
 
