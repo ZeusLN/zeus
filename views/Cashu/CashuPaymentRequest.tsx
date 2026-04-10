@@ -237,10 +237,31 @@ export default class CashuPaymentRequest extends React.Component<
 
     handleMultiMintToggle = async (enabled: boolean) => {
         const { CashuStore } = this.props;
+        const supportsMultiMint = (mintUrl: string) => {
+            const normalized = mintUrl.endsWith('/')
+                ? mintUrl.slice(0, -1)
+                : mintUrl;
+            const mintInfo =
+                CashuStore.mintInfos[mintUrl] ||
+                CashuStore.mintInfos[normalized];
+
+            return !!(mintInfo?.nuts?.[15] || mintInfo?.nuts?.['15']);
+        };
 
         this.setState({ multiMintEnabled: enabled });
 
-        if (!enabled) {
+        if (enabled) {
+            const selected = CashuStore.selectedMintUrls || [];
+            const source =
+                selected.length > 1 ? selected : CashuStore.mintUrls || [];
+            const nextSelection = Array.from(
+                new Set(source.filter(supportsMultiMint))
+            );
+
+            if (nextSelection.length > 1) {
+                await CashuStore.setMultiMintSelectedUrls(nextSelection);
+            }
+        } else {
             const selectedMintUrl = CashuStore.selectedMintUrl;
             await CashuStore.setMultiMintSelectedUrls(
                 selectedMintUrl ? [selectedMintUrl] : []
