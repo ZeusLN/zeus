@@ -227,6 +227,23 @@ export default class CashuPaymentRequest extends React.Component<
         });
     };
 
+    handleMultiMintToggle = async (enabled: boolean) => {
+        const { CashuStore } = this.props;
+
+        this.setState({ multiMintEnabled: enabled });
+
+        if (!enabled) {
+            const selectedMintUrl = CashuStore.selectedMintUrl;
+            await CashuStore.setMultiMintSelectedUrls(
+                selectedMintUrl ? [selectedMintUrl] : []
+            );
+        }
+
+        if (CashuStore.paymentRequest) {
+            await CashuStore.getPayReq(CashuStore.paymentRequest);
+        }
+    };
+
     render() {
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
@@ -939,12 +956,9 @@ export default class CashuPaymentRequest extends React.Component<
                                             </Text>
                                             <Switch
                                                 value={multiMintEnabled}
-                                                onValueChange={() => {
-                                                    this.setState({
-                                                        multiMintEnabled:
-                                                            !multiMintEnabled
-                                                    });
-                                                }}
+                                                onValueChange={
+                                                    this.handleMultiMintToggle
+                                                }
                                             />
                                         </Row>
                                     )}
