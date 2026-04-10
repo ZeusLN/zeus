@@ -166,6 +166,8 @@ interface ClaimTokenResponse {
 }
 
 export default class CashuStore {
+    private getPayReqRequestId = 0;
+
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
@@ -3717,6 +3719,8 @@ export default class CashuStore {
         bolt11Invoice: string,
         isDonationPayment: boolean = false
     ) => {
+        const requestId = ++this.getPayReqRequestId;
+
         if (__DEV__) {
             console.log('getPayReq: Starting', {
                 bolt11Invoice: bolt11Invoice?.substring(0, 20),
@@ -3777,6 +3781,10 @@ export default class CashuStore {
                 console.log('getPayReq: bolt11 decoded');
             }
 
+            if (requestId !== this.getPayReqRequestId) {
+                return;
+            }
+
             const payReq = new Invoice(data);
             // Set payReq early so the view can render invoice details
             // even if melt quote preparation fails
@@ -3817,6 +3825,7 @@ export default class CashuStore {
                 : rawPaymentAmt;
 
             let singleMeltQuote: typeof this.meltQuote;
+            let computedPayReqError: string | undefined;
 
             let totalFeeEstimate = 0;
 
@@ -3841,7 +3850,7 @@ export default class CashuStore {
                     );
 
                     if (!preparedQuotes.length || totalAllocated < paymentAmt) {
-                        this.getPayReqError = localeString(
+                        computedPayReqError = localeString(
                             'stores.CashuStore.notEnoughFunds'
                         );
                     }
@@ -3892,7 +3901,7 @@ export default class CashuStore {
                     (Number(singleMeltQuote.amount) || 0) +
                     (Number(singleMeltQuote.fee_reserve) || 0);
 
-                this.getPayReqError =
+                computedPayReqError =
                     mintBalance < totalNeeded
                         ? localeString('stores.CashuStore.notEnoughFunds')
                         : undefined;
@@ -3901,10 +3910,15 @@ export default class CashuStore {
                 this.meltQuotes = [];
             }
 
+            if (requestId !== this.getPayReqRequestId) {
+                return;
+            }
+
             runInAction(() => {
                 this.payReq = payReq;
                 this.meltQuote = singleMeltQuote;
                 this.feeEstimate = totalFeeEstimate;
+                this.getPayReqError = computedPayReqError;
             });
             if (__DEV__) {
                 console.log('getPayReq: Success, setting loading = false');
@@ -3914,6 +3928,11 @@ export default class CashuStore {
                 console.log('getPayReq: Error caught', e?.message || e);
             }
             const errorMsg = errorToUserFriendly(e);
+
+            if (requestId !== this.getPayReqRequestId) {
+                return;
+            }
+
             runInAction(() => {
                 this.meltQuotes = [];
                 this.meltQuote = undefined;
@@ -3926,7 +3945,7 @@ export default class CashuStore {
                     'getPayReq: Finally block, setting loading = false'
                 );
             }
-            if (!isDonationPayment) {
+            if (!isDonationPayment && requestId === this.getPayReqRequestId) {
                 runInAction(() => {
                     this.loading = false;
                 });
