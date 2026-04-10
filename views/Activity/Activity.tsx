@@ -319,7 +319,13 @@ const ActivityListItem = observer(
                             }}
                         >
                             <Amount
-                                sats={item.getAmount}
+                                sats={
+                                    item.isReverseSwap
+                                        ? swapStore?.getReverseSwapReceiveAmount(
+                                              item.getAmount
+                                          )
+                                        : item.getAmount
+                                }
                                 sensitive
                                 color={getRightTitleTheme(item)}
                             />

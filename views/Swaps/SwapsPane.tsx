@@ -175,7 +175,9 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 item?.isSubmarineSwap
                                     ? item.expectedAmount
                                     : item.isReverseSwap
-                                    ? item.getAmount
+                                    ? this.props.SwapStore?.getReverseSwapReceiveAmount(
+                                          item.getAmount
+                                      )
                                     : undefined
                             }
                             sensitive

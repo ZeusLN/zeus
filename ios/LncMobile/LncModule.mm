@@ -277,12 +277,13 @@ RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
                  lockupAddress:(NSString *)lockupAddress
                  destinationAddress:(NSString *)destinationAddress
                  feeRate:(NSInteger)feeRate
+                 minerFee:(double)minerFee
                  isTestnet:(BOOL)isTestnet
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet, &error);
+    LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, (int32_t)feeRate, (int64_t)minerFee, isTestnet, &error);
     if (error) {
         NSLog(@"createReverseClaimTransaction error   %@",   error);
         reject(@"createReverseClaimTransaction_error", error.localizedDescription, error);

@@ -81,6 +81,7 @@ export interface ILndMobile {
         lockupAddress: string,
         destinationAddress: string,
         feeRate: number,
+        minerFee: number,
         isTestnet?: boolean
     ): Promise<string>;
 
