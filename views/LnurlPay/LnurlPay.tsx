@@ -100,34 +100,33 @@ export default class LnurlPay extends React.Component<
         }
     }
 
-    // ensure the state is reset to show correct units
-    // for when users navs back, while preserving user-entered amounts
-    resetState = () => {
+    // Recalculate the displayed amount in the current unit when the user
+    // navigates back (e.g. from AmountKeypad after switching units).
+    recalculateDisplayAmount = () => {
         const { satAmount } = this.state;
-        const fresh = this.stateFromProps(this.props);
-        // If the user has entered an amount, recalculate display from
-        // their satAmount rather than resetting to route params
         if (satAmount && satAmount != 0) {
             const { amount: displayAmount } = getUnformattedAmount({
                 sats: satAmount
             });
-            this.setState({
-                ...fresh,
-                amount: displayAmount,
-                satAmount
-            });
-        } else {
-            this.setState(fresh);
+            if (displayAmount !== this.state.amount) {
+                this.setState({ amount: displayAmount });
+            }
         }
     };
 
     componentDidMount() {
-        this.props.navigation.addListener('focus', this.resetState);
+        this.props.navigation.addListener(
+            'focus',
+            this.recalculateDisplayAmount
+        );
     }
 
     componentWillUnmount() {
         this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('focus', this.resetState);
+            this.props.navigation.removeListener(
+                'focus',
+                this.recalculateDisplayAmount
+            );
     }
 
     stateFromProps(props: LnurlPayProps) {
