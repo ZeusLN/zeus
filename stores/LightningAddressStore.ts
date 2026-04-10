@@ -93,6 +93,7 @@ export default class LightningAddressStore {
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
+    private pendingPushUpdate: boolean = false;
     @observable public readyToAutomaticallyAccept: boolean = false;
     @observable public prepareToAutomaticallyAcceptStart: boolean = false;
     // Auth
@@ -1072,15 +1073,28 @@ export default class LightningAddressStore {
         return attestation;
     };
 
-    public setDeviceToken = (token: string) =>
-        (this.currentDeviceToken = token);
+    @action
+    public setDeviceToken = (token: string) => {
+        this.currentDeviceToken = token;
+        if (this.pendingPushUpdate) {
+            this.pendingPushUpdate = false;
+            this.updatePushCredentials().catch((e) =>
+                console.log('Failed to update push credentials', e)
+            );
+        }
+    };
 
     public updatePushCredentials = async () => {
+        if (!this.currentDeviceToken) {
+            // Device token hasn't arrived yet — defer until
+            // setDeviceToken is called by the push notification callback
+            this.pendingPushUpdate = true;
+            return;
+        }
         // only push update if the device token has changed
         if (
-            this.currentDeviceToken &&
-            (!this.serviceDeviceToken ||
-                this.currentDeviceToken !== this.serviceDeviceToken)
+            !this.serviceDeviceToken ||
+            this.currentDeviceToken !== this.serviceDeviceToken
         ) {
             await this.update({
                 device_token: this.currentDeviceToken,
