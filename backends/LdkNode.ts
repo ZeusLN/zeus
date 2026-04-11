@@ -271,10 +271,13 @@ export default class LdkNode {
      * Get lightning balance
      */
     getLightningBalance = async (): Promise<any> => {
-        const [channels, balances] = await Promise.all([
+        const [channels, balances, status] = await Promise.all([
             LdkNodeInjection.channel.listChannels(),
-            LdkNodeInjection.node.listBalances()
+            LdkNodeInjection.node.listBalances(),
+            LdkNodeInjection.node.status()
         ]);
+
+        const currentBlockHeight = status.currentBestBlock_height;
 
         let localBalance = new BigNumber(0);
         let remoteBalance = new BigNumber(0);
@@ -331,6 +334,15 @@ export default class LdkNode {
         }
         for (const sb of balances.pendingBalancesFromChannelClosures) {
             if (sb.channelId && activeChannelIds.has(sb.channelId)) continue;
+            // Skip sweeps that have already confirmed on-chain —
+            // their value is now in the on-chain wallet balance
+            if (
+                sb.type === 'awaitingThresholdConfirmations' &&
+                sb.confirmationHeight != null &&
+                sb.confirmationHeight <= currentBlockHeight
+            ) {
+                continue;
+            }
             pendingCloseBalance = pendingCloseBalance.plus(sb.amountSatoshis);
         }
 
