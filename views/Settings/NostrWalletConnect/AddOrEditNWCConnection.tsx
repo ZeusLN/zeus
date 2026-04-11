@@ -277,7 +277,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedPermissions,
             showCustomExpiryInput,
             customExpiryValue,
-            selectedPermissionType,
             budgetValue,
             maxBudgetLimit,
             customRelayUrl,
@@ -308,12 +307,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
         }
 
-        if (
-            NostrConnectUtils.shouldShowBudget(
-                selectedPermissionType,
-                selectedPermissions
-            )
-        ) {
+        if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {
             if (budgetValue === 0 && maxBudgetLimit >= 0) {
                 return false;
             }
@@ -340,7 +334,7 @@ export default class AddOrEditNWCConnection extends React.Component<
 
         const shouldResetBudget =
             permissionType === PermissionType.ReadOnly ||
-            !NostrConnectUtils.shouldShowBudget(permissionType, permissions);
+            !NostrConnectUtils.hasPaymentPermissions(permissions);
 
         this.updateStateWithChangeTracking({
             selectedPermissionType: permissionType,
@@ -373,13 +367,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         const newPermissionType =
             NostrConnectUtils.determinePermissionType(newPermissions);
 
-        // Reset budget when switching to ReadOnly or any non-budget permission
+        // Reset budget when pay_invoice is not among permissions (e.g. read-only preset)
         const shouldResetBudget =
             newPermissionType === PermissionType.ReadOnly ||
-            !NostrConnectUtils.shouldShowBudget(
-                newPermissionType,
-                newPermissions
-            );
+            !NostrConnectUtils.hasPaymentPermissions(newPermissions);
 
         this.updateStateWithChangeTracking({
             selectedPermissions: newPermissions,
@@ -503,7 +494,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedRelayUrl,
             selectedPermissions,
             selectedBudgetRenewalIndex,
-            selectedPermissionType,
             budgetValue,
             expiresAt,
             customExpiryValue,
@@ -536,13 +526,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             budgetRenewal
         };
 
-        // Budget is required for FullAccess or when permissions include pay_invoice/pay_keysend
-        if (
-            NostrConnectUtils.shouldShowBudget(
-                selectedPermissionType,
-                selectedPermissions
-            )
-        ) {
+        // Budget is required when pay_invoice is among the permissions
+        if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {
             if (budgetValue === 0 && maxBudgetLimit > 0) {
                 throw new Error(
                     localeString(
@@ -893,7 +878,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue,
             customExpiryUnit,
             budgetValue,
-            selectedPermissionType,
             selectedPermissions,
             customRelayUrl
         } = this.state;
@@ -1185,9 +1169,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         )}
 
-                        {NostrConnectUtils.shouldShowBudget(
-                            this.state.selectedPermissionType,
-                            this.state.selectedPermissions
+                        {NostrConnectUtils.hasPaymentPermissions(
+                            selectedPermissions
                         ) && (
                             <View style={{ marginTop: 10 }}>
                                 <View style={styles.sectionTitleContainer}>
@@ -1384,8 +1367,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             {showAdvancedSettings && (
                                 <>
                                     {/* Budget Renewal */}
-                                    {NostrConnectUtils.shouldShowBudget(
-                                        selectedPermissionType,
+                                    {NostrConnectUtils.hasPaymentPermissions(
                                         selectedPermissions
                                     ) && (
                                         <View
