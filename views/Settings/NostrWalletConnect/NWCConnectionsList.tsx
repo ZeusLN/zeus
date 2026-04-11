@@ -24,7 +24,6 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -201,9 +200,7 @@ export default class NWCConnectionsList extends React.Component<
         item: NWCConnection;
         index: number;
     }) => {
-        const hasPaymentPermissions = NostrConnectUtils.hasPaymentPermissions(
-            connection.permissions
-        );
+        const hasPaymentPermissions = connection.hasPaymentPermissions();
         return (
             <View style={{ paddingTop: index === 0 ? 10 : 0 }}>
                 <TouchableOpacity

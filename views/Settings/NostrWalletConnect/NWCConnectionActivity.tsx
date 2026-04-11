@@ -133,8 +133,7 @@ export default class NWCConnectionActivity extends React.Component<
         if (noFiltersActive) return [];
 
         return activities.filter((item) => {
-            const isSent =
-                item.type === 'pay_invoice' || item.type === 'pay_keysend';
+            const isSent = item.type === 'pay_invoice';
             const isReceived = item.type === 'make_invoice';
 
             if (item.status === 'success') {
@@ -188,8 +187,7 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     getActivityTitle = (item: ConnectionActivity): string => {
-        const isSent =
-            item.type === 'pay_invoice' || item.type === 'pay_keysend';
+        const isSent = item.type === 'pay_invoice';
 
         if (isSent) {
             if (item.status === 'failed')
@@ -221,10 +219,7 @@ export default class NWCConnectionActivity extends React.Component<
             return item.invoice.getAmount;
         }
 
-        if (
-            (item.type === 'pay_invoice' || item.type === 'pay_keysend') &&
-            item.payment
-        ) {
+        if (item.type === 'pay_invoice' && item.payment) {
             return item.payment.getAmount;
         }
 
@@ -263,8 +258,7 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleActivityPress = (item: ConnectionActivity) => {
-        const isSent =
-            item.type === 'pay_invoice' || item.type === 'pay_keysend';
+        const isSent = item.type === 'pay_invoice';
 
         if (isSent && item.status !== 'failed') {
             this.navigateToPaymentDetails(item);

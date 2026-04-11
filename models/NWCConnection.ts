@@ -12,10 +12,7 @@ import Payment from './Payment';
 import CashuPayment from './CashuPayment';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 
-export type ConnectionActivityType =
-    | 'pay_invoice'
-    | 'make_invoice'
-    | 'pay_keysend';
+export type ConnectionActivityType = 'pay_invoice' | 'make_invoice';
 
 export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
 
@@ -409,15 +406,9 @@ export default class NWCConnection extends BaseModel {
         );
     }
     public hasPaymentPermissions(): boolean {
-        return (
-            this.permissions?.some(
-                (p) =>
-                    p === 'pay_invoice' ||
-                    p === 'pay_keysend' ||
-                    p === 'make_invoice'
-            ) ?? false
-        );
+        return NostrConnectUtils.hasPaymentPermissions(this.permissions ?? []);
     }
+
     public getDaysUntilExpiry(): number | null {
         if (!this.expiresAt) return null;
         const now = new Date();

@@ -3124,10 +3124,6 @@ export default class NostrWalletConnectStore {
                             3
                         );
 
-                    if (request.method === 'pay_keysend') {
-                        return null;
-                    }
-
                     if (request.method === 'pay_invoice') {
                         const { isExpired, amount } =
                             await NostrConnectUtils.decodeInvoiceTags(
@@ -3145,6 +3141,11 @@ export default class NostrWalletConnectStore {
                         };
                     }
 
+                    await this.publishNotImplementedNip47Response(
+                        connection,
+                        request,
+                        eventId
+                    );
                     return null;
                 } catch (error) {
                     console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
@@ -3526,7 +3527,14 @@ export default class NostrWalletConnectStore {
                     );
                     break;
                 default:
-                    return { success: true };
+                    response = this.handleError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                            { method: request.method }
+                        ),
+                        ErrorCodes.NOT_IMPLEMENTED
+                    );
+                    break;
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
@@ -3563,6 +3571,36 @@ export default class NostrWalletConnectStore {
             errorMessage: hasError ? errorMessage : undefined
         };
     }
+    /**
+     * NIP-47 error codes include NOT_IMPLEMENTED for wallet methods that are not supported.
+     */
+    private async publishNotImplementedNip47Response(
+        connection: NWCConnection,
+        request: NWCRequest,
+        eventId: string
+    ): Promise<void> {
+        try {
+            const response = this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                    { method: request.method }
+                ),
+                ErrorCodes.NOT_IMPLEMENTED
+            );
+            await this.publishEventToClient(
+                connection,
+                request.method,
+                response,
+                eventId
+            );
+        } catch (error) {
+            console.warn(
+                'NWC: Failed to publish NOT_IMPLEMENTED for pending event',
+                { eventId, method: request.method, error }
+            );
+        }
+    }
+
     // Publishing Events to Nostr client
     private async publishEventToClient(
         connection: NWCConnection,

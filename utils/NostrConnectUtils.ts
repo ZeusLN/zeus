@@ -120,15 +120,6 @@ export default class NostrConnectUtils {
                 )
             },
             {
-                key: 'pay_keysend',
-                title: localeString(
-                    'views.Settings.NostrWalletConnect.permissions.payKeysend'
-                ),
-                description: localeString(
-                    'views.Settings.NostrWalletConnect.permissions.payKeysendDescription'
-                )
-            },
-            {
                 key: 'sign_message',
                 title: localeString('views.Settings.signMessage.button'),
                 description: localeString(
@@ -292,7 +283,6 @@ export default class NostrConnectUtils {
             'make_invoice',
             'lookup_invoice',
             'list_transactions',
-            'pay_keysend',
             'sign_message'
         ];
     }
@@ -327,9 +317,6 @@ export default class NostrConnectUtils {
             ),
             list_transactions: localeString(
                 'views.Settings.NostrWalletConnect.permissions.listTransactionsShort'
-            ),
-            pay_keysend: localeString(
-                'views.Settings.NostrWalletConnect.permissions.payKeysendShort'
             )
         };
         return descriptions[permission] || permission.replace(/_/g, ' ');
@@ -383,32 +370,17 @@ export default class NostrConnectUtils {
         return PermissionType.Custom;
     }
 
+    /** True when `pay_invoice` is among granted methods (budget / payment UI applies). */
+    static hasPaymentPermissions(permissions: Nip47SingleMethod[]): boolean {
+        return permissions.includes('pay_invoice');
+    }
+
     static getBudgetRenewalIndex(budgetRenewal?: string): number {
         const options = NostrConnectUtils.getBudgetRenewalOptions();
         const index = options.findIndex(
             (option) => option.key === budgetRenewal
         );
         return index >= 0 ? index : 0;
-    }
-
-    static shouldShowBudget(
-        permissionType: PermissionType | null,
-        selectedPermissions: Nip47SingleMethod[]
-    ): boolean {
-        if (permissionType === PermissionType.FullAccess) {
-            return true;
-        }
-        return (
-            selectedPermissions.includes('pay_invoice') ||
-            selectedPermissions.includes('pay_keysend')
-        );
-    }
-
-    static hasPaymentPermissions(permissions: Nip47SingleMethod[]): boolean {
-        return (
-            permissions.includes('pay_invoice') ||
-            permissions.includes('pay_keysend')
-        );
     }
 
     /**
@@ -419,6 +391,7 @@ export default class NostrConnectUtils {
      * @returns Object containing payment hash, description hash, and expiry time
      * @throws Error if invoice decoding fails
      */
+
     static async decodeInvoiceTags(
         invoice: string,
         checkForPaidStatus: boolean = false
