@@ -87,7 +87,12 @@ export default class Channel extends BaseModel {
     } | null {
         if (!this.pendingOpen) return null;
         // LDK path: direct counts available, no block-height arithmetic needed
-        if (this.confirmations != null && this.confirmations_required != null) {
+        // Skip when confirmations_required is 0 (zero-conf) or missing
+        if (
+            this.confirmations != null &&
+            this.confirmations_required != null &&
+            this.confirmations_required > 0
+        ) {
             return {
                 current: this.confirmations,
                 total: this.confirmations_required
