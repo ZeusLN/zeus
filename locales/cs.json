@@ -1741,7 +1741,7 @@
     "stores.NostrWalletConnectStore.error.pendingEventIdHashMismatch": "Nesouhlasí id/hash čekající události",
     "stores.NostrWalletConnectStore.error.pendingEventInvalidSignature": "Neplatný podpis čekající události",
     "stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission": "Připojení nemá oprávnění pay_invoice",
-    "stores.NostrWalletConnectStore.error.methodNotImplemented": "The {{method}} method is not implemented by this wallet.",
+    "stores.NostrWalletConnectStore.error.methodNotImplemented": "Metoda {{method}} touto peněženkou není implementována.",
     "error.connectionRefused": "Hostitel je nedostupný. Zkuste restartovat uzel nebo jeho Tor proces.",
     "error.hostUnreachable": "Hostitel je nedostupný. Zkuste restartovat uzel nebo jeho Tor proces.",
     "error.nodeConnectError": "Připojení k uzlu se nezdařilo. Ověřte prosím, zda jsou údaje jako adresa hostitele a port správně zadány a zda služba běží.",
