@@ -218,7 +218,7 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01'
-    implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
+    implementation project(':react-native-nitro-tor')
     // gif
     implementation 'com.facebook.fresco:animated-gif:3.6.0'
     implementation 'com.facebook.fresco:fresco:3.6.0'
