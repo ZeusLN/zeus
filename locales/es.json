@@ -2031,7 +2031,7 @@
     "views.Settings.NostrWalletConnect.persistentNWCService": "Modo persistente",
     "views.Settings.NostrWalletConnect.persistentNWCServiceDescription": "Continúe ejecutando el servicio Nostr Wallet Connect en segundo plano incluso cuando la aplicación esté cerrada.",
     "views.Settings.NostrWalletConnect.chooseRelay": "Elija el relé Nostr para esta conexión",
-    "views.LspExplanation.text1": "Zeus es una billetera Lightning de custodia propria. Para enviar o recibir un pagos lightning, debe abrir un canal de pago lightning, que tiene una tarifa de configuración.",
+    "views.LspExplanation.text1": "Zeus es una billetera Lightning de custodia propia. Para enviar o recibir un pagos lightning, debe abrir un canal de pago lightning, que tiene una tarifa de configuración.",
     "views.LspExplanation.text2": "Una vez que el canal esté configurado, solo tendrá que pagar tarifas de red normal hasta que su canal agote su capacidad.",
     "views.LspExplanation.buttonText": "Obtenga más información sobre liquidez",
     "views.LspExplanation.buttonText2": "Obtenga más información sobre cómo funciona el LSP",
