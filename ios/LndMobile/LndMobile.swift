@@ -115,6 +115,33 @@ class LndMobile: RCTEventEmitter {
       }
   }
 
+  /// As produced by LND/gRPC mobile bindings, e.g. `code = Internal desc = ...` (aligned with Android `LndMobileService`).
+  private static let lndGrpcStatusMessageRegex: NSRegularExpression = {
+    // swiftlint:disable:next force_try
+    try! NSRegularExpression(pattern: "code = (\\S+) desc = (.*)")
+  }()
+
+  private func lndGrpcErrorCodeAndDesc(from fullError: String) -> (code: String, desc: String) {
+    let range = NSRange(location: 0, length: (fullError as NSString).length)
+    guard
+      let match = Self.lndGrpcStatusMessageRegex.firstMatch(in: fullError, options: [], range: range),
+      match.numberOfRanges > 2
+    else {
+      return ("Error", fullError)
+    }
+    let codeNS = match.range(at: 1)
+    let descNS = match.range(at: 2)
+    guard
+      codeNS.location != NSNotFound,
+      descNS.location != NSNotFound,
+      let codeRange = Range(codeNS, in: fullError),
+      let descRange = Range(descNS, in: fullError)
+    else {
+      return ("Error", fullError)
+    }
+    return (String(fullError[codeRange]), String(fullError[descRange]))
+  }
+
   @objc(checkStatus:rejecter:)
   func checkStatus(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     resolve(Lnd.shared.checkStatus())
@@ -147,13 +174,7 @@ class LndMobile: RCTEventEmitter {
       guard let self = self else { return }
       if let e = error {
         let fullError = e.localizedDescription
-        var errorCode = "Error"
-        var errorDesc = fullError
-        if let codeRange = fullError.range(of: "code = "),
-           let descRange = fullError.range(of: " desc = ") {
-          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
-          errorDesc  = String(fullError[descRange.upperBound..<fullError.endIndex])
-        }
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
         self.sendEvent(withName: "SubscribeState",
                        body: ["error_code": errorCode, "error_desc": errorDesc])
       } else {
@@ -235,13 +256,7 @@ class LndMobile: RCTEventEmitter {
         NSLog(e.localizedDescription)
 
         let fullError = e.localizedDescription
-        var errorCode = "Error"
-        var errorDesc = fullError
-
-        if let codeRange = fullError.range(of: "code = "), let descRange = fullError.range(of: " desc = ") {
-          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
-          errorDesc = String(fullError[descRange.upperBound..<fullError.endIndex])
-        }
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
 
         self.sendEvent(
           withName: method,
@@ -268,13 +283,7 @@ class LndMobile: RCTEventEmitter {
         NSLog(e.localizedDescription)
 
         let fullError = e.localizedDescription
-        var errorCode = "Error"
-        var errorDesc = fullError
-
-        if let codeRange = fullError.range(of: "code = "), let descRange = fullError.range(of: " desc = ") {
-          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
-          errorDesc = String(fullError[descRange.upperBound..<fullError.endIndex])
-        }
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
 
         self.sendEvent(
           withName: method,
