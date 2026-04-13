@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import android.os.HandlerThread;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -104,6 +106,26 @@ public class LndMobileService extends Service {
 
   private static boolean isStream(Method m) {
       return isReceiveStream(m) || isSendStream(m);
+  }
+
+  /** As produced by LND/gRPC mobile bindings, e.g. {@code code = Internal desc = ...}. */
+  private static final Pattern LND_GRPC_STATUS_MESSAGE =
+      Pattern.compile("code = (\\S+) desc = (.*)");
+
+  private static void putLndGrpcErrorFields(Bundle bundle, String message) {
+    if (message != null) {
+      Matcher matcher = LND_GRPC_STATUS_MESSAGE.matcher(message);
+      if (matcher.find()) {
+        bundle.putString("error_code", matcher.group(1));
+        bundle.putString("error_desc", matcher.group(2));
+      } else {
+        bundle.putString("error_code", "Error");
+        bundle.putString("error_desc", message);
+      }
+    } else {
+      bundle.putString("error_code", "Error");
+      bundle.putString("error_desc", "unknown");
+    }
   }
 
   class IncomingHandler extends Handler {
@@ -314,14 +336,7 @@ public class LndMobileService extends Service {
 
       bundle.putString("method", method);
 
-      if (message.contains("code = ") && message.contains("desc = ")) {
-        bundle.putString("error_code", message.substring(message.indexOf("code = ") + 7, message.indexOf(" desc = ")));
-        bundle.putString("error_desc", message.substring(message.indexOf("desc = ") + 7));
-      }
-      else {
-        bundle.putString("error_code", "Error");
-        bundle.putString("error_desc", message);
-      }
+      putLndGrpcErrorFields(bundle, message);
 
       bundle.putString("error", message);
       msg.setData(bundle);
@@ -362,14 +377,7 @@ public class LndMobileService extends Service {
 
       bundle.putString("method", method);
 
-      if (message.contains("code = ") && message.contains("desc = ")) {
-        bundle.putString("error_code", message.substring(message.indexOf("code = ") + 7, message.indexOf(" desc = ")));
-        bundle.putString("error_desc", message.substring(message.indexOf("desc = ") + 7));
-      }
-      else {
-        bundle.putString("error_code", "Error");
-        bundle.putString("error_desc", message);
-      }
+      putLndGrpcErrorFields(bundle, message);
 
       msg.setData(bundle);
 
@@ -415,14 +423,7 @@ public class LndMobileService extends Service {
       // Allow re-subscription on the next LND start.
       streamsStarted.remove("SubscribeState");
       Bundle bundle = new Bundle();
-      String message = e.getMessage();
-      if (message != null && message.contains("code = ") && message.contains("desc = ")) {
-        bundle.putString("error_code", message.substring(message.indexOf("code = ") + 7, message.indexOf(" desc = ")));
-        bundle.putString("error_desc", message.substring(message.indexOf("desc = ") + 7));
-      } else {
-        bundle.putString("error_code", "Error");
-        bundle.putString("error_desc", message != null ? message : "unknown");
-      }
+      putLndGrpcErrorFields(bundle, e.getMessage());
       sendResult(bundle);
     }
 
@@ -509,10 +510,12 @@ public class LndMobileService extends Service {
             // Start SubscribeState before resolving the JS promise so JS can
             // register its listener first and never miss the initial state event.
             if (!streamsStarted.contains("SubscribeState")) {
-              streamsStarted.add("SubscribeState");
               try {
                 Method m = streamMethods.get("SubscribeState");
-                if (m != null) {
+                if (m == null) {
+                  Log.e(TAG, "SubscribeState stream method not registered in streamMethods");
+                } else {
+                  streamsStarted.add("SubscribeState");
                   m.invoke(null, new byte[0], new LndStateStreamCallback(recipient));
                 }
               } catch (Exception e) {
