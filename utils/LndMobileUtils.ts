@@ -758,7 +758,9 @@ async function retryStartLnd({
 }) {
     for (let attempt = 1; attempt <= MAX_START_LND_RETRIES; attempt++) {
         try {
-            await sleep(LND_RETRY_DELAY_MS);
+            if (attempt > 1) {
+                await sleep(LND_RETRY_DELAY_MS);
+            }
             await startLnd(startArgs);
             log.d('LND started successfully after retry');
             return;
