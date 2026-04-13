@@ -662,13 +662,22 @@ export default class SwapDetails extends React.Component<
         fee: string
     ): Promise<boolean> => {
         try {
-            const dObject = keys.__D;
+            const dObject = keys?.__D;
 
-            // Extract keys, sort them numerically, and map to byte values
-            const dBytes = Object.keys(dObject)
-                .map((key) => parseInt(key, 10))
-                .sort((a, b) => a - b)
-                .map((key) => dObject[key]);
+            if (!dObject) {
+                console.error('keys.__D is undefined');
+                return false;
+            }
+
+            let dBytes: number[];
+            if (Array.isArray(dObject)) {
+                dBytes = dObject;
+            } else if (dObject?.data && Array.isArray(dObject.data)) {
+                dBytes = dObject.data;
+            } else {
+                console.error('Unexpected key format:', typeof dObject);
+                return false;
+            }
 
             const privateKeyHex = dBytes
                 .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -679,6 +688,15 @@ export default class SwapDetails extends React.Component<
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
+                    const preimageHex =
+                        typeof preimage === 'string'
+                            ? preimage
+                            : Buffer.isBuffer(preimage)
+                            ? preimage.toString('hex')
+                            : preimage?.data
+                            ? Buffer.from(preimage.data).toString('hex')
+                            : '';
+
                     await createReverseClaimTransaction({
                         endpoint,
                         swapId: createdResponse.id,
@@ -686,11 +704,12 @@ export default class SwapDetails extends React.Component<
                         refundLeaf: createdResponse.swapTree.refundLeaf.output,
                         privateKey: privateKeyHex,
                         servicePubKey: createdResponse.refundPublicKey,
-                        preimageHex: preimage.toString('hex'),
+                        preimageHex,
                         transactionHex,
                         lockupAddress,
                         destinationAddress,
                         feeRate: Number(fee || 2),
+                        minerFee: this.props.SwapStore?.claimMinerFee || 0,
                         isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
                     });
 
@@ -945,7 +964,11 @@ export default class SwapDetails extends React.Component<
                                 )}
                                 value={
                                     <Amount
-                                        sats={swapData?.getAmount}
+                                        sats={
+                                            SwapStore?.getReverseSwapReceiveAmount(
+                                                swapData?.getAmount
+                                            ) || 0
+                                        }
                                         sensitive
                                         toggleable
                                     />

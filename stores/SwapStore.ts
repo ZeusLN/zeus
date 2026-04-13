@@ -30,9 +30,34 @@ import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
 
+interface SubmarineSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: number;
+    };
+    limits?: {
+        minimal?: number;
+        maximal?: number;
+    };
+}
+
+interface ReverseSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: {
+            claim?: number;
+            lockup?: number;
+        };
+    };
+    limits?: {
+        minimal?: number;
+        maximal?: number;
+    };
+}
+
 export default class SwapStore {
-    @observable public subInfo = {};
-    @observable public reverseInfo = {};
+    @observable public subInfo: SubmarineSwapInfo = {};
+    @observable public reverseInfo: ReverseSwapInfo = {};
     @observable public loading = true;
     @observable public apiError = '';
     @observable public swaps: any = [];
@@ -54,6 +79,16 @@ export default class SwapStore {
             () => this.getSwapFees()
         );
     }
+
+    @computed get claimMinerFee(): number {
+        return this.reverseInfo?.fees?.minerFees?.claim || 0;
+    }
+
+    getReverseSwapReceiveAmount = (
+        onchainAmount: number | undefined
+    ): number => {
+        return (onchainAmount || 0) - this.claimMinerFee;
+    };
 
     @action
     public clearError = () => {

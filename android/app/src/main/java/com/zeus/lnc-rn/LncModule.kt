@@ -207,11 +207,11 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, isTestnet: Boolean?, promise: Promise) {
+  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, isTestnet: Boolean?, promise: Promise) {
      Log.d("createReverseClaimTransaction called", "");
 
      try {
-         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet ?: false)
+         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, isTestnet ?: false)
          promise.resolve(null)
      } catch (e: Exception) {
          promise.reject("CREATE_REVERSE_CLAIM_ERROR", e.toString())
