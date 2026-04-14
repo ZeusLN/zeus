@@ -546,7 +546,15 @@ export default class CashuStore {
     @action
     public fetchMintInfo = async (mintUrl: string) => {
         try {
-            const mintInfo = await CashuDevKit.fetchMintInfo(mintUrl);
+            const mintInfo = await Promise.race([
+                CashuDevKit.fetchMintInfo(mintUrl),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error(`Timeout: ${mintUrl}`)),
+                        10000
+                    )
+                )
+            ]);
             if (mintInfo) {
                 runInAction(() => {
                     this.mintInfos[mintUrl] = mintInfo;
@@ -1436,19 +1444,14 @@ export default class CashuStore {
 
         const results = await Promise.allSettled(
             uncached.map(async (mintUrl) => {
-                const info = await Promise.race([
-                    CashuDevKit.fetchMintInfo(mintUrl),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timeout')), 10000)
-                    )
-                ]);
+                const info = await this.fetchMintInfo(mintUrl);
                 return { mintUrl, info };
             })
         );
 
         runInAction(() => {
             for (const result of results) {
-                if (result.status === 'fulfilled') {
+                if (result.status === 'fulfilled' && result.value.info) {
                     this.mintInfoCache.set(
                         result.value.mintUrl,
                         result.value.info
