@@ -65,6 +65,10 @@ RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription exp
 RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// Probe Methods
+RCT_EXTERN_METHOD(sendBolt11Probes:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendBolt11ProbesUsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // Spontaneous Payment Methods
 RCT_EXTERN_METHOD(sendSpontaneousPayment:(NSString *)nodeId amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 

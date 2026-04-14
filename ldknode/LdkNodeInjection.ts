@@ -465,6 +465,45 @@ const sendBolt11UsingAmount = async ({
 };
 
 // ============================================================================
+// Probe Functions
+// ============================================================================
+
+const sendBolt11Probes = async ({
+    invoice,
+    maxTotalRoutingFeeMsat,
+    maxPathCount
+}: {
+    invoice: string;
+    maxTotalRoutingFeeMsat?: number;
+    maxPathCount?: number;
+}): Promise<void> => {
+    await LdkNodeModule.sendBolt11Probes(
+        invoice,
+        maxTotalRoutingFeeMsat ?? -1,
+        maxPathCount ?? -1
+    );
+};
+
+const sendBolt11ProbesUsingAmount = async ({
+    invoice,
+    amountMsat,
+    maxTotalRoutingFeeMsat,
+    maxPathCount
+}: {
+    invoice: string;
+    amountMsat: number;
+    maxTotalRoutingFeeMsat?: number;
+    maxPathCount?: number;
+}): Promise<void> => {
+    await LdkNodeModule.sendBolt11ProbesUsingAmount(
+        invoice,
+        amountMsat,
+        maxTotalRoutingFeeMsat ?? -1,
+        maxPathCount ?? -1
+    );
+};
+
+// ============================================================================
 // Spontaneous Payment Functions
 // ============================================================================
 
@@ -1062,6 +1101,17 @@ export interface ILdkNodeInjections {
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
         }) => Promise<string>;
+        sendBolt11Probes: (params: {
+            invoice: string;
+            maxTotalRoutingFeeMsat?: number;
+            maxPathCount?: number;
+        }) => Promise<void>;
+        sendBolt11ProbesUsingAmount: (params: {
+            invoice: string;
+            amountMsat: number;
+            maxTotalRoutingFeeMsat?: number;
+            maxPathCount?: number;
+        }) => Promise<void>;
     };
     spontaneous: {
         sendSpontaneousPayment: (params: {
@@ -1237,7 +1287,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
         receiveBolt11,
         receiveVariableAmountBolt11,
         sendBolt11,
-        sendBolt11UsingAmount
+        sendBolt11UsingAmount,
+        sendBolt11Probes,
+        sendBolt11ProbesUsingAmount
     },
     spontaneous: {
         sendSpontaneousPayment

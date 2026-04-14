@@ -1157,6 +1157,50 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Probe Methods
+
+    @objc(sendBolt11Probes:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func sendBolt11Probes(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
+                try bolt11.sendProbes(invoice: bolt11Invoice, routeParameters: routeParams)
+                resolve(nil)
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(sendBolt11ProbesUsingAmount:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func sendBolt11ProbesUsingAmount(_ invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
+                try bolt11.sendProbesUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams)
+                resolve(nil)
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     // MARK: - Spontaneous Payment Methods
 
     @objc(sendSpontaneousPayment:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)

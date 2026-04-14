@@ -1297,6 +1297,48 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Probe Methods
+
+    @ReactMethod
+    fun sendBolt11Probes(invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+        val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt11 = node.bolt11Payment()
+                val invoiceObj = Bolt11Invoice.fromStr(invoice)
+                bolt11.sendProbes(invoiceObj, routeParams)
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun sendBolt11ProbesUsingAmount(invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+        val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt11 = node.bolt11Payment()
+                val invoiceObj = Bolt11Invoice.fromStr(invoice)
+                bolt11.sendProbesUsingAmount(invoiceObj, amountMsat.toLong().toULong(), routeParams)
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
     // Spontaneous Payment Methods
 
     @ReactMethod

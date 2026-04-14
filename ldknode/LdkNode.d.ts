@@ -565,6 +565,19 @@ export interface ILdkNodeModule {
         maxPathCount: number
     ): Promise<string>;
 
+    // Probe Methods
+    sendBolt11Probes(
+        invoice: string,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
+    ): Promise<void>;
+    sendBolt11ProbesUsingAmount(
+        invoice: string,
+        amountMsat: number,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
+    ): Promise<void>;
+
     // Spontaneous Payment Methods
     sendSpontaneousPayment(
         nodeId: string,
