@@ -151,7 +151,8 @@ export default class CashuPaymentRequest extends React.Component<
 
                     this.donationLockRequest = currentRequest;
                 }
-            }
+            },
+            { fireImmediately: true }
         );
 
         const { paymentRequest, getPayReq } = CashuStore;
@@ -214,6 +215,12 @@ export default class CashuPaymentRequest extends React.Component<
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
         const { satAmount, multiMintEnabled, donationAmount } = this.state;
+        const requestAmount = CashuStore.payReq?.getRequestAmount;
+        const paymentAmount = satAmount
+            ? satAmount.toString()
+            : requestAmount
+            ? requestAmount.toString()
+            : undefined;
 
         const enableDonations =
             Platform.OS !== 'ios' &&
@@ -226,7 +233,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         if (isMultiMint) {
             navigation.navigate('MultimintPayment', {
-                paymentAmount: satAmount ? satAmount.toString() : undefined,
+                paymentAmount,
                 enableDonations,
                 ...(enableDonations &&
                     donationAmount > 0 && {
@@ -244,7 +251,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         // Call sendPayment with the freshest values
         this.sendPayment({
-            amount: satAmount ? satAmount.toString() : undefined
+            amount: paymentAmount
         });
     };
 

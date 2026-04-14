@@ -300,8 +300,9 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     render() {
-        const { CashuStore, ContactStore, LnurlPayStore, navigation } =
+        const { CashuStore, ContactStore, LnurlPayStore, navigation, route } =
             this.props;
+        const amountFromRoute = Number(route.params?.paymentAmount);
         const {
             loading,
             paymentError,
@@ -315,7 +316,8 @@ export default class CashuSendingLightning extends React.Component<
             paymentFee
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
-        const paymentAmount = payReq?.getRequestAmount;
+        const paymentAmount =
+            amountFromRoute > 0 ? amountFromRoute : payReq?.getRequestAmount;
         const {
             storedNotes,
             donationHandled,
