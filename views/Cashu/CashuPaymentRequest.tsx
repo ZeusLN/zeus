@@ -98,6 +98,7 @@ export default class CashuPaymentRequest extends React.Component<
     isComponentMounted: boolean = false;
     focusListener: any = null;
     payReqDisposer: any;
+    donationLockRequest?: string;
     state = {
         customAmount: '',
         satAmount: '',
@@ -121,22 +122,34 @@ export default class CashuPaymentRequest extends React.Component<
             () => CashuStore.payReq,
             (payReq) => {
                 if (payReq?.getRequestAmount) {
+                    const currentRequest = CashuStore.paymentRequest;
+
+                    if (
+                        currentRequest &&
+                        this.donationLockRequest === currentRequest
+                    ) {
+                        return;
+                    }
+
+                    const defaultPct = Number(defaultDonationPercentage) || 0;
+
                     const requestAmount = payReq.getRequestAmount;
                     const donationAmount = calculateDonationAmount(
                         requestAmount,
-                        Number(defaultDonationPercentage) || 0
+                        defaultPct
                     );
                     const index = findDonationPercentageIndex(
-                        Number(defaultDonationPercentage) || 0,
+                        defaultPct,
                         [5, 10, 20]
                     );
 
                     this.setState({
                         donationAmount,
                         selectedIndex: index,
-                        donationPercentage:
-                            Number(defaultDonationPercentage) || 0
+                        donationPercentage: defaultPct
                     });
+
+                    this.donationLockRequest = currentRequest;
                 }
             }
         );
@@ -358,6 +371,7 @@ export default class CashuPaymentRequest extends React.Component<
                 requestAmount ?? 0,
                 percentage
             );
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: percentage,
                 donationAmount,
@@ -374,7 +388,7 @@ export default class CashuPaymentRequest extends React.Component<
                 value,
                 donationPercentageOptions
             );
-
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: value,
                 donationAmount,
