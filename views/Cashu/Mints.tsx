@@ -131,6 +131,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             multiMintSelectedUrls,
             clearInvoice,
             setSelectedMint,
+            setMultiMintSelectedUrls,
             setReceiveMint,
             toggleMultiMintSelection,
             randomizeMintSelection,
@@ -308,9 +309,16 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
 
                                             await setSelectedMint(
                                                 mintInfo?.mintUrl
-                                            ).then(() => {
-                                                navigation.goBack();
-                                            });
+                                            );
+                                            if (
+                                                SettingsStore.settings?.ecash
+                                                    ?.enableMultiMint
+                                            ) {
+                                                await setMultiMintSelectedUrls([
+                                                    mintInfo?.mintUrl
+                                                ]);
+                                            }
+                                            navigation.goBack();
                                         }}
                                     >
                                         {multiMintEnabled && (
