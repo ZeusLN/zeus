@@ -962,7 +962,8 @@ export default class SwapDetails extends React.Component<
                                     <Amount
                                         sats={
                                             SwapStore?.getReverseSwapReceiveAmount(
-                                                swapData?.getAmount
+                                                swapData?.getAmount,
+                                                swapData?.claimMinerFee
                                             ) || 0
                                         }
                                         sensitive

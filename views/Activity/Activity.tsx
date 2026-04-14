@@ -322,7 +322,8 @@ const ActivityListItem = observer(
                                 sats={
                                     item.isReverseSwap
                                         ? swapStore?.getReverseSwapReceiveAmount(
-                                              item.getAmount
+                                              item.getAmount,
+                                              item.claimMinerFee
                                           )
                                         : item.getAmount
                                 }

@@ -85,9 +85,11 @@ export default class SwapStore {
     }
 
     getReverseSwapReceiveAmount = (
-        onchainAmount: number | undefined
+        onchainAmount: number | undefined,
+        swapClaimMinerFee?: number
     ): number => {
-        return (onchainAmount || 0) - this.claimMinerFee;
+        const fee = swapClaimMinerFee ?? this.claimMinerFee;
+        return (onchainAmount || 0) - fee;
     };
 
     @action
@@ -474,6 +476,7 @@ export default class SwapStore {
             responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
+            responseData.claimMinerFee = this.claimMinerFee;
 
             await this.saveReverseSwaps(
                 responseData,
