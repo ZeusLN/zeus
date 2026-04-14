@@ -18,6 +18,16 @@ const userFriendlyErrors: any = {
         'error.failureReasonIncorrectPaymentDetails',
     FAILURE_REASON_INSUFFICIENT_BALANCE:
         'error.failureReasonInsufficientBalance',
+    // LDK Node payment failure reasons
+    recipientRejected: 'error.ldk.recipientRejected',
+    retriesExhausted: 'error.ldk.retriesExhausted',
+    routeNotFound: 'error.ldk.routeNotFound',
+    paymentExpired: 'error.ldk.paymentExpired',
+    unknownRequiredFeatures: 'error.ldk.unknownRequiredFeatures',
+    invoiceRequestExpired: 'error.ldk.invoiceRequestExpired',
+    invoiceRequestRejected: 'error.ldk.invoiceRequestRejected',
+    blindedPathCreationFailed: 'error.ldk.blindedPathCreationFailed',
+    PAYMENT_FAILED_UNKNOWN: 'error.paymentFailed',
     Error: 'general.error'
 };
 

@@ -20,6 +20,7 @@ import type {
     ClosedChannelDetails,
     PaymentDetails,
     LdkNodeEvent,
+    PaymentFailureReason,
     ClosureReason,
     Lsps1OrderResponse,
     Lsps1OrderStatus
@@ -1783,6 +1784,7 @@ export default class LdkNode {
 
     /**
      * Poll listPayments until the given payment succeeds or fails.
+     * Captures failure reason from events for better error messages.
      * Returns the completed payment or throws on failure/timeout.
      */
     private awaitPaymentCompletion = async (
@@ -1791,29 +1793,44 @@ export default class LdkNode {
         const maxAttempts = 60;
         const delayMs = 1000;
         let payment = null;
+        let failureReason: PaymentFailureReason | undefined;
 
-        for (let i = 0; i < maxAttempts; i++) {
-            const payments = await LdkNodeInjection.payments.listPayments();
-            payment = payments.find((p) => p.id === paymentId);
-
-            if (payment?.status === 'succeeded') {
-                break;
+        // Subscribe to events to capture the failure reason
+        const unsubscribe = this.subscribeToEvents((event: LdkNodeEvent) => {
+            if (
+                event.type === 'paymentFailed' &&
+                event.paymentId === paymentId
+            ) {
+                failureReason = event.reason;
             }
-            if (payment?.status === 'failed') {
-                throw new Error(localeString('error.paymentFailed'));
+        });
+
+        try {
+            for (let i = 0; i < maxAttempts; i++) {
+                const payments = await LdkNodeInjection.payments.listPayments();
+                payment = payments.find((p) => p.id === paymentId);
+
+                if (payment?.status === 'succeeded') {
+                    break;
+                }
+                if (payment?.status === 'failed') {
+                    throw new Error(failureReason || 'PAYMENT_FAILED_UNKNOWN');
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
             }
 
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
+            if (payment?.status !== 'succeeded') {
+                throw new Error(localeString('error.paymentTimedOut'));
+            }
 
-        if (payment?.status !== 'succeeded') {
-            throw new Error(localeString('error.paymentTimedOut'));
+            return {
+                hash: payment?.kind.hash || paymentId,
+                preimage: payment?.kind.preimage || ''
+            };
+        } finally {
+            unsubscribe();
         }
-
-        return {
-            hash: payment?.kind.hash || paymentId,
-            preimage: payment?.kind.preimage || ''
-        };
     };
 
     /**
