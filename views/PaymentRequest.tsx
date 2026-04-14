@@ -611,6 +611,7 @@ export default class PaymentRequest extends React.Component<
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
 
         const isCLightning: boolean = implementation === 'cln-rest';
+        const isLdkNode: boolean = implementation === 'ldk-node';
 
         const isNoAmountInvoice: boolean = !requestAmount;
 
@@ -1290,7 +1291,7 @@ export default class PaymentRequest extends React.Component<
                                             </React.Fragment>
                                         )}
 
-                                        {ampOrMppEnabled && (
+                                        {ampOrMppEnabled && !isLdkNode && (
                                             <React.Fragment>
                                                 <Text
                                                     style={{
@@ -1323,33 +1324,35 @@ export default class PaymentRequest extends React.Component<
                                         )}
 
                                         {(BackendUtils.supportsCustomFeeLimit() ||
-                                            implementation === 'cln-rest') && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.label,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.Payments.timeoutSeconds'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    keyboardType="numeric"
-                                                    value={timeoutSeconds}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            timeoutSeconds: text
-                                                        })
-                                                    }
-                                                />
-                                            </>
-                                        )}
+                                            isCLightning) &&
+                                            !isLdkNode && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.Payments.timeoutSeconds'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        keyboardType="numeric"
+                                                        value={timeoutSeconds}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                timeoutSeconds:
+                                                                    text
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
                                     </>
                                 )}
                                 {enableDonations &&
