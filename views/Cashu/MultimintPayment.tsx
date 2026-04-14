@@ -59,6 +59,7 @@ interface MultimintPaymentState {
     totalSelectedBalance: number;
     step: MultinutPaymentStep;
     isProcessing: boolean;
+    paymentStarted: boolean;
     error?: string;
     showPaymentDetails: boolean;
     storedNotes: string;
@@ -123,6 +124,7 @@ export default class MultimintPayment extends React.Component<
                     ? MultinutPaymentStep.FAILED
                     : MultinutPaymentStep.PROCESSING,
             isProcessing: false,
+            paymentStarted: false,
             error: hasNoMintsSelected
                 ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
                 : hasInsufficientBalance
@@ -199,6 +201,7 @@ export default class MultimintPayment extends React.Component<
             this.setState((prev) => ({
                 step: MultinutPaymentStep.PROCESSING,
                 isProcessing: true,
+                paymentStarted: true,
                 error: undefined,
                 mints: prev.mints.map((mint) => ({
                     ...mint,
@@ -464,7 +467,8 @@ export default class MultimintPayment extends React.Component<
             storedNotes,
             paymentType,
             payingDonation,
-            donationHandled
+            donationHandled,
+            paymentStarted
         } = this.state;
         const windowSize = Dimensions.get('window');
 
@@ -499,7 +503,7 @@ export default class MultimintPayment extends React.Component<
 
                 {!isComplete && (
                     <Header
-                        leftComponent="Back"
+                        leftComponent={paymentStarted ? undefined : 'Back'}
                         centerComponent={{
                             text: localeString(
                                 'views.SendingLightning.sending'
