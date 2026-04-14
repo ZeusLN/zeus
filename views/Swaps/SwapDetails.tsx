@@ -602,6 +602,29 @@ export default class SwapDetails extends React.Component<
         return result;
     };
 
+    getPrivateKeyHex = (keys: any): string | null => {
+        const dObject = keys?.__D;
+
+        if (!dObject) {
+            console.error('keys.__D is undefined');
+            return null;
+        }
+
+        let dBytes: number[];
+        if (Array.isArray(dObject)) {
+            dBytes = dObject;
+        } else if (dObject?.data && Array.isArray(dObject.data)) {
+            dBytes = dObject.data;
+        } else {
+            console.error('Unexpected key format:', typeof dObject);
+            return null;
+        }
+
+        return dBytes
+            .map((byte) => byte.toString(16).padStart(2, '0'))
+            .join('');
+    };
+
     /**
      * Create and send a claim transaction
      */
@@ -612,17 +635,8 @@ export default class SwapDetails extends React.Component<
         endpoint: string
     ): Promise<boolean> => {
         try {
-            const dObject = keys.__D;
-
-            // Extract keys, sort them numerically, and map to byte values
-            const dBytes = Object.keys(dObject)
-                .map((key) => parseInt(key, 10))
-                .sort((a, b) => a - b)
-                .map((key) => dObject[key]);
-
-            const privateKeyHex = dBytes
-                .map((byte) => byte.toString(16).padStart(2, '0'))
-                .join('');
+            const privateKeyHex = this.getPrivateKeyHex(keys);
+            if (!privateKeyHex) return false;
 
             try {
                 await createClaimTransaction({
@@ -662,23 +676,23 @@ export default class SwapDetails extends React.Component<
         fee: string
     ): Promise<boolean> => {
         try {
-            const dObject = keys.__D;
-
-            // Extract keys, sort them numerically, and map to byte values
-            const dBytes = Object.keys(dObject)
-                .map((key) => parseInt(key, 10))
-                .sort((a, b) => a - b)
-                .map((key) => dObject[key]);
-
-            const privateKeyHex = dBytes
-                .map((byte) => byte.toString(16).padStart(2, '0'))
-                .join('');
+            const privateKeyHex = this.getPrivateKeyHex(keys);
+            if (!privateKeyHex) return false;
 
             // allow some retries in case of alt network
             // tx propagation issues
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
+                    const preimageHex =
+                        typeof preimage === 'string'
+                            ? preimage
+                            : Buffer.isBuffer(preimage)
+                            ? preimage.toString('hex')
+                            : preimage?.data
+                            ? Buffer.from(preimage.data).toString('hex')
+                            : '';
+
                     await createReverseClaimTransaction({
                         endpoint,
                         swapId: createdResponse.id,
@@ -686,11 +700,12 @@ export default class SwapDetails extends React.Component<
                         refundLeaf: createdResponse.swapTree.refundLeaf.output,
                         privateKey: privateKeyHex,
                         servicePubKey: createdResponse.refundPublicKey,
-                        preimageHex: preimage.toString('hex'),
+                        preimageHex,
                         transactionHex,
                         lockupAddress,
                         destinationAddress,
                         feeRate: Number(fee || 2),
+                        minerFee: this.props.SwapStore?.claimMinerFee || 0,
                         isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
                     });
 
@@ -945,7 +960,12 @@ export default class SwapDetails extends React.Component<
                                 )}
                                 value={
                                     <Amount
-                                        sats={swapData?.getAmount}
+                                        sats={
+                                            SwapStore?.getReverseSwapReceiveAmount(
+                                                swapData?.getAmount,
+                                                swapData?.claimMinerFee
+                                            ) || 0
+                                        }
                                         sensitive
                                         toggleable
                                     />

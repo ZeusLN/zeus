@@ -51,6 +51,7 @@ export default class Swap extends BaseModel {
     acceptZeroConf?: boolean;
     address?: string;
     bip21?: string;
+    claimMinerFee?: number;
     failureReason?: string;
     imported?: boolean;
     keyIndex?: number;
