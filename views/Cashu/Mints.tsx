@@ -236,9 +236,17 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                   selectedMintUrl &&
                                   mintInfo?.mintUrl &&
                                   selectedMintUrl === mintInfo?.mintUrl;
-                            const supportsMultinut =
-                                !!mintInfo?.nuts &&
-                                !!(mintInfo.nuts[15] || mintInfo.nuts['15']);
+                            const nut15 =
+                                mintInfo?.nuts?.[15] || mintInfo?.nuts?.['15'];
+                            const methods = Array.isArray(nut15)
+                                ? nut15
+                                : nut15?.methods || [];
+                            const supportsMultinut = methods.some(
+                                (method: any) =>
+                                    method?.method?.toLowerCase() ===
+                                        'bolt11' &&
+                                    method?.unit?.toLowerCase() === 'sat'
+                            );
                             const isDisabled =
                                 multiMintEnabled && !supportsMultinut;
                             const errorConnecting = item.errorConnecting;
@@ -278,7 +286,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             opacity: isDisabled ? 0.4 : 1
                                         }}
                                         onPress={async () => {
-                                            if (isDisabled) {
+                                            if (isDisabled && !isSelectedMint) {
                                                 return;
                                             }
 
