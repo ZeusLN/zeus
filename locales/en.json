@@ -78,6 +78,8 @@
     "general.pay": "Pay",
     "general.payLater": "Pay Later",
     "general.open": "Open",
+    "general.set": "Set",
+    "general.notSet": "Not set",
     "general.settled": "Settled",
     "general.new": "New",
     "general.loading": "Loading",
