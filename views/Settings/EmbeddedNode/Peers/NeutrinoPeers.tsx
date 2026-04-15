@@ -45,6 +45,7 @@ interface NeutrinoPeersState {
     addPeer: string;
     pingTime: number;
     pingTimeout: boolean;
+    pingUnreachable: boolean;
     pingHost: string;
     loading: boolean;
 }
@@ -70,6 +71,7 @@ export default class NeutrinoPeers extends React.Component<
             addPeer: '',
             pingTime: 0,
             pingTimeout: false,
+            pingUnreachable: false,
             pingHost: '',
             loading: false
         };
@@ -89,6 +91,7 @@ export default class NeutrinoPeers extends React.Component<
             addPeer,
             pingTime,
             pingTimeout,
+            pingUnreachable,
             pingHost,
             loading
         } = this.state;
@@ -125,6 +128,7 @@ export default class NeutrinoPeers extends React.Component<
                     <View style={{ flex: 1 }}>
                         {loading && <LoadingIndicator />}
                         {!pingTimeout &&
+                            !pingUnreachable &&
                             !loading &&
                             pingHost &&
                             pingTime <= 200 && (
@@ -134,6 +138,7 @@ export default class NeutrinoPeers extends React.Component<
                                 />
                             )}
                         {!pingTimeout &&
+                            !pingUnreachable &&
                             !loading &&
                             pingHost &&
                             pingTime < NEUTRINO_PING_THRESHOLD_MS &&
@@ -144,6 +149,7 @@ export default class NeutrinoPeers extends React.Component<
                                 />
                             )}
                         {!pingTimeout &&
+                            !pingUnreachable &&
                             !loading &&
                             pingHost &&
                             pingTime >= NEUTRINO_PING_THRESHOLD_MS && (
@@ -156,6 +162,14 @@ export default class NeutrinoPeers extends React.Component<
                             <ErrorMessage
                                 message={`${pingHost}: ${localeString(
                                     'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
+                                )}`}
+                                dismissable
+                            />
+                        )}
+                        {!loading && pingHost && !!pingUnreachable && (
+                            <ErrorMessage
+                                message={`${pingHost}: ${localeString(
+                                    'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
                                 )}`}
                                 dismissable
                             />
@@ -266,18 +280,29 @@ export default class NeutrinoPeers extends React.Component<
                                                         this.setState({
                                                             pingTime: 0,
                                                             pingTimeout: false,
+                                                            pingUnreachable:
+                                                                false,
                                                             pingHost: addPeer,
                                                             loading: true
                                                         });
 
-                                                        const ms =
+                                                        const result =
                                                             await pingPeer(
                                                                 addPeer
                                                             );
-                                                        this.setState({
-                                                            pingTime: ms,
-                                                            loading: false
-                                                        });
+                                                        if (result.reachable) {
+                                                            this.setState({
+                                                                pingTime:
+                                                                    result.ms,
+                                                                loading: false
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                pingUnreachable:
+                                                                    true,
+                                                                loading: false
+                                                            });
+                                                        }
                                                     } catch (e) {
                                                         this.setState({
                                                             pingTimeout: true,
@@ -375,6 +400,8 @@ export default class NeutrinoPeers extends React.Component<
                                                                             pingTime: 0,
                                                                             pingTimeout:
                                                                                 false,
+                                                                            pingUnreachable:
+                                                                                false,
                                                                             pingHost:
                                                                                 item,
                                                                             loading:
@@ -382,18 +409,31 @@ export default class NeutrinoPeers extends React.Component<
                                                                         }
                                                                     );
 
-                                                                    const ms =
+                                                                    const result =
                                                                         await pingPeer(
                                                                             item
                                                                         );
-                                                                    this.setState(
-                                                                        {
-                                                                            pingTime:
-                                                                                ms,
-                                                                            loading:
-                                                                                false
-                                                                        }
-                                                                    );
+                                                                    if (
+                                                                        result.reachable
+                                                                    ) {
+                                                                        this.setState(
+                                                                            {
+                                                                                pingTime:
+                                                                                    result.ms,
+                                                                                loading:
+                                                                                    false
+                                                                            }
+                                                                        );
+                                                                    } else {
+                                                                        this.setState(
+                                                                            {
+                                                                                pingUnreachable:
+                                                                                    true,
+                                                                                loading:
+                                                                                    false
+                                                                            }
+                                                                        );
+                                                                    }
                                                                 } catch (e) {
                                                                     this.setState(
                                                                         {
