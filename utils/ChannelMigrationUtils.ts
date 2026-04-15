@@ -3,7 +3,6 @@ import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import RNRestart from 'react-native-restart';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import * as CryptoJS from 'crypto-js';
 
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
@@ -11,7 +10,7 @@ import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
 import { sleep } from './SleepUtils';
-import { zipFolder, unzipFile } from './ZipUtils';
+import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
 
@@ -243,24 +242,23 @@ export const uploadChannelBackupToOlympus = async (
                             'views.Tools.migration.export.zippingBackup'
                         )
                     );
-                const tempZipPath = `${
-                    RNFS.CachesDirectoryPath
-                }/zeus-olympus-backup-${Date.now()}.zip`;
+                const timestamp = Date.now();
+                const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.zip`;
+                const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.enc`;
                 await zipFolder(graphDir, tempZipPath);
-                const zipBase64 = await ReactNativeBlobUtil.fs.readFile(
-                    tempZipPath,
-                    'base64'
-                );
-                await RNFS.unlink(tempZipPath);
 
                 if (setStatus)
                     setStatus(
                         localeString('views.Tools.migration.export.encrypting')
                     );
-                const encryptedBackup = CryptoJS.AES.encrypt(
-                    zipBase64,
-                    seedArray
-                ).toString();
+                await encryptFile(tempZipPath, tempEncPath, seedArray);
+                await RNFS.unlink(tempZipPath);
+
+                const encryptedBase64 = await ReactNativeBlobUtil.fs.readFile(
+                    tempEncPath,
+                    'base64'
+                );
+                await RNFS.unlink(tempEncPath);
 
                 // upload to the server
                 if (setStatus)
@@ -276,7 +274,7 @@ export const uploadChannelBackupToOlympus = async (
                         pubkey,
                         message: uploadAuth.verification,
                         signature: uploadSignature,
-                        backup: encryptedBackup
+                        backup: encryptedBase64
                     })
                 );
 
@@ -519,6 +517,10 @@ export const restoreChannelBackupFromOlympus = async (
 
         // 3. Download the encrypted backup
         console.log('Downloading encrypted backup...');
+        const timestamp = Date.now();
+        const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.enc`;
+        const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.zip`;
+
         const restoreResponse = await ReactNativeBlobUtil.fetch(
             'POST',
             `${BACKUPS_HOST}/api/restore-channels`,
@@ -530,7 +532,8 @@ export const restoreChannelBackupFromOlympus = async (
             })
         );
 
-        if (restoreResponse.info().status !== 200) {
+        const restoreStatus = restoreResponse.info().status;
+        if (restoreStatus !== 200) {
             let errorMsg = 'Download failed';
             try {
                 const errorJson = restoreResponse.json();
@@ -539,30 +542,20 @@ export const restoreChannelBackupFromOlympus = async (
             throw new Error(errorMsg);
         }
 
+        // The server stores and returns the backup as a base64 string
+        // (it was uploaded as base64 inside a JSON body). Decode it
+        // back to raw binary before decrypting.
+        const encryptedBase64Response = await restoreResponse.text();
+        await ReactNativeBlobUtil.fs.writeFile(
+            tempEncPath,
+            encryptedBase64Response,
+            'base64'
+        );
+
         // 4. Decrypt the payload
         console.log('Decrypting backup...');
-        const encryptedBackupString = await restoreResponse.text();
-
-        try {
-            const jsonCheck = JSON.parse(encryptedBackupString);
-            if (jsonCheck && jsonCheck.success === false) {
-                throw new Error(`Backend Error: ${jsonCheck.error}`);
-            }
-        } catch (e: any) {
-            if (e?.message?.includes('Backend Error')) throw e;
-        }
-
-        const decryptedBytes = CryptoJS.AES.decrypt(
-            encryptedBackupString,
-            seedArray
-        );
-        const decryptedStr = decryptedBytes.toString(CryptoJS.enc.Utf8);
-
-        if (!decryptedStr) {
-            throw new Error(
-                'Decryption failed. Incorrect seed or corrupted file.'
-            );
-        }
+        await decryptFile(tempEncPath, tempZipPath, seedArray);
+        await RNFS.unlink(tempEncPath);
 
         const MAX_RECOVERY_WAIT_ATTEMPTS = 60;
         for (let attempt = 1; ; attempt++) {
@@ -605,14 +598,6 @@ export const restoreChannelBackupFromOlympus = async (
             }
         } catch (e) {}
 
-        const tempZipPath = `${
-            RNFS.CachesDirectoryPath
-        }/zeus-olympus-restore-${Date.now()}.zip`;
-        await ReactNativeBlobUtil.fs.writeFile(
-            tempZipPath,
-            decryptedStr,
-            'base64'
-        );
         await unzipFile(tempZipPath, destFolder);
         await RNFS.unlink(tempZipPath);
 
