@@ -542,7 +542,16 @@ export default class SeedRecovery extends React.PureComponent<
                             }
                         }
 
-                        this.setState({ showSuggestions: false });
+                        if (type === 'scb') {
+                            this.setState({
+                                showSuggestions: false,
+                                selectedWordIndex: null
+                            });
+                        } else {
+                            this.setState({
+                                showSuggestions: false
+                            });
+                        }
 
                         // set focus
                         if (!Keyboard.isVisible()) {
@@ -913,7 +922,10 @@ export default class SeedRecovery extends React.PureComponent<
                                 <TextInput
                                     ref={this.textInput}
                                     onFocus={() => {
-                                        if (selectedText?.length === 0) {
+                                        if (
+                                            selectedText?.length === 0 &&
+                                            selectedInputType !== 'scb'
+                                        ) {
                                             this.setState({
                                                 showSuggestions: true
                                             });
@@ -938,8 +950,12 @@ export default class SeedRecovery extends React.PureComponent<
                                         marginLeft: 10,
                                         marginRight: 10,
                                         width: '90%',
-                                        alignSelf: 'center'
+                                        alignSelf: 'center',
+                                        ...(selectedInputType === 'scb' && {
+                                            maxHeight: 200
+                                        })
                                     }}
+                                    multiline={selectedInputType === 'scb'}
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     autoFocus
@@ -955,6 +971,12 @@ export default class SeedRecovery extends React.PureComponent<
                                                     text.length > 0
                                                         ? true
                                                         : false
+                                            });
+                                        } else if (
+                                            selectedInputType === 'scb'
+                                        ) {
+                                            this.setState({
+                                                showSuggestions: false
                                             });
                                         }
 
@@ -1014,137 +1036,171 @@ export default class SeedRecovery extends React.PureComponent<
                         </View>
                         {!showSuggestions && (
                             <>
-                                <ScrollView
-                                    contentContainerStyle={{
-                                        flexGrow: 1,
-                                        flexDirection: 'row'
-                                    }}
-                                    keyboardShouldPersistTaps="handled"
-                                >
-                                    {restoreSwaps ||
-                                    restoreRescueKey ||
-                                    implementation === 'ldk-node' ? (
-                                        <>
-                                            <View
-                                                style={{
-                                                    ...styles.column,
-                                                    alignSelf:
-                                                        !selectedInputType
-                                                            ? 'center'
-                                                            : undefined
-                                                }}
-                                            >
-                                                {[0, 1, 2, 3, 4, 5].map((i) => (
-                                                    <RecoveryLabel
-                                                        key={i}
-                                                        type="mnemonicWord"
-                                                        index={i}
-                                                        text={
-                                                            this.state
-                                                                .seedArray[i]
-                                                        }
-                                                    />
-                                                ))}
-                                            </View>
-                                            <View
-                                                style={{
-                                                    ...styles.column,
-                                                    alignSelf:
-                                                        !selectedInputType
-                                                            ? 'center'
-                                                            : undefined
-                                                }}
-                                            >
-                                                {[6, 7, 8, 9, 10, 11].map(
-                                                    (i) => (
-                                                        <RecoveryLabel
-                                                            key={i}
-                                                            type="mnemonicWord"
-                                                            index={i}
-                                                            text={
-                                                                this.state
-                                                                    .seedArray[
-                                                                    i
-                                                                ]
-                                                            }
-                                                        />
-                                                    )
-                                                )}
-                                            </View>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <View
-                                                style={{
-                                                    ...styles.column,
-                                                    alignSelf:
-                                                        !selectedInputType
-                                                            ? 'center'
-                                                            : undefined
-                                                }}
-                                            >
-                                                {[
-                                                    0, 1, 2, 3, 4, 5, 6, 7, 8,
-                                                    9, 10, 11
-                                                ].map((index: number) => {
-                                                    return (
-                                                        <RecoveryLabel
-                                                            key={index}
-                                                            type="mnemonicWord"
-                                                            index={index}
-                                                            text={
-                                                                seedArray[index]
-                                                            }
-                                                        />
-                                                    );
-                                                })}
-                                            </View>
-                                            <View
-                                                style={{
-                                                    ...styles.column,
-                                                    alignSelf:
-                                                        !selectedInputType
-                                                            ? 'center'
-                                                            : undefined
-                                                }}
-                                            >
-                                                {[
-                                                    12, 13, 14, 15, 16, 17, 18,
-                                                    19, 20, 21, 22, 23
-                                                ].map((index: number) => {
-                                                    return (
-                                                        <RecoveryLabel
-                                                            key={index}
-                                                            type="mnemonicWord"
-                                                            index={index}
-                                                            text={
-                                                                seedArray[index]
-                                                            }
-                                                        />
-                                                    );
-                                                })}
-                                            </View>
-                                        </>
-                                    )}
-                                </ScrollView>
+                                {selectedInputType !== 'scb' && (
+                                    <ScrollView
+                                        contentContainerStyle={{
+                                            flexGrow: 1,
+                                            flexDirection: 'row'
+                                        }}
+                                        keyboardShouldPersistTaps="handled"
+                                    >
+                                        {restoreSwaps ||
+                                        restoreRescueKey ||
+                                        implementation === 'ldk-node' ? (
+                                            <>
+                                                <View
+                                                    style={{
+                                                        ...styles.column,
+                                                        alignSelf:
+                                                            !selectedInputType
+                                                                ? 'center'
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    {[0, 1, 2, 3, 4, 5].map(
+                                                        (i) => (
+                                                            <RecoveryLabel
+                                                                key={i}
+                                                                type="mnemonicWord"
+                                                                index={i}
+                                                                text={
+                                                                    this.state
+                                                                        .seedArray[
+                                                                        i
+                                                                    ]
+                                                                }
+                                                            />
+                                                        )
+                                                    )}
+                                                </View>
+                                                <View
+                                                    style={{
+                                                        ...styles.column,
+                                                        alignSelf:
+                                                            !selectedInputType
+                                                                ? 'center'
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    {[6, 7, 8, 9, 10, 11].map(
+                                                        (i) => (
+                                                            <RecoveryLabel
+                                                                key={i}
+                                                                type="mnemonicWord"
+                                                                index={i}
+                                                                text={
+                                                                    this.state
+                                                                        .seedArray[
+                                                                        i
+                                                                    ]
+                                                                }
+                                                            />
+                                                        )
+                                                    )}
+                                                </View>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <View
+                                                    style={{
+                                                        ...styles.column,
+                                                        alignSelf:
+                                                            !selectedInputType
+                                                                ? 'center'
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    {[
+                                                        0, 1, 2, 3, 4, 5, 6, 7,
+                                                        8, 9, 10, 11
+                                                    ].map((index: number) => {
+                                                        return (
+                                                            <RecoveryLabel
+                                                                key={index}
+                                                                type="mnemonicWord"
+                                                                index={index}
+                                                                text={
+                                                                    seedArray[
+                                                                        index
+                                                                    ]
+                                                                }
+                                                            />
+                                                        );
+                                                    })}
+                                                </View>
+                                                <View
+                                                    style={{
+                                                        ...styles.column,
+                                                        alignSelf:
+                                                            !selectedInputType
+                                                                ? 'center'
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    {[
+                                                        12, 13, 14, 15, 16, 17,
+                                                        18, 19, 20, 21, 22, 23
+                                                    ].map((index: number) => {
+                                                        return (
+                                                            <RecoveryLabel
+                                                                key={index}
+                                                                type="mnemonicWord"
+                                                                index={index}
+                                                                text={
+                                                                    seedArray[
+                                                                        index
+                                                                    ]
+                                                                }
+                                                            />
+                                                        );
+                                                    })}
+                                                </View>
+                                            </>
+                                        )}
+                                    </ScrollView>
+                                )}
 
                                 {!(
                                     restoreSwaps ||
                                     restoreRescueKey ||
                                     implementation === 'ldk-node'
-                                ) && (
+                                ) &&
+                                    selectedInputType !== 'scb' && (
+                                        <View
+                                            style={{
+                                                flexGrow: 1,
+                                                flexDirection: 'row'
+                                            }}
+                                        >
+                                            <View style={styles.scb}>
+                                                <RecoveryLabel
+                                                    type="scb"
+                                                    text={channelBackupsBase64}
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+                                {selectedInputType === 'scb' && (
                                     <View
                                         style={{
-                                            flexGrow: 1,
-                                            flexDirection: 'row'
+                                            marginTop: 10,
+                                            width: '100%',
+                                            paddingHorizontal: 6
                                         }}
                                     >
-                                        <View style={styles.scb}>
-                                            <RecoveryLabel
-                                                type="scb"
-                                                text={channelBackupsBase64}
-                                            />
-                                        </View>
+                                        <Button
+                                            title={localeString(
+                                                'general.confirm'
+                                            )}
+                                            onPress={() => {
+                                                Keyboard.dismiss();
+                                                this.setState({
+                                                    selectedInputType: null,
+                                                    selectedText: ''
+                                                });
+                                            }}
+                                            secondary
+                                        />
                                     </View>
                                 )}
                             </>
@@ -1321,7 +1377,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 )}
                             </>
                         )}
-                        {!showSuggestions && (
+                        {!showSuggestions && selectedInputType !== 'scb' && (
                             <View
                                 style={{
                                     alignSelf: 'center',
