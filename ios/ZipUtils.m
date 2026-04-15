@@ -1,5 +1,28 @@
 #import "ZipUtils.h"
 #import <zlib.h>
+#import <CommonCrypto/CommonCryptor.h>
+#import <CommonCrypto/CommonKeyDerivation.h>
+
+// These GCM oneshot functions are available since iOS 13 but are not
+// declared in the public CommonCrypto headers.  Provide explicit
+// prototypes so the build succeeds under -Wimplicit-function-declaration.
+CCCryptorStatus CCCryptorGCMOneshotEncrypt(
+    CCAlgorithm alg, const void *key, size_t keyLength,
+    const void *iv, size_t ivLen,
+    const void *aData, size_t aDataLen,
+    const void *dataIn, size_t dataInLength,
+    void *dataOut,
+    void *tagOut, size_t tagLength
+) __attribute__((weak_import));
+
+CCCryptorStatus CCCryptorGCMOneshotDecrypt(
+    CCAlgorithm alg, const void *key, size_t keyLength,
+    const void *iv, size_t ivLen,
+    const void *aData, size_t aDataLen,
+    const void *dataIn, size_t dataInLength,
+    void *dataOut,
+    const void *tagIn, size_t tagLength
+) __attribute__((weak_import));
 
 // Minizip-compatible local file header constants
 #define ZIP_LOCAL_HEADER_SIGNATURE 0x04034b50
@@ -298,6 +321,169 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
     decompressed.length = stream.total_out;
     inflateEnd(&stream);
     return decompressed;
+}
+
+#pragma mark - Encryption constants
+
+static const uint8_t CRYPTO_VERSION = 0x01;
+static const size_t SALT_LEN = 16;
+static const size_t IV_LEN = 12;
+static const size_t GCM_TAG_LEN = 16;
+static const uint32_t PBKDF2_ITERATIONS = 100000;
+static const size_t KEY_LEN = 32; // AES-256
+
+#pragma mark - Encrypt
+
+RCT_EXPORT_METHOD(encryptFile:(NSString *)inputPath
+                  outputPath:(NSString *)outputPath
+                  passphrase:(NSString *)passphrase
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSData *plaintext = [NSData dataWithContentsOfFile:inputPath];
+        if (!plaintext) {
+            reject(@"ERR_ENCRYPT", [NSString stringWithFormat:@"Input file does not exist: %@", inputPath], nil);
+            return;
+        }
+
+        // Generate random salt and IV
+        uint8_t salt[SALT_LEN];
+        uint8_t iv[IV_LEN];
+        if (SecRandomCopyBytes(kSecRandomDefault, SALT_LEN, salt) != errSecSuccess ||
+            SecRandomCopyBytes(kSecRandomDefault, IV_LEN, iv) != errSecSuccess) {
+            reject(@"ERR_ENCRYPT", @"Failed to generate random bytes", nil);
+            return;
+        }
+
+        // Derive key with PBKDF2-SHA256
+        NSData *passphraseData = [passphrase dataUsingEncoding:NSUTF8StringEncoding];
+        uint8_t derivedKey[KEY_LEN];
+        CCStatus kdfStatus = CCKeyDerivationPBKDF(
+            kCCPBKDF2,
+            passphraseData.bytes, passphraseData.length,
+            salt, SALT_LEN,
+            kCCPRFHmacAlgSHA256,
+            PBKDF2_ITERATIONS,
+            derivedKey, KEY_LEN
+        );
+        if (kdfStatus != kCCSuccess) {
+            reject(@"ERR_ENCRYPT", @"Key derivation failed", nil);
+            return;
+        }
+
+        // AES-256-GCM encrypt
+        size_t ciphertextLen = plaintext.length;
+        NSMutableData *ciphertext = [NSMutableData dataWithLength:ciphertextLen];
+        uint8_t tag[GCM_TAG_LEN];
+
+        CCCryptorStatus status = CCCryptorGCMOneshotEncrypt(
+            kCCAlgorithmAES,
+            derivedKey, KEY_LEN,
+            iv, IV_LEN,
+            NULL, 0, // no AAD
+            plaintext.bytes, plaintext.length,
+            ciphertext.mutableBytes,
+            tag, GCM_TAG_LEN
+        );
+
+        if (status != kCCSuccess) {
+            reject(@"ERR_ENCRYPT", [NSString stringWithFormat:@"Encryption failed with status: %d", status], nil);
+            return;
+        }
+
+        // Write: [version][salt][iv][ciphertext][tag]
+        NSMutableData *output = [NSMutableData data];
+        [output appendBytes:&CRYPTO_VERSION length:1];
+        [output appendBytes:salt length:SALT_LEN];
+        [output appendBytes:iv length:IV_LEN];
+        [output appendData:ciphertext];
+        [output appendBytes:tag length:GCM_TAG_LEN];
+
+        if ([output writeToFile:outputPath atomically:YES]) {
+            resolve(nil);
+        } else {
+            reject(@"ERR_ENCRYPT", @"Failed to write encrypted file", nil);
+        }
+    });
+}
+
+#pragma mark - Decrypt
+
+RCT_EXPORT_METHOD(decryptFile:(NSString *)inputPath
+                  outputPath:(NSString *)outputPath
+                  passphrase:(NSString *)passphrase
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSData *fileData = [NSData dataWithContentsOfFile:inputPath];
+        if (!fileData) {
+            reject(@"ERR_DECRYPT", [NSString stringWithFormat:@"Input file does not exist: %@", inputPath], nil);
+            return;
+        }
+
+        size_t minLen = 1 + SALT_LEN + IV_LEN + GCM_TAG_LEN;
+        if (fileData.length < minLen) {
+            reject(@"ERR_DECRYPT", @"File too small to be a valid encrypted backup", nil);
+            return;
+        }
+
+        const uint8_t *bytes = fileData.bytes;
+
+        uint8_t version = bytes[0];
+        if (version != CRYPTO_VERSION) {
+            reject(@"ERR_DECRYPT", [NSString stringWithFormat:@"Unsupported encryption version: %d", version], nil);
+            return;
+        }
+
+        const uint8_t *salt = bytes + 1;
+        const uint8_t *iv = bytes + 1 + SALT_LEN;
+        size_t headerLen = 1 + SALT_LEN + IV_LEN;
+        size_t ciphertextLen = fileData.length - headerLen - GCM_TAG_LEN;
+        const uint8_t *ciphertextBytes = bytes + headerLen;
+        const uint8_t *tagBytes = bytes + headerLen + ciphertextLen;
+
+        // Derive key with PBKDF2-SHA256
+        NSData *passphraseData = [passphrase dataUsingEncoding:NSUTF8StringEncoding];
+        uint8_t derivedKey[KEY_LEN];
+        CCStatus kdfStatus = CCKeyDerivationPBKDF(
+            kCCPBKDF2,
+            passphraseData.bytes, passphraseData.length,
+            salt, SALT_LEN,
+            kCCPRFHmacAlgSHA256,
+            PBKDF2_ITERATIONS,
+            derivedKey, KEY_LEN
+        );
+        if (kdfStatus != kCCSuccess) {
+            reject(@"ERR_DECRYPT", @"Key derivation failed", nil);
+            return;
+        }
+
+        // AES-256-GCM decrypt
+        NSMutableData *plaintext = [NSMutableData dataWithLength:ciphertextLen];
+
+        CCCryptorStatus status = CCCryptorGCMOneshotDecrypt(
+            kCCAlgorithmAES,
+            derivedKey, KEY_LEN,
+            iv, IV_LEN,
+            NULL, 0, // no AAD
+            ciphertextBytes, ciphertextLen,
+            plaintext.mutableBytes,
+            tagBytes, GCM_TAG_LEN
+        );
+
+        if (status != kCCSuccess) {
+            reject(@"ERR_DECRYPT", @"Decryption failed. Incorrect seed or corrupted file.", nil);
+            return;
+        }
+
+        if ([plaintext writeToFile:outputPath atomically:YES]) {
+            resolve(nil);
+        } else {
+            reject(@"ERR_DECRYPT", @"Failed to write decrypted file", nil);
+        }
+    });
 }
 
 @end

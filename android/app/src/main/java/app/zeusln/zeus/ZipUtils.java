@@ -9,9 +9,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.security.SecureRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class ZipUtils extends ReactContextBaseJavaModule {
 
@@ -113,6 +120,133 @@ public class ZipUtils extends ReactContextBaseJavaModule {
             promise.resolve(null);
         } catch (Exception e) {
             promise.reject("ERR_UNZIP", e.getMessage(), e);
+        }
+    }
+
+    private static final int VERSION = 0x01;
+    private static final int SALT_LEN = 16;
+    private static final int IV_LEN = 12;
+    private static final int GCM_TAG_BITS = 128;
+    private static final int PBKDF2_ITERATIONS = 100000;
+    private static final int KEY_LEN_BITS = 256;
+
+    @ReactMethod
+    public void encryptFile(String inputPath, String outputPath, String passphrase, Promise promise) {
+        try {
+            File inFile = new File(inputPath);
+            if (!inFile.exists()) {
+                promise.reject("ERR_ENCRYPT", "Input file does not exist: " + inputPath);
+                return;
+            }
+
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[SALT_LEN];
+            random.nextBytes(salt);
+            byte[] iv = new byte[IV_LEN];
+            random.nextBytes(iv);
+
+            SecretKeySpec key = deriveKey(passphrase, salt);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+
+            byte[] plaintext = readAllBytes(inFile);
+            byte[] ciphertext = cipher.doFinal(plaintext);
+
+            File outFile = new File(outputPath);
+            File parentDir = outFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                fos.write(VERSION);
+                fos.write(salt);
+                fos.write(iv);
+                fos.write(ciphertext); // includes GCM tag appended by Android
+            }
+
+            promise.resolve(null);
+        } catch (Exception e) {
+            promise.reject("ERR_ENCRYPT", e.getMessage(), e);
+        }
+    }
+
+    @ReactMethod
+    public void decryptFile(String inputPath, String outputPath, String passphrase, Promise promise) {
+        try {
+            File inFile = new File(inputPath);
+            if (!inFile.exists()) {
+                promise.reject("ERR_DECRYPT", "Input file does not exist: " + inputPath);
+                return;
+            }
+
+            byte[] fileData = readAllBytes(inFile);
+            int minLen = 1 + SALT_LEN + IV_LEN + GCM_TAG_BITS / 8;
+            if (fileData.length < minLen) {
+                promise.reject("ERR_DECRYPT", "File too small to be a valid encrypted backup");
+                return;
+            }
+
+            int version = fileData[0] & 0xFF;
+            if (version != VERSION) {
+                promise.reject("ERR_DECRYPT", "Unsupported encryption version: " + version);
+                return;
+            }
+
+            byte[] salt = new byte[SALT_LEN];
+            System.arraycopy(fileData, 1, salt, 0, SALT_LEN);
+            byte[] iv = new byte[IV_LEN];
+            System.arraycopy(fileData, 1 + SALT_LEN, iv, 0, IV_LEN);
+
+            int headerLen = 1 + SALT_LEN + IV_LEN;
+            int ciphertextLen = fileData.length - headerLen;
+            byte[] ciphertext = new byte[ciphertextLen];
+            System.arraycopy(fileData, headerLen, ciphertext, 0, ciphertextLen);
+
+            SecretKeySpec key = deriveKey(passphrase, salt);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+
+            byte[] plaintext = cipher.doFinal(ciphertext);
+
+            File outFile = new File(outputPath);
+            File parentDir = outFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                fos.write(plaintext);
+            }
+
+            promise.resolve(null);
+        } catch (javax.crypto.AEADBadTagException e) {
+            promise.reject("ERR_DECRYPT", "Decryption failed. Incorrect seed or corrupted file.");
+        } catch (Exception e) {
+            promise.reject("ERR_DECRYPT", e.getMessage(), e);
+        }
+    }
+
+    private SecretKeySpec deriveKey(String passphrase, byte[] salt) throws Exception {
+        PBEKeySpec spec = new PBEKeySpec(passphrase.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_LEN_BITS);
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+        spec.clearPassword();
+        return new SecretKeySpec(keyBytes, "AES");
+    }
+
+    private byte[] readAllBytes(File file) throws Exception {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] data = new byte[(int) file.length()];
+            int offset = 0;
+            while (offset < data.length) {
+                int read = fis.read(data, offset, data.length - offset);
+                if (read < 0) break;
+                offset += read;
+            }
+            return data;
         }
     }
 }
