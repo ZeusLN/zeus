@@ -84,8 +84,11 @@ export default class NodeChoice extends React.Component<
             let reachableCount = 0;
             for (const peer of DEFAULT_NEUTRINO_PEERS_MAINNET) {
                 try {
-                    const ms = await pingPeer(peer);
-                    if (ms < NEUTRINO_PING_THRESHOLD_MS) {
+                    const result = await pingPeer(peer);
+                    if (
+                        result.reachable &&
+                        result.ms < NEUTRINO_PING_THRESHOLD_MS
+                    ) {
                         reachableCount++;
                     }
                 } catch {

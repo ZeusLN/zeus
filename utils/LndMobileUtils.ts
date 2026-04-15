@@ -84,10 +84,15 @@ export const NEUTRINO_PING_THRESHOLD_MS = 1000;
 
 // Fetch-based latency check that runs entirely on the JS thread,
 // avoiding the native thread race condition in react-native-ping.
+export interface PingResult {
+    ms: number;
+    reachable: boolean;
+}
+
 export async function pingPeer(
     host: string,
     timeout: number = NEUTRINO_PING_TIMEOUT_MS
-): Promise<number> {
+): Promise<PingResult> {
     if (host.includes('://')) {
         throw new Error(
             localeString(
@@ -98,15 +103,15 @@ export async function pingPeer(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     const start = global.performance.now();
+    let reachable = false;
     try {
         await fetch(`http://${host}:8333`, {
             method: 'HEAD',
             signal: controller.signal
         });
-    } catch {
-        // We only care about the round-trip time. A connection refused,
-        // reset, or other network error still proves the host is reachable.
-        // Only an abort (timeout) should be treated as unreachable.
+        // Any HTTP response (even non-200) means the host is reachable.
+        reachable = true;
+    } catch (e: any) {
         if (controller.signal.aborted) {
             throw new Error(
                 localeString(
@@ -114,10 +119,36 @@ export async function pingPeer(
                 )
             );
         }
+        // Bitcoin peers don't speak HTTP so fetch always throws — even
+        // for reachable peers (TCP connects, then the non-HTTP response
+        // causes a parse error).  We try to distinguish real peers from
+        // nonexistent hosts via two independent signals:
+        //
+        // 1. Platform-specific DNS error messages.
+        const msg = (e?.message || '').toLowerCase();
+        const hasDnsHint =
+            msg.includes('unable to resolve host') || // Android (OkHttp)
+            msg.includes('no address associated') || // Android variant
+            msg.includes('could not find the server') || // iOS
+            msg.includes('cannot find host') || // iOS variant
+            msg.includes('nodename nor servname') || // iOS/macOS getaddrinfo
+            msg.includes('hostname could not be found') || // Windows
+            msg.includes('not known'); // Linux getaddrinfo
+        if (hasDnsHint) {
+            reachable = false;
+        } else {
+            // 2. Timing heuristic for platforms where the error message
+            //    is generic (e.g. Android "Network request failed").
+            //    A real host needs at least one network round-trip for
+            //    DNS + TCP before the error, while a DNS NXDOMAIN from
+            //    the local resolver returns almost instantly.
+            const elapsed = global.performance.now() - start;
+            reachable = elapsed >= 100;
+        }
     } finally {
         clearTimeout(timer);
     }
-    return Math.round(global.performance.now() - start);
+    return { ms: Math.round(global.performance.now() - start), reachable };
 }
 
 // ~4GB
@@ -911,11 +942,11 @@ export async function optimizeNeutrinoPeers(
         const peer = peers[i];
         await new Promise(async (resolve) => {
             try {
-                const ms = await pingPeer(peer);
-                console.log(`# ${peer} - ${ms}`);
+                const result = await pingPeer(peer);
+                console.log(`# ${peer} - ${result.ms}`);
                 results.push({
                     peer,
-                    ms
+                    ms: result.reachable ? result.ms : 'Unreachable'
                 });
                 resolve(true);
             } catch (e) {
@@ -1014,11 +1045,11 @@ export async function optimizeNeutrinoPeers(
                     const peer = peers[i];
                     await new Promise(async (resolve) => {
                         try {
-                            const ms = await pingPeer(peer);
-                            console.log(`# ${peer} - ${ms}`);
+                            const result = await pingPeer(peer);
+                            console.log(`# ${peer} - ${result.ms}`);
                             results.push({
                                 peer,
-                                ms
+                                ms: result.reachable ? result.ms : 'Unreachable'
                             });
                             resolve(true);
                         } catch (e) {

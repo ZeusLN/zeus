@@ -84,11 +84,15 @@ export default class AlertStore {
             const peer = peers[i];
             await new Promise(async (resolve) => {
                 try {
-                    const ms = await pingPeer(peer);
-                    console.log(`# ${peer} - ${ms}`);
+                    const result = await pingPeer(peer);
+                    console.log(`# ${peer} - ${result.ms}`);
                     results.push({
                         peer,
-                        ms
+                        ms: result.reachable
+                            ? result.ms
+                            : localeString(
+                                  'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
+                              )
                     });
                     resolve(true);
                 } catch (e) {
