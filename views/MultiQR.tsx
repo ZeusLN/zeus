@@ -61,7 +61,8 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                 onchainAddress: parsedContact.onchainAddress ?? [],
                 nip05: parsedContact.nip05 ?? [],
                 nostrNpub: parsedContact.nostrNpub ?? [],
-                pubkey: parsedContact.pubkey ?? []
+                pubkey: parsedContact.pubkey ?? [],
+                cashuPubkey: parsedContact.cashuPubkey ?? []
             };
 
             setAddressData([
