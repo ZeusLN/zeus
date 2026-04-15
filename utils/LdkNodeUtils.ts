@@ -19,6 +19,7 @@ import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
 
 // Default Esplora servers
 export const ESPLORA_SERVERS_MAINNET = [
+    'https://electrs.zeusln.com',
     'https://electrs.getalbypro.com',
     'https://blockstream.info/api',
     'https://mempool.space/api'
