@@ -616,7 +616,12 @@ export default class SeedRecovery extends React.PureComponent<
                         style={{
                             flex: 1,
                             fontFamily: 'PPNeueMontreal-Medium',
-                            color: themeColor('text'),
+                            color:
+                                !showSuggestions && type === 'scb'
+                                    ? text
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText')
+                                    : themeColor('text'),
                             fontSize: 18,
                             alignSelf:
                                 type === 'mnemonicWord'
@@ -634,6 +639,10 @@ export default class SeedRecovery extends React.PureComponent<
                             selectedWordIndex === index
                         )
                             ? '********'
+                            : !showSuggestions && type === 'scb'
+                            ? text
+                                ? localeString('general.set')
+                                : localeString('general.notSet')
                             : text}
                     </Text>
                 </TouchableOpacity>
