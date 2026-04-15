@@ -23,6 +23,8 @@ typealias Callback = (Data?, Error?) -> Void
 typealias StreamCallback = (Data?, Error?) -> Void
 
 // Used internally in this class to deal with Lndmobile/Go
+// Renamed in ObjC to avoid collision with Lndmobile.xcframework's own LndmobileCallback
+@objc(ZeusLndmobileCallback)
 class LndmobileCallback: NSObject, LndmobileCallbackProtocol {
   var method: String
   var callback: Callback
