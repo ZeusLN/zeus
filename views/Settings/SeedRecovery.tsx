@@ -961,7 +961,9 @@ export default class SeedRecovery extends React.PureComponent<
                                         width: '90%',
                                         alignSelf: 'center',
                                         ...(selectedInputType === 'scb' && {
-                                            maxHeight: 200
+                                            maxHeight: 200,
+                                            padding: 10,
+                                            paddingRight: 20
                                         })
                                     }}
                                     multiline={selectedInputType === 'scb'}
