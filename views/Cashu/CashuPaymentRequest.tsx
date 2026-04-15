@@ -265,7 +265,14 @@ export default class CashuPaymentRequest extends React.Component<
                 CashuStore.mintInfos[mintUrl] ||
                 CashuStore.mintInfos[normalized];
 
-            return !!(mintInfo?.nuts?.[15] || mintInfo?.nuts?.['15']);
+            const nut15 = mintInfo?.nuts?.[15] || mintInfo?.nuts?.['15'];
+            const methods = Array.isArray(nut15) ? nut15 : nut15?.methods || [];
+
+            return methods.some(
+                (method: any) =>
+                    method?.method?.toLowerCase() === 'bolt11' &&
+                    method?.unit?.toLowerCase() === 'sat'
+            );
         };
 
         this.setState({ multiMintEnabled: enabled });

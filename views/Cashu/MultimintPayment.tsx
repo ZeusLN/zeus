@@ -474,11 +474,12 @@ export default class MultimintPayment extends React.Component<
 
         const paymentAmount = this.paymentAmountSat;
 
-        const hasError =
-            step === MultinutPaymentStep.FAILED ||
-            !!error ||
-            !!CashuStore?.paymentError;
-        const errorMessage = error || CashuStore?.paymentErrorMsg;
+        const hasError = step === MultinutPaymentStep.FAILED || !!error;
+        const errorMessage =
+            error ||
+            (step === MultinutPaymentStep.FAILED
+                ? CashuStore?.paymentErrorMsg
+                : undefined);
         const isComplete = step === MultinutPaymentStep.COMPLETE;
 
         return (
