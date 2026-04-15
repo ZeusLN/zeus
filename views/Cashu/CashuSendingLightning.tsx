@@ -195,8 +195,10 @@ export default class CashuSendingLightning extends React.Component<
             )
                 ?.toString()
                 ?.toUpperCase();
+            const donationPaid =
+                !!payment?.payment_preimage || donationState === 'PAID';
 
-            if (!payment || donationState !== 'PAID') {
+            if (!payment || !donationPaid) {
                 console.log('Donation payment failed.');
                 this.setState({ donationHandled: false });
                 return;
