@@ -11,6 +11,7 @@ import Carousel, {
 } from 'react-native-reanimated-carousel';
 
 import Header from '../components/Header';
+import Text from '../components/Text';
 import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
@@ -28,6 +29,8 @@ interface MultiQRProps {
 
 const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
     const [addressData, setAddressData] = useState(['']);
+    const [contactLabel, setContactLabel] = useState('');
+
     const { navigation, route } = props;
 
     const ref = useRef<ICarouselInstance>(null);
@@ -65,6 +68,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                 cashuPubkey: parsedContact.cashuPubkey ?? []
             };
 
+            setContactLabel(parsedContact.name ?? '');
             setAddressData([
                 `zeuscontact:${JSON.stringify(essentialContact)}`,
                 ...addressData
@@ -92,6 +96,11 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             textBottom
             truncateLongValue
             iconOnly={true}
+            valueStyle={
+                route.params?.fromContactDetailsView
+                    ? { fontSize: 18 }
+                    : undefined
+            }
         />
     );
 
@@ -104,6 +113,16 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                 }}
                 navigation={navigation}
             />
+            {route.params?.fromContactDetailsView && contactLabel ? (
+                <Text
+                    style={{
+                        fontSize: 24,
+                        textAlign: 'center'
+                    }}
+                >
+                    {contactLabel}
+                </Text>
+            ) : null}
             <View
                 style={{
                     flex: 1,
