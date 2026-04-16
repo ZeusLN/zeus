@@ -30,11 +30,31 @@ export default class NostrWalletConnect {
         );
         return { invoices };
     };
-    createInvoice = async (data: any) =>
-        await this.nwc.makeInvoice({
+    createInvoice = async (data: any) => {
+        const result = await this.nwc.makeInvoice({
             defaultMemo: data.memo,
             amount: Number(data.value)
         });
+
+        // NWC only returns { paymentRequest }. createUnifiedInvoice
+        // requires a valid rHash, so extract payment_hash from the
+        // bolt11 to satisfy that check.
+        if (result?.paymentRequest && !result.payment_hash) {
+            try {
+                const decoded: any = bolt11.decode(result.paymentRequest);
+                const hashTag = decoded.tags?.find(
+                    (t: any) => t.tagName === 'payment_hash'
+                );
+                if (hashTag?.data) {
+                    result.payment_hash = hashTag.data;
+                }
+            } catch (e) {
+                // decoding is best-effort
+            }
+        }
+
+        return result;
+    };
     getPayments = async (
         params: {
             maxPayments?: number;
