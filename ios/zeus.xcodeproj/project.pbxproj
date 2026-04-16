@@ -18,7 +18,6 @@
 		0FF34B98A6FF4E299A2F4B38 /* Rabbit.svg in Resources */ = {isa = PBXBuildFile; fileRef = 806332CB14FC4FD5A93268B8 /* Rabbit.svg */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB11A68108700A75B9A /* LaunchScreen.xib */; };
-		13B07FBD1A6810BG00A75B9A /* BackgroundTaskManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		13B56D1900B8453796EF0EDA /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8968C5A47BF6473DAAADAAB6 /* Lato-Regular.ttf */; };
@@ -223,6 +222,7 @@
 		FC88310264684B759C49A8BC /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9D769B3657474C57B214C324 /* Channels.svg */; };
 		FEEEEFC0248849C8BFB0F9A4 /* ldk.png in Resources */ = {isa = PBXBuildFile; fileRef = CEF377B5DB424EBBB4249CA4 /* ldk.png */; };
 		FF3AC496C4DE4B86AEC22CA7 /* MintToken.svg in Resources */ = {isa = PBXBuildFile; fileRef = C06B8930D07546EA8605E869 /* MintToken.svg */; };
+		NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */ = {isa = PBXBuildFile; fileRef = NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -450,8 +450,6 @@
 		13B07F961A680F5B00A75B9A /* zeus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zeus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = zeus/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = zeus/AppDelegate.mm; sourceTree = "<group>"; };
-		13B07FB01A6810BE00A75B9A /* BackgroundTaskManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BackgroundTaskManager.h; path = zeus/BackgroundTaskManager.h; sourceTree = "<group>"; };
-		13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = BackgroundTaskManager.m; path = zeus/BackgroundTaskManager.m; sourceTree = "<group>"; };
 		13B07FB21A68108700A75B9A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = zeus/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = zeus/Info.plist; sourceTree = "<group>"; };
@@ -700,6 +698,8 @@
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		F840E2B2E8BB45209B057E42 /* Filter On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter On.svg"; path = "../assets/images/SVG/Filter On.svg"; sourceTree = "<group>"; };
 		FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_6a.jpg; path = ../assets/images/zeus_illustration_6a.jpg; sourceTree = "<group>"; };
+		NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NWCAudioKeepAlive.m; path = zeus/NWCAudioKeepAlive.m; sourceTree = "<group>"; };
+		NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NWCAudioKeepAlive.h; path = zeus/NWCAudioKeepAlive.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -866,8 +866,8 @@
 				85477FC5256D5D3400A4EAD1 /* dummy.swift */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
-				13B07FB01A6810BE00A75B9A /* BackgroundTaskManager.h */,
-				13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */,
+				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
+				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
@@ -1977,7 +1977,7 @@
 				B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */,
 				745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
-				13B07FBD1A6810BG00A75B9A /* BackgroundTaskManager.m in Sources */,
+				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
 				745388442A54C2B6000927CE /* lightning.pb.swift in Sources */,
 				74B637822A5A350B00750202 /* LncModule.mm in Sources */,
 				74B637842A5A350B00750202 /* Callback.mm in Sources */,
