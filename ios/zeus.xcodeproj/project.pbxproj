@@ -110,7 +110,7 @@
 		74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */; };
 		74C5F97C2D5311BC003840C4 /* PPNeueMontreal-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */; };
 		74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
-		74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */; };
+		74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */; };
 		7559993899134A458764182A /* Gear.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD64CA87612F416B940C8B7C /* Gear.svg */; };
 		7682ABAE72B940CE8DA4BD4F /* zeus_illustration_1b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 0CF3D10833D24020923868CE /* zeus_illustration_1b.jpg */; };
 		78D83D32BB1A48AEBFCF1515 /* zeus_illustration_3a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */; };
@@ -575,7 +575,7 @@
 		74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Book.otf"; path = "../assets/fonts/PPNeueMontreal-Book.otf"; sourceTree = SOURCE_ROOT; };
 		74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Medium.otf"; path = "../assets/fonts/PPNeueMontreal-Medium.otf"; sourceTree = SOURCE_ROOT; };
 		74DE86022BB530E5001FEC15 /* libresolv.9.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.9.tbd; path = usr/lib/libresolv.9.tbd; sourceTree = SDKROOT; };
-		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
+		74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Medium.otf"; path = "../assets/fonts/PPNeueMontreal-Medium.otf"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		7ABECF711E9D4F5AB912E1C0 /* Copy.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Copy.svg; path = ../assets/images/SVG/Copy.svg; sourceTree = "<group>"; };
 		7BF4E2803ED74582856B0DDC /* alby.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = alby.jpg; path = ../assets/images/alby.jpg; sourceTree = "<group>"; };
@@ -1095,7 +1095,7 @@
 				6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */,
 				74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */,
 				74668A572AE3CBB90023695A /* Marlide-Display.ttf */,
-				74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */,
+				74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */,
 				97D9A8F5652E4AC580E97DEF /* Mempool.svg */,
 				2D6AFC110FCE4DB693ABCF13 /* loading.gif */,
 				745E06A9295CB0E500597EE8 /* Caret Down.svg */,
@@ -1645,7 +1645,7 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
-				74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */,
+				74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */,
 				74C5F97A2D5311BC003840C4 /* PPNeueMontreal-Bold.otf in Resources */,
 				74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */,
 				74C5F97C2D5311BC003840C4 /* PPNeueMontreal-Medium.otf in Resources */,
