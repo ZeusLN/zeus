@@ -12,12 +12,11 @@
 import * as necc from '@noble/secp256k1';
 import { HDKey } from '@scure/bip32';
 import createHash from 'create-hash';
+import { mnemonicToSeedSync } from '@scure/bip39';
 
 // Import noble_ecc to ensure hmacSha256Sync / sha256Sync are configured
 // (required by necc.signSync)
 import '../zeus_modules/noble_ecc';
-
-const bip39 = require('bip39');
 
 // 64-byte salt from vss-server SignatureValidatingAuthorizer
 const SIGNING_CONSTANT = Buffer.from(
@@ -37,7 +36,7 @@ export function deriveVssSigningKey(
     mnemonic: string,
     passphrase?: string
 ): { privateKey: Uint8Array; publicKey: Uint8Array } {
-    const seed = bip39.mnemonicToSeedSync(mnemonic, passphrase || '');
+    const seed = Buffer.from(mnemonicToSeedSync(mnemonic, passphrase || ''));
     return deriveVssSigningKeyFromSeed(seed);
 }
 
