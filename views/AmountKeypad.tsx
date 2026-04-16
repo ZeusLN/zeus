@@ -262,7 +262,8 @@ const styles = StyleSheet.create({
     amountDisplayContainer: {
         flex: 1,
         alignItems: 'center',
-        marginTop: 60
+        marginTop: 60,
+        overflow: 'hidden'
     },
     unitToggleContainer: {
         alignItems: 'center',
