@@ -65,4 +65,14 @@ const getPhoto = (photo: string | undefined): string => {
     return photo || '';
 };
 
-export { getPhoto };
+const getPresetName = (assetUri: string): string => {
+    const pathPart = assetUri.split('?')[0];
+    const fileName = pathPart.split('/').pop() || '';
+    return fileName
+        .replace('.png', '')
+        .replace('.jpg', '')
+        .replace(/[-_]/g, '')
+        .toLowerCase();
+};
+
+export { getPhoto, getPresetName };

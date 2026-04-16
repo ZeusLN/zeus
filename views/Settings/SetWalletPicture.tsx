@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
-import { getPhoto } from '../../utils/PhotoUtils';
+import { getPhoto, getPresetName } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Screen from '../../components/Screen';
@@ -135,18 +135,8 @@ export default class SetWalletPicture extends React.Component<
     };
 
     handleImageTap = async (item: any) => {
-        let presetImageUri = Image.resolveAssetSource(item).uri;
-        presetImageUri = presetImageUri
-            .replace('.png', '')
-            .replace('.jpg', '')
-            .replace(/-/g, '')
-            .replace(/\//g, '_')
-            .toLowerCase();
-
-        const splitDash = presetImageUri.split('_').reverse()[0];
-        const split = splitDash.split('?')[0];
-
-        const photo = `preset://${split}`;
+        const presetImageUri = Image.resolveAssetSource(item).uri;
+        const photo = `preset://${getPresetName(presetImageUri)}`;
 
         this.setState({
             photo
