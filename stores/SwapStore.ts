@@ -4,9 +4,11 @@ import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
-import { validateMnemonic } from '@scure/bip39';
-
-const bip39 = require('bip39');
+import {
+    validateMnemonic,
+    mnemonicToSeedSync,
+    generateMnemonic
+} from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -724,7 +726,7 @@ export default class SwapStore {
 
     @action
     public mnemonicToHDKey = (mnemonic: string) => {
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
+        const seed = mnemonicToSeedSync(mnemonic);
         const hdKey = HDKey.fromMasterSeed(seed);
         return hdKey;
     };
@@ -781,7 +783,7 @@ export default class SwapStore {
         const mnemonic =
             implementation === 'ldk-node' && ldkMnemonic
                 ? ldkMnemonic
-                : bip39.generateMnemonic();
+                : generateMnemonic(BIP39_WORD_LIST);
         await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);
 
         return mnemonic;

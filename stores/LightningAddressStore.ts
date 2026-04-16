@@ -11,8 +11,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
 // @ts-ignore:next-line
 import { getPublicKey, relayInit } from 'nostr-tools';
-
-const bip39 = require('bip39');
+import { mnemonicToEntropy, generateMnemonic } from '@scure/bip39';
 
 import { sha256 } from 'js-sha256';
 
@@ -22,6 +21,7 @@ import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -206,7 +206,12 @@ export default class LightningAddressStore {
         const preimages = [];
         for (let i = 0; i < 250; i++) {
             preimages.push(
-                bip39.mnemonicToEntropy(bip39.generateMnemonic(256))
+                Buffer.from(
+                    mnemonicToEntropy(
+                        generateMnemonic(BIP39_WORD_LIST, 256),
+                        BIP39_WORD_LIST
+                    )
+                ).toString('hex')
             );
         }
 
