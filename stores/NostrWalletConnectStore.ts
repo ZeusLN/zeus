@@ -7,37 +7,24 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 import 'websocket-polyfill';
 import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
-import type {
-    Nip47GetInfoResponse,
-    Nip47GetBalanceResponse,
-    Nip47PayInvoiceRequest,
-    Nip47PayResponse,
-    Nip47MakeInvoiceRequest,
-    Nip47LookupInvoiceRequest,
-    Nip47ListTransactionsRequest,
-    Nip47ListTransactionsResponse,
-    Nip47Transaction,
-    Nip47SignMessageResponse,
-    Nip47SignMessageRequest,
-    Nip47SingleMethod
-} from '@getalby/sdk/dist/nwc/types';
 
-import type {
-    NWCWalletServiceRequestHandler,
-    NWCWalletServiceResponsePromise
-} from '@getalby/sdk/dist/nwc';
+export type Nip47SingleMethod = nwc.Nip47SingleMethod;
+export type NWCWalletServiceRequestHandler = nwc.NWCWalletServiceRequestHandler;
+export type NWCWalletServiceResponsePromise<T> =
+    nwc.NWCWalletServiceResponsePromise<T>;
+export type Nip47GetInfoResponse = nwc.Nip47GetInfoResponse;
+export type Nip47GetBalanceResponse = nwc.Nip47GetBalanceResponse;
+export type Nip47PayInvoiceRequest = nwc.Nip47PayInvoiceRequest;
+export type Nip47PayResponse = nwc.Nip47PayResponse;
+export type Nip47MakeInvoiceRequest = nwc.Nip47MakeInvoiceRequest;
+export type Nip47LookupInvoiceRequest = nwc.Nip47LookupInvoiceRequest;
+export type Nip47ListTransactionsRequest = nwc.Nip47ListTransactionsRequest;
+export type Nip47ListTransactionsResponse = nwc.Nip47ListTransactionsResponse;
+export type Nip47Transaction = nwc.Nip47Transaction;
+export type Nip47SignMessageResponse = nwc.Nip47SignMessageResponse;
+export type Nip47SignMessageRequest = nwc.Nip47SignMessageRequest;
 
-import {
-    getPublicKey,
-    generatePrivateKey,
-    relayInit,
-    getEventHash,
-    getSignature,
-    UnsignedEvent,
-    validateEvent,
-    verifySignature
-} from 'nostr-tools';
-import * as nip04 from '@nostr/tools/nip04';
+import { getPublicKey, generatePrivateKey, relayInit } from 'nostr-tools';
 
 import {
     Platform,
@@ -46,14 +33,13 @@ import {
     AppState
 } from 'react-native';
 import { Notifications } from 'react-native-notifications';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
-import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
+import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
@@ -127,32 +113,10 @@ interface WalletServiceKeys {
     privateKey: string;
     publicKey: string;
 }
-
-interface NostrEvent {
-    kind: number;
-    tags: string[][];
-    created_at: number;
-    pubkey: string;
-    content: string;
-    id: string;
-    sig: string;
-}
-interface RestoreResponse {
-    connections: { relay: string; pubkey: string }[];
-    events: string[];
-}
 interface NWCRequest {
     id: string;
     method: Nip47SingleMethod;
     params: any;
-}
-
-interface InvoiceEventType {
-    eventStr: string;
-    request: NWCRequest;
-    connection: NWCConnection;
-    eventId: string;
-    amount: number;
 }
 
 export interface PendingPayment {
@@ -201,16 +165,22 @@ export default class NostrWalletConnectStore {
     @observable public cashuEnabled: boolean = false;
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
-    @observable private iosBackgroundTaskActive: boolean = false;
-    @observable public iosBackgroundTimeRemaining: number = 0;
-    @observable public iosHandoffInProgress: boolean = false;
     @observable public isProcessingPendingPayInvoices: boolean = false;
     @observable public isAllPendingPaymentsSuccessful: boolean = false;
     @observable public processedPendingPayInvoiceEventIds: string[] = [];
     @observable public failedPendingPayInvoiceEventIds: string[] = [];
     @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
-    private iosBackgroundTimerInterval: any = null;
+    @observable public iosAudioKeepAliveActive: boolean = false;
+    @observable public iosAudioKeepAliveUptime: number = 0;
+    @observable public iosAudioKeepAliveDisconnects: number = 0;
+    private iosAudioUptimeInterval: any = null;
+    private iosAudioInterruptedUnsub: (() => void) | null = null;
+    private iosAudioInterruptionEndedUnsub: (() => void) | null = null;
+    private iosAudioRouteChangedUnsub: (() => void) | null = null;
+    private iosAudioStatusUpdateUnsub: (() => void) | null = null;
+    private iosAudioSuspendedUnsub: (() => void) | null = null;
+    private iosAudioAppStateListener: any = null;
     private androidReconnectionListener: any = null;
     private appStateListener: any = null;
     private androidLogListener: any = null;
@@ -256,7 +226,6 @@ export default class NostrWalletConnectStore {
         const hasActiveConnections = this.activeConnections.length > 0;
         if (!hasActiveConnections) return;
 
-        if (this.isInNWCConnectionQRView) this.endIOSBackgroundTask();
         await this.retryWithBackoff(async () => {
             runInAction(() => {
                 this.error = false;
@@ -276,8 +245,9 @@ export default class NostrWalletConnectStore {
                     this.setupAndroidLogListener();
                 }
                 if (Platform.OS === 'ios') {
-                    await this.fetchPendingEvents();
-                    await this.sendHandoffRequest();
+                    // iOS has no native foreground service, so we always set
+                    // up AppState monitoring for any active NWC session.
+                    this.setupIOSAppStateMonitoring();
                 }
                 runInAction(() => {
                     this.loadingMsg = undefined;
@@ -392,57 +362,25 @@ export default class NostrWalletConnectStore {
         }
     };
 
-    @action
-    public stopService = async (): Promise<boolean> => {
-        try {
-            runInAction(() => {
-                this.loading = true;
-                this.error = false;
-            });
-
-            if (Platform.OS === 'android') {
-                try {
-                    const { NostrConnectModule } =
-                        require('react-native').NativeModules;
-                    await NostrConnectModule.stopNostrConnectService();
-                } catch (serviceError) {
-                    console.warn(
-                        'NWC: Failed to stop Android background service:',
-                        serviceError
-                    );
-                }
-            }
-            await this.unsubscribeFromAllConnections();
-            return true;
-        } catch (error: any) {
-            console.error('Failed to stop NWC service:', error);
-            runInAction(() => {
-                this.error = true;
-                this.errorMessage =
-                    (error instanceof Error ? error.message : String(error)) ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.failedToStopService'
-                    );
-            });
-            return false;
-        } finally {
-            runInAction(() => {
-                this.loading = false;
-            });
-        }
-    };
-    // iOS: Always reset (except when in NWC connection QR view)
-    // Android: Only reset if persistentNWCServicesEnabled is false
+    // iOS: Reset unless audio keep-alive is holding a persistent NWC session,
+    //      or unless currently in the NWC connection QR view.
+    // Android: Only reset if persistentNWCServicesEnabled is false.
     @action
     public reset = async () => {
-        if (this.isInNWCConnectionQRView) this.startIOSBackgroundTask();
+        // On iOS, skip full teardown whenever the AppState monitor is active —
+        // i.e. the NWC service is running and audio keep-alive is registered.
+        // This mirrors Android's persistentNWCServiceEnabled behaviour.
+        const iosAudioPersisting =
+            Platform.OS === 'ios' && this.iosAudioAppStateListener !== null;
         if (
-            (Platform.OS === 'ios' && !this.isInNWCConnectionQRView) ||
+            (Platform.OS === 'ios' &&
+                !this.isInNWCConnectionQRView &&
+                !iosAudioPersisting) ||
             (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
         ) {
-            if (this.iosBackgroundTimerInterval) {
-                clearInterval(this.iosBackgroundTimerInterval);
-                this.iosBackgroundTimerInterval = null;
+            if (Platform.OS === 'ios') {
+                this.teardownIOSAppStateMonitor();
+                await this.stopIOSAudioKeepAlive();
             }
             if (this.androidReconnectionListener) {
                 this.androidReconnectionListener.remove();
@@ -467,8 +405,6 @@ export default class NostrWalletConnectStore {
             this.lastConnectionAttempt = 0;
             this.cashuEnabled = false;
             this.persistentNWCServiceEnabled = false;
-            this.iosBackgroundTimeRemaining = 0;
-            this.iosHandoffInProgress = false;
             this.nwcWalletServices.clear();
             this.publishedRelays.clear();
             this.resetPendingPayInvoiceState();
@@ -643,7 +579,6 @@ export default class NostrWalletConnectStore {
             });
             await this.saveConnections();
             await this.subscribeToConnection(connection);
-            await this.sendHandoffRequest();
             return connectionUrl;
         } catch (error: any) {
             throw error;
@@ -865,125 +800,6 @@ export default class NostrWalletConnectStore {
                 );
             });
             throw error;
-        }
-    };
-    private savePendingPayments = async (pendingPayments: PendingPayment[]) => {
-        try {
-            const existsPendingPayment = await Storage.getItem(
-                NWC_PENDING_PAYMENTS
-            );
-            if (existsPendingPayment) {
-                const prev: PendingPayment[] = JSON.parse(existsPendingPayment);
-                await Storage.setItem(
-                    NWC_PENDING_PAYMENTS,
-                    JSON.stringify([...prev, ...pendingPayments])
-                );
-                return;
-            }
-            await Storage.setItem(
-                NWC_PENDING_PAYMENTS,
-                JSON.stringify(pendingPayments)
-            );
-        } catch (error) {
-            console.error('failed to save pending payment');
-        }
-    };
-    public deleteAllPendingPayments = async () => {
-        try {
-            await Storage.setItem(NWC_PENDING_PAYMENTS, JSON.stringify([]));
-            return true;
-        } catch (error) {
-            console.error('failed to delete pending payment');
-            return false;
-        }
-    };
-    public deletePendingPaymentById = async (deleteId: string) => {
-        try {
-            const result = await Storage.getItem(NWC_PENDING_PAYMENTS);
-            if (result) {
-                const pendingPayments: PendingPayment[] = JSON.parse(result);
-                const newpendingPayments = pendingPayments.filter(
-                    (item) => item.eventId !== deleteId
-                );
-                await Storage.setItem(
-                    NWC_PENDING_PAYMENTS,
-                    JSON.stringify(newpendingPayments)
-                );
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('failed to delete pending payment');
-            return false;
-        }
-    };
-    public updatePendingPayment = async (
-        pendingPayment: PendingPayment
-    ): Promise<boolean> => {
-        try {
-            const pendingPayments = await this.getPendingPayments();
-            const pendingPaymentindex = pendingPayments.findIndex(
-                (payment) => pendingPayment.eventId === payment.eventId
-            );
-            if (pendingPaymentindex === -1) {
-                return false;
-            }
-            pendingPayments[pendingPaymentindex] = pendingPayment;
-            await Storage.setItem(
-                NWC_PENDING_PAYMENTS,
-                JSON.stringify(pendingPayments)
-            );
-            return true;
-        } catch (error) {
-            console.error('failed to update pending payment');
-            return false;
-        }
-    };
-    public getPendingPayments = async (): Promise<PendingPayment[]> => {
-        try {
-            const pendingPayments = await Storage.getItem(NWC_PENDING_PAYMENTS);
-            if (!pendingPayments) {
-                return [];
-            }
-            const parsed = JSON.parse(pendingPayments);
-            const payments = Array.isArray(parsed) ? parsed : [];
-            const restoredPayments = (
-                await Promise.all(
-                    payments.map(async (payment: PendingPayment) => {
-                        const connection = this.getConnection(
-                            payment.connection.id
-                        );
-
-                        if (!connection) {
-                            await this.deletePendingPaymentById(
-                                payment.eventId
-                            );
-                            return [];
-                        }
-                        if (payment.isProcessed && !payment.status) {
-                            if (
-                                NostrConnectUtils.isIgnorableError(
-                                    payment.errorMessage || ''
-                                )
-                            ) {
-                                await this.deletePendingPaymentById(
-                                    payment.eventId
-                                );
-                            }
-                        }
-
-                        return {
-                            ...payment,
-                            connection
-                        };
-                    })
-                )
-            ).filter((payment): payment is PendingPayment => payment !== null);
-
-            return restoredPayments;
-        } catch (error) {
-            console.error('failed to load pending payment', error);
-            return [];
         }
     };
 
@@ -2975,732 +2791,223 @@ export default class NostrWalletConnectStore {
             console.warn('Android: Reconnection check error:', error);
         }
     }
-    @action
-    public async startIOSBackgroundTask(
-        duration: number = 30000
-    ): Promise<boolean> {
-        if (Platform.OS !== 'ios') {
-            return false;
-        }
-        try {
-            const started = await IOSBackgroundTaskUtils.startBackgroundTask();
-            if (!started) {
-                console.warn('IOS NWC: Failed to start background task');
-                return false;
-            }
-            runInAction(() => {
-                this.iosBackgroundTaskActive = true;
-                this.iosBackgroundTimeRemaining = 30;
-                this.iosHandoffInProgress = true;
-            });
+    // ─── iOS audio keep-alive (AVAudioSession + silent loop) ─────────────────
 
-            if (this.iosBackgroundTimerInterval) {
-                clearInterval(this.iosBackgroundTimerInterval);
-            }
-
-            this.iosBackgroundTimerInterval = setInterval(() => {
-                runInAction(() => {
-                    if (this.iosBackgroundTimeRemaining > 0) {
-                        this.iosBackgroundTimeRemaining--;
-                    } else {
-                        this.endIOSBackgroundTask();
-                    }
-                });
-            }, 1000);
-
-            await new Promise((resolve) => setTimeout(resolve, duration));
-
-            return true;
-        } catch (error) {
-            console.error('IOS NWC: Failed to start background task:', error);
-            return false;
-        } finally {
-            this.endIOSBackgroundTask();
-        }
-    }
-    @action
-    public async endIOSBackgroundTask(): Promise<void> {
-        if (Platform.OS !== 'ios' || !this.iosBackgroundTaskActive) {
-            return;
-        }
-
-        if (this.iosBackgroundTimerInterval) {
-            clearInterval(this.iosBackgroundTimerInterval);
-            this.iosBackgroundTimerInterval = null;
-        }
-
-        runInAction(() => {
-            this.iosBackgroundTimeRemaining = 0;
-            this.iosHandoffInProgress = false;
-        });
-
-        try {
-            await IOSBackgroundTaskUtils.endBackgroundTask();
-            runInAction(() => {
-                this.iosBackgroundTaskActive = false;
-            });
-        } catch (error) {
-            console.error('iOS NWC: Failed to end background task:', error);
-        }
-    }
-    // for IOS fetch and process pending events
-    @action
-    public async fetchPendingEvents(maxRetries: number = 3): Promise<void> {
-        if (!this.isServiceReady()) {
-            console.warn('Service not ready, cannot fetch pending events');
-            return;
-        }
-        if (this.activeConnections.length === 0) {
-            console.info(
-                'IOS NWC: No active connections, skipping fetch pending events'
-            );
-            return;
-        }
-
-        runInAction(() => {
-            this.error = false;
-            this.loadingMsg = localeString(
-                'stores.NostrWalletConnectStore.fetchingPendingEvents'
-            );
-        });
-        try {
-            const deviceToken = this.lightningAddressStore.currentDeviceToken;
-            if (!deviceToken) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.deviceTokenNotAvailable'
-                    )
-                );
-            }
-            const data = await this.retryWithBackoff(
-                async (): Promise<RestoreResponse | void> => {
-                    const response = await ReactNativeBlobUtil.fetch(
-                        'GET',
-                        `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/restore?device_token=${encodeURIComponent(
-                            deviceToken
-                        )}`,
-                        { 'Content-Type': 'application/json' }
-                    );
-                    if (response.info().status !== 200) {
-                        throw new Error(
-                            `HTTP error ${
-                                response.info().status
-                            }: ${await response.text()}`
-                        );
-                    }
-                    return await JSON.parse(response.data);
-                },
-                maxRetries
-            );
-            if (data?.events) {
-                await this.validatingPendingPaymentEvents(data.events);
-            }
-        } catch (error) {
-            console.warn(
-                'iOS NWC: Failed to fetch pending events:',
-                (error as Error).message
-            );
-        } finally {
-            runInAction(() => {
-                this.loadingMsg = undefined;
-            });
-        }
-    }
-
-    private async validatingPendingPaymentEvents(
-        events: string[]
-    ): Promise<void> {
-        if (!events?.length) {
-            console.info('NWC: No pending events to process');
-            return;
-        }
-
-        const results = await Promise.all(
-            events.map(async (eventStr) => {
-                try {
-                    const { request, connection, eventId } =
-                        await this.retryWithBackoff(
-                            () => this.validateAndParsePendingEvent(eventStr),
-                            3
-                        );
-
-                    if (request.method === 'pay_invoice') {
-                        const { isExpired, amount } =
-                            await NostrConnectUtils.decodeInvoiceTags(
-                                request.params?.invoice
-                            );
-                        if (isExpired) {
-                            return null;
-                        }
-                        return {
-                            eventStr,
-                            request,
-                            connection,
-                            eventId,
-                            amount
-                        };
-                    }
-
-                    await this.publishNotImplementedNip47Response(
-                        connection,
-                        request,
-                        eventId
-                    );
-                    return null;
-                } catch (error) {
-                    console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
-                        error,
-                        eventStr
-                    });
-                    return null;
-                }
-            })
-        );
-
-        const pendingEvents = results
-            .filter((r): r is InvoiceEventType => r !== null)
-            .map((event) => ({
-                ...event,
-                connectionName: event.connection.name,
-                status: false,
-                isProcessed: false
-            }));
-
-        const dedupedPendingEvents = Array.from(
-            new Map(
-                pendingEvents.map((event) => [event.eventId, event])
-            ).values()
-        );
-
-        if (!dedupedPendingEvents.length) return;
-
-        const totalAmount = dedupedPendingEvents.reduce(
-            (sum, e) => sum + e.amount,
-            0
-        );
-
-        this.savePendingPayments(dedupedPendingEvents);
-
-        if (!this.isInNWCPendingPaymentsView) {
-            this.modalStore.toggleNWCPendingPaymentsModal({
-                pendingEvents: dedupedPendingEvents,
-                totalAmount
-            });
-        }
-    }
-    private async validateAndParsePendingEvent(eventStr: string): Promise<{
-        request: NWCRequest;
-        connection: NWCConnection;
-        eventId: string;
-    }> {
-        let event: NostrEvent;
-        try {
-            event = JSON.parse(eventStr);
-        } catch (error) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.pendingEventParseFailed'
-                )
-            );
-        }
-        if (
-            event.kind !== 23194 ||
-            !event.content ||
-            !event.pubkey ||
-            !event.id ||
-            !event.sig
-        ) {
-            console.warn('NWC: Invalid event format, skipping', {
-                event
-            });
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.pendingEventInvalidFormat'
-                )
-            );
-        }
-        const connection = this.activeConnections.find(
-            (c) => c.pubkey === event.pubkey
-        );
-        if (!connection) {
-            console.warn('NWC: Connection not found for event', {
-                pubkey: event.pubkey
-            });
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionNotFound'
-                )
-            );
-        }
-        let request: NWCRequest;
-        try {
-            const privateKey = this.walletServiceKeys!.privateKey;
-            if (!privateKey) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
-                    )
-                );
-            }
-            const decryptedContent = nip04.decrypt(
-                privateKey,
-                connection.pubkey,
-                event.content
-            );
-            request = JSON.parse(decryptedContent);
-        } catch (error) {
-            console.error('NWC: Failed to decrypt or parse event content', {
-                error,
-                eventStr
-            });
-            throw error;
-        }
-
-        if (!validateEvent(event)) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.pendingEventInvalidPayload'
-                )
-            );
-        }
-
-        const recomputedEventId = getEventHash({
-            kind: event.kind,
-            tags: event.tags,
-            content: event.content,
-            created_at: event.created_at,
-            pubkey: event.pubkey
-        });
-        if (event.id !== recomputedEventId) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.pendingEventIdHashMismatch'
-                )
-            );
-        }
-        if (!verifySignature(event)) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.pendingEventInvalidSignature'
-                )
-            );
-        }
-
-        if (
-            request.method === 'pay_invoice' &&
-            !connection.hasPermission('pay_invoice')
-        ) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
-                )
-            );
-        }
-        return { request, connection, eventId: event.id };
-    }
-
-    @action
-    public async processPendingPaymentsEvents(
-        pendingEvents: PendingPayment[]
-    ): Promise<void> {
-        let remainingEvents = [...pendingEvents];
-        let remainingTotal = remainingEvents.reduce(
-            (sum, event) => sum + event.amount,
-            0
-        );
-        this.resetPendingPayInvoiceState();
-        runInAction(() => {
-            this.isProcessingPendingPayInvoices = true;
-        });
-
-        if (!this.isInNWCPendingPaymentsView)
-            this.modalStore.toggleNWCPendingPaymentsModal({
-                pendingEvents: remainingEvents,
-                totalAmount: remainingTotal
-            });
-
-        const processingResults = await Promise.allSettled(
-            pendingEvents.map(async (event) => {
-                try {
-                    // Ensure we have a proper NWCConnection instance
-                    // In case the connection was not restored properly
-                    const connection = this.getConnection(event.connection.id);
-
-                    if (!connection) {
-                        return;
-                    }
-
-                    const result = await this.handleEventRequest(
-                        connection,
-                        event.request,
-                        event.eventId,
-                        true // skip single payment Notification for pending events
-                    );
-                    runInAction(async () => {
-                        if (result.success) {
-                            this.processedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            await this.updatePendingPayment({
-                                ...event,
-                                status: true,
-                                isProcessed: true
-                            });
-                        } else {
-                            this.failedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            if (result.errorMessage) {
-                                let formattedError = result.errorMessage;
-                                try {
-                                    const parsed = JSON.parse(
-                                        result.errorMessage
-                                    );
-                                    if (parsed.message) {
-                                        formattedError = parsed.message;
-                                    } else if (typeof parsed === 'string') {
-                                        formattedError = parsed;
-                                    }
-                                } catch {
-                                    formattedError = result.errorMessage;
-                                }
-                                await this.updatePendingPayment({
-                                    ...event,
-                                    status: false,
-                                    isProcessed: true,
-                                    errorMessage: formattedError
-                                });
-                                this.pendingPayInvoiceErrors.set(
-                                    event.eventId,
-                                    formattedError
-                                );
-                            }
-                        }
-                    });
-
-                    return { event, result };
-                } catch (error) {
-                    console.warn('NWC: Failed to process pending pay invoice', {
-                        error,
-                        eventId: event.eventId
-                    });
-                    runInAction(async () => {
-                        this.failedPendingPayInvoiceEventIds.push(
-                            event.eventId
-                        );
-                        const message =
-                            error instanceof Error
-                                ? error.message
-                                : String(error);
-                        let formattedError = message;
-                        try {
-                            const parsed = JSON.parse(message);
-                            if (parsed.message) {
-                                formattedError = parsed.message;
-                            } else if (typeof parsed === 'string') {
-                                formattedError = parsed;
-                            }
-                        } catch {
-                            formattedError = message;
-                        }
-                        await this.updatePendingPayment({
-                            ...event,
-                            status: false,
-                            isProcessed: true,
-                            errorMessage: formattedError
-                        });
-                        this.pendingPayInvoiceErrors.set(
-                            event.eventId,
-                            formattedError
-                        );
-                    });
-                    return { event, result: { success: false } };
-                }
-            })
-        );
-        const successfulEventIds = new Set<string>();
-        const successfulPayments: Array<{
-            amount: number;
-            connectionName: string;
-        }> = [];
-        for (const result of processingResults) {
-            if (result.status === 'fulfilled') {
-                if (result.value?.result?.success) {
-                    successfulEventIds.add(result.value.event.eventId);
-                    successfulPayments.push({
-                        amount: result.value.event.amount,
-                        connectionName: result.value.event.connectionName
-                    });
-                    await this.deletePendingPaymentById(
-                        result.value.event.eventId
-                    );
-                }
-            }
-        }
-        remainingEvents = remainingEvents.filter(
-            (e) => !successfulEventIds.has(e.eventId)
-        );
-        remainingTotal = remainingEvents.reduce((sum, e) => sum + e.amount, 0);
-
-        if (successfulPayments.length > 0) {
-            const totalAmount = successfulPayments.reduce(
-                (sum, p) => sum + p.amount,
-                0
-            );
-            const value = numberWithCommas(totalAmount.toString());
-            const connectionNames = [
-                ...new Set(successfulPayments.map((p) => p.connectionName))
-            ].join(', ');
-            const connectionNameDisplay =
-                connectionNames.length > 50
-                    ? connectionNames.substring(0, 50) + '...'
-                    : connectionNames;
-            const paymentCountText =
-                successfulPayments.length === 1
-                    ? `1 ${localeString(
-                          'views.Wallet.Wallet.payments'
-                      ).toLowerCase()}`
-                    : `${successfulPayments.length} ${localeString(
-                          'views.Wallet.Wallet.payments'
-                      )}`;
-            const notificationBody = `${paymentCountText} ${localeString(
-                'general.sent'
-            )}: ${value} ${localeString('general.sats')}${
-                connectionNames ? ` (${connectionNameDisplay})` : ''
-            }`;
-            this.showNotification(
-                localeString(
-                    'stores.NostrWalletConnectStore.paymentSentNotificationTitle'
-                ),
-                notificationBody
-            );
-        }
-
-        runInAction(() => {
-            this.isProcessingPendingPayInvoices = false;
-        });
-
-        const hasFailures = this.failedPendingPayInvoiceEventIds.length > 0;
-
-        if (hasFailures) {
-            if (!this.isInNWCPendingPaymentsView)
-                this.modalStore.toggleNWCPendingPaymentsModal({
-                    pendingEvents: remainingEvents,
-                    totalAmount: remainingTotal
-                });
-        } else {
-            if (!this.isInNWCPendingPaymentsView)
-                this.modalStore.toggleNWCPendingPaymentsModal({});
-            runInAction(() => {
-                this.isAllPendingPaymentsSuccessful = true;
-            });
-            await this.deleteAllPendingPayments();
-
-            runInAction(() => {
-                this.resetPendingPayInvoiceState();
-            });
-        }
-    }
-
-    private async handleEventRequest(
-        connection: NWCConnection,
-        request: NWCRequest,
-        eventId: string,
-        skipNotification: boolean = false
-    ): Promise<{ success: boolean; errorMessage?: string }> {
-        let response: any;
-        try {
-            switch (request.method) {
-                case 'pay_invoice':
-                    if (!connection.hasPermission('pay_invoice')) {
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
-                            )
-                        };
-                    }
-                    response = await this.handlePayInvoice(
-                        connection,
-                        request.params,
-                        skipNotification
-                    );
-                    break;
-                default:
-                    response = this.handleError(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                            { method: request.method }
-                        ),
-                        ErrorCodes.NOT_IMPLEMENTED
-                    );
-                    break;
-            }
-        } catch (error) {
-            console.warn('NWC: Failed to handle event request', {
-                error: (error as Error).message,
-                method: request.method,
-                connection: connection.name,
-                eventId
-            });
-            const errorMessage =
-                (error instanceof Error ? error.message : String(error)) ||
-                localeString(
-                    'stores.NostrWalletConnectStore.error.failedToPayInvoice'
-                );
-            response = this.handleError(
-                errorMessage,
-                ErrorCodes.INTERNAL_ERROR
-            );
-        }
-        const hasError = !!response?.error;
-        const errorMessage = response?.error?.message;
-
-        // Only publish if we have a response
-        if (response) {
-            await this.publishEventToClient(
-                connection,
-                request.method,
-                response,
-                eventId
-            );
-        }
-
-        return {
-            success: !hasError,
-            errorMessage: hasError ? errorMessage : undefined
-        };
-    }
     /**
-     * NIP-47 error codes include NOT_IMPLEMENTED for wallet methods that are not supported.
+     * Registers a React Native AppState listener (iOS-only) that:
+     *  - Starts the audio keep-alive engine the moment the app enters the
+     *    background, so the session is active before iOS suspends the process.
+     *  - Re-subscribes to all Nostr relay connections when the app returns to
+     *    the foreground, in case the WebSocket was torn down while backgrounded.
      */
-    private async publishNotImplementedNip47Response(
-        connection: NWCConnection,
-        request: NWCRequest,
-        eventId: string
-    ): Promise<void> {
-        try {
-            const response = this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                    { method: request.method }
-                ),
-                ErrorCodes.NOT_IMPLEMENTED
-            );
-            await this.publishEventToClient(
-                connection,
-                request.method,
-                response,
-                eventId
-            );
-        } catch (error) {
-            console.warn(
-                'NWC: Failed to publish NOT_IMPLEMENTED for pending event',
-                { eventId, method: request.method, error }
-            );
-        }
-    }
+    private setupIOSAppStateMonitoring(): void {
+        if (Platform.OS !== 'ios') return;
 
-    // Publishing Events to Nostr client
-    private async publishEventToClient(
-        connection: NWCConnection,
-        method: string,
-        response: any,
-        eventId?: string
-    ): Promise<void> {
-        const servicePrivateKey = this.walletServiceKeys!.privateKey;
-        const servicePublicKey = this.walletServiceKeys!.publicKey;
-        const content = nip04.encrypt(
-            servicePrivateKey,
-            connection.pubkey,
-            JSON.stringify({
-                result_type: method,
-                ...(response?.error
-                    ? { error: response.error }
-                    : { result: response?.result })
-            })
-        );
-        let tags = [];
-        if (eventId) {
-            tags.push(['e', eventId, 'encryption', 'nip04 nip44_v2']);
-        }
-        const unsignedEvent: UnsignedEvent = {
-            kind: 23195,
-            tags,
-            content,
-            created_at: dateTimeUtils.getCurrentTimestamp(),
-            pubkey: servicePublicKey
-        };
-        const signedEvent = {
-            ...unsignedEvent,
-            id: getEventHash(unsignedEvent),
-            sig: getSignature(unsignedEvent, servicePrivateKey)
-        };
+        // Remove any stale listener before registering a new one
+        this.teardownIOSAppStateMonitor();
 
-        await this.retryWithBackoff(async () => {
-            const relay = relayInit(connection.relayUrl);
-            try {
-                await relay.connect();
-                await relay.publish(signedEvent);
-            } finally {
-                try {
-                    relay.close();
-                } catch (error) {
-                    console.error('NWC: Failed to close relay:', error);
+        // If we're already in the background (rare edge case), start immediately
+        if (AppState.currentState === 'background') {
+            this.startIOSAudioKeepAlive();
+        }
+
+        let previousState: string = AppState.currentState;
+
+        this.iosAudioAppStateListener = AppState.addEventListener(
+            'change',
+            async (nextState: string) => {
+                if (!this.isServiceReady()) return;
+
+                if (
+                    nextState === 'background' &&
+                    previousState !== 'background'
+                ) {
+                    console.log(
+                        '[NWCAudio] App entering background – starting keep-alive'
+                    );
+                    await this.startIOSAudioKeepAlive();
+                } else if (
+                    nextState === 'active' &&
+                    previousState === 'background'
+                ) {
+                    // App returning to foreground — stop audio, re-subscribe relay
+                    console.log(
+                        '[NWCAudio] App returning to foreground – stopping keep-alive'
+                    );
+                    await this.stopIOSAudioKeepAlive();
+                    if (this.isServiceReady()) {
+                        await this.subscribeToAllConnections();
+                    }
                 }
+
+                previousState = nextState;
             }
-        }, MAX_RELAY_ATTEMPTS);
+        );
+
+        console.log('[NWCAudio] iOS AppState monitor registered');
     }
 
-    // IOS: handoff request to notification server
+    private teardownIOSAppStateMonitor(): void {
+        if (this.iosAudioAppStateListener) {
+            this.iosAudioAppStateListener.remove();
+            this.iosAudioAppStateListener = null;
+        }
+    }
+
+    /**
+     * Starts a silent AVAudioSession (.playback) backed by an AVAudioEngine
+     * loop.  While active, iOS treats the app as a foreground-like audio
+     * process and avoids suspending it, allowing the Nostr WebSocket relay
+     * subscriptions to remain live in the background.
+     *
+     * Called automatically by setupIOSAppStateMonitoring() when the app enters
+     * the background — NOT during foreground service init.
+     *
+     * NOTE: Experimental – App Store review may reject this technique.
+     */
     @action
-    public sendHandoffRequest = async (): Promise<void> => {
-        if (Platform.OS !== 'ios') {
-            console.log('IOS NWC: Not iOS, skipping handoff request');
-            return;
+    public async startIOSAudioKeepAlive(): Promise<boolean> {
+        if (Platform.OS !== 'ios') return false;
+        if (!IOSAudioKeepAliveUtils.isAvailable()) {
+            console.warn('[NWCAudio] Module not available');
+            return false;
         }
-        if (this.activeConnections.length === 0) {
-            console.log(
-                'IOS NWC: No active connections, skipping handoff request'
-            );
-            return;
+
+        const status = await IOSAudioKeepAliveUtils.start();
+        if (!status?.isActive) {
+            console.warn('[NWCAudio] Failed to activate audio session');
+            return false;
         }
-        try {
-            const deviceToken = this.lightningAddressStore.currentDeviceToken;
-            if (!deviceToken) {
+
+        runInAction(() => {
+            this.iosAudioKeepAliveActive = true;
+            this.iosAudioKeepAliveUptime = 0;
+            this.iosAudioKeepAliveDisconnects = 0;
+        });
+
+        // Local uptime counter (JS side, updated every second)
+        if (this.iosAudioUptimeInterval) {
+            clearInterval(this.iosAudioUptimeInterval);
+        }
+        this.iosAudioUptimeInterval = setInterval(() => {
+            runInAction(() => {
+                this.iosAudioKeepAliveUptime += 1;
+            });
+        }, 1000);
+
+        // Audio session interrupted (e.g. incoming phone call)
+        this.iosAudioInterruptedUnsub = IOSAudioKeepAliveUtils.onInterrupted(
+            (payload) => {
                 console.warn(
-                    'IOS NWC: Device token not available, skipping handoff request'
+                    `[NWCAudio] Interrupted – reason: ${payload.reason}, ` +
+                        `disconnects: ${payload.disconnectCount}`
                 );
-                return;
+                runInAction(() => {
+                    this.iosAudioKeepAliveDisconnects = payload.disconnectCount;
+                });
             }
-            const handoffData = {
-                device_token: deviceToken,
-                connections: this.activeConnections.map((conn) => ({
-                    relay: conn.relayUrl,
-                    pubkey: conn.pubkey,
-                    name: conn.name
-                }))
-            };
-            const response = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/handoff`,
-                {
-                    'Content-Type': 'application/json'
-                },
-                JSON.stringify(handoffData)
-            );
-            if (response.info().status !== 200) {
-                throw new Error(
-                    `IOS NWC: Handoff request failed with status ${
-                        response.info().status
-                    }: ${await response.text()}`
+        );
+
+        // Interruption ended – re-subscribe to relay
+        this.iosAudioInterruptionEndedUnsub =
+            IOSAudioKeepAliveUtils.onInterruptionEnded(async (payload) => {
+                console.log(
+                    `[NWCAudio] Interruption ended – shouldResume: ${payload.shouldResume}`
+                );
+                if (payload.shouldResume && this.isServiceReady()) {
+                    console.log('[NWCAudio] Re-subscribing to all connections');
+                    await this.subscribeToAllConnections();
+                }
+            });
+
+        // Audio route changed (headphones pulled, CarPlay, etc.)
+        this.iosAudioRouteChangedUnsub = IOSAudioKeepAliveUtils.onRouteChanged(
+            (payload) => {
+                console.log(
+                    `[NWCAudio] Route changed: ${payload.reason} → ${payload.currentOutput}`
                 );
             }
-            console.info('IOS NWC: Handoff request sent successfully');
-        } catch (error) {
-            console.error('IOS NWC: Failed to send handoff request:', error);
+        );
+
+        // Periodic heartbeat from native layer
+        this.iosAudioStatusUpdateUnsub = IOSAudioKeepAliveUtils.onStatusUpdate(
+            (payload) => {
+                console.log(
+                    `[NWCAudio] Status – uptime: ${payload.uptimeSeconds.toFixed(
+                        0
+                    )}s, ` +
+                        `bg: ${payload.backgroundDuration.toFixed(0)}s, ` +
+                        `disconnects: ${payload.disconnectCount}, ` +
+                        `output: ${payload.currentOutput}, ` +
+                        `iOS: ${payload.iosVersion}`
+                );
+                runInAction(() => {
+                    this.iosAudioKeepAliveDisconnects = payload.disconnectCount;
+                });
+            }
+        );
+
+        // Native layer suspects the app is being suspended
+        this.iosAudioSuspendedUnsub = IOSAudioKeepAliveUtils.onSuspended(
+            async (payload) => {
+                console.warn(
+                    `[NWCAudio] Suspected suspension – reason: ${payload.reason}, ` +
+                        `uptime: ${payload.uptimeSeconds.toFixed(0)}s`
+                );
+                // Re-subscribe once we can – the next foreground transition
+                // will also trigger initializeService via AppState change.
+            }
+        );
+
+        console.log(
+            '[NWCAudio] Keep-alive active – NWC relay will persist in background'
+        );
+        return true;
+    }
+
+    /**
+     * Tears down the audio keep-alive session and removes all associated
+     * event listeners.
+     */
+    @action
+    public async stopIOSAudioKeepAlive(): Promise<void> {
+        if (Platform.OS !== 'ios') return;
+        if (!this.iosAudioKeepAliveActive) return;
+
+        if (this.iosAudioUptimeInterval) {
+            clearInterval(this.iosAudioUptimeInterval);
+            this.iosAudioUptimeInterval = null;
         }
-    };
+
+        // Remove all event listeners
+        this.iosAudioInterruptedUnsub?.();
+        this.iosAudioInterruptedUnsub = null;
+
+        this.iosAudioInterruptionEndedUnsub?.();
+        this.iosAudioInterruptionEndedUnsub = null;
+
+        this.iosAudioRouteChangedUnsub?.();
+        this.iosAudioRouteChangedUnsub = null;
+
+        this.iosAudioStatusUpdateUnsub?.();
+        this.iosAudioStatusUpdateUnsub = null;
+
+        this.iosAudioSuspendedUnsub?.();
+        this.iosAudioSuspendedUnsub = null;
+
+        if (IOSAudioKeepAliveUtils.isAvailable()) {
+            const finalStatus = await IOSAudioKeepAliveUtils.stop();
+            console.log(
+                `[NWCAudio] Session ended – total uptime: ` +
+                    `${finalStatus?.uptimeSeconds.toFixed(0) ?? '?'}s, ` +
+                    `disconnects: ${finalStatus?.disconnectCount ?? '?'}`
+            );
+        }
+
+        runInAction(() => {
+            this.iosAudioKeepAliveActive = false;
+        });
+    }
 
     private showNotification(title: string, body: string): void {
         if (Platform.OS === 'android') {
