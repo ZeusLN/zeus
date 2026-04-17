@@ -101,7 +101,9 @@ export default class EsploraServer extends React.Component<
         ];
 
         const effectiveServer = this.getEffectiveServer();
-        const hasUnsavedChanges = effectiveServer !== savedEsploraServer;
+        const hasUnsavedChanges =
+            effectiveServer !== savedEsploraServer &&
+            !(selectedValue === CUSTOM_VALUE && customServer.trim() === '');
         const showReset =
             effectiveServer !== '' && effectiveServer !== defaultServer;
 
