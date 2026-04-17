@@ -12,7 +12,7 @@ import AmountInput from '../components/AmountInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
 import DropdownSetting from '../components/DropdownSetting';
-import FormAccordion from '../components/FormAccordion';
+import Accordion from '../components/Accordion';
 import Header from '../components/Header';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
@@ -1043,7 +1043,8 @@ export default class OpenChannel extends React.Component<
                                         />
                                     </View>
 
-                                    <FormAccordion
+                                    <Accordion
+                                        headerLayout="form"
                                         id="open-channel-advanced"
                                         title={localeString(
                                             'general.advancedSettings'
@@ -1224,7 +1225,7 @@ export default class OpenChannel extends React.Component<
                                                 </>
                                             )}
                                         </>
-                                    </FormAccordion>
+                                    </Accordion>
                                 </>
                             )}
 

@@ -16,7 +16,7 @@ import ldkNode from '../../../../ldknode/LdkNodeInjection';
 
 import Button from '../../../../components/Button';
 import DropdownSetting from '../../../../components/DropdownSetting';
-import FormAccordion from '../../../../components/FormAccordion';
+import Accordion from '../../../../components/Accordion';
 import Header from '../../../../components/Header';
 import LoadingIndicator from '../../../../components/LoadingIndicator';
 import OnchainFeeInput from '../../../../components/OnchainFeeInput';
@@ -241,7 +241,8 @@ export default class Sweepremoteclosed extends React.Component<
                                     navigation={navigation}
                                 />
                             </>
-                            <FormAccordion
+                            <Accordion
+                                headerLayout="form"
                                 id="sweep-remote-closed-advanced"
                                 title={localeString('general.advancedSettings')}
                             >
@@ -361,7 +362,7 @@ export default class Sweepremoteclosed extends React.Component<
                                         </>
                                     )}
                                 </>
-                            </FormAccordion>
+                            </Accordion>
                         </ScrollView>
                         <View style={{ bottom: 10 }}>
                             <View

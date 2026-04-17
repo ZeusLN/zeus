@@ -18,55 +18,45 @@ import Animated, {
     SharedValue
 } from 'react-native-reanimated';
 
-export interface AccordionItemProps {
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import KeyValue from './KeyValue';
+import { Row } from './layout/Row';
+import { themeColor } from '../utils/ThemeUtils';
+
+const ANIMATION_DURATION_MS = 400;
+
+const formHeaderBase: ViewStyle = {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 10
+};
+
+const formBodyContentBase: ViewStyle = {
+    paddingHorizontal: 0
+};
+
+function FormHeaderCaret({ isOpen }: { isOpen: boolean }) {
+    return isOpen ? (
+        <CaretDown fill={themeColor('text')} width="20" height="20" />
+    ) : (
+        <CaretRight fill={themeColor('text')} width="20" height="20" />
+    );
+}
+
+type AccordionItemProps = {
     isExpanded: SharedValue<boolean>;
     children: React.ReactNode;
     viewKey: string;
-    duration?: number;
-    style?: StyleProp<ViewStyle>;
-}
+};
 
-export interface AccordionProps {
-    title: string;
-    children: React.ReactNode;
-    /** Controlled open state. When provided, the accordion becomes controlled. */
-    open?: boolean;
-    defaultOpen?: boolean;
-    duration?: number;
-    /** Visual preset for the container */
-    variant?: 'card' | 'flat';
-    /** Default vertical spacing below the accordion */
-    spacing?: 'default' | 'none';
-    /** Apply default padding to the body content */
-    bodyPadded?: boolean;
-    headerStyle?: ViewStyle;
-    titleStyle?: TextStyle;
-    /** Styles applied to the animated body wrapper */
-    bodyStyle?: StyleProp<ViewStyle>;
-    /** Styles applied to the inner body container (defaults include padding) */
-    bodyContentStyle?: StyleProp<ViewStyle>;
-    containerStyle?: StyleProp<ViewStyle>;
-    /** Optional stable id used for layout measurement keys (defaults to title) */
-    id?: string;
-    renderHeader?: (isOpen: boolean) => React.ReactNode;
-    renderIcon?: (isOpen: boolean) => React.ReactNode;
-    /** Called with the new open state whenever the accordion is toggled */
-    onToggle?: (isOpen: boolean) => void;
-    /** When true, the header does not toggle the section */
-    disabled?: boolean;
-}
-
-export function AccordionItem({
-    isExpanded,
-    children,
-    viewKey,
-    duration = 400,
-    style
-}: AccordionItemProps) {
+function AccordionItem({ isExpanded, children, viewKey }: AccordionItemProps) {
     const height = useSharedValue(0);
 
     const derivedHeight = useDerivedValue(() =>
-        withTiming(height.value * Number(isExpanded.value), { duration })
+        withTiming(height.value * Number(isExpanded.value), {
+            duration: ANIMATION_DURATION_MS
+        })
     );
 
     const bodyStyle = useAnimatedStyle(() => {
@@ -93,7 +83,7 @@ export function AccordionItem({
     return (
         <Animated.View
             key={`accordionItem_${viewKey}`}
-            style={[styles.animatedView, bodyStyle, style]}
+            style={[styles.animatedView, bodyStyle]}
         >
             <View onLayout={handleLayout} style={styles.innerWrapper}>
                 {children}
@@ -102,23 +92,52 @@ export function AccordionItem({
     );
 }
 
+export interface AccordionProps {
+    title: string;
+    children: React.ReactNode;
+    open?: boolean;
+    defaultOpen?: boolean;
+    variant?: 'card' | 'flat';
+    spacing?: 'default' | 'none';
+    bodyPadded?: boolean;
+    /** Flat layout, no outer margin, unpadded body (list / nested accordions). */
+    embedded?: boolean;
+    /**
+     * Form-style accordion: same layout as embedded, plus default header row
+     * (KeyValue title + caret). Override with `renderHeader` or customize the
+     * title side with `renderFormTitle`.
+     */
+    headerLayout?: 'standard' | 'form';
+    headerStyle?: ViewStyle;
+    titleStyle?: TextStyle;
+    bodyContentStyle?: StyleProp<ViewStyle>;
+    containerStyle?: StyleProp<ViewStyle>;
+    id?: string;
+    /** Replaces the entire header (no default title or caret). */
+    renderHeader?: (isOpen: boolean) => React.ReactNode;
+    /** When headerLayout is form and renderHeader is omitted, custom title row only; caret stays on the right. */
+    renderFormTitle?: (isOpen: boolean) => React.ReactNode;
+    onToggle?: (isOpen: boolean) => void;
+    disabled?: boolean;
+}
+
 export function Accordion({
     title,
     children,
     open,
     defaultOpen = false,
-    duration = 400,
     variant = 'card',
     spacing = 'default',
     bodyPadded = true,
+    embedded = false,
+    headerLayout = 'standard',
     headerStyle,
     titleStyle,
-    bodyStyle,
     bodyContentStyle,
     containerStyle,
     id,
     renderHeader,
-    renderIcon,
+    renderFormTitle,
     onToggle,
     disabled = false
 }: AccordionProps) {
@@ -134,24 +153,63 @@ export function Accordion({
 
     const viewKey = useMemo(() => id ?? title, [id, title]);
 
+    const useFormLayout = headerLayout === 'form';
+    const useEmbeddedLayout = embedded || useFormLayout;
+
+    const resolvedVariant = useEmbeddedLayout ? 'flat' : variant;
+    const resolvedSpacing = useEmbeddedLayout ? 'none' : spacing;
+    const resolvedBodyPadded = useEmbeddedLayout ? false : bodyPadded;
+
+    const mergedHeaderStyle = useMemo(() => {
+        if (!useFormLayout) return headerStyle;
+        return StyleSheet.flatten([formHeaderBase, headerStyle]) as ViewStyle;
+    }, [headerStyle, useFormLayout]);
+
+    const mergedBodyContentStyle = useMemo((): StyleProp<ViewStyle> => {
+        if (!useFormLayout) return bodyContentStyle;
+        return [formBodyContentBase, bodyContentStyle];
+    }, [bodyContentStyle, useFormLayout]);
+
+    const formDefaultHeader = useCallback(
+        (isExpanded: boolean) => (
+            <Row justify="space-between">
+                <View style={{ flex: 1 }}>
+                    {renderFormTitle ? (
+                        renderFormTitle(isExpanded)
+                    ) : (
+                        <KeyValue keyValue={title} />
+                    )}
+                </View>
+                <FormHeaderCaret isOpen={isExpanded} />
+            </Row>
+        ),
+        [renderFormTitle, title]
+    );
+
+    const resolvedRenderHeader = useMemo(() => {
+        if (renderHeader) return renderHeader;
+        if (useFormLayout) return formDefaultHeader;
+        return undefined;
+    }, [formDefaultHeader, renderHeader, useFormLayout]);
+
     const resolvedContainerStyle = useMemo(() => {
         const styleList: Array<StyleProp<ViewStyle>> = [styles.containerBase];
 
-        if (variant === 'flat') {
+        if (resolvedVariant === 'flat') {
             styleList.push(styles.containerFlat);
         } else {
             styleList.push(styles.containerCard);
         }
 
         styleList.push(
-            spacing === 'none'
+            resolvedSpacing === 'none'
                 ? styles.containerSpacingNone
                 : styles.containerSpacingDefault
         );
 
         if (containerStyle) styleList.push(containerStyle);
         return styleList;
-    }, [containerStyle, spacing, variant]);
+    }, [containerStyle, resolvedSpacing, resolvedVariant]);
 
     const toggle = useCallback(() => {
         if (disabled) return;
@@ -168,34 +226,26 @@ export function Accordion({
                 disabled={disabled}
                 onPress={toggle}
                 style={[
-                    renderHeader ? styles.customHeader : styles.header,
-                    headerStyle
+                    resolvedRenderHeader ? styles.customHeader : styles.header,
+                    mergedHeaderStyle
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={title}
                 accessibilityHint="Toggles accordion section"
-                accessibilityState={{ disabled }}
+                accessibilityState={{ disabled, expanded: currentOpen }}
             >
-                {renderHeader ? (
-                    renderHeader(currentOpen)
+                {resolvedRenderHeader ? (
+                    resolvedRenderHeader(currentOpen)
                 ) : (
-                    <>
-                        <Text style={[styles.title, titleStyle]}>{title}</Text>
-                        {renderIcon ? renderIcon(currentOpen) : null}
-                    </>
+                    <Text style={[styles.title, titleStyle]}>{title}</Text>
                 )}
             </TouchableOpacity>
 
-            <AccordionItem
-                isExpanded={isOpen}
-                viewKey={viewKey}
-                duration={duration}
-                style={bodyStyle}
-            >
+            <AccordionItem isExpanded={isOpen} viewKey={viewKey}>
                 <View
                     style={[
-                        bodyPadded ? styles.body : undefined,
-                        bodyContentStyle
+                        resolvedBodyPadded ? styles.body : undefined,
+                        mergedBodyContentStyle
                     ]}
                 >
                     {children}
@@ -248,10 +298,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         flex: 1,
         marginRight: 8
-    },
-    chevron: {
-        fontSize: 20,
-        lineHeight: 22
     },
     body: {
         paddingHorizontal: 16,
