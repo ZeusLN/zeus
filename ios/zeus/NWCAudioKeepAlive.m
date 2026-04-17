@@ -83,7 +83,6 @@ RCT_EXPORT_MODULE();
     [self unregisterNotifications];
 }
 
-// ─── Exported methods ────────────────────────────────────────────────────────
 
 /**
  * Configures AVAudioSession with .playback category (mixWithOthers so we
