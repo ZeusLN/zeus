@@ -2,6 +2,8 @@ import * as React from 'react';
 import { Animated, Text, View, ViewStyle } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
+import AnimatedDigit from './AnimatedDigit';
+
 import Conversion from './Conversion';
 
 import FiatStore from '../stores/FiatStore';
@@ -34,6 +36,43 @@ interface KeypadAmountDisplayProps {
 @inject('FiatStore', 'UnitsStore')
 @observer
 export default class KeypadAmountDisplay extends React.Component<KeypadAmountDisplayProps> {
+    renderFormattedNumber(
+        formattedNumber: string,
+        textColor: Animated.AnimatedInterpolation<string> | string,
+        fontSize: number,
+        lineHeight: number
+    ) {
+        let digitIndex = 0;
+        const textStyle = {
+            fontSize,
+            fontFamily: 'PPNeueMontreal-Medium',
+            lineHeight
+        };
+        return formattedNumber.split('').map((char) => {
+            const isDigit = char >= '0' && char <= '9';
+            if (isDigit) {
+                const key = `digit_${digitIndex}`;
+                digitIndex++;
+                return (
+                    <AnimatedDigit
+                        key={key}
+                        value={char}
+                        color={textColor}
+                        style={textStyle}
+                    />
+                );
+            }
+            return (
+                <Animated.Text
+                    key={'sep_' + digitIndex + '_' + char}
+                    style={[textStyle, { color: textColor }]}
+                >
+                    {char}
+                </Animated.Text>
+            );
+        });
+    }
+
     render() {
         const {
             amount,
@@ -91,6 +130,8 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             }
         }
 
+        const textColor = amount === '0' ? themeColor('secondaryText') : color;
+
         const conversionElement = showConversion && (
             <View
                 style={{
@@ -121,37 +162,57 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                         transform: [{ translateX: shakeAnimation }]
                     }}
                 >
-                    <Animated.Text
+                    <View
                         style={{
-                            color:
-                                amount === '0'
-                                    ? themeColor('secondaryText')
-                                    : color,
-                            fontSize,
-                            textAlign: 'center',
-                            fontFamily: 'PPNeueMontreal-Medium',
-                            lineHeight
+                            flexDirection: 'row',
+                            alignItems: 'flex-end',
+                            justifyContent: 'center'
                         }}
                     >
-                        {prefix}
-                        {formattedNumber}
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {decimalPlaceholder.string}
-                        </Text>
-                        {suffix ? (
-                            <Text
+                        {prefix ? (
+                            <Animated.Text
                                 style={{
-                                    fontSize: fontSize * 0.2
+                                    color: textColor,
+                                    fontSize,
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    lineHeight
+                                }}
+                            >
+                                {prefix}
+                            </Animated.Text>
+                        ) : null}
+                        {this.renderFormattedNumber(
+                            formattedNumber,
+                            textColor,
+                            fontSize,
+                            lineHeight
+                        )}
+                        {suffix ? (
+                            <Animated.Text
+                                style={{
+                                    alignSelf: 'center',
+                                    marginTop: fontSize * 0.25,
+                                    color: textColor as any,
+                                    fontSize: Math.max(fontSize * 0.2, 12),
+                                    fontFamily: 'PPNeueMontreal-Medium'
                                 }}
                             >
                                 {suffix}
+                            </Animated.Text>
+                        ) : null}
+                        {decimalPlaceholder.string ? (
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize,
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    lineHeight
+                                }}
+                            >
+                                {decimalPlaceholder.string}
                             </Text>
                         ) : null}
-                    </Animated.Text>
+                    </View>
                 </Animated.View>
 
                 {childrenBeforeConversion && children}
