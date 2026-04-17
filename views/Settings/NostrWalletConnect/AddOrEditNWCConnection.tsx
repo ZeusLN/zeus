@@ -13,8 +13,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
-import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
-
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import { Body } from '../../../components/text/Body';
@@ -34,7 +32,8 @@ import NostrConnectUtils, {
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NostrWalletConnectStore, {
-    DEFAULT_NOSTR_RELAYS
+    DEFAULT_NOSTR_RELAYS,
+    Nip47SingleMethod
 } from '../../../stores/NostrWalletConnectStore';
 import ModalStore from '../../../stores/ModalStore';
 
