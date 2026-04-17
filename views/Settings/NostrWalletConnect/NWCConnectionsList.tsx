@@ -34,7 +34,6 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
-import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionsListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -53,7 +52,6 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
-    hasPendingPayments: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -68,8 +66,7 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All,
-            hasPendingPayments: false
+            filter: ConnectionFilter.All
         };
     }
 
@@ -387,15 +384,7 @@ export default class NWCConnectionsList extends React.Component<
         const { NostrWalletConnectStore, navigation, SettingsStore } =
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { connectionsLoading, error, hasPendingPayments } = this.state;
-        const shouldReduceIconSize =
-            hasPendingPayments &&
-            !(
-                Platform.OS === 'ios' &&
-                (SettingsStore.implementation !== 'embedded-lnd' ||
-                    !SettingsStore.settings?.ecash?.enableCashu)
-            );
-        const HeaderIconSize = shouldReduceIconSize ? 24 : 30;
+        const { connectionsLoading, error } = this.state;
         const { settings } = SettingsStore;
         const isNwcSettingsAvailable =
             Platform.OS === 'android' ||
@@ -440,26 +429,11 @@ export default class NWCConnectionsList extends React.Component<
                                 >
                                     <Add
                                         fill={themeColor('text')}
-                                        width={HeaderIconSize}
-                                        height={HeaderIconSize}
+                                        width={30}
+                                        height={30}
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                {hasPendingPayments && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'NWCPendingPayments'
-                                            )
-                                        }
-                                    >
-                                        <ClockIcon
-                                            color={themeColor('bitcoin')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
-                                        />
-                                    </TouchableOpacity>
-                                )}
 
                                 {isNwcSettingsAvailable && (
                                     <TouchableOpacity
@@ -472,8 +446,8 @@ export default class NWCConnectionsList extends React.Component<
                                     >
                                         <Gear
                                             fill={themeColor('text')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
+                                            width={30}
+                                            height={30}
                                             style={{ alignSelf: 'center' }}
                                         />
                                     </TouchableOpacity>
