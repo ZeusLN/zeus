@@ -164,7 +164,7 @@ export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
-    @observable public cashuWallets: { [key: string]: Wallet };
+    @observable public cashuWallets: { [key: string]: Wallet } = {};
     @observable public totalBalanceSats: number;
     // Per-mint data fetched from CDK
     @observable public mintBalances: { [key: string]: number } = {};
