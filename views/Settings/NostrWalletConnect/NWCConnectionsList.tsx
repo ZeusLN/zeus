@@ -76,29 +76,11 @@ export default class NWCConnectionsList extends React.Component<
         const { navigation } = this.props;
         navigation.addListener('focus', this.handleFocus);
         this.getConnections();
-        this.getPendingPayments();
     }
     componentWillUnmount() {
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
-    getPendingPayments = async () => {
-        try {
-            this.setState({ connectionsLoading: true });
-            const { NostrWalletConnectStore } = this.props;
-            const pendingPayments =
-                await NostrWalletConnectStore.getPendingPayments();
-            this.setState({
-                hasPendingPayments: pendingPayments.length > 0,
-                connectionsLoading: false
-            });
-        } catch (e) {
-            this.setState({
-                error: (e as Error).message,
-                connectionsLoading: false
-            });
-        }
-    };
     getConnections = async () => {
         try {
             this.setState({
@@ -124,7 +106,6 @@ export default class NWCConnectionsList extends React.Component<
     };
     handleFocus = async () => {
         await this.getConnections();
-        await this.getPendingPayments();
     };
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;

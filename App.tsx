@@ -56,7 +56,6 @@ import InfoModal from './components/Modals/InfoModal';
 import ShareModal from './components/Modals/ShareModal';
 import NewChannelModal from './components/Modals/NewChannelModal';
 import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
-import NWCPendingPaymentsModal from './components/Modals/NWCPendingPaymentsModal';
 import RatingModal from './components/Modals/RatingModal';
 import RestoreChannelModal from './components/Modals/RestoreChannelModal';
 
@@ -134,7 +133,6 @@ import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR
 import NWCSettings from './views/Settings/NostrWalletConnect/NWCSettings';
 import NWCConnectionActivity from './views/Settings/NostrWalletConnect/NWCConnectionActivity';
 import NWCConnectionActivityFilter from './views/Settings/NostrWalletConnect/NWCConnectionActivityFilter';
-import NWCPendingPayments from './views/Settings/NostrWalletConnect/NWCPendingPayments';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
 import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
@@ -995,12 +993,6 @@ export default class App extends React.PureComponent {
                                                             }
                                                         />
                                                         <Stack.Screen
-                                                            name="NWCPendingPayments" // @ts-ignore:next-line
-                                                            component={
-                                                                NWCPendingPayments
-                                                            }
-                                                        />
-                                                        <Stack.Screen
                                                             name="NWCSettings" // @ts-ignore:next-line
                                                             component={
                                                                 NWCSettings
@@ -1673,8 +1665,6 @@ export default class App extends React.PureComponent {
                             <NewChannelModal />
                             {/* @ts-ignore:next-line */}
                             <GraphSyncPromptModal />
-                            {/* @ts-ignore:next-line */}
-                            <NWCPendingPaymentsModal />
                             {/* @ts-ignore:next-line */}
                             <InfoModal />
                             {/* @ts-ignore:next-line */}
