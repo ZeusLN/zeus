@@ -31,7 +31,8 @@ import {
     Platform,
     NativeModules,
     DeviceEventEmitter,
-    AppState
+    AppState,
+    EmitterSubscription
 } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -73,7 +74,6 @@ import LightningAddressStore from './LightningAddressStore';
 import ModalStore from './ModalStore';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
-export const NWC_PENDING_PAYMENTS = 'zeus-nwc-pending-payments';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
@@ -93,6 +93,8 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io'
 ];
 
+type AppStateSubscription = ReturnType<typeof AppState.addEventListener>;
+
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
@@ -111,23 +113,6 @@ interface ClientKeys {
 interface WalletServiceKeys {
     privateKey: string;
     publicKey: string;
-}
-interface NWCRequest {
-    id: string;
-    method: Nip47SingleMethod;
-    params: any;
-}
-
-export interface PendingPayment {
-    eventStr: string;
-    request: NWCRequest;
-    connection: NWCConnection;
-    eventId: string;
-    connectionName: string;
-    amount: number;
-    isProcessed?: boolean;
-    status?: boolean;
-    errorMessage?: string;
 }
 
 export interface CreateConnectionParams {
@@ -158,31 +143,25 @@ export default class NostrWalletConnectStore {
     @observable public waitingForConnection = false;
     @observable public currentConnectionId?: string;
     @observable public connectionJustSucceeded = false;
-    @observable public isInNWCConnectionQRView = false;
-    @observable public isInNWCPendingPaymentsView = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
     @observable public cashuEnabled: boolean = false;
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
-    @observable public isProcessingPendingPayInvoices: boolean = false;
-    @observable public isAllPendingPaymentsSuccessful: boolean = false;
-    @observable public processedPendingPayInvoiceEventIds: string[] = [];
-    @observable public failedPendingPayInvoiceEventIds: string[] = [];
-    @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
     @observable public iosAudioKeepAliveActive: boolean = false;
     @observable public iosAudioKeepAliveUptime: number = 0;
     @observable public iosAudioKeepAliveDisconnects: number = 0;
-    private iosAudioUptimeInterval: any = null;
+    private iosAudioUptimeInterval: ReturnType<typeof setInterval> | null =
+        null;
     private iosAudioInterruptedUnsub: (() => void) | null = null;
     private iosAudioInterruptionEndedUnsub: (() => void) | null = null;
     private iosAudioRouteChangedUnsub: (() => void) | null = null;
     private iosAudioStatusUpdateUnsub: (() => void) | null = null;
     private iosAudioSuspendedUnsub: (() => void) | null = null;
-    private iosAudioAppStateListener: any = null;
-    private androidReconnectionListener: any = null;
-    private appStateListener: any = null;
-    private androidLogListener: any = null;
+    private iosAudioAppStateListener: AppStateSubscription | null = null;
+    private androidReconnectionListener: EmitterSubscription | null = null;
+    private appStateListener: AppStateSubscription | null = null;
+    private androidLogListener: EmitterSubscription | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -244,9 +223,12 @@ export default class NostrWalletConnectStore {
                         this.setupAppStateMonitoring();
                         this.setupAndroidLogListener();
                     }
-                    if (Platform.OS === 'ios') {
-                        // iOS has no native foreground service, so we always set
-                        // up AppState monitoring for any active NWC session.
+                    if (
+                        Platform.OS === 'ios' &&
+                        this.persistentNWCServiceEnabled
+                    ) {
+                        // Same user preference as Android: keep NWC reachable in background
+                        // (iOS: AppState + silent audio session).
                         this.setupIOSAppStateMonitoring();
                     }
                     runInAction(() => {
@@ -367,22 +349,11 @@ export default class NostrWalletConnectStore {
         }
     };
 
-    // iOS: Reset unless audio keep-alive is holding a persistent NWC session,
-    //      or unless currently in the NWC connection QR view.
-    // Android: Only reset if persistentNWCServicesEnabled is false.
+    // Skip full teardown while persistent background NWC is enabled (same flag on
+    // iOS and Android).
     @action
     public reset = async () => {
-        // On iOS, skip full teardown whenever the AppState monitor is active —
-        // i.e. the NWC service is running and audio keep-alive is registered.
-        // This mirrors Android's persistentNWCServiceEnabled behaviour.
-        const iosAudioPersisting =
-            Platform.OS === 'ios' && this.iosAudioAppStateListener !== null;
-        if (
-            (Platform.OS === 'ios' &&
-                !this.isInNWCConnectionQRView &&
-                !iosAudioPersisting) ||
-            (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
-        ) {
+        if (!this.persistentNWCServiceEnabled) {
             if (Platform.OS === 'ios') {
                 this.teardownIOSAppStateMonitor();
                 await this.stopIOSAudioKeepAlive();
@@ -409,20 +380,12 @@ export default class NostrWalletConnectStore {
             this.connectionJustSucceeded = false;
             this.lastConnectionAttempt = 0;
             this.cashuEnabled = false;
-            this.persistentNWCServiceEnabled = false;
             this.nwcWalletServices.clear();
             this.publishedRelays.clear();
-            this.resetPendingPayInvoiceState();
             await this.unsubscribeFromAllConnections();
         }
     };
-    @action
-    public resetPendingPayInvoiceState(): void {
-        this.isProcessingPendingPayInvoices = false;
-        this.processedPendingPayInvoiceEventIds = [];
-        this.failedPendingPayInvoiceEventIds = [];
-        this.pendingPayInvoiceErrors.clear();
-    }
+
     public isServiceReady(): boolean {
         return (
             this.walletServiceKeys?.privateKey !== undefined &&
@@ -951,7 +914,6 @@ export default class NostrWalletConnectStore {
     public startWaitingForConnection = (connectionId: string) => {
         this.waitingForConnection = true;
         this.currentConnectionId = connectionId;
-        this.isInNWCConnectionQRView = true;
     };
 
     @action
@@ -959,7 +921,6 @@ export default class NostrWalletConnectStore {
         this.connectionJustSucceeded = true;
         this.waitingForConnection = false;
         this.currentConnectionId = undefined;
-        this.isInNWCConnectionQRView = false;
 
         setTimeout(() => {
             runInAction(() => {
@@ -2433,7 +2394,6 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-    // Android Persistent Setting
     private async loadPersistentServiceSetting(): Promise<void> {
         try {
             const stored = await AsyncStorage.getItem(
@@ -2466,16 +2426,20 @@ export default class NostrWalletConnectStore {
                 this.persistentNWCServiceEnabled = enabled;
             });
 
-            // Stop background service if disabling persistent service
-            if (!enabled && Platform.OS === 'android') {
-                try {
-                    const { NostrConnectModule } = NativeModules;
-                    await NostrConnectModule.stopNostrConnectService();
-                } catch (serviceError) {
-                    console.warn(
-                        'NWC: Failed to stop background service:',
-                        serviceError
-                    );
+            if (!enabled) {
+                if (Platform.OS === 'android') {
+                    try {
+                        const { NostrConnectModule } = NativeModules;
+                        await NostrConnectModule.stopNostrConnectService();
+                    } catch (serviceError) {
+                        console.warn(
+                            'NWC: Failed to stop background service:',
+                            serviceError
+                        );
+                    }
+                } else if (Platform.OS === 'ios') {
+                    this.teardownIOSAppStateMonitor();
+                    await this.stopIOSAudioKeepAlive();
                 }
             }
         } catch (error) {
@@ -2810,14 +2774,13 @@ export default class NostrWalletConnectStore {
     // ─── iOS audio keep-alive (AVAudioSession + silent loop) ─────────────────
 
     /**
-     * Registers a React Native AppState listener (iOS-only) that:
-     *  - Starts the audio keep-alive engine the moment the app enters the
-     *    background, so the session is active before iOS suspends the process.
-     *  - Re-subscribes to all Nostr relay connections when the app returns to
-     *    the foreground, in case the WebSocket was torn down while backgrounded.
+     * iOS-only: registers AppState listener when `persistentNWCServiceEnabled`
+     * is on (same setting as Android’s foreground service). Starts silent audio
+     * in background and re-subscribes relays when returning to foreground.
      */
     private setupIOSAppStateMonitoring(): void {
         if (Platform.OS !== 'ios') return;
+        if (!this.persistentNWCServiceEnabled) return;
 
         // Remove any stale listener before registering a new one
         this.teardownIOSAppStateMonitor();
@@ -3147,10 +3110,5 @@ export default class NostrWalletConnectStore {
                 )
             };
         }
-    }
-    public setisInNWCPendingPaymentsView(isInNWCPendingPaymentsView: boolean) {
-        runInAction(() => {
-            this.isInNWCPendingPaymentsView = isInNWCPendingPaymentsView;
-        });
     }
 }
