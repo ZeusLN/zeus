@@ -1,10 +1,3 @@
-import type {
-    Nip47NotificationType,
-    Nip47SingleMethod,
-    Nip47Transaction,
-    Nip47ListTransactionsRequest
-} from '@getalby/sdk/dist/nwc/types';
-
 import {
     BudgetRenewalType,
     PermissionType,
@@ -17,6 +10,13 @@ import CashuPayment from '../models/CashuPayment';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuToken from '../models/CashuToken';
 import Transaction from '../models/Transaction';
+
+import {
+    Nip47NotificationType,
+    Nip47SingleMethod,
+    Nip47Transaction,
+    Nip47ListTransactionsRequest
+} from '../stores/NostrWalletConnectStore';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';

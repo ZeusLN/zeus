@@ -23,6 +23,7 @@ export type Nip47ListTransactionsResponse = nwc.Nip47ListTransactionsResponse;
 export type Nip47Transaction = nwc.Nip47Transaction;
 export type Nip47SignMessageResponse = nwc.Nip47SignMessageResponse;
 export type Nip47SignMessageRequest = nwc.Nip47SignMessageRequest;
+export type Nip47NotificationType = nwc.Nip47NotificationType;
 
 import { getPublicKey, generatePrivateKey, relayInit } from 'nostr-tools';
 
@@ -43,6 +44,7 @@ import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
+import { retry } from '../utils/SleepUtils';
 
 import NWCConnection, {
     BudgetRenewalType,
@@ -76,8 +78,6 @@ export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
-export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
-    'https://nwc-ios-handoff.zeusln.com/api/v1';
 
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
@@ -226,47 +226,53 @@ export default class NostrWalletConnectStore {
         const hasActiveConnections = this.activeConnections.length > 0;
         if (!hasActiveConnections) return;
 
-        await this.retryWithBackoff(async () => {
-            runInAction(() => {
-                this.error = false;
-                this.loading = true;
-                this.loadingMsg = localeString(
-                    'stores.NostrWalletConnectStore.initializingService'
-                );
-            });
-            try {
-                await this.initializeNWCWalletServices();
-                await this.startService(hasActiveConnections);
-                await this.loadMaxBudget();
-                await this.checkAndResetAllBudgets();
-                if (Platform.OS === 'android') {
-                    this.setupAndroidReconnectionListener();
-                    this.setupAppStateMonitoring();
-                    this.setupAndroidLogListener();
-                }
-                if (Platform.OS === 'ios') {
-                    // iOS has no native foreground service, so we always set
-                    // up AppState monitoring for any active NWC session.
-                    this.setupIOSAppStateMonitoring();
-                }
+        await retry({
+            fn: async () => {
                 runInAction(() => {
-                    this.loadingMsg = undefined;
-                    this.loading = false;
-                });
-            } catch (error) {
-                console.error('Failed to initialize NWC service:', error);
-                const errorMessage =
-                    (error instanceof Error ? error.message : String(error)) ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.failedToInitializeService'
+                    this.error = false;
+                    this.loading = true;
+                    this.loadingMsg = localeString(
+                        'stores.NostrWalletConnectStore.initializingService'
                     );
-                runInAction(() => {
-                    this.setError(errorMessage);
-                    this.loading = false;
-                    this.loadingMsg = undefined;
                 });
-            }
-        }, MAX_RELAY_ATTEMPTS);
+                try {
+                    await this.initializeNWCWalletServices();
+                    await this.startService(hasActiveConnections);
+                    await this.loadMaxBudget();
+                    await this.checkAndResetAllBudgets();
+                    if (Platform.OS === 'android') {
+                        this.setupAndroidReconnectionListener();
+                        this.setupAppStateMonitoring();
+                        this.setupAndroidLogListener();
+                    }
+                    if (Platform.OS === 'ios') {
+                        // iOS has no native foreground service, so we always set
+                        // up AppState monitoring for any active NWC session.
+                        this.setupIOSAppStateMonitoring();
+                    }
+                    runInAction(() => {
+                        this.loadingMsg = undefined;
+                        this.loading = false;
+                    });
+                } catch (error) {
+                    console.error('Failed to initialize NWC service:', error);
+                    const errorMessage =
+                        (error instanceof Error
+                            ? error.message
+                            : String(error)) ||
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.failedToInitializeService'
+                        );
+                    runInAction(() => {
+                        this.setError(errorMessage);
+                        this.loading = false;
+                        this.loadingMsg = undefined;
+                    });
+                }
+            },
+            maxRetries: MAX_RELAY_ATTEMPTS,
+            exponentialBackoff: true
+        });
     };
 
     private async loadInitialSettings() {
@@ -504,16 +510,19 @@ export default class NostrWalletConnectStore {
                 );
                 if (nwcWalletService && this.walletServiceKeys?.privateKey) {
                     try {
-                        await this.retryWithBackoff(async () => {
-                            await nwcWalletService.publishWalletServiceInfoEvent(
-                                this.walletServiceKeys!.privateKey,
-                                NostrConnectUtils.getFullAccessPermissions(),
-                                NostrConnectUtils.getNotifications()
-                            );
-                            runInAction(() => {
-                                this.publishedRelays.add(params.relayUrl);
-                            });
-                        }, 3);
+                        await retry({
+                            fn: async () => {
+                                await nwcWalletService.publishWalletServiceInfoEvent(
+                                    this.walletServiceKeys!.privateKey,
+                                    NostrConnectUtils.getFullAccessPermissions(),
+                                    NostrConnectUtils.getNotifications()
+                                );
+                                runInAction(() => {
+                                    this.publishedRelays.add(params.relayUrl);
+                                });
+                            },
+                            exponentialBackoff: true
+                        });
                         await new Promise((resolve) =>
                             setTimeout(resolve, 500)
                         );
@@ -1064,9 +1073,13 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            const unsubscribe = await this.retryWithBackoff(async () => {
-                return await nwcWalletService.subscribe(keypair, handler);
-            }, MAX_RELAY_ATTEMPTS);
+            const unsubscribe = await retry({
+                fn: async () => {
+                    return await nwcWalletService.subscribe(keypair, handler);
+                },
+                maxRetries: MAX_RELAY_ATTEMPTS,
+                exponentialBackoff: true
+            });
 
             runInAction(() => {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
@@ -1140,19 +1153,22 @@ export default class NostrWalletConnectStore {
     ): Promise<void> {
         const unsub = this.activeSubscriptions.get(connectionId);
         if (unsub) {
-            await this.retryWithBackoff(async () => {
-                try {
-                    unsub();
-                    runInAction(() => {
-                        this.activeSubscriptions.delete(connectionId);
-                    });
-                } catch (error) {
-                    console.error(
-                        `Error unsubscribing from connection ${connectionId}:`,
-                        error
-                    );
-                }
-            }, 3);
+            await retry({
+                fn: async () => {
+                    try {
+                        unsub();
+                        runInAction(() => {
+                            this.activeSubscriptions.delete(connectionId);
+                        });
+                    } catch (error) {
+                        console.error(
+                            `Error unsubscribing from connection ${connectionId}:`,
+                            error
+                        );
+                    }
+                },
+                exponentialBackoff: true
+            });
         }
     }
 
@@ -1178,17 +1194,20 @@ export default class NostrWalletConnectStore {
                 return;
             }
             try {
-                await this.retryWithBackoff(async () => {
-                    await nwcWalletService.publishWalletServiceInfoEvent(
-                        this.walletServiceKeys!.privateKey,
-                        NostrConnectUtils.getFullAccessPermissions(),
-                        NostrConnectUtils.getNotifications()
-                    );
-                    runInAction(() => {
-                        this.publishedRelays.add(relayUrl);
-                    });
-                    successfulPublishes++;
-                }, 3);
+                await retry({
+                    fn: async () => {
+                        await nwcWalletService.publishWalletServiceInfoEvent(
+                            this.walletServiceKeys!.privateKey,
+                            NostrConnectUtils.getFullAccessPermissions(),
+                            NostrConnectUtils.getNotifications()
+                        );
+                        runInAction(() => {
+                            this.publishedRelays.add(relayUrl);
+                        });
+                        successfulPublishes++;
+                    },
+                    exponentialBackoff: true
+                });
             } catch (error) {
                 console.error(`Failed to publish to relay ${relayUrl}`, {
                     error
@@ -2696,8 +2715,8 @@ export default class NostrWalletConnectStore {
                             if (!nwcWalletService.connected) {
                                 if (this.walletServiceKeys) {
                                     try {
-                                        await this.retryWithBackoff(
-                                            async () => {
+                                        await retry({
+                                            fn: async () => {
                                                 await nwcWalletService.publishWalletServiceInfoEvent(
                                                     this.walletServiceKeys!
                                                         .privateKey,
@@ -2710,8 +2729,8 @@ export default class NostrWalletConnectStore {
                                                     );
                                                 });
                                             },
-                                            3
-                                        );
+                                            exponentialBackoff: true
+                                        });
                                         // Verify connection after reconnection attempt
                                         if (nwcWalletService.connected) {
                                             return {
@@ -3100,30 +3119,6 @@ export default class NostrWalletConnectStore {
         };
     }
 
-    async retryWithBackoff<T>(
-        operation: () => Promise<T>,
-        maxRetries: number,
-        baseDelay: number = 1000,
-        maxDelay: number = 10000
-    ): Promise<T> {
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                return await operation();
-            } catch (error) {
-                if (attempt === maxRetries - 1) throw error;
-                const delay = Math.min(
-                    baseDelay * Math.pow(2, attempt) + Math.random() * 100,
-                    maxDelay
-                );
-                await new Promise((resolve) => setTimeout(resolve, delay));
-            }
-        }
-        throw new Error(
-            localeString(
-                'stores.NostrWalletConnectStore.error.maxRetriesReached'
-            )
-        );
-    }
     public async pingRelay(relayUrl: string): Promise<{
         status: boolean;
         error?: string | null;
