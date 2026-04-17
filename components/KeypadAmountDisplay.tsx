@@ -187,19 +187,6 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                             fontSize,
                             lineHeight
                         )}
-                        {suffix ? (
-                            <Animated.Text
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: fontSize * 0.25,
-                                    color: textColor as any,
-                                    fontSize: Math.max(fontSize * 0.2, 12),
-                                    fontFamily: 'PPNeueMontreal-Medium'
-                                }}
-                            >
-                                {suffix}
-                            </Animated.Text>
-                        ) : null}
                         {decimalPlaceholder.string ? (
                             <Text
                                 style={{
@@ -211,6 +198,19 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                             >
                                 {decimalPlaceholder.string}
                             </Text>
+                        ) : null}
+                        {suffix ? (
+                            <Animated.Text
+                                style={{
+                                    alignSelf: 'center',
+                                    marginTop: fontSize * 0.25,
+                                    color: textColor,
+                                    fontSize: Math.max(fontSize * 0.2, 12),
+                                    fontFamily: 'PPNeueMontreal-Medium'
+                                }}
+                            >
+                                {suffix}
+                            </Animated.Text>
                         ) : null}
                     </View>
                 </Animated.View>
