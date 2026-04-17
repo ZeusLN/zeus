@@ -1192,11 +1192,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (
-            lightningAddress.enabled &&
-            BackendUtils.supportsCustomPreimages() &&
-            !NodeInfoStore.testnet
-        ) {
+        if (lightningAddress.enabled && !NodeInfoStore.testnet) {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
@@ -1204,7 +1200,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (settings?.lightningAddress?.automaticallyAccept) {
                         if (
                             LightningAddressStore.lightningAddressType ===
-                            'zaplocker'
+                                'zaplocker' &&
+                            BackendUtils.supportsCustomPreimages()
                         ) {
                             LightningAddressStore.prepareToAutomaticallyAcceptZaplocker();
                         } else if (
