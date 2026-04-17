@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
+import DropdownSetting from '../../../components/DropdownSetting';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import TextInput from '../../../components/TextInput';
@@ -15,8 +16,11 @@ import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import {
     getDefaultEsploraServer,
+    getEsploraServersForNetwork,
     SupportedNetwork
 } from '../../../utils/LdkNodeUtils';
+
+const CUSTOM_VALUE = '__custom__';
 
 interface EsploraServerProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -24,7 +28,8 @@ interface EsploraServerProps {
 }
 
 interface EsploraServerState {
-    esploraServer: string;
+    selectedValue: string;
+    customServer: string;
     savedEsploraServer: string;
 }
 
@@ -34,10 +39,24 @@ export default class EsploraServer extends React.Component<
     EsploraServerProps,
     EsploraServerState
 > {
-    state = {
-        esploraServer: this.props.SettingsStore.ldkEsploraServer || '',
-        savedEsploraServer: this.props.SettingsStore.ldkEsploraServer || ''
-    };
+    constructor(props: EsploraServerProps) {
+        super(props);
+
+        const { SettingsStore } = props;
+        const saved = SettingsStore.ldkEsploraServer || '';
+        const network =
+            (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+            'mainnet';
+        const servers = getEsploraServersForNetwork(network);
+
+        const isPreset = saved === '' || servers.includes(saved);
+
+        this.state = {
+            selectedValue: isPreset ? saved || servers[0] : CUSTOM_VALUE,
+            customServer: isPreset ? '' : saved,
+            savedEsploraServer: isPreset ? saved || servers[0] : saved
+        };
+    }
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
@@ -55,19 +74,38 @@ export default class EsploraServer extends React.Component<
         }
     };
 
+    getEffectiveServer = (): string => {
+        const { selectedValue, customServer } = this.state;
+        return selectedValue === CUSTOM_VALUE ? customServer : selectedValue;
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { esploraServer, savedEsploraServer } = this.state;
+        const { selectedValue, customServer, savedEsploraServer } = this.state;
         const { ldkNetwork } = SettingsStore;
 
-        const defaultServer = getDefaultEsploraServer(
-            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
-        );
+        const network =
+            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet';
+        const servers = getEsploraServersForNetwork(network);
+        const defaultServer = getDefaultEsploraServer(network);
 
+        const dropdownValues = [
+            ...servers.map((url) => ({
+                key: url,
+                value: url
+            })),
+            {
+                key: localeString('general.custom'),
+                value: CUSTOM_VALUE
+            }
+        ];
+
+        const effectiveServer = this.getEffectiveServer();
+        const hasUnsavedChanges =
+            effectiveServer !== savedEsploraServer &&
+            !(selectedValue === CUSTOM_VALUE && customServer.trim() === '');
         const showReset =
-            esploraServer !== '' && esploraServer !== defaultServer;
-
-        const hasUnsavedChanges = esploraServer !== savedEsploraServer;
+            effectiveServer !== '' && effectiveServer !== defaultServer;
 
         return (
             <Screen>
@@ -100,27 +138,38 @@ export default class EsploraServer extends React.Component<
                             </Text>
                         </View>
 
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {localeString(
+                        <DropdownSetting
+                            title={localeString(
                                 'views.Settings.EmbeddedNode.EsploraServer.serverUrl'
                             )}
-                        </Text>
-                        <TextInput
-                            value={esploraServer}
-                            placeholder={defaultServer || ''}
-                            onChangeText={(text: string) => {
+                            selectedValue={selectedValue}
+                            onValueChange={(value: string) => {
                                 this.setState({
-                                    esploraServer: text
+                                    selectedValue: value,
+                                    customServer:
+                                        value === CUSTOM_VALUE
+                                            ? customServer
+                                            : ''
                                 });
                             }}
-                            autoCapitalize="none"
-                            autoCorrect={false}
+                            values={dropdownValues}
                         />
+
+                        {selectedValue === CUSTOM_VALUE && (
+                            <TextInput
+                                value={customServer}
+                                placeholder={localeString(
+                                    'views.Settings.EmbeddedNode.EsploraServer.serverUrl'
+                                )}
+                                onChangeText={(text: string) => {
+                                    this.setState({
+                                        customServer: text
+                                    });
+                                }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        )}
 
                         <View style={{ marginTop: 10 }}>
                             <Text
@@ -145,7 +194,7 @@ export default class EsploraServer extends React.Component<
                                         'general.save'
                                     )}
                                     onPress={() =>
-                                        this.saveSettings(esploraServer)
+                                        this.saveSettings(effectiveServer)
                                     }
                                 />
                             </View>
@@ -161,7 +210,8 @@ export default class EsploraServer extends React.Component<
                                     secondary
                                     onPress={async () => {
                                         this.setState({
-                                            esploraServer: defaultServer
+                                            selectedValue: defaultServer,
+                                            customServer: ''
                                         });
                                         await this.saveSettings(defaultServer);
                                     }}

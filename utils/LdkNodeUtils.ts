@@ -88,6 +88,28 @@ export function getNetworkType(network: SupportedNetwork): Network {
 }
 
 /**
+ * Get all Esplora servers for a network
+ */
+export function getEsploraServersForNetwork(
+    network: SupportedNetwork
+): string[] {
+    switch (network) {
+        case 'mainnet':
+            return ESPLORA_SERVERS_MAINNET;
+        case 'testnet':
+            return ESPLORA_SERVERS_TESTNET;
+        case 'signet':
+            return ESPLORA_SERVERS_SIGNET;
+        case 'mutinynet':
+            return ESPLORA_SERVERS_MUTINYNET;
+        case 'regtest':
+            return ['http://localhost:3000'];
+        default:
+            return ESPLORA_SERVERS_MAINNET;
+    }
+}
+
+/**
  * Get default Esplora server for network
  */
 export function getDefaultEsploraServer(network: SupportedNetwork): string {
@@ -399,6 +421,7 @@ export default {
     getLdkNodeStoragePath,
     createLdkNodeDirectory,
     getNetworkType,
+    getEsploraServersForNetwork,
     getDefaultEsploraServer,
     getDefaultRgsServer,
     generateMnemonic,
