@@ -16,6 +16,8 @@ export default function AnimatedDigit({
     const translateY = useRef(new Animated.Value(10)).current;
 
     useEffect(() => {
+        opacity.setValue(0);
+        translateY.setValue(10);
         Animated.parallel([
             Animated.timing(opacity, {
                 toValue: 1,
@@ -28,7 +30,7 @@ export default function AnimatedDigit({
                 useNativeDriver: true
             })
         ]).start();
-    }, []);
+    }, [value]);
 
     return (
         <Animated.View
