@@ -16,7 +16,7 @@ import History from '../../assets/images/SVG/History.svg';
 import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../components/Button';
-import FormAccordion from '../../components/FormAccordion';
+import Accordion from '../../components/Accordion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -457,12 +457,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     <>
                                         {Object.keys(getInfoData).length >
                                             0 && (
-                                            <FormAccordion
+                                            <Accordion
+                                                headerLayout="form"
                                                 id="lsps1-service-info"
                                                 title={localeString(
                                                     'views.LSPS1.serviceInfo'
                                                 )}
-                                                renderHeaderContent={() => (
+                                                renderFormTitle={() => (
                                                     <Row justify="space-between">
                                                         {isOlympus && (
                                                             <View
@@ -703,7 +704,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             />
                                                         </View>
                                                     )}
-                                            </FormAccordion>
+                                            </Accordion>
                                         )}
                                     </>
                                     <Text
@@ -863,7 +864,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         </View>
                                     </>
                                     {Object.keys(getInfoData).length > 0 && (
-                                        <FormAccordion
+                                        <Accordion
+                                            headerLayout="form"
                                             id="lsps1-advanced-settings"
                                             title={localeString(
                                                 'general.advancedSettings'
@@ -1137,7 +1139,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     </View>
                                                 )}
                                             </>
-                                        </FormAccordion>
+                                        </Accordion>
                                     )}
                                 </ScrollView>
                             )}

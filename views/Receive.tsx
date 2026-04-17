@@ -58,7 +58,7 @@ import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 import { Spacer } from '../components/layout/Spacer';
-import FormAccordion from '../components/FormAccordion';
+import Accordion from '../components/Accordion';
 
 import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
@@ -2583,13 +2583,13 @@ export default class Receive extends React.Component<
                                             )}
 
                                             {BackendUtils.supportsSettingInvoiceExpiration() && (
-                                                <FormAccordion
+                                                <Accordion
+                                                    headerLayout="form"
                                                     key={`receive-expiration-${lspIsActive}`}
                                                     id="receive-expiration"
                                                     title={localeString(
                                                         'views.Receive.expiration'
                                                     )}
-                                                    defaultOpen={false}
                                                     disabled={lspIsActive}
                                                     renderHeader={(isOpen) => (
                                                         <Row
@@ -2782,11 +2782,12 @@ export default class Receive extends React.Component<
                                                             }}
                                                         />
                                                     </>
-                                                </FormAccordion>
+                                                </Accordion>
                                             )}
 
                                             {showAdvancedSettingsToggle && (
-                                                <FormAccordion
+                                                <Accordion
+                                                    headerLayout="form"
                                                     id="receive-advanced-settings"
                                                     title={localeString(
                                                         'general.advancedSettings'
@@ -3140,7 +3141,7 @@ export default class Receive extends React.Component<
                                                                 </View>
                                                             )}
                                                     </>
-                                                </FormAccordion>
+                                                </Accordion>
                                             )}
 
                                             <View style={styles.button}>

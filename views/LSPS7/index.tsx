@@ -10,7 +10,7 @@ import History from '../../assets/images/SVG/History.svg';
 import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../components/Button';
-import FormAccordion from '../../components/FormAccordion';
+import Accordion from '../../components/Accordion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -338,12 +338,13 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                         paddingHorizontal: 22
                                     }}
                                 >
-                                    <FormAccordion
+                                    <Accordion
+                                        headerLayout="form"
                                         id="lsps7-service-info"
                                         title={localeString(
                                             'views.LSPS1.serviceInfo'
                                         )}
-                                        renderHeaderContent={() => (
+                                        renderFormTitle={() => (
                                             <Row justify="space-between">
                                                 {isOlympus && (
                                                     <View
@@ -399,7 +400,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 value="LSPS7"
                                             />
                                         </View>
-                                    </FormAccordion>
+                                    </Accordion>
 
                                     <View
                                         style={{
@@ -527,7 +528,8 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             />
                                         </View>
                                     </>
-                                    <FormAccordion
+                                    <Accordion
+                                        headerLayout="form"
                                         id="lsps7-advanced-settings"
                                         title={localeString(
                                             'general.advancedSettings'
@@ -596,7 +598,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 </>
                                             )}
                                         </>
-                                    </FormAccordion>
+                                    </Accordion>
                                 </ScrollView>
                             )}
                         </ScrollView>

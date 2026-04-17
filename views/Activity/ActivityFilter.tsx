@@ -270,12 +270,16 @@ export default class ActivityFilter extends React.Component<
     };
 
     toggleSection = (
-        sectionName: keyof ActivityFilterState['expandedSections']
+        sectionName: keyof ActivityFilterState['expandedSections'],
+        next?: boolean
     ) => {
         this.setState((prevState) => ({
             expandedSections: {
                 ...prevState.expandedSections,
-                [sectionName]: !prevState.expandedSections[sectionName]
+                [sectionName]:
+                    next !== undefined
+                        ? next
+                        : !prevState.expandedSections[sectionName]
             }
         }));
     };
@@ -710,12 +714,13 @@ export default class ActivityFilter extends React.Component<
                                             id="activityfilter-services"
                                             title={item.label}
                                             open={expandedSections.services}
-                                            onToggle={() =>
-                                                this.toggleSection('services')
+                                            onToggle={(next) =>
+                                                this.toggleSection(
+                                                    'services',
+                                                    next
+                                                )
                                             }
-                                            variant="flat"
-                                            spacing="none"
-                                            bodyPadded={false}
+                                            embedded
                                             renderHeader={(isOpen) => (
                                                 <ListItem
                                                     containerStyle={{
@@ -820,16 +825,15 @@ export default class ActivityFilter extends React.Component<
                                                                         open={
                                                                             expandedSections.swaps
                                                                         }
-                                                                        onToggle={() =>
+                                                                        onToggle={(
+                                                                            next
+                                                                        ) =>
                                                                             this.toggleSection(
-                                                                                'swaps'
+                                                                                'swaps',
+                                                                                next
                                                                             )
                                                                         }
-                                                                        variant="flat"
-                                                                        spacing="none"
-                                                                        bodyPadded={
-                                                                            false
-                                                                        }
+                                                                        embedded
                                                                         renderHeader={(
                                                                             isOpen
                                                                         ) => (
@@ -957,16 +961,15 @@ export default class ActivityFilter extends React.Component<
                                                                                                 open={
                                                                                                     isSubItemExpanded
                                                                                                 }
-                                                                                                onToggle={() =>
+                                                                                                onToggle={(
+                                                                                                    next
+                                                                                                ) =>
                                                                                                     this.toggleSection(
-                                                                                                        subItem.section
+                                                                                                        subItem.section,
+                                                                                                        next
                                                                                                     )
                                                                                                 }
-                                                                                                variant="flat"
-                                                                                                spacing="none"
-                                                                                                bodyPadded={
-                                                                                                    false
-                                                                                                }
+                                                                                                embedded
                                                                                                 renderHeader={(
                                                                                                     isOpen
                                                                                                 ) => (
@@ -1149,16 +1152,15 @@ export default class ActivityFilter extends React.Component<
                                                                     open={
                                                                         isChildExpanded
                                                                     }
-                                                                    onToggle={() =>
+                                                                    onToggle={(
+                                                                        next
+                                                                    ) =>
                                                                         this.toggleSection(
-                                                                            child.section as any
+                                                                            child.section as any,
+                                                                            next
                                                                         )
                                                                     }
-                                                                    variant="flat"
-                                                                    spacing="none"
-                                                                    bodyPadded={
-                                                                        false
-                                                                    }
+                                                                    embedded
                                                                     renderHeader={(
                                                                         isOpen
                                                                     ) => (

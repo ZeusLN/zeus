@@ -16,7 +16,7 @@ import Slider from '@react-native-community/slider';
 import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
-import FormAccordion from '../../components/FormAccordion';
+import Accordion from '../../components/Accordion';
 import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
 import Screen from '../../components/Screen';
@@ -1464,7 +1464,8 @@ export default class Rebalance extends React.Component<
         const { feeLimit, timeoutSeconds } = this.state;
 
         return (
-            <FormAccordion
+            <Accordion
+                headerLayout="form"
                 id="rebalance-advanced"
                 title={localeString('general.advancedSettings')}
             >
@@ -1486,7 +1487,7 @@ export default class Rebalance extends React.Component<
                             this.setState({ timeoutSeconds: text })
                     )}
                 </>
-            </FormAccordion>
+            </Accordion>
         );
     };
 
