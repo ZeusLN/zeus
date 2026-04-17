@@ -100,7 +100,6 @@ enum ErrorCodes {
     FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
-    NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
     INVOICE_EXPIRED = 'INVOICE_EXPIRED'
 }
@@ -510,19 +509,10 @@ export default class NostrWalletConnectStore {
                 );
                 if (nwcWalletService && this.walletServiceKeys?.privateKey) {
                     try {
-                        await retry({
-                            fn: async () => {
-                                await nwcWalletService.publishWalletServiceInfoEvent(
-                                    this.walletServiceKeys!.privateKey,
-                                    NostrConnectUtils.getFullAccessPermissions(),
-                                    NostrConnectUtils.getNotifications()
-                                );
-                                runInAction(() => {
-                                    this.publishedRelays.add(params.relayUrl);
-                                });
-                            },
-                            exponentialBackoff: true
-                        });
+                        await this.publishWalletServiceInfoWithRetry(
+                            nwcWalletService,
+                            params.relayUrl
+                        );
                         await new Promise((resolve) =>
                             setTimeout(resolve, 500)
                         );
@@ -1181,6 +1171,34 @@ export default class NostrWalletConnectStore {
             this.activeSubscriptions.clear();
         });
     }
+
+    private async publishWalletServiceInfoWithRetry(
+        nwcWalletService: nwc.NWCWalletService,
+        relayUrl: string
+    ): Promise<void> {
+        const privateKey = this.walletServiceKeys?.privateKey;
+        if (!privateKey) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.walletServiceKeysNotInitialized'
+                )
+            );
+        }
+        await retry({
+            fn: async () => {
+                await nwcWalletService.publishWalletServiceInfoEvent(
+                    privateKey,
+                    NostrConnectUtils.getFullAccessPermissions(),
+                    NostrConnectUtils.getNotifications()
+                );
+                runInAction(() => {
+                    this.publishedRelays.add(relayUrl);
+                });
+            },
+            exponentialBackoff: true
+        });
+    }
+
     private async publishToAllRelays(): Promise<number> {
         let successfulPublishes = 0;
         const publishPromises = Array.from(
@@ -1194,20 +1212,11 @@ export default class NostrWalletConnectStore {
                 return;
             }
             try {
-                await retry({
-                    fn: async () => {
-                        await nwcWalletService.publishWalletServiceInfoEvent(
-                            this.walletServiceKeys!.privateKey,
-                            NostrConnectUtils.getFullAccessPermissions(),
-                            NostrConnectUtils.getNotifications()
-                        );
-                        runInAction(() => {
-                            this.publishedRelays.add(relayUrl);
-                        });
-                        successfulPublishes++;
-                    },
-                    exponentialBackoff: true
-                });
+                await this.publishWalletServiceInfoWithRetry(
+                    nwcWalletService,
+                    relayUrl
+                );
+                successfulPublishes++;
             } catch (error) {
                 console.error(`Failed to publish to relay ${relayUrl}`, {
                     error
@@ -2715,22 +2724,10 @@ export default class NostrWalletConnectStore {
                             if (!nwcWalletService.connected) {
                                 if (this.walletServiceKeys) {
                                     try {
-                                        await retry({
-                                            fn: async () => {
-                                                await nwcWalletService.publishWalletServiceInfoEvent(
-                                                    this.walletServiceKeys!
-                                                        .privateKey,
-                                                    NostrConnectUtils.getFullAccessPermissions(),
-                                                    NostrConnectUtils.getNotifications()
-                                                );
-                                                runInAction(() => {
-                                                    this.publishedRelays.add(
-                                                        relayUrl
-                                                    );
-                                                });
-                                            },
-                                            exponentialBackoff: true
-                                        });
+                                        await this.publishWalletServiceInfoWithRetry(
+                                            nwcWalletService,
+                                            relayUrl
+                                        );
                                         // Verify connection after reconnection attempt
                                         if (nwcWalletService.connected) {
                                             return {
@@ -3127,7 +3124,14 @@ export default class NostrWalletConnectStore {
             const relay = relayInit(relayUrl);
             const timeout = new Promise<void>((_, reject) =>
                 setTimeout(
-                    () => reject(new Error('Connection timed out')),
+                    () =>
+                        reject(
+                            new Error(
+                                localeString(
+                                    'views.Settings.NostrWalletConnect.connectionTimeout'
+                                )
+                            )
+                        ),
                     5000
                 )
             );

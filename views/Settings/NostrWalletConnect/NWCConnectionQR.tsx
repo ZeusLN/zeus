@@ -4,7 +4,6 @@ import {
     StyleSheet,
     Text,
     ScrollView,
-    Platform,
     AppState,
     AppStateStatus,
     NativeEventSubscription
@@ -134,13 +133,6 @@ export default class NWCConnectionQR extends React.Component<
     render() {
         const { navigation, NostrWalletConnectStore, route } = this.props;
         const { nostrUrl } = route.params;
-        const { appState } = this.state;
-
-        const shouldShowIosTimer =
-            Platform.OS === 'ios' &&
-            appState === 'inactive' &&
-            NostrWalletConnectStore.iosHandoffInProgress &&
-            NostrWalletConnectStore.iosBackgroundTimeRemaining > 0;
 
         return (
             <Screen>
@@ -180,53 +172,6 @@ export default class NWCConnectionQR extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.NostrWalletConnect.waitingForAppToConnect'
-                                )}
-                            </Text>
-                        </View>
-                    )}
-
-                    {shouldShowIosTimer && (
-                        <View style={styles.iosTimerContainer}>
-                            <Text
-                                style={[
-                                    styles.iosTimerTitle,
-                                    { color: themeColor('text') }
-                                ]}
-                            >
-                                {localeString(
-                                    'views.Settings.NostrWalletConnect.switchToNostrClient'
-                                )}
-                            </Text>
-                            <View style={styles.timerCircle}>
-                                <Text
-                                    style={[
-                                        styles.timerText,
-                                        { color: themeColor('highlight') }
-                                    ]}
-                                >
-                                    {
-                                        NostrWalletConnectStore.iosBackgroundTimeRemaining
-                                    }
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.timerLabel,
-                                        {
-                                            color: themeColor('secondaryText')
-                                        }
-                                    ]}
-                                >
-                                    {localeString('models.Invoice.seconds')}
-                                </Text>
-                            </View>
-                            <Text
-                                style={[
-                                    styles.iosTimerSubtitle,
-                                    { color: themeColor('secondaryText') }
-                                ]}
-                            >
-                                {localeString(
-                                    'views.Settings.NostrWalletConnect.backgroundConnectionWindow'
                                 )}
                             </Text>
                         </View>
@@ -320,7 +265,7 @@ export default class NWCConnectionQR extends React.Component<
                                 <View style={styles.modalButton}>
                                     <Button
                                         title={localeString(
-                                            'views.Settings.NostrWalletConnect.continueWaiting'
+                                            'views.Settings.NostrWalletConnect.keepWaiting'
                                         )}
                                         onPress={this.handleContinueWaiting}
                                     />
@@ -385,24 +330,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
         marginBottom: 16
-    },
-    timerCircle: {
-        width: 70,
-        height: 70,
-        borderRadius: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginVertical: 12
-    },
-    timerText: {
-        fontSize: 36,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontWeight: '700'
-    },
-    timerLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book',
-        marginTop: 4
     },
     iosTimerSubtitle: {
         fontSize: 14,
