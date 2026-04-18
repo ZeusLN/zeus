@@ -9,6 +9,13 @@ import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import {
+    DEFAULT_SCORER_URL,
+    DEFAULT_VSS_SERVER,
+    getDefaultEsploraServer,
+    getDefaultRgsServer,
+    SupportedNetwork
+} from '../utils/LdkNodeUtils';
 
 import Storage from '../storage';
 
@@ -55,6 +62,7 @@ export interface Node {
     ldkPassphrase?: string;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
+    ldkScorerUrl?: string;
     ldkVssServer?: string;
 }
 
@@ -1650,6 +1658,7 @@ export default class SettingsStore {
     @observable public ldkNetwork?: string;
     @observable public ldkEsploraServer?: string;
     @observable public ldkRgsServer?: string;
+    @observable public ldkScorerUrl?: string;
     @observable public ldkVssServer?: string;
     @observable public ldkNodeSyncing: boolean = false;
     @observable public isChannelMigrating: boolean = false;
@@ -1857,9 +1866,20 @@ export default class SettingsStore {
             this.ldkMnemonic = node.ldkMnemonic;
             this.ldkPassphrase = node.ldkPassphrase;
             this.ldkNetwork = node.ldkNetwork;
-            this.ldkEsploraServer = node.ldkEsploraServer;
-            this.ldkRgsServer = node.ldkRgsServer;
-            this.ldkVssServer = node.ldkVssServer;
+            this.ldkEsploraServer =
+                node.ldkEsploraServer ||
+                getDefaultEsploraServer(
+                    (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+                        'mainnet'
+                );
+            this.ldkRgsServer =
+                node.ldkRgsServer ||
+                getDefaultRgsServer(
+                    (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+                        'mainnet'
+                );
+            this.ldkScorerUrl = node.ldkScorerUrl || DEFAULT_SCORER_URL;
+            this.ldkVssServer = node.ldkVssServer || DEFAULT_VSS_SERVER;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         } else {
@@ -1873,6 +1893,7 @@ export default class SettingsStore {
             this.ldkNetwork = undefined;
             this.ldkEsploraServer = undefined;
             this.ldkRgsServer = undefined;
+            this.ldkScorerUrl = undefined;
             this.ldkVssServer = undefined;
         }
     };

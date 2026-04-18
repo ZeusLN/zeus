@@ -47,6 +47,10 @@ const setGossipSourceRgs = async (rgsServerUrl: string): Promise<void> => {
     return await LdkNodeModule.setGossipSourceRgs(rgsServerUrl);
 };
 
+const setPathfindingScoresSource = async (url: string): Promise<void> => {
+    return await LdkNodeModule.setPathfindingScoresSource(url);
+};
+
 const setGossipSourceP2p = async (): Promise<void> => {
     return await LdkNodeModule.setGossipSourceP2p();
 };
@@ -802,6 +806,7 @@ const initializeNode = async ({
     mnemonic,
     passphrase,
     rgsServerUrl,
+    scorerUrl,
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
@@ -814,6 +819,7 @@ const initializeNode = async ({
     mnemonic: string;
     passphrase?: string | null;
     rgsServerUrl?: string;
+    scorerUrl?: string;
     listeningAddresses?: string[];
     lsps1Config?: {
         nodeId: string;
@@ -844,6 +850,11 @@ const initializeNode = async ({
         console.log(`LDK Node: RGS server set to ${rgsServerUrl}`);
     } else {
         console.log('LDK Node: No RGS server configured, using P2P gossip');
+    }
+
+    if (scorerUrl) {
+        await setPathfindingScoresSource(scorerUrl);
+        console.log(`LDK Node: Scorer URL set to ${scorerUrl}`);
     }
 
     if (listeningAddresses && listeningAddresses.length > 0) {
@@ -976,6 +987,7 @@ export interface ILdkNodeInjections {
         setStorageDirPath: (path: string) => Promise<void>;
         setEsploraServer: (serverUrl: string) => Promise<void>;
         setGossipSourceRgs: (rgsServerUrl: string) => Promise<void>;
+        setPathfindingScoresSource: (url: string) => Promise<void>;
         setGossipSourceP2p: () => Promise<void>;
         setListeningAddresses: (addresses: string[]) => Promise<void>;
         setLiquiditySourceLsps1: (params: {
@@ -1210,6 +1222,7 @@ export interface ILdkNodeInjections {
             mnemonic: string;
             passphrase?: string | null;
             rgsServerUrl?: string;
+            scorerUrl?: string;
             listeningAddresses?: string[];
             lsps1Config?: {
                 nodeId: string;
@@ -1240,6 +1253,7 @@ const LdkNodeInjection: ILdkNodeInjections = {
         setStorageDirPath,
         setEsploraServer,
         setGossipSourceRgs,
+        setPathfindingScoresSource,
         setGossipSourceP2p,
         setListeningAddresses,
         setLiquiditySourceLsps1,

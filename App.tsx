@@ -168,6 +168,7 @@ import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 import RapidGossipSync from './views/Settings/EmbeddedNode/RapidGossipSync';
 import EsploraServer from './views/Settings/EmbeddedNode/EsploraServer';
 import VssServer from './views/Settings/EmbeddedNode/VssServer';
+import PathfindingScorer from './views/Settings/EmbeddedNode/PathfindingScorer';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 import LDKLogs from './views/Settings/EmbeddedNode/LDKLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
@@ -1102,6 +1103,12 @@ export default class App extends React.PureComponent {
                                                             name="VssServer" // @ts-ignore:next-line
                                                             component={
                                                                 VssServer
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="PathfindingScorer" // @ts-ignore:next-line
+                                                            component={
+                                                                PathfindingScorer
                                                             }
                                                         />
                                                         <Stack.Screen

@@ -19,6 +19,7 @@ class LdkNodeModule: RCTEventEmitter {
     // Stored builder settings (not part of Config)
     private var storedEsploraServerUrl: String?
     private var storedRgsServerUrl: String?
+    private var storedScorerUrl: String?
     private var storedLsps1NodeId: PublicKey?
     private var storedLsps1Address: SocketAddress?
     private var storedLsps1Token: String?
@@ -79,6 +80,7 @@ class LdkNodeModule: RCTEventEmitter {
         storedTrustedPeers0conf = []
         storedEsploraServerUrl = nil
         storedRgsServerUrl = nil
+        storedScorerUrl = nil
         storedLsps1NodeId = nil
         storedLsps1Address = nil
         storedLsps1Token = nil
@@ -164,6 +166,18 @@ class LdkNodeModule: RCTEventEmitter {
         self.storedRgsServerUrl = rgsServerUrl
         builder.setGossipSourceRgs(rgsServerUrl: rgsServerUrl)
         resolve(["status": "ok"])
+    }
+
+    @objc(setPathfindingScoresSource:resolver:rejecter:)
+    func setPathfindingScoresSource(_ url: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let builder = self.builder else {
+            reject("error", "Builder not initialized", nil)
+            return
+        }
+
+        self.storedScorerUrl = url
+        builder.setPathfindingScoresSource(url: url)
+        resolve(nil)
     }
 
     @objc(setTrustedPeers0conf:resolver:rejecter:)
@@ -468,6 +482,10 @@ class LdkNodeModule: RCTEventEmitter {
         if let rgsUrl = self.storedRgsServerUrl {
             NSLog("LdkNodeModule: applyBuilderSettings: RGS server = \(rgsUrl)")
             builder.setGossipSourceRgs(rgsServerUrl: rgsUrl)
+        }
+        if let scorerUrl = self.storedScorerUrl {
+            NSLog("LdkNodeModule: applyBuilderSettings: Scorer URL = \(scorerUrl)")
+            builder.setPathfindingScoresSource(url: scorerUrl)
         }
         if let lsps1NodeId = self.storedLsps1NodeId, let lsps1Address = self.storedLsps1Address {
             builder.setLiquiditySourceLsps1(nodeId: lsps1NodeId, address: lsps1Address, token: self.storedLsps1Token)

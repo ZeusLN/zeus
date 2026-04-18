@@ -28,6 +28,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     // Stored builder settings (not part of Config)
     private var storedEsploraServerUrl: String? = null
     private var storedRgsServerUrl: String? = null
+    private var storedScorerUrl: String? = null
     private var storedLsps1NodeId: PublicKey? = null
     private var storedLsps1Address: SocketAddress? = null
     private var storedLsps1Token: String? = null
@@ -60,6 +61,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedTrustedPeers0conf = emptyList()
         storedEsploraServerUrl = null
         storedRgsServerUrl = null
+        storedScorerUrl = null
         storedLsps1NodeId = null
         storedLsps1Address = null
         storedLsps1Token = null
@@ -145,6 +147,18 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val builder = this.builder ?: throw Exception("Builder not initialized")
             this.storedRgsServerUrl = rgsServerUrl
             builder.setGossipSourceRgs(rgsServerUrl)
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
+    @ReactMethod
+    fun setPathfindingScoresSource(url: String, promise: Promise) {
+        try {
+            val builder = this.builder ?: throw Exception("Builder not initialized")
+            this.storedScorerUrl = url
+            builder.setPathfindingScoresSource(url)
             promise.resolve(null)
         } catch (e: Exception) {
             promise.reject("error", errorMessage(e))
@@ -467,6 +481,10 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         this.storedRgsServerUrl?.let {
             Log.d("LdkNodeModule", "applyBuilderSettings: RGS server = $it")
             builder.setGossipSourceRgs(it)
+        }
+        this.storedScorerUrl?.let {
+            Log.d("LdkNodeModule", "applyBuilderSettings: Scorer URL = $it")
+            builder.setPathfindingScoresSource(it)
         }
         this.storedLsps1NodeId?.let { nodeId ->
             this.storedLsps1Address?.let { address ->

@@ -442,6 +442,7 @@ export interface ILdkNodeModule {
     setStorageDirPath(path: string): Promise<void>;
     setEsploraServer(serverUrl: string): Promise<void>;
     setGossipSourceRgs(rgsServerUrl: string): Promise<void>;
+    setPathfindingScoresSource(url: string): Promise<void>;
     setGossipSourceP2p(): Promise<void>;
     setListeningAddresses(addresses: string[]): Promise<void>;
 
