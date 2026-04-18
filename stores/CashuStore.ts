@@ -2798,6 +2798,15 @@ export default class CashuStore {
             );
         }
 
+        // Auto-select first mint if none is selected (e.g. after Nostr restore)
+        if (!this.selectedMintUrl && this.mintUrls.length > 0) {
+            this.selectedMintUrl = this.mintUrls[0];
+            await Storage.setItem(
+                `${lndDir}-cashu-selectedMintUrl`,
+                this.selectedMintUrl
+            );
+        }
+
         runInAction(() => {
             this.loadingMsg = undefined;
             this.initializing = false;
