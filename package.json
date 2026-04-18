@@ -185,7 +185,7 @@
     "@typescript-eslint/eslint-plugin": "8.36.0",
     "@typescript-eslint/parser": "8.36.0",
     "babel-jest": "29.7.0",
-    "compressing": "1.10.4",
+    "compressing": "1.10.5",
     "concurrently": "9.1.2",
     "eslint": "9.0.0",
     "eslint-import-resolver-typescript": "3.6.1",
