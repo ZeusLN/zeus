@@ -98,6 +98,33 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
+                        {/* LDK Node: VSS Server */}
+                        {isLdkNode && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('VssServer')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.VssServer.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
                         {/* LDK Node: RGS Settings */}
                         {isLdkNode && (
                             <ListItem
@@ -127,13 +154,15 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
-                        {/* LDK Node: VSS Server */}
+                        {/* LDK Node: Pathfinding Scorer */}
                         {isLdkNode && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
                                 }}
-                                onPress={() => navigation.navigate('VssServer')}
+                                onPress={() =>
+                                    navigation.navigate('PathfindingScorer')
+                                }
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
@@ -143,7 +172,7 @@ export default class EmbeddedNode extends React.Component<
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.EmbeddedNode.VssServer.title'
+                                            'views.Settings.EmbeddedNode.PathfindingScorer.title'
                                         )}
                                     </ListItem.Title>
                                 </ListItem.Content>
