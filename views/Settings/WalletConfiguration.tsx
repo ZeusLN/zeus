@@ -78,6 +78,7 @@ import {
     getDefaultEsploraServer,
     getDefaultRgsServer,
     DEFAULT_VSS_SERVER,
+    DEFAULT_SCORER_URL,
     SupportedNetwork
 } from '../../utils/LdkNodeUtils';
 
@@ -1115,6 +1116,7 @@ export default class WalletConfiguration extends React.Component<
                 esploraServerUrl:
                     ldkEsploraServer || getDefaultEsploraServer(networkType),
                 rgsServerUrl: ldkRgsServer || getDefaultRgsServer(networkType),
+                scorerUrl: DEFAULT_SCORER_URL,
                 lsps1Config,
                 trustedPeers0conf: trustedPeers,
                 vssServerUrl: DEFAULT_VSS_SERVER

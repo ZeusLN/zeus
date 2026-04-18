@@ -62,7 +62,8 @@ import {
     stopLdkNode,
     getDefaultEsploraServer,
     getDefaultRgsServer,
-    DEFAULT_VSS_SERVER
+    DEFAULT_VSS_SERVER,
+    DEFAULT_SCORER_URL
 } from '../../utils/LdkNodeUtils';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
@@ -755,6 +756,7 @@ export default class SeedRecovery extends React.PureComponent<
                         network: networkType,
                         esploraServerUrl: getDefaultEsploraServer(networkType),
                         rgsServerUrl: getDefaultRgsServer(networkType),
+                        scorerUrl: DEFAULT_SCORER_URL,
                         lsps1Config,
                         trustedPeers0conf: trustedPeers,
                         vssServerUrl: DEFAULT_VSS_SERVER

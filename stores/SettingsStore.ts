@@ -55,6 +55,7 @@ export interface Node {
     ldkPassphrase?: string;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
+    ldkScorerUrl?: string;
     ldkVssServer?: string;
 }
 
@@ -1650,6 +1651,7 @@ export default class SettingsStore {
     @observable public ldkNetwork?: string;
     @observable public ldkEsploraServer?: string;
     @observable public ldkRgsServer?: string;
+    @observable public ldkScorerUrl?: string;
     @observable public ldkVssServer?: string;
     @observable public ldkNodeSyncing: boolean = false;
     @observable public isChannelMigrating: boolean = false;
@@ -1859,6 +1861,7 @@ export default class SettingsStore {
             this.ldkNetwork = node.ldkNetwork;
             this.ldkEsploraServer = node.ldkEsploraServer;
             this.ldkRgsServer = node.ldkRgsServer;
+            this.ldkScorerUrl = node.ldkScorerUrl;
             this.ldkVssServer = node.ldkVssServer;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
@@ -1873,6 +1876,7 @@ export default class SettingsStore {
             this.ldkNetwork = undefined;
             this.ldkEsploraServer = undefined;
             this.ldkRgsServer = undefined;
+            this.ldkScorerUrl = undefined;
             this.ldkVssServer = undefined;
         }
     };

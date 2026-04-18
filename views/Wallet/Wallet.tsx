@@ -60,7 +60,8 @@ import {
 import {
     startLdkNodeWallet,
     stopLdkNode,
-    DEFAULT_VSS_SERVER
+    DEFAULT_VSS_SERVER,
+    DEFAULT_SCORER_URL
 } from '../../utils/LdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
@@ -555,6 +556,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ldkNetwork,
             ldkEsploraServer,
             ldkRgsServer,
+            ldkScorerUrl,
             ldkVssServer,
             updateSettings,
             fetchLock
@@ -666,6 +668,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         | 'regtest',
                     esploraServerUrl: ldkEsploraServer,
                     rgsServerUrl: ldkRgsServer,
+                    scorerUrl:
+                        ldkScorerUrl === undefined
+                            ? DEFAULT_SCORER_URL
+                            : ldkScorerUrl,
                     lsps1Config,
                     trustedPeers0conf: trustedPeers,
                     vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,

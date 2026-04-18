@@ -46,6 +46,9 @@ export const RGS_SERVERS_TESTNET = [
     'https://rapidsync.lightningdevkit.org/testnet/snapshot'
 ];
 
+// Default pathfinding scores server
+export const DEFAULT_SCORER_URL = 'https://scores.zeusln.com/latest.bin';
+
 /**
  * Get the storage directory path for LDK Node data
  */
@@ -164,6 +167,7 @@ async function initNode({
     network,
     esploraServerUrl,
     rgsServerUrl,
+    scorerUrl,
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
@@ -175,6 +179,7 @@ async function initNode({
     network: SupportedNetwork;
     esploraServerUrl?: string;
     rgsServerUrl?: string;
+    scorerUrl?: string;
     listeningAddresses?: string[];
     lsps1Config?: {
         nodeId: string;
@@ -202,6 +207,7 @@ async function initNode({
         mnemonic,
         passphrase: passphrase || null,
         rgsServerUrl: rgsUrl,
+        scorerUrl,
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
@@ -223,6 +229,7 @@ export async function createLdkNodeWallet({
     network,
     esploraServerUrl,
     rgsServerUrl,
+    scorerUrl,
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
@@ -234,6 +241,7 @@ export async function createLdkNodeWallet({
     network: SupportedNetwork;
     esploraServerUrl?: string;
     rgsServerUrl?: string;
+    scorerUrl?: string;
     listeningAddresses?: string[];
     lsps1Config?: {
         nodeId: string;
@@ -263,6 +271,7 @@ export async function createLdkNodeWallet({
         network,
         esploraServerUrl,
         rgsServerUrl,
+        scorerUrl,
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
@@ -286,6 +295,7 @@ export async function startLdkNodeWallet({
     network,
     esploraServerUrl,
     rgsServerUrl,
+    scorerUrl,
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
@@ -299,6 +309,7 @@ export async function startLdkNodeWallet({
     network: SupportedNetwork;
     esploraServerUrl?: string;
     rgsServerUrl?: string;
+    scorerUrl?: string;
     listeningAddresses?: string[];
     lsps1Config?: {
         nodeId: string;
@@ -321,6 +332,7 @@ export async function startLdkNodeWallet({
             network,
             esploraServerUrl,
             rgsServerUrl,
+            scorerUrl,
             listeningAddresses,
             lsps1Config,
             trustedPeers0conf,
