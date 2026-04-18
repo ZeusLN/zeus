@@ -9,6 +9,13 @@ import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import {
+    DEFAULT_SCORER_URL,
+    DEFAULT_VSS_SERVER,
+    getDefaultEsploraServer,
+    getDefaultRgsServer,
+    SupportedNetwork
+} from '../utils/LdkNodeUtils';
 
 import Storage from '../storage';
 
@@ -1859,10 +1866,20 @@ export default class SettingsStore {
             this.ldkMnemonic = node.ldkMnemonic;
             this.ldkPassphrase = node.ldkPassphrase;
             this.ldkNetwork = node.ldkNetwork;
-            this.ldkEsploraServer = node.ldkEsploraServer;
-            this.ldkRgsServer = node.ldkRgsServer;
-            this.ldkScorerUrl = node.ldkScorerUrl;
-            this.ldkVssServer = node.ldkVssServer;
+            this.ldkEsploraServer =
+                node.ldkEsploraServer ||
+                getDefaultEsploraServer(
+                    (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+                        'mainnet'
+                );
+            this.ldkRgsServer =
+                node.ldkRgsServer ||
+                getDefaultRgsServer(
+                    (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+                        'mainnet'
+                );
+            this.ldkScorerUrl = node.ldkScorerUrl || DEFAULT_SCORER_URL;
+            this.ldkVssServer = node.ldkVssServer || DEFAULT_VSS_SERVER;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         } else {
