@@ -27,6 +27,7 @@ import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -426,6 +427,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             const shareIntentData =
                 explicitShareIntentData || shareIntentResult?.params;
             if (Platform.OS === 'android') {
+                // Clear stale persistent mode key from the other implementation
+                // to prevent its foreground notification from appearing
+                if (implementation === 'ldk-node') {
+                    await AsyncStorage.setItem(
+                        'persistentServicesEnabled',
+                        'false'
+                    );
+                } else if (implementation === 'embedded-lnd') {
+                    await AsyncStorage.setItem(
+                        'persistentLdkNodeServicesEnabled',
+                        'false'
+                    );
+                }
                 const locale = settings.locale || 'en';
                 bridgeJavaStrings(locale);
             }
