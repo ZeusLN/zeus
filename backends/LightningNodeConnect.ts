@@ -12,7 +12,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
 import VersionUtils from '../utils/VersionUtils';
 
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256 } from '@noble/hashes/sha256';
 import BigNumber from 'bignumber.js';
 
 const ADDRESS_TYPES = [
@@ -614,9 +614,7 @@ export default class LightningNodeConnect {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256(Base64Utils.stringToUint8Array(signed.signature))
         };
     };
     lookupInvoice = async (data: any) =>
