@@ -631,7 +631,7 @@ public class LndMobileService extends Service {
         notificationBuilder = new Notification.Builder(this);
       }
       notificationBuilder
-        .setContentText(getLocalizedString("androidNotification.lndRunningBackground"))
+        .setContentText(getLocalizedString("androidNotification.nodeRunningBackground"))
         .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
         .setContentIntent(pendingIntent)
         .setOngoing(true)

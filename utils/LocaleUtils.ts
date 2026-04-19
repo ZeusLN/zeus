@@ -76,11 +76,10 @@ const Indonesian: any = ID;
 
 // strings that are needed on the java layer
 const JAVA_LAYER_STRINGS = [
-    'androidNotification.lndRunningBackground',
+    'androidNotification.nodeRunningBackground',
     'androidNotification.shutdown',
     'androidNotification.nwcRunningBackground',
-    'androidNotification.nwcShutdown',
-    'androidNotification.ldkNodeRunningBackground'
+    'androidNotification.nwcShutdown'
 ];
 
 export function localeString(

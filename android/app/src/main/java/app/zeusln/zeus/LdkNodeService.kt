@@ -141,7 +141,7 @@ class LdkNodeService : Service() {
         }
 
         builder
-            .setContentText(getLocalizedString("androidNotification.ldkNodeRunningBackground"))
+            .setContentText(getLocalizedString("androidNotification.nodeRunningBackground"))
             .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
