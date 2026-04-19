@@ -6,9 +6,9 @@
  * @see https://github.com/bitcoinjs/bitcoinjs-lib/issues/1781
  */
 import * as necc from '@noble/secp256k1';
+import { sha256 } from '@noble/hashes/sha256';
 import { TinySecp256k1Interface as TinySecp256k1InterfaceBIP32 } from 'bip32/types/bip32';
 import { XOnlyPointAddTweakResult } from 'bitcoinjs-lib/src/types';
-import createHash from 'create-hash';
 import { createHmac } from 'crypto';
 import { TinySecp256k1Interface } from 'ecpair';
 
@@ -25,9 +25,14 @@ export interface TinySecp256k1InterfaceExtended {
 }
 
 necc.utils.sha256Sync = (...messages: Uint8Array[]): Uint8Array => {
-  const sha256 = createHash('sha256');
-  for (const message of messages) sha256.update(message);
-  return sha256.digest();
+  const totalLength = messages.reduce((sum, message) => sum + message.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const message of messages) {
+    combined.set(message, offset);
+    offset += message.length;
+  }
+  return sha256(combined);
 };
 
 necc.utils.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {

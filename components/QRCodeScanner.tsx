@@ -15,6 +15,8 @@ import {
     useCameraDevice,
     useCodeScanner
 } from 'react-native-vision-camera';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -31,8 +33,6 @@ import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-
-const createHash = require('create-hash');
 
 interface QRProps {
     text?: string;
@@ -81,7 +81,7 @@ export default function QRCodeScanner({
     const device = useCameraDevice('back');
 
     const handleRead = (data: any) => {
-        const hash = createHash('sha256').update(data).digest().toString('hex');
+        const hash = bytesToHex(sha256(utf8ToBytes(String(data))));
         if (scannedCache.current.has(hash)) {
             // this QR was already scanned, let's prevent firing duplicate callbacks
             return;
