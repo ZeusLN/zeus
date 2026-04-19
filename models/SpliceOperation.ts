@@ -18,7 +18,7 @@ export interface SpliceOperation {
     amount: string;
     destination?: string;
     fee: number;
-    script: string;
+    script?: string;
     startedAt: number;
     confirmations: number;
     error?: string;

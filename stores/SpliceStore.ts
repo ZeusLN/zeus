@@ -1,5 +1,4 @@
 import { action, observable, runInAction } from 'mobx';
-import SpliceScriptBuilder from '../utils/SpliceScriptBuilder';
 import BackendUtils from '../utils/BackendUtils';
 import {
     SpliceOutRequest,
@@ -47,10 +46,18 @@ export default class SpliceStore {
             return null;
         }
 
-        return this.initiateSpliceDryrun(
-            SpliceScriptBuilder.buildSpliceOut(request),
-            request.forceFeerate || false
-        );
+        if (BackendUtils.supportsSpliceDryrun()) {
+            return this.performDryrun(request, SpliceOperationType.OUT);
+        }
+
+        const minimalResult: SpliceDryrunResult = {
+            txid: '',
+            fee: null
+        };
+        runInAction(() => {
+            this.currentDryrunResult = minimalResult;
+        });
+        return minimalResult;
     };
 
     @action
@@ -66,37 +73,47 @@ export default class SpliceStore {
             return null;
         }
 
-        return this.initiateSpliceDryrun(
-            SpliceScriptBuilder.buildSpliceIn(request),
-            request.forceFeerate || false
-        );
+        if (BackendUtils.supportsSpliceDryrun()) {
+            return this.performDryrun(request, SpliceOperationType.IN);
+        }
+
+        const minimalResult: SpliceDryrunResult = {
+            txid: '',
+            fee: null
+        };
+        runInAction(() => {
+            this.currentDryrunResult = minimalResult;
+        });
+        return minimalResult;
     };
 
     @action
-    private initiateSpliceDryrun = async (
-        script: string,
-        forceFeerate: boolean
+    private performDryrun = async (
+        request: SpliceOutRequest | SpliceInRequest,
+        type: SpliceOperationType
     ): Promise<SpliceDryrunResult | null> => {
         this.loading = true;
         this.error = null;
 
         try {
-
-            const response = await BackendUtils.devSplice(
-                script,
-                true,
-                forceFeerate
-            );
-
-            const fee = this.extractFeeFromResponse(response);
+            const response =
+                type === SpliceOperationType.OUT
+                    ? await BackendUtils.spliceOut({
+                          ...request,
+                          dryrun: true
+                      })
+                    : await BackendUtils.spliceIn({
+                          ...request,
+                          dryrun: true
+                      });
 
             const dryrunResult: SpliceDryrunResult = {
                 txid: response.txid || '',
                 psbt: response.psbt,
                 tx: response.tx,
-                fee,
-                transcript: response.dryrun || [],
-                script
+                fee: response.fee ?? null,
+                transcript: response.transcript,
+                script: response.script
             };
 
             runInAction(() => {
@@ -106,7 +123,6 @@ export default class SpliceStore {
 
             return dryrunResult;
         } catch (error: any) {
-
             const errorMessage = this.parseErrorMessage(error);
 
             runInAction(() => {
@@ -120,13 +136,13 @@ export default class SpliceStore {
     @action
     public executeSplice = async (
         channelId: string,
-        script: string,
+        type: SpliceOperationType,
         previousLocalBalance: string,
         amount: string,
         destination: string,
         fee: number,
-        type: SpliceOperationType = SpliceOperationType.OUT,
-        forceFeerate: boolean = false
+        forceFeerate: boolean = false,
+        feeRate?: number
     ): Promise<SpliceExecutionResult | null> => {
         this.loading = true;
         this.error = null;
@@ -152,17 +168,29 @@ export default class SpliceStore {
         }
 
         try {
-            const response = await BackendUtils.devSplice(
-                script,
-                false,
-                forceFeerate
-            );
+            const response =
+                type === SpliceOperationType.OUT
+                    ? await BackendUtils.spliceOut({
+                          channelId,
+                          amount,
+                          destination,
+                          forceFeerate,
+                          feeRate,
+                          dryrun: false
+                      })
+                    : await BackendUtils.spliceIn({
+                          channelId,
+                          amount,
+                          forceFeerate,
+                          feeRate,
+                          dryrun: false
+                      });
 
             const executionResult: SpliceExecutionResult = {
                 txid: response.txid || '',
                 psbt: response.psbt,
                 tx: response.tx,
-                script
+                script: response.script
             };
 
             const spliceOp: SpliceOperation = {
@@ -173,7 +201,7 @@ export default class SpliceStore {
                 amount,
                 destination,
                 fee,
-                script,
+                script: executionResult.script,
                 startedAt: Date.now(),
                 confirmations: 0,
                 previousLocalBalance
@@ -191,7 +219,6 @@ export default class SpliceStore {
 
             return executionResult;
         } catch (error: any) {
-
             const errorMessage = this.parseErrorMessage(error);
 
             runInAction(() => {
@@ -210,7 +237,6 @@ export default class SpliceStore {
                     amount,
                     destination,
                     fee,
-                    script,
                     startedAt: Date.now(),
                     confirmations: 0,
                     error: errorMessage,
@@ -274,7 +300,7 @@ export default class SpliceStore {
     public getPendingBalance = (channelId: string): string | null => {
         const splice = this.activeSplices.get(channelId);
         if (splice && this.isChannelSplicing(channelId)) {
-            if (splice.type === SpliceOperationType.OUT) {
+            if (splice.type === SpliceOperationType.OUT && splice.fee > 0) {
                 const previous = parseInt(splice.previousLocalBalance || '0');
                 const amount = parseInt(splice.amount);
                 const fee = splice.fee;
@@ -311,18 +337,6 @@ export default class SpliceStore {
         }
 
         return { isValid: true, error: '' };
-    };
-
-    private extractFeeFromResponse = (response: any): number | null => {
-        if (response.dryrun && Array.isArray(response.dryrun)) {
-            for (const line of response.dryrun) {
-                const feeMatch = line.match(/fee[:\s]+(\d+)\s*sat/i);
-                if (feeMatch) {
-                    return parseInt(feeMatch[1]);
-                }
-            }
-        }
-        return null;
     };
 
     private parseErrorMessage = (error: any): string => {
@@ -368,7 +382,8 @@ export default class SpliceStore {
                 errorMessage =
                     'Transaction replacement rejected. The new fee rate must be higher than the existing transaction. Try with a higher fee rate.';
             } else if (
-                finalMessage.includes('Peer does not support splicing')
+                finalMessage.includes('Peer does not support splicing') ||
+                finalMessage.includes('ChannelSplicingFailed')
             ) {
                 errorMessage = 'The peer does not support splicing operations.';
             } else if (

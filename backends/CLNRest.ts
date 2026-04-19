@@ -3,6 +3,7 @@ import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
+import SpliceScriptBuilder from '../utils/SpliceScriptBuilder';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 import {
@@ -599,6 +600,77 @@ export default class CLNRest {
             debug_log: false
         });
     };
+
+    spliceOut = async (params: {
+        channelId: string;
+        amount: string;
+        destination: string;
+        feeRate?: number;
+        forceFeerate?: boolean;
+        dryrun?: boolean;
+    }): Promise<any> => {
+        const script = SpliceScriptBuilder.buildSpliceOut({
+            channelId: params.channelId,
+            amount: params.amount,
+            destination: params.destination,
+            feeRate: params.feeRate
+        });
+        const response = await this.devSplice(
+            script,
+            params.dryrun ?? false,
+            params.forceFeerate ?? false
+        );
+        return {
+            txid: response.txid || '',
+            fee: this.extractSpliceFee(response),
+            psbt: response.psbt,
+            tx: response.tx,
+            transcript: response.dryrun || [],
+            script
+        };
+    };
+
+    spliceIn = async (params: {
+        channelId: string;
+        amount: string;
+        feeRate?: number;
+        forceFeerate?: boolean;
+        dryrun?: boolean;
+    }): Promise<any> => {
+        const script = SpliceScriptBuilder.buildSpliceIn({
+            channelId: params.channelId,
+            amount: params.amount,
+            feeRate: params.feeRate
+        });
+        const response = await this.devSplice(
+            script,
+            params.dryrun ?? false,
+            params.forceFeerate ?? false
+        );
+        return {
+            txid: response.txid || '',
+            fee: this.extractSpliceFee(response),
+            psbt: response.psbt,
+            tx: response.tx,
+            transcript: response.dryrun || [],
+            script
+        };
+    };
+
+    private extractSpliceFee = (response: any): number => {
+        if (response.dryrun && Array.isArray(response.dryrun)) {
+            for (const line of response.dryrun) {
+                const feeMatch = line.match(/fee[:\s]+(\d+)\s*sat/i);
+                if (feeMatch) {
+                    return parseInt(feeMatch[1]);
+                }
+            }
+        }
+        return 250;
+    };
+
+    supportsSpliceDryrun = () => true;
+    supportsSpliceFeeControl = () => true;
 
     supportsPeers = () => true;
     supportsMessageSigning = () => true;

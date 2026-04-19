@@ -294,5 +294,4 @@ export default class Channel extends BaseModel {
                 : lnrpc.CommitmentType[Number(this.commitment_type)]
             : undefined;
     }
-
 }
