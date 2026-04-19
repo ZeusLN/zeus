@@ -2838,11 +2838,6 @@ export default class NostrWalletConnectStore {
      * loop.  While active, iOS treats the app as a foreground-like audio
      * process and avoids suspending it, allowing the Nostr WebSocket relay
      * subscriptions to remain live in the background.
-     *
-     * Called automatically by setupIOSAppStateMonitoring() when the app enters
-     * the background — NOT during foreground service init.
-     *
-     * NOTE: Experimental – App Store review may reject this technique.
      */
     @action
     public async startIOSAudioKeepAlive(): Promise<boolean> {
