@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "输入精确金额以实现精准再平衡",
     "views.RebalancingChannels.sendingRebalance": "通道再平衡中",
     "views.RebalancingChannels.rebalanceSummary": "查看再平衡摘要",
-    "androidNotification.lndRunningBackground": "闪电网络守护程序（LND）正在后台运行",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": " 关机",
     "backends.NWC.permissionDenied": "此操作已被拒绝",
     "androidNotification.nwcRunningBackground": "Nostr 钱包连接正在后台运行",
-    "androidNotification.nwcShutdown": "停止服务",
-    "androidNotification.ldkNodeRunningBackground": "LDK 节点在后台运行"
+    "androidNotification.nwcShutdown": "停止服务"
 }
