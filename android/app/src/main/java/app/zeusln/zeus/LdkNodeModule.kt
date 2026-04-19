@@ -1007,6 +1007,40 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun spliceIn(userChannelId: String, counterpartyNodeId: String, spliceAmountSats: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                node.spliceIn(userChannelId, counterpartyNodeId, spliceAmountSats.toLong().toULong())
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun spliceOut(userChannelId: String, counterpartyNodeId: String, address: String, spliceAmountSats: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                node.spliceOut(userChannelId, counterpartyNodeId, address, spliceAmountSats.toLong().toULong())
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
     // On-chain Methods
 
     @ReactMethod

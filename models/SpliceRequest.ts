@@ -4,6 +4,7 @@ export interface SpliceOutRequest {
     destination: string;
     feeRate?: number;
     forceFeerate?: boolean;
+    dryrun?: boolean;
 }
 
 export interface SpliceInRequest {
@@ -11,6 +12,7 @@ export interface SpliceInRequest {
     amount: string;
     feeRate?: number;
     forceFeerate?: boolean;
+    dryrun?: boolean;
 }
 
 export interface SpliceDryrunResult {
@@ -19,12 +21,12 @@ export interface SpliceDryrunResult {
     tx?: string;
     fee: number | null;
     transcript?: string[];
-    script: string;
+    script?: string;
 }
 
 export interface SpliceExecutionResult {
     txid: string;
     psbt?: string;
     tx?: string;
-    script: string;
+    script?: string;
 }

@@ -338,8 +338,7 @@ export default class ChannelView extends React.Component<
 
         const spliceChannelId = channel?.channelId || '';
         const isSplicing = SpliceStore.isChannelSplicing(spliceChannelId);
-        const spliceOperation =
-            SpliceStore.getSpliceOperation(spliceChannelId);
+        const spliceOperation = SpliceStore.getSpliceOperation(spliceChannelId);
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -582,14 +581,12 @@ export default class ChannelView extends React.Component<
                                     }}
                                 >
                                     {`${localeString('general.destination')}: ${
-                                        spliceOperation.destination
-                                            .length > 30
+                                        spliceOperation.destination.length > 30
                                             ? `${spliceOperation.destination.substring(
                                                   0,
                                                   30
                                               )}...`
-                                            : spliceOperation
-                                                  .destination
+                                            : spliceOperation.destination
                                     }`}
                                 </Text>
                             )}

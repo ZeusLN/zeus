@@ -239,13 +239,15 @@ export default class SpliceOut extends React.Component<
         }
 
         const feeRateNum = parseFloat(feeRate);
-        if (feeRate && (isNaN(feeRateNum) || feeRateNum <= 0)) {
-            this.setState({
-                error: localeString(
-                    'views.Tools.SpliceOut.error.invalidFeeRate'
-                )
-            });
-            return;
+        if (BackendUtils.supportsSpliceFeeControl()) {
+            if (feeRate && (isNaN(feeRateNum) || feeRateNum <= 0)) {
+                this.setState({
+                    error: localeString(
+                        'views.Tools.SpliceOut.error.invalidFeeRate'
+                    )
+                });
+                return;
+            }
         }
 
         if (selectedIndex === 0) {
@@ -262,24 +264,22 @@ export default class SpliceOut extends React.Component<
 
         this.setState({ error: '' });
 
+        const channelId = selectedChannel.channelId || selectedChannel.chan_id;
         let result: any = null;
 
-        // Dryrun to get fee estimate
         if (selectedIndex === 0) {
-            // Splice Out
             const destination = this.getDestinationAddress();
 
             result = await SpliceStore.initiateSpliceOut({
-                channelId: selectedChannel.chan_id,
+                channelId,
                 amount,
                 destination,
                 feeRate: feeRateNum,
                 forceFeerate
             });
         } else {
-            // Splice In
             result = await SpliceStore.initiateSpliceIn({
-                channelId: selectedChannel.chan_id,
+                channelId,
                 amount,
                 feeRate: feeRateNum,
                 forceFeerate
@@ -316,8 +316,13 @@ export default class SpliceOut extends React.Component<
 
     performExecute = async () => {
         const { SpliceStore } = this.props;
-        const { selectedChannel, amount, forceFeerate, selectedIndex } =
-            this.state;
+        const {
+            selectedChannel,
+            amount,
+            feeRate,
+            forceFeerate,
+            selectedIndex
+        } = this.state;
 
         const dryrunResult = SpliceStore.currentDryrunResult;
         if (!dryrunResult) {
@@ -340,20 +345,21 @@ export default class SpliceOut extends React.Component<
             return;
         }
 
-        const destination =
-            selectedIndex === 0 ? this.getDestinationAddress() : '';
+        const isSpliceOut = selectedIndex === 0;
+        const destination = isSpliceOut ? this.getDestinationAddress() : '';
+        const type = isSpliceOut
+            ? SpliceOperationType.OUT
+            : SpliceOperationType.IN;
 
         await SpliceStore.executeSplice(
-            selectedChannel.chan_id,
-            dryrunResult.script,
+            selectedChannel.channelId || selectedChannel.chan_id,
+            type,
             selectedChannel.localBalance,
             amount,
             destination,
             dryrunResult.fee ?? 0,
-            selectedIndex === 0
-                ? SpliceOperationType.OUT
-                : SpliceOperationType.IN,
-            forceFeerate
+            forceFeerate,
+            parseFloat(feeRate) || undefined
         );
 
         this.props.navigation.navigate('SendingOnChain');
@@ -471,60 +477,77 @@ export default class SpliceOut extends React.Component<
                     keyboardType="numeric"
                 />
 
-                {/* Fee Rate */}
-                <Text
-                    style={{
-                        ...styles.text,
-                        color: themeColor('secondaryText')
-                    }}
-                >
-                    {`${localeString('views.Channel.feeRate')} (sats/vbyte)`}
-                </Text>
-                <TextInput
-                    placeholder="2"
-                    value={feeRate}
-                    onChangeText={(text: string) =>
-                        this.setState({ feeRate: text })
-                    }
-                    keyboardType="numeric"
-                />
-
-                {/* Force Feerate */}
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        marginTop: 16
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: themeColor('secondaryText'),
-                            flex: 1,
-                            fontSize: 18
-                        }}
-                    >
-                        {localeString('views.Tools.SpliceOut.forceFeerate')}
-                    </Text>
-                    <View style={{ alignSelf: 'center', marginLeft: 5 }}>
-                        <Switch
-                            value={forceFeerate}
-                            onValueChange={(value: boolean) =>
-                                this.setState({ forceFeerate: value })
+                {BackendUtils.supportsSpliceFeeControl() && (
+                    <>
+                        {/* Fee Rate */}
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Channel.feeRate'
+                            )} (sats/vbyte)`}
+                        </Text>
+                        <TextInput
+                            placeholder="2"
+                            value={feeRate}
+                            onChangeText={(text: string) =>
+                                this.setState({ feeRate: text })
                             }
+                            keyboardType="numeric"
                         />
-                    </View>
-                </View>
 
-                <Text style={styles.helperText}>
-                    {localeString(
-                        'views.Tools.SpliceOut.forceFeerateDescription'
-                    )}
-                </Text>
+                        {/* Force Feerate */}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 16
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText'),
+                                    flex: 1,
+                                    fontSize: 18
+                                }}
+                            >
+                                {localeString(
+                                    'views.Tools.SpliceOut.forceFeerate'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    alignSelf: 'center',
+                                    marginLeft: 5
+                                }}
+                            >
+                                <Switch
+                                    value={forceFeerate}
+                                    onValueChange={(value: boolean) =>
+                                        this.setState({
+                                            forceFeerate: value
+                                        })
+                                    }
+                                />
+                            </View>
+                        </View>
+
+                        <Text style={styles.helperText}>
+                            {localeString(
+                                'views.Tools.SpliceOut.forceFeerateDescription'
+                            )}
+                        </Text>
+                    </>
+                )}
                 <View style={styles.button}>
                     <Button
                         title={localeString(
-                            'views.Tools.SpliceOut.previewSplice'
+                            BackendUtils.supportsSpliceDryrun()
+                                ? 'views.Tools.SpliceOut.previewSplice'
+                                : 'general.continue'
                         )}
                         onPress={this.handleInitiate}
                         disabled={!selectedChannel}
@@ -546,11 +569,6 @@ export default class SpliceOut extends React.Component<
         const amountLabel = isSpliceOut
             ? localeString('views.Tools.SpliceOut.spliceOut')
             : localeString('views.Tools.SpliceOut.spliceIn');
-
-        const totalLabel = isSpliceOut
-            ? localeString('views.Tools.SpliceOut.totalDeducted')
-            : localeString('views.Tools.SpliceIn.totalAdded');
-
         const dryrunResult = SpliceStore.currentDryrunResult;
 
         if (!dryrunResult) return <LoadingIndicator />;
@@ -590,7 +608,15 @@ export default class SpliceOut extends React.Component<
                             color={themeColor('warning')}
                         />
                         <KeyValue
-                            keyValue={totalLabel}
+                            keyValue={
+                                isSpliceOut
+                                    ? localeString(
+                                          'views.Tools.SpliceOut.totalDeducted'
+                                      )
+                                    : localeString(
+                                          'views.Tools.SpliceIn.totalAdded'
+                                      )
+                            }
                             value={
                                 <Amount
                                     sats={
@@ -617,7 +643,9 @@ export default class SpliceOut extends React.Component<
                     <View
                         style={[
                             styles.transcript,
-                            { backgroundColor: themeColor('secondary') }
+                            {
+                                backgroundColor: themeColor('secondary')
+                            }
                         ]}
                     >
                         <Text
@@ -676,11 +704,7 @@ export default class SpliceOut extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={
-                        step === 'confirm'
-                            ? this.handleCancel
-                            : undefined
-                    }
+                    onBack={step === 'confirm' ? this.handleCancel : undefined}
                     centerComponent={{
                         text: localeString('views.Tools.splicing'),
                         style: { color: themeColor('text') }
