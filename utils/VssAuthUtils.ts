@@ -11,7 +11,7 @@
 
 import * as necc from '@noble/secp256k1';
 import { HDKey } from '@scure/bip32';
-import createHash from 'create-hash';
+import { sha256 } from '@noble/hashes/sha256';
 
 // Import noble_ecc to ensure hmacSha256Sync / sha256Sync are configured
 // (required by necc.signSync)
@@ -82,11 +82,13 @@ export function generateVssAuthHeaders(
     const timestampBytes = Buffer.from(timestamp, 'ascii');
 
     // Message: SHA256(SIGNING_CONSTANT || pubkey_bytes || timestamp_ascii)
-    const hash = createHash('sha256');
-    hash.update(SIGNING_CONSTANT);
-    hash.update(Buffer.from(publicKey));
-    hash.update(timestampBytes);
-    const msgHash = new Uint8Array(hash.digest());
+    const msgHash = sha256(
+        Buffer.concat([
+            SIGNING_CONSTANT,
+            Buffer.from(publicKey),
+            timestampBytes
+        ])
+    );
 
     // ECDSA sign (compact 64-byte r||s format)
     const sig = necc.signSync(msgHash, privateKey, { der: false });
