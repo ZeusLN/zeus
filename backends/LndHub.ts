@@ -5,7 +5,7 @@ import { settingsStore } from '../stores/Stores';
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256 } from '@noble/hashes/sha256';
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 
@@ -79,27 +79,21 @@ export default class LndHub extends LND {
             amount: data.amt
         });
     lnurlAuth = (message: string) => {
-        const messageHash = new sha256Hash()
-            .update(Base64Utils.stringToUint8Array(message))
-            .digest();
+        const messageHash = sha256(Base64Utils.stringToUint8Array(message));
 
         let signed, signature, key, linkingKeyPair;
         switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
-                key = new sha256Hash()
-                    .update(
-                        Base64Utils.stringToUint8Array(
-                            `lndhub://${settingsStore.username}:${settingsStore.password}`
-                        )
+                key = sha256(
+                    Base64Utils.stringToUint8Array(
+                        `lndhub://${settingsStore.username}:${settingsStore.password}`
                     )
-                    .digest();
+                );
                 linkingKeyPair = ec.keyFromPrivate(key, true);
                 signed = linkingKeyPair
                     .sign(messageHash, { canonical: true })
                     .toDER('hex');
-                signature = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signed))
-                    .digest();
+                signature = sha256(Base64Utils.stringToUint8Array(signed));
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(
