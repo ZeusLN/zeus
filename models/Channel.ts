@@ -4,7 +4,6 @@ const { chanFormat } = require('bolt07');
 
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
-import { spliceStore } from '../stores/Stores';
 
 interface HTLC {
     hash_lock: string;
@@ -296,18 +295,4 @@ export default class Channel extends BaseModel {
             : undefined;
     }
 
-    @computed
-    public get isSplicing(): boolean {
-        return spliceStore.isChannelSplicing(this.channelId || '');
-    }
-
-    @computed
-    public get splicePendingBalance(): string | null {
-        return spliceStore.getPendingBalance(this.channelId || '');
-    }
-
-    @computed
-    public get spliceOperation() {
-        return spliceStore.getSpliceOperation(this.channelId || '');
-    }
 }
