@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
 import { HMAC as sha256HMAC } from 'fast-sha256';
+import { getPublicKey, signSync } from '@noble/secp256k1';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -23,9 +24,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import DropdownSetting from '../components/DropdownSetting';
 import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
-
-const EC = require('elliptic').ec;
-const ec = new EC('secp256k1');
+import '../zeus_modules/noble_ecc'; // ensures hmacSha256Sync is configured for signSync
 
 const LNURLAUTH_CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
@@ -125,19 +124,16 @@ export default class LnurlAuth extends React.Component<
                     .update(Base64Utils.stringToUint8Array(this.state.domain))
                     .digest();
 
-                const linkingKeyPair = ec.keyFromPrivate(linkingKeyPriv, true);
-                const pubPoint = linkingKeyPair.getPublic();
-                // Need to compress the key
-                const linkingKeyPub = pubPoint.encodeCompressed('hex');
+                const linkingKeyPub = Buffer.from(
+                    getPublicKey(linkingKeyPriv, true)
+                ).toString('hex');
 
-                const signedMessage = ec.sign(
+                const signedMessageDER = signSync(
                     Base64Utils.hexToBytes(this.state.k1),
-                    linkingKeyPriv,
-                    { canonical: true }
+                    linkingKeyPriv
                 );
-                const signedMessageDER = signedMessage.toDER();
                 const signedMessageDERHex =
-                    Base64Utils.bytesToHex(signedMessageDER);
+                    Buffer.from(signedMessageDER).toString('hex');
 
                 this.setState({
                     linkingKeyPub,
