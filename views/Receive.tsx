@@ -1731,33 +1731,39 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        loading ||
-                        watchedInvoicePaid ||
-                        posStatus === 'active' ||
-                        hideRightHeaderComponent ? undefined : route.params
-                              ?.selectedIndex === 2 ? (
-                            BackendUtils.supportsAddressTypeSelection() &&
-                            account === 'default' ? (
-                                <SettingsButton />
-                            ) : undefined
-                        ) : haveInvoice ? (
-                            selectedIndex === 2 ? (
+                        <Row>
+                            {loading && (
+                                <View style={{ marginRight: 10 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
+                            {watchedInvoicePaid ||
+                            posStatus === 'active' ||
+                            hideRightHeaderComponent ? undefined : route.params
+                                  ?.selectedIndex === 2 ? (
                                 BackendUtils.supportsAddressTypeSelection() &&
                                 account === 'default' ? (
                                     <SettingsButton />
+                                ) : undefined
+                            ) : haveInvoice ? (
+                                selectedIndex === 2 ? (
+                                    BackendUtils.supportsAddressTypeSelection() &&
+                                    account === 'default' ? (
+                                        <SettingsButton />
+                                    ) : (
+                                        <ClearButton />
+                                    )
                                 ) : (
                                     <ClearButton />
                                 )
-                            ) : (
-                                <ClearButton />
-                            )
-                        ) : !creatingInvoice &&
-                          BackendUtils.supportsAddressTypeSelection() &&
-                          account === 'default' &&
-                          !route.params?.forceLn &&
-                          (selectedIndex === 2 || selectedIndex === 1) ? (
-                            <SettingsButton />
-                        ) : undefined
+                            ) : !creatingInvoice &&
+                              BackendUtils.supportsAddressTypeSelection() &&
+                              account === 'default' &&
+                              !route.params?.forceLn &&
+                              (selectedIndex === 2 || selectedIndex === 1) ? (
+                                <SettingsButton />
+                            ) : undefined}
+                        </Row>
                     }
                     navigation={navigation}
                 />
@@ -1895,7 +1901,7 @@ export default class Receive extends React.Component<
                                         )}
                                     </>
                                 )}
-                                {(creatingInvoice || loading) && (
+                                {creatingInvoice && (
                                     <View style={{ marginTop: 40 }}>
                                         <LoadingIndicator />
                                     </View>
@@ -2349,8 +2355,7 @@ export default class Receive extends React.Component<
                                             )}
                                     </View>
                                 )}
-                                {!loading &&
-                                    !haveInvoice &&
+                                {!haveInvoice &&
                                     !creatingInvoice &&
                                     route.params?.selectedIndex !== 2 && (
                                         <>
