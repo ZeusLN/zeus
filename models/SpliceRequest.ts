@@ -13,18 +13,11 @@ export interface SpliceInRequest {
     forceFeerate?: boolean;
 }
 
-export interface SpliceRebalanceRequest {
-    fromChannelId: string;
-    toChannelId: string;
-    amount: string;
-    feeRate?: number;
-}
-
 export interface SpliceDryrunResult {
     txid: string;
     psbt?: string;
     tx?: string;
-    fee: number;
+    fee: number | null;
     transcript?: string[];
     script: string;
 }

@@ -1,11 +1,9 @@
 export enum SpliceOperationType {
     OUT = 'out',
-    IN = 'in',
-    REBALANCE = 'rebalance'
+    IN = 'in'
 }
 
 export enum SpliceStatus {
-    PENDING = 'pending',
     EXECUTING = 'executing',
     CONFIRMING = 'confirming',
     COMPLETED = 'completed',

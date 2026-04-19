@@ -20,7 +20,7 @@ import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
-import SendIcon from '../../assets/images/SVG/Send.svg';
+import ChannelSplicingIcon from '../../assets/images/SVG/ChannelSplicing.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
@@ -496,11 +496,10 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                 onPress={() => navigation.navigate('SpliceOut')}
                             >
                                 <View style={styles.icon}>
-                                    {/* Need to change this Icon - temporary for now */}
-                                    <SendIcon
+                                    <ChannelSplicingIcon
                                         fill={themeColor('text')}
-                                        width={25}
-                                        height={25}
+                                        width={28}
+                                        height={28}
                                     />
                                 </View>
                                 <Text
@@ -509,7 +508,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.Tools.spliceOut')}
+                                    {localeString('views.Tools.splicing')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
@@ -528,34 +527,34 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                 marginVertical: 5
                             }}
                         >
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('Sweep')}
-                                >
-                                    <View style={styles.columnField}>
-                                        <View style={styles.icon}>
-                                            <SweepIcon
-                                                fill={themeColor('text')}
-                                                width={18}
-                                                height={18}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString('views.Sweep.title')}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Sweep')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <SweepIcon
+                                            fill={themeColor('text')}
+                                            width={18}
+                                            height={18}
+                                        />
                                     </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Sweep.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode &&
                         BackendUtils.supportsOnchainSends() &&
