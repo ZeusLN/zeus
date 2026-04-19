@@ -22,7 +22,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { toLnrpcAddressType } from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
 
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256 } from '@noble/hashes/sha256';
 import BigNumber from 'bignumber.js';
 
 const NEXT_ADDR_MAP: any = {
@@ -681,9 +681,7 @@ export default class LightningNodeConnect {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256(Base64Utils.stringToUint8Array(signed.signature))
         };
     };
     lookupInvoice = async (data: any) =>
