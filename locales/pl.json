@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Weryfikacja certyfikatu",
     "views.Settings.AddEditNode.createLndhub": "Utwórz konto LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Save Wallet Config",
     "views.Settings.WalletConfiguration.setWalletActive": "Set Wallet Config as Active",
     "views.Settings.WalletConfiguration.walletActive": "Wallet Active",
