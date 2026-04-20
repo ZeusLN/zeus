@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "룬",
     "views.Settings.AddEditNode.certificateVerification": "인증서 확인",
     "views.Settings.AddEditNode.createLndhub": "LNDHub 계정 만들기",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "지갑 설정 저장",
     "views.Settings.WalletConfiguration.setWalletActive": "지갑을 활성으로 설정",
     "views.Settings.WalletConfiguration.walletActive": "지갑 활성",
