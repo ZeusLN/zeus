@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Verificare Certificat",
     "views.Settings.AddEditNode.createLndhub": "Creează cont LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Salvați configurația portofelului",
     "views.Settings.WalletConfiguration.setWalletActive": "Setați Configurarea portofelului ca activ",
     "views.Settings.WalletConfiguration.walletActive": "Portofel activ",
