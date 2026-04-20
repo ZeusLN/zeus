@@ -771,7 +771,12 @@ export default class NostrWalletConnectStore {
                 const existingClientPrivateKey =
                     await this.loadClientPrivateKey(connection.pubkey);
                 if (!existingClientPrivateKey || !this.walletServiceKeys?.publicKey) {
-                    return { success: true };
+                    this.setError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                        )
+                    );
+                    return { success: false };
                 }
 
                 const lud16 =
@@ -1991,10 +1996,19 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const amountSats = await this.getInvoiceAmount(
+        const { amountSats, usedRequestAmount } = await this.getInvoiceAmount(
             request.invoice,
-            invoiceInfo
+            invoiceInfo,
+            request.amount
         );
+        if (amountSats <= 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
+                ),
+                ErrorCodes.INVALID_INVOICE
+            );
+        }
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
                 (Number(invoiceInfo.timestamp) + Number(invoiceInfo.expiry)) *
@@ -2040,11 +2054,15 @@ export default class NostrWalletConnectStore {
             );
         }
         this.transactionsStore.reset();
-        this.transactionsStore.sendPayment({
+        const paymentData: any = {
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
-        });
+        };
+        if (usedRequestAmount && request.amount) {
+            paymentData.amount = millisatsToSats(request.amount).toString();
+        }
+        this.transactionsStore.sendPayment(paymentData);
 
         await this.waitForPaymentCompletion();
 
@@ -2373,8 +2391,9 @@ export default class NostrWalletConnectStore {
     }
     private async getInvoiceAmount(
         invoice: string,
-        invoiceInfo: any
-    ): Promise<number> {
+        invoiceInfo: any,
+        requestAmountMsats?: number
+    ): Promise<{ amountSats: number; usedRequestAmount: boolean }> {
         let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
         if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
             backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
@@ -2385,7 +2404,7 @@ export default class NostrWalletConnectStore {
             );
         }
         if (backendAmount > 0) {
-            return backendAmount;
+            return { amountSats: backendAmount, usedRequestAmount: false };
         }
         const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
         if (amount > 0) {
@@ -2393,10 +2412,17 @@ export default class NostrWalletConnectStore {
                 'NWC: Backend did not provide amount, using decoded invoice amount:',
                 amount
             );
-            return amount;
+            return { amountSats: amount, usedRequestAmount: false };
         }
 
-        return backendAmount;
+        const requestAmountSats = millisatsToSats(
+            Number(requestAmountMsats) || 0
+        );
+        if (requestAmountSats > 0) {
+            return { amountSats: requestAmountSats, usedRequestAmount: true };
+        }
+
+        return { amountSats: 0, usedRequestAmount: false };
     }
 
     /**

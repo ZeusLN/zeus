@@ -114,6 +114,15 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     private unsubscribeFocus?: () => void;
 
+    private hasActiveLightningAddress = (): boolean => {
+        const { NostrWalletConnectStore } = this.props;
+        return (
+            NostrWalletConnectStore.lightningAddressStore
+                .lightningAddressActivated &&
+            !!NostrWalletConnectStore.lightningAddressStore.lightningAddress
+        );
+    };
+
     loadData = async () => {
         const { route, NostrWalletConnectStore } = this.props;
         const connectionId = route.params?.connectionId;
@@ -137,10 +146,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         const { NostrWalletConnectStore } = this.props;
         const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
         const existingBudgetValue = this.state.budgetValue || 0;
-        const hasLightningAddress =
-            NostrWalletConnectStore.lightningAddressStore
-                .lightningAddressActivated &&
-            !!NostrWalletConnectStore.lightningAddressStore.lightningAddress;
+        const hasLightningAddress = this.hasActiveLightningAddress();
         this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: existingBudgetValue,
@@ -653,8 +659,15 @@ export default class AddOrEditNWCConnection extends React.Component<
                     connectionId,
                     params
                 );
-                if (updated) {
+                if (updated.success) {
                     setTimeout(() => navigation.goBack(), 100);
+                } else {
+                    throw new Error(
+                        NostrWalletConnectStore.errorMessage ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                            )
+                    );
                 }
             } else {
                 const nostrUrl = await NostrWalletConnectStore.createConnection(
@@ -907,10 +920,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             includeLightningAddress
         } = this.state;
         const { persistentNWCServiceEnabled } = NostrWalletConnectStore;
-        const hasActiveLightningAddress =
-            NostrWalletConnectStore.lightningAddressStore
-                .lightningAddressActivated &&
-            !!NostrWalletConnectStore.lightningAddressStore.lightningAddress;
+        const hasActiveLightningAddress = this.hasActiveLightningAddress();
         const activeLightningAddress =
             NostrWalletConnectStore.lightningAddressStore.lightningAddress;
         const budgetRenewalButtons: any =
