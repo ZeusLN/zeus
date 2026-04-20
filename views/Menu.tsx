@@ -145,7 +145,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 if (selectedNode.embeddedLndNetwork) {
                     nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
                 }
-                if (!selectedNode.isSqlite) {
+                if (selectedNode.isSqlite) {
+                    nodeSubtitle += ' [SQLite]';
+                } else {
                     nodeSubtitle += ' [Bolt]';
                 }
             }

@@ -375,7 +375,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     if (item.embeddedLndNetwork) {
                                         nodeSubtitle += ` (${item.embeddedLndNetwork})`;
                                     }
-                                    if (!item.isSqlite) {
+                                    if (item.isSqlite) {
+                                        nodeSubtitle += ' [SQLite]';
+                                    } else {
                                         nodeSubtitle += ' [Bolt]';
                                     }
                                 }
