@@ -1010,7 +1010,7 @@ export default class WalletConfiguration extends React.Component<
                     walletPassword: randomBase64,
                     embeddedLndNetwork: network,
                     lndDir,
-                    isSqlite: true,
+                    isSqlite: this.state.isSqlite ?? false,
                     creatingWallet: false
                 },
                 () => {
@@ -1210,6 +1210,7 @@ export default class WalletConfiguration extends React.Component<
             remoteKey,
             adminMacaroon,
             embeddedLndNetwork,
+            isSqlite,
             recoveryCipherSeed,
             channelBackupsBase64,
             creatingWallet,
@@ -1685,6 +1686,31 @@ export default class WalletConfiguration extends React.Component<
                                                 )}
                                             />
                                         )}
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'views.Settings.WalletConfiguration.database'
+                                            )}
+                                            selectedValue={
+                                                isSqlite ? 'sqlite' : 'bolt'
+                                            }
+                                            onValueChange={(value: string) => {
+                                                this.setState({
+                                                    isSqlite: value === 'sqlite'
+                                                });
+                                            }}
+                                            values={[
+                                                {
+                                                    key: 'Bolt',
+                                                    value: 'bolt'
+                                                },
+                                                {
+                                                    key: `SQLite (${localeString(
+                                                        'general.experimental'
+                                                    )})`,
+                                                    value: 'sqlite'
+                                                }
+                                            ]}
+                                        />
                                         {false && (
                                             <>
                                                 <Text
@@ -2857,6 +2883,21 @@ export default class WalletConfiguration extends React.Component<
                             <KeyValue
                                 keyValue={localeString('general.network')}
                                 value={embeddedLndNetwork}
+                            />
+                        )}
+
+                        {implementation === 'embedded-lnd' && adminMacaroon && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Settings.WalletConfiguration.database'
+                                )}
+                                value={
+                                    isSqlite
+                                        ? `SQLite (${localeString(
+                                              'general.experimental'
+                                          )})`
+                                        : 'Bolt'
+                                }
                             />
                         )}
 
