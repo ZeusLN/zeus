@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Sertifika Verifikasyonu",
     "views.Settings.AddEditNode.createLndhub": "LNDHub hesabı oluştur",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Save Wallet Config",
     "views.Settings.WalletConfiguration.setWalletActive": "Set Wallet Config as Active",
     "views.Settings.WalletConfiguration.walletActive": "Wallet Active",
