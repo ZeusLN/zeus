@@ -53,6 +53,7 @@ import { v4 as uuidv4 } from 'uuid';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
+import { buildNostrWalletConnectUrl } from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
@@ -115,6 +116,7 @@ enum ErrorCodes {
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
     NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
+    RESTRICTED = 'RESTRICTED',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
     INVOICE_EXPIRED = 'INVOICE_EXPIRED'
 }
@@ -177,6 +179,7 @@ export interface CreateConnectionParams {
     expiresAt?: Date;
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
+    includeLightningAddress?: boolean;
     totalSpendSats?: number;
     lastBudgetReset?: Date;
     activity?: ConnectionActivity[];
@@ -603,7 +606,10 @@ export default class NostrWalletConnectStore {
                 }
             }
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
-                this.generateConnectionSecret(params.relayUrl);
+                this.generateConnectionSecret(
+                    params.relayUrl,
+                    params.includeLightningAddress
+                );
             const connectionData = {
                 id: params.id || uuidv4(),
                 name: params.name.trim(),
@@ -630,6 +636,7 @@ export default class NostrWalletConnectStore {
                 customExpiryUnit: params.customExpiryUnit,
                 nodePubkey,
                 implementation,
+                includeLightningAddress: params.includeLightningAddress,
                 activity: params.activity || []
             };
 
@@ -760,8 +767,10 @@ export default class NostrWalletConnectStore {
             if (relayUrlChanged) {
                 return {
                     nostrUrl:
-                        this.generateConnectionSecret(newRelayUrl)
-                            .connectionUrl,
+                        this.generateConnectionSecret(
+                            newRelayUrl,
+                            connection.includeLightningAddress
+                        ).connectionUrl,
                     success: true
                 };
             }
@@ -1117,7 +1126,10 @@ export default class NostrWalletConnectStore {
             this.connections[index] = connection;
         }
     }
-    private generateConnectionSecret(relayUrl: string) {
+    private generateConnectionSecret(
+        relayUrl: string,
+        includeLightningAddress = true
+    ) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
                 localeString(
@@ -1127,9 +1139,17 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        const lud16 =
+            includeLightningAddress &&
+            this.lightningAddressStore.lightningAddressActivated
+                ? this.lightningAddressStore.lightningAddress
+                : undefined;
+        const connectionUrl = buildNostrWalletConnectUrl({
+            walletServicePubkey: this.walletServiceKeys.publicKey,
+            relayUrl,
+            secret: connectionPrivateKey,
+            lud16
+        });
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
     @action
@@ -3286,13 +3306,11 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        if (
-            request.method === 'pay_invoice' &&
-            !connection.hasPermission('pay_invoice')
-        ) {
+        if (!connection.hasPermission(request.method)) {
             throw new Error(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
+                    'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                    { method: request.method }
                 )
             );
         }
@@ -3511,20 +3529,85 @@ export default class NostrWalletConnectStore {
         let response: any;
         try {
             switch (request.method) {
+                case 'get_info':
+                    response = await this.handleGetInfo(connection);
+                    break;
+                case 'get_balance':
+                    response = await this.handleGetBalance(connection);
+                    break;
                 case 'pay_invoice':
                     if (!connection.hasPermission('pay_invoice')) {
-                        return {
-                            success: false,
-                            errorMessage: localeString(
+                        response = this.handleError(
+                            localeString(
                                 'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
-                            )
-                        };
+                            ),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
                     }
                     response = await this.handlePayInvoice(
                         connection,
                         request.params,
                         skipNotification
                     );
+                    break;
+                case 'make_invoice':
+                    if (!connection.hasPermission('make_invoice')) {
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
+                    response = await this.handleMakeInvoice(
+                        connection,
+                        request.params
+                    );
+                    break;
+                case 'lookup_invoice':
+                    if (!connection.hasPermission('lookup_invoice')) {
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
+                    response = await this.handleLookupInvoice(request.params);
+                    break;
+                case 'list_transactions':
+                    if (!connection.hasPermission('list_transactions')) {
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
+                    response = await this.handleListTransactions(
+                        connection,
+                        request.params
+                    );
+                    break;
+                case 'sign_message':
+                    if (!connection.hasPermission('sign_message')) {
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
+                    response = await this.handleSignMessage(request.params);
                     break;
                 default:
                     response = this.handleError(
@@ -3622,8 +3705,9 @@ export default class NostrWalletConnectStore {
         );
         let tags = [];
         if (eventId) {
-            tags.push(['e', eventId, 'encryption', 'nip04 nip44_v2']);
+            tags.push(['e', eventId]);
         }
+        tags.push(['p', connection.pubkey]);
         const unsignedEvent: UnsignedEvent = {
             kind: 23195,
             tags,

@@ -51,7 +51,7 @@ const PRESET_INDEX = {
 
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
-        return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
+        return [];
     }
 
     static get TIME_UNITS(): TimeUnit[] {

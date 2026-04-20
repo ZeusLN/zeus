@@ -70,6 +70,7 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    includeLightningAddress?: boolean;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
@@ -123,6 +124,7 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
+    @observable includeLightningAddress?: boolean;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
