@@ -782,11 +782,9 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
             await this.subscribeToConnection(connection);
             if (relayUrlChanged) {
-                const lud16 =
-                    connection.includeLightningAddress &&
-                    this.lightningAddressStore.lightningAddressActivated
-                        ? this.lightningAddressStore.lightningAddress
-                        : undefined;
+                const lud16 = this.getConnectionLud16(
+                    connection.includeLightningAddress
+                );
 
                 return {
                     nostrUrl: buildNostrWalletConnectUrl({
@@ -1163,11 +1161,7 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const lud16 =
-            includeLightningAddress &&
-            this.lightningAddressStore.lightningAddressActivated
-                ? this.lightningAddressStore.lightningAddress
-                : undefined;
+        const lud16 = this.getConnectionLud16(includeLightningAddress);
         const connectionUrl = buildNostrWalletConnectUrl({
             walletServicePubkey: this.walletServiceKeys.publicKey,
             relayUrl,
@@ -1175,6 +1169,15 @@ export default class NostrWalletConnectStore {
             lud16
         });
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
+    }
+
+    private getConnectionLud16(
+        includeLightningAddress: boolean
+    ): string | undefined {
+        return includeLightningAddress &&
+            this.lightningAddressStore.lightningAddressActivated
+            ? this.lightningAddressStore.lightningAddress
+            : undefined;
     }
     @action
     public startWaitingForConnection = (connectionId: string) => {
@@ -1999,16 +2002,13 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const { amountSats, usedRequestAmount } = await this.getInvoiceAmount(
-            request.invoice,
-            invoiceInfo,
-            request.amount
-        );
-        if (
-            usedRequestAmount &&
-            request.amount &&
-            request.amount % 1000 !== 0
-        ) {
+        const { amountSats, usedRequestAmount, invalidRequestAmount } =
+            await this.getInvoiceAmount(
+                request.invoice,
+                invoiceInfo,
+                request.amount
+            );
+        if (invalidRequestAmount) {
             return this.handleError(
                 'Invalid amount: millisatoshi amount must be a whole number of satoshis',
                 ErrorCodes.INVALID_PARAMS
@@ -2067,7 +2067,12 @@ export default class NostrWalletConnectStore {
             );
         }
         this.transactionsStore.reset();
-        const paymentData: any = {
+        const paymentData: {
+            payment_request: string;
+            fee_limit_sat: string;
+            timeout_seconds: string;
+            amount?: string;
+        } = {
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
@@ -2406,7 +2411,11 @@ export default class NostrWalletConnectStore {
         invoice: string,
         invoiceInfo: any,
         requestAmountMsats?: number
-    ): Promise<{ amountSats: number; usedRequestAmount: boolean }> {
+    ): Promise<{
+        amountSats: number;
+        usedRequestAmount: boolean;
+        invalidRequestAmount: boolean;
+    }> {
         let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
         if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
             backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
@@ -2417,7 +2426,11 @@ export default class NostrWalletConnectStore {
             );
         }
         if (backendAmount > 0) {
-            return { amountSats: backendAmount, usedRequestAmount: false };
+            return {
+                amountSats: backendAmount,
+                usedRequestAmount: false,
+                invalidRequestAmount: false
+            };
         }
         const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
         if (amount > 0) {
@@ -2425,17 +2438,35 @@ export default class NostrWalletConnectStore {
                 'NWC: Backend did not provide amount, using decoded invoice amount:',
                 amount
             );
-            return { amountSats: amount, usedRequestAmount: false };
+            return {
+                amountSats: amount,
+                usedRequestAmount: false,
+                invalidRequestAmount: false
+            };
         }
 
-        const requestAmountSats = millisatsToSats(
-            Number(requestAmountMsats) || 0
-        );
-        if (requestAmountSats > 0) {
-            return { amountSats: requestAmountSats, usedRequestAmount: true };
+        const normalizedRequestAmountMsats = Number(requestAmountMsats) || 0;
+        if (normalizedRequestAmountMsats > 0) {
+            if (normalizedRequestAmountMsats % 1000 !== 0) {
+                return {
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
+
+            return {
+                amountSats: millisatsToSats(normalizedRequestAmountMsats),
+                usedRequestAmount: true,
+                invalidRequestAmount: false
+            };
         }
 
-        return { amountSats: 0, usedRequestAmount: false };
+        return {
+            amountSats: 0,
+            usedRequestAmount: false,
+            invalidRequestAmount: false
+        };
     }
 
     /**
@@ -3215,6 +3246,22 @@ export default class NostrWalletConnectStore {
                             3
                         );
 
+                    if (
+                        request.method === 'pay_invoice' &&
+                        !connection.hasPermission('pay_invoice')
+                    ) {
+                        await this.publishEventToClient(
+                            connection,
+                            request.method,
+                            this.handleError(
+                                localeString('backends.NWC.permissionDenied'),
+                                ErrorCodes.RESTRICTED
+                            ),
+                            eventId
+                        );
+                        return null;
+                    }
+
                     if (request.method === 'pay_invoice') {
                         const { isExpired, amount } =
                             await NostrConnectUtils.decodeInvoiceTags(
@@ -3591,35 +3638,33 @@ export default class NostrWalletConnectStore {
     ): Promise<{ success: boolean; errorMessage?: string }> {
         let response: any;
         try {
-            switch (request.method) {
+            const methodsRequiringPermission: Nip47SingleMethod[] = [
+                'get_info',
+                'get_balance',
+                'pay_invoice',
+                'make_invoice',
+                'lookup_invoice',
+                'list_transactions',
+                'sign_message'
+            ];
+
+            if (
+                methodsRequiringPermission.includes(request.method) &&
+                !connection.hasPermission(request.method)
+            ) {
+                response = this.handleError(
+                    localeString('backends.NWC.permissionDenied'),
+                    ErrorCodes.RESTRICTED
+                );
+            } else {
+                switch (request.method) {
                 case 'get_info':
-                    if (!connection.hasPermission('get_info')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleGetInfo(connection);
                     break;
                 case 'get_balance':
-                    if (!connection.hasPermission('get_balance')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleGetBalance(connection);
                     break;
                 case 'pay_invoice':
-                    if (!connection.hasPermission('pay_invoice')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handlePayInvoice(
                         connection,
                         request.params,
@@ -3627,49 +3672,21 @@ export default class NostrWalletConnectStore {
                     );
                     break;
                 case 'make_invoice':
-                    if (!connection.hasPermission('make_invoice')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleMakeInvoice(
                         connection,
                         request.params
                     );
                     break;
                 case 'lookup_invoice':
-                    if (!connection.hasPermission('lookup_invoice')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleLookupInvoice(request.params);
                     break;
                 case 'list_transactions':
-                    if (!connection.hasPermission('list_transactions')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleListTransactions(
                         connection,
                         request.params
                     );
                     break;
                 case 'sign_message':
-                    if (!connection.hasPermission('sign_message')) {
-                        response = this.handleError(
-                            localeString('backends.NWC.permissionDenied'),
-                            ErrorCodes.RESTRICTED
-                        );
-                        break;
-                    }
                     response = await this.handleSignMessage(request.params);
                     break;
                 default:
@@ -3681,6 +3698,7 @@ export default class NostrWalletConnectStore {
                         ErrorCodes.NOT_IMPLEMENTED
                     );
                     break;
+                }
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
