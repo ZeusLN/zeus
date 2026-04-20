@@ -1711,37 +1711,6 @@ export default class WalletConfiguration extends React.Component<
                                                 }
                                             ]}
                                         />
-                                        {false && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {`${localeString(
-                                                        'views.Settings.AddEditNode.recoveryCipherSeed'
-                                                    )} (${localeString(
-                                                        'general.optional'
-                                                    )})`}
-                                                </Text>
-                                                <TextInput
-                                                    placeholder="ship yellow box resource scan pelican..."
-                                                    value={recoveryCipherSeed}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            recoveryCipherSeed:
-                                                                text
-                                                        })
-                                                    }
-                                                    locked={loading}
-                                                />
-                                            </>
-                                        )}
                                     </View>
                                 )}
 
