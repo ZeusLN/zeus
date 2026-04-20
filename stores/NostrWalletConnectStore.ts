@@ -3306,14 +3306,6 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        if (!connection.hasPermission(request.method)) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                    { method: request.method }
-                )
-            );
-        }
         return { request, connection, eventId: event.id };
     }
 
@@ -3530,9 +3522,23 @@ export default class NostrWalletConnectStore {
         try {
             switch (request.method) {
                 case 'get_info':
+                    if (!connection.hasPermission('get_info')) {
+                        response = this.handleError(
+                            localeString('backends.NWC.permissionDenied'),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
                     response = await this.handleGetInfo(connection);
                     break;
                 case 'get_balance':
+                    if (!connection.hasPermission('get_balance')) {
+                        response = this.handleError(
+                            localeString('backends.NWC.permissionDenied'),
+                            ErrorCodes.RESTRICTED
+                        );
+                        break;
+                    }
                     response = await this.handleGetBalance(connection);
                     break;
                 case 'pay_invoice':
@@ -3554,10 +3560,7 @@ export default class NostrWalletConnectStore {
                 case 'make_invoice':
                     if (!connection.hasPermission('make_invoice')) {
                         response = this.handleError(
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                                { method: request.method }
-                            ),
+                            localeString('backends.NWC.permissionDenied'),
                             ErrorCodes.RESTRICTED
                         );
                         break;
@@ -3570,10 +3573,7 @@ export default class NostrWalletConnectStore {
                 case 'lookup_invoice':
                     if (!connection.hasPermission('lookup_invoice')) {
                         response = this.handleError(
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                                { method: request.method }
-                            ),
+                            localeString('backends.NWC.permissionDenied'),
                             ErrorCodes.RESTRICTED
                         );
                         break;
@@ -3583,10 +3583,7 @@ export default class NostrWalletConnectStore {
                 case 'list_transactions':
                     if (!connection.hasPermission('list_transactions')) {
                         response = this.handleError(
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                                { method: request.method }
-                            ),
+                            localeString('backends.NWC.permissionDenied'),
                             ErrorCodes.RESTRICTED
                         );
                         break;
@@ -3599,10 +3596,7 @@ export default class NostrWalletConnectStore {
                 case 'sign_message':
                     if (!connection.hasPermission('sign_message')) {
                         response = this.handleError(
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                                { method: request.method }
-                            ),
+                            localeString('backends.NWC.permissionDenied'),
                             ErrorCodes.RESTRICTED
                         );
                         break;
