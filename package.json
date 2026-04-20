@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "13.0.0-beta4",
+  "version": "13.0.0-rc1",
   "private": true,
   "engines": {
     "node": ">= 22.11.0"
