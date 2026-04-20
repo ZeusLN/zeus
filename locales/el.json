@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Επιβεβαίωση πιστοποιητικού",
     "views.Settings.AddEditNode.createLndhub": "Δημιουργία λογαριασμού LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Αποθήκευση διαμόρφωσης πορτοφολιού",
     "views.Settings.WalletConfiguration.setWalletActive": "Επιλογή διαμόρφωσης πορτοφολιού ως ενεργή",
     "views.Settings.WalletConfiguration.walletActive": "Ενεργό πορτοφόλι",
