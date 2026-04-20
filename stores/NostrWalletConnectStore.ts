@@ -3544,9 +3544,7 @@ export default class NostrWalletConnectStore {
                 case 'pay_invoice':
                     if (!connection.hasPermission('pay_invoice')) {
                         response = this.handleError(
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
-                            ),
+                            localeString('backends.NWC.permissionDenied'),
                             ErrorCodes.RESTRICTED
                         );
                         break;
