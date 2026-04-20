@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Verifikasi Sertifikat",
     "views.Settings.AddEditNode.createLndhub": "Buat akun LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Simpan Konfigurasi Dompet",
     "views.Settings.WalletConfiguration.setWalletActive": "Setel Konfigurasi Dompet sebagai Aktif",
     "views.Settings.WalletConfiguration.walletActive": "Dompet Aktif",
