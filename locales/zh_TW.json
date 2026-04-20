@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "符石(rune)",
     "views.Settings.AddEditNode.certificateVerification": "憑證校驗",
     "views.Settings.AddEditNode.createLndhub": "新增 LNDHub 帳戶",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "儲存錢包設定",
     "views.Settings.WalletConfiguration.setWalletActive": "啟用錢包設定",
     "views.Settings.WalletConfiguration.walletActive": "錢包啟用中",
