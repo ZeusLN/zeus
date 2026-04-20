@@ -79,6 +79,13 @@ RCT_EXPORT_MODULE();
 }
 
 - (void)dealloc {
+    NSTimer *timer = _statusTimer;
+    _statusTimer = nil;
+    if (timer) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [timer invalidate];
+        });
+    }
     [self teardownAudioEngine];
     [self unregisterNotifications];
 }
@@ -128,9 +135,16 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
     // 3. Register for system notifications
     [self registerNotifications];
 
+    self.sessionStartTime       = [NSDate date];
+    self.backgroundEnteredTime  = nil;
+    self.isActive               = YES;
+
     // 4. Start heartbeat timer (main thread for RunLoop compatibility)
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.statusTimer invalidate];
+        if (!self.isActive) {
+            return;
+        }
         __weak typeof(self) weakSelf = self;
         self.statusTimer = [NSTimer scheduledTimerWithTimeInterval:kStatusIntervalSeconds
                                                           repeats:YES
@@ -138,10 +152,6 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
             [weakSelf emitStatusUpdate:NO reason:nil];
         }];
     });
-
-    self.sessionStartTime       = [NSDate date];
-    self.backgroundEnteredTime  = nil;
-    self.isActive               = YES;
 
     NSLog(@"[NWCAudio] Started – iOS %@ on %@", self.iosVersion, self.deviceModel);
     resolve([self currentStatusDict]);
@@ -253,8 +263,11 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
 
     self.isActive = NO;
 
-    [self.statusTimer invalidate];
+    NSTimer *timer = self.statusTimer;
     self.statusTimer = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [timer invalidate];
+    });
 
     [self teardownAudioEngine];
     [self unregisterNotifications];
