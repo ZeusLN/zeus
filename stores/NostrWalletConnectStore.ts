@@ -111,6 +111,7 @@ export const DEFAULT_NOSTR_RELAYS = [
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
+    INVALID_PARAMS = 'INVALID_PARAMS',
     INVALID_INVOICE = 'INVALID_INVOICE',
     FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
@@ -731,6 +732,19 @@ export default class NostrWalletConnectStore {
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
             const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
+            const existingClientPrivateKey = relayUrlChanged
+                ? await this.loadClientPrivateKey(connection.pubkey)
+                : undefined;
+            const walletServicePubkey = this.walletServiceKeys?.publicKey;
+
+            if (relayUrlChanged && (!existingClientPrivateKey || !walletServicePubkey)) {
+                this.setError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                    )
+                );
+                return { success: false };
+            }
 
             if (relayUrlChanged) {
                 await this.unsubscribeFromConnection(connectionId);
@@ -768,17 +782,6 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
             await this.subscribeToConnection(connection);
             if (relayUrlChanged) {
-                const existingClientPrivateKey =
-                    await this.loadClientPrivateKey(connection.pubkey);
-                if (!existingClientPrivateKey || !this.walletServiceKeys?.publicKey) {
-                    this.setError(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
-                        )
-                    );
-                    return { success: false };
-                }
-
                 const lud16 =
                     connection.includeLightningAddress &&
                     this.lightningAddressStore.lightningAddressActivated
@@ -787,9 +790,9 @@ export default class NostrWalletConnectStore {
 
                 return {
                     nostrUrl: buildNostrWalletConnectUrl({
-                        walletServicePubkey: this.walletServiceKeys.publicKey,
+                        walletServicePubkey: walletServicePubkey!,
                         relayUrl: newRelayUrl,
-                        secret: existingClientPrivateKey,
+                        secret: existingClientPrivateKey!,
                         lud16
                     }),
                     success: true
@@ -2001,6 +2004,16 @@ export default class NostrWalletConnectStore {
             invoiceInfo,
             request.amount
         );
+        if (
+            usedRequestAmount &&
+            request.amount &&
+            request.amount % 1000 !== 0
+        ) {
+            return this.handleError(
+                'Invalid amount: millisatoshi amount must be a whole number of satoshis',
+                ErrorCodes.INVALID_PARAMS
+            );
+        }
         if (amountSats <= 0) {
             return this.handleError(
                 localeString(

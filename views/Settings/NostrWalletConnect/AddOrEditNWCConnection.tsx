@@ -154,6 +154,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                 ? prevState.includeLightningAddressInitialized
                     ? prevState.includeLightningAddress
                     : true
+                : prevState.includeLightningAddressInitialized
+                ? prevState.includeLightningAddress
                 : false,
             includeLightningAddressInitialized:
                 prevState.includeLightningAddressInitialized ||
@@ -1171,8 +1173,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             )}
                         </View>
 
-                        {!route.params?.isEdit &&
-                            hasActiveLightningAddress &&
+                        {hasActiveLightningAddress &&
                             !!activeLightningAddress && (
                                 <View style={styles.section}>
                                     <View
