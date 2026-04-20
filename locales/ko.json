@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "정확한 리밸런싱을 위해 정확한 금액을 입력하세요",
     "views.RebalancingChannels.sendingRebalance": "채널 리밸런싱 중",
     "views.RebalancingChannels.rebalanceSummary": "리밸런스 요약 보기",
-    "androidNotification.lndRunningBackground": "LND가 백그라운드에서 실행 중",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "종료",
     "backends.NWC.permissionDenied": "이 작업에 대한 권한이 거부되었습니다",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect가 백그라운드에서 실행 중입니다",
-    "androidNotification.nwcShutdown": "서비스 중지",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.nwcShutdown": "서비스 중지"
 }

@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "Genauen Betrag für präzises Rebalancing eingeben",
     "views.RebalancingChannels.sendingRebalance": "Rebalancing der Kanäle wird ausgeführt",
     "views.RebalancingChannels.rebalanceSummary": "Rebalance-Ergebnis anzeigen",
-    "androidNotification.lndRunningBackground": "LND läuft im Hintergrund",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Herunterfahren",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect läuft im Hintergrund",
-    "androidNotification.nwcShutdown": "Service stoppen",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.nwcShutdown": "Service stoppen"
 }

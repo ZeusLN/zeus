@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "Zadejte přesnou částku pro přesné rebalancování",
     "views.RebalancingChannels.sendingRebalance": "Kanály rebalancování",
     "views.RebalancingChannels.rebalanceSummary": "Zobrazit shrnutí rebalancování",
-    "androidNotification.lndRunningBackground": "LND běží na pozadí",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Vypnout",
     "backends.NWC.permissionDenied": "Tato operace byla zamítnuta",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect běží na pozadí",
-    "androidNotification.nwcShutdown": "Zastavit službu",
-    "androidNotification.ldkNodeRunningBackground": "Uzel LDK běží na pozadí"
+    "androidNotification.nwcShutdown": "Zastavit službu"
 }

@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "Masukkan jumlah yang tepat untuk penyeimbangan ulang yang akurat",
     "views.RebalancingChannels.sendingRebalance": "Sedang Menyeimbangkan Ulang Saluran",
     "views.RebalancingChannels.rebalanceSummary": "Lihat Ringkasan Penyeimbangan Ulang",
-    "androidNotification.lndRunningBackground": "LND sedang berjalan di latar belakang",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Matikan",
     "backends.NWC.permissionDenied": "Izin ditolak untuk operasi ini",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect sedang berjalan di latar belakang",
-    "androidNotification.nwcShutdown": "Hentikan Layanan",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.nwcShutdown": "Hentikan Layanan"
 }

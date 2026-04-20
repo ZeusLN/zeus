@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "Enter exact amount for precise rebalancing",
     "views.RebalancingChannels.sendingRebalance": "Rebalancing Channels",
     "views.RebalancingChannels.rebalanceSummary": "View Rebalance Summary",
-    "androidNotification.lndRunningBackground": "LND पृष्ठभूमि में चल रहा है",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "बंद करें",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
-    "androidNotification.nwcShutdown": "Stop Service",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.nwcShutdown": "Stop Service"
 }

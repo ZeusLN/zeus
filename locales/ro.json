@@ -2439,10 +2439,9 @@
     "views.Rebalance.preciseInputDescription": "Introduceți suma exactă pentru o reechilibrare precisă",
     "views.RebalancingChannels.sendingRebalance": "Reechilibrarea canalelor",
     "views.RebalancingChannels.rebalanceSummary": "Vizualizați rezumatul reechilibrării",
-    "androidNotification.lndRunningBackground": "LND rulează în fundal",
+    "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Închidere",
     "backends.NWC.permissionDenied": "Permisiune refuzată pentru această operațiune",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect rulează în fundal",
-    "androidNotification.nwcShutdown": "Opriți serviciul",
-    "androidNotification.ldkNodeRunningBackground": "LDK Node Running in Background"
+    "androidNotification.nwcShutdown": "Opriți serviciul"
 }
