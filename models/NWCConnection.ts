@@ -70,10 +70,23 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
-    includeLightningAddress?: boolean;
+    includeLightningAddress: boolean;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
+export type StoredNWCConnectionData = Omit<
+    NWCConnectionData,
+    'includeLightningAddress'
+> & {
+    includeLightningAddress?: boolean;
+};
+
+export const normalizeNWCConnectionData = (
+    connection: StoredNWCConnectionData
+): NWCConnectionData => ({
+    ...connection,
+    includeLightningAddress: connection.includeLightningAddress ?? false
+});
 export interface ConnectionWarning {
     type: ConnectionWarningType;
     severity: 'info' | 'warning' | 'error';
@@ -124,13 +137,15 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
-    @observable includeLightningAddress?: boolean;
+    @observable includeLightningAddress: boolean;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
 
-    constructor(data?: NWCConnectionData) {
-        super(data);
+    constructor(data?: StoredNWCConnectionData) {
+        super(data ? normalizeNWCConnectionData(data) : data);
+
+        this.includeLightningAddress = !!this.includeLightningAddress;
 
         this.totalSpendSats = Math.floor(Number(this.totalSpendSats || 0));
         this.maxAmountSats =

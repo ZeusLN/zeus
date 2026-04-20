@@ -605,10 +605,13 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
+
+            const includeLightningAddress =
+                params.includeLightningAddress ?? false;
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
                 this.generateConnectionSecret(
                     params.relayUrl,
-                    params.includeLightningAddress
+                    includeLightningAddress
                 );
             const connectionData = {
                 id: params.id || uuidv4(),
@@ -636,7 +639,7 @@ export default class NostrWalletConnectStore {
                 customExpiryUnit: params.customExpiryUnit,
                 nodePubkey,
                 implementation,
-                includeLightningAddress: params.includeLightningAddress,
+                includeLightningAddress,
                 activity: params.activity || []
             };
 
@@ -1128,7 +1131,7 @@ export default class NostrWalletConnectStore {
     }
     private generateConnectionSecret(
         relayUrl: string,
-        includeLightningAddress = true
+        includeLightningAddress = false
     ) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(

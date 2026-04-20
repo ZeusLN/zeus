@@ -61,6 +61,7 @@ interface AddOrEditNWCConnectionState {
     customRelayUrl: string;
     selectedPermissions: Nip47SingleMethod[];
     includeLightningAddress: boolean;
+    includeLightningAddressInitialized: boolean;
     selectedBudgetRenewalIndex: number;
     expiresAt: Date | undefined;
     error: string;
@@ -92,6 +93,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             customRelayUrl: '',
             selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
             includeLightningAddress: false,
+            includeLightningAddressInitialized: false,
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
             error: '',
@@ -139,11 +141,18 @@ export default class AddOrEditNWCConnection extends React.Component<
             NostrWalletConnectStore.lightningAddressStore
                 .lightningAddressActivated &&
             !!NostrWalletConnectStore.lightningAddressStore.lightningAddress;
-        this.setState({
+        this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: existingBudgetValue,
             includeLightningAddress: hasLightningAddress
-        });
+                ? prevState.includeLightningAddressInitialized
+                    ? prevState.includeLightningAddress
+                    : true
+                : false,
+            includeLightningAddressInitialized:
+                prevState.includeLightningAddressInitialized ||
+                hasLightningAddress
+        }));
     };
 
     componentWillUnmount() {
@@ -189,7 +198,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customRelayUrl: connection.relayUrl || '',
                 selectedPermissions: connection.permissions,
                 includeLightningAddress:
-                    connection.includeLightningAddress ?? true,
+                    connection.includeLightningAddress ?? false,
+                includeLightningAddressInitialized: true,
                 selectedBudgetRenewalIndex: budgetRenewalIndex,
                 expiresAt: connection.expiresAt!,
                 originalConnection: connection,
@@ -238,7 +248,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             relayUrl: originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
             permissions: [...originalConnection.permissions].sort(),
             includeLightningAddress:
-                originalConnection.includeLightningAddress ?? true,
+                originalConnection.includeLightningAddress ?? false,
             maxAmountSats: originalConnection.maxAmountSats,
             budgetRenewal: originalConnection.budgetRenewal || 'never',
             expiresAt: originalConnection.expiresAt
