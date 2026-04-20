@@ -768,12 +768,25 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
             await this.subscribeToConnection(connection);
             if (relayUrlChanged) {
+                const existingClientPrivateKey =
+                    await this.loadClientPrivateKey(connection.pubkey);
+                if (!existingClientPrivateKey || !this.walletServiceKeys?.publicKey) {
+                    return { success: true };
+                }
+
+                const lud16 =
+                    connection.includeLightningAddress &&
+                    this.lightningAddressStore.lightningAddressActivated
+                        ? this.lightningAddressStore.lightningAddress
+                        : undefined;
+
                 return {
-                    nostrUrl:
-                        this.generateConnectionSecret(
-                            newRelayUrl,
-                            connection.includeLightningAddress
-                        ).connectionUrl,
+                    nostrUrl: buildNostrWalletConnectUrl({
+                        walletServicePubkey: this.walletServiceKeys.publicKey,
+                        relayUrl: newRelayUrl,
+                        secret: existingClientPrivateKey,
+                        lud16
+                    }),
                     success: true
                 };
             }
@@ -2561,6 +2574,22 @@ export default class NostrWalletConnectStore {
             );
         }
     }
+
+    private async loadClientPrivateKey(
+        pubkey: string
+    ): Promise<string | undefined> {
+        try {
+            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+            if (!storedKeys) return undefined;
+
+            const keys: ClientKeys = JSON.parse(storedKeys);
+            return keys[pubkey];
+        } catch (error) {
+            console.error('Failed to load client private key:', error);
+            return undefined;
+        }
+    }
+
     private async deleteClientKeys(pubkey: string): Promise<void> {
         try {
             const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
