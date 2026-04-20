@@ -4,7 +4,7 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
     global.TextDecoder = TextEncodingPolyfill.TextDecoder;
     global.TextEncoder = TextEncodingPolyfill.TextEncoder;
 }
-import { action, computed, observable, runInAction } from 'mobx';
+import { action, computed, observable, reaction, runInAction } from 'mobx';
 
 import {
     NWCWalletService,
@@ -88,6 +88,7 @@ const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
+const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -165,6 +166,7 @@ export default class NostrWalletConnectStore {
     private androidReconnectionListener: EmitterSubscription | null = null;
     private appStateListener: AppStateSubscription | null = null;
     private androidLogListener: EmitterSubscription | null = null;
+    private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -230,7 +232,6 @@ export default class NostrWalletConnectStore {
                         Platform.OS === 'ios' &&
                         this.persistentNWCServiceEnabled
                     ) {
-                        // Same user preference as Android: keep NWC reachable in background
                         // (iOS: AppState + silent audio session).
                         this.setupIOSAppStateMonitoring();
                     }
@@ -358,6 +359,7 @@ export default class NostrWalletConnectStore {
     @action
     public reset = async () => {
         if (!this.persistentNWCServiceEnabled) {
+            await this.flushScheduledSave();
             if (Platform.OS === 'ios') {
                 this.teardownIOSAppStateMonitor();
                 await this.stopIOSAudioKeepAlive();
@@ -656,7 +658,7 @@ export default class NostrWalletConnectStore {
                 this.connections[connectionIndex] = connection;
             });
 
-            await this.saveConnections();
+            this.scheduleSave();
             await this.subscribeToConnection(connection);
             if (relayUrlChanged) {
                 return {
@@ -725,8 +727,37 @@ export default class NostrWalletConnectStore {
             });
         }
     };
+    private cancelScheduledSave(): void {
+        if (this._scheduledSave !== null) {
+            clearTimeout(this._scheduledSave);
+            this._scheduledSave = null;
+        }
+    }
+    private scheduleSave(): void {
+        this.cancelScheduledSave();
+        this._scheduledSave = setTimeout(() => {
+            this._scheduledSave = null;
+            this.saveConnections().catch((err) =>
+                console.error(
+                    'NWC: scheduleSave → saveConnections failed:',
+                    err
+                )
+            );
+        }, SAVE_CONNECTIONS_DEBOUNCE_MS);
+    }
+    private async flushScheduledSave(): Promise<void> {
+        if (this._scheduledSave === null) return;
+        this.cancelScheduledSave();
+        try {
+            await this.saveConnections();
+        } catch (err) {
+            console.error('NWC: flushScheduledSave failed:', err);
+        }
+    }
+
     @action
     public saveConnections = async () => {
+        this.cancelScheduledSave();
         try {
             const existingData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             const allConnections: any[] = existingData
@@ -867,7 +898,7 @@ export default class NostrWalletConnectStore {
                 return !isInvalidFailure;
             });
         });
-        this.saveConnections();
+        this.scheduleSave();
         return { name: connection.name, activity: connection.activity };
     };
     @action
@@ -882,7 +913,11 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 connection.lastUsed = new Date();
             });
-            await this.saveConnections();
+            if (wasNeverUsed) {
+                await this.saveConnections();
+            } else {
+                this.scheduleSave();
+            }
 
             if (
                 this.waitingForConnection &&
@@ -990,9 +1025,12 @@ export default class NostrWalletConnectStore {
             }
 
             if (connection.hasPermission('pay_invoice')) {
+                const payHandler = this.isCashuConfigured
+                    ? this.handleCashuPayInvoice.bind(this, connection)
+                    : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handlePayInvoice(connection, request)
+                        payHandler(request)
                     );
             }
 
@@ -1149,7 +1187,7 @@ export default class NostrWalletConnectStore {
     }
 
     private async publishWalletServiceInfoWithRetry(
-        nwcWalletService: nwc.NWCWalletService,
+        nwcWalletService: NWCWalletService,
         relayUrl: string
     ): Promise<void> {
         const privateKey = this.walletServiceKeys?.privateKey;
@@ -1288,36 +1326,6 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-    private async handlePayInvoice(
-        connection: NWCConnection,
-        request: Nip47PayInvoiceRequest,
-        skipNotification: boolean = false
-    ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
-        try {
-            if (this.isCashuConfigured) {
-                return this.handleCashuPayInvoice(
-                    connection,
-                    request,
-                    skipNotification
-                );
-            }
-            return this.handleLightningPayInvoice(
-                connection,
-                request,
-                skipNotification
-            );
-        } catch (error: any) {
-            console.error('NWC: Error in handlePayInvoice:', error);
-            return this.handleError(
-                (error instanceof Error ? error.message : String(error)) ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
-                    ),
-                ErrorCodes.INTERNAL_ERROR
-            );
-        }
-    }
-
     private async handleMakeInvoice(
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
@@ -1375,7 +1383,7 @@ export default class NostrWalletConnectStore {
                             });
                             this.findAndUpdateConnection(connection);
                         });
-                    this.saveConnections();
+                    this.scheduleSave();
                     this.showInvoiceCreatedNotification(
                         millisatsToSats(request.amount),
                         connection.name,
@@ -1514,7 +1522,7 @@ export default class NostrWalletConnectStore {
                     this.findAndUpdateConnection(connection);
                 });
             }
-            this.saveConnections();
+            this.scheduleSave();
             this.showInvoiceCreatedNotification(
                 millisatsToSats(request.amount),
                 connection.name,
@@ -1769,8 +1777,7 @@ export default class NostrWalletConnectStore {
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest,
-        skipNotification: boolean = false
+        request: Nip47PayInvoiceRequest
     ) {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
@@ -1874,8 +1881,7 @@ export default class NostrWalletConnectStore {
                 decoded: payment,
                 payment_source: 'lightning',
                 connection,
-                amountSats,
-                skipNotification
+                amountSats
             });
 
         return {
@@ -1889,8 +1895,7 @@ export default class NostrWalletConnectStore {
 
     private async handleCashuPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest,
-        skipNotification: boolean = false
+        request: Nip47PayInvoiceRequest
     ) {
         const cashuStatus = this.cashuConfigurationStatus;
         if (!cashuStatus.isConfigured) {
@@ -2032,7 +2037,6 @@ export default class NostrWalletConnectStore {
                 type: 'pay_invoice',
                 payment_source: 'cashu',
                 amountSats: amount,
-                skipNotification,
                 connection
             });
         }
@@ -2062,7 +2066,7 @@ export default class NostrWalletConnectStore {
         });
 
         if (needsSave) {
-            await this.saveConnections();
+            this.scheduleSave();
         }
     };
     @action
@@ -2085,7 +2089,7 @@ export default class NostrWalletConnectStore {
                     connection.removeWarning(warningType);
                 });
         }
-        await this.saveConnections();
+        this.scheduleSave();
     }
 
     // HELPER METHODS
@@ -2184,19 +2188,38 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Waits for payment completion with timeout handling
+     * Resolves when `transactionsStore.loading` becomes false, or after the
+     * payment timeout. Uses a MobX reaction instead of polling every 200ms.
      */
     private async waitForPaymentCompletion(): Promise<void> {
         const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
-        const pollInterval = 200;
-        const startTime = Date.now();
 
-        while (
-            this.transactionsStore.loading &&
-            Date.now() - startTime < maxWaitTime
-        ) {
-            await new Promise((resolve) => setTimeout(resolve, pollInterval));
-        }
+        await new Promise<void>((resolve) => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                resolve();
+            };
+
+            let disposer: (() => void) | undefined;
+            const timeoutId = setTimeout(() => {
+                disposer?.();
+                finish();
+            }, maxWaitTime);
+
+            disposer = reaction(
+                () => this.transactionsStore.loading,
+                (loading) => {
+                    if (!loading) {
+                        clearTimeout(timeoutId);
+                        disposer?.();
+                        finish();
+                    }
+                },
+                { fireImmediately: true }
+            );
+        });
 
         // If still loading after max wait, consider it timed out
         if (this.transactionsStore.loading) {
@@ -2215,8 +2238,7 @@ export default class NostrWalletConnectStore {
         payment_source,
         decoded,
         connection,
-        amountSats,
-        skipNotification = false
+        amountSats
     }: {
         id: string;
         type: ConnectionActivityType;
@@ -2224,7 +2246,6 @@ export default class NostrWalletConnectStore {
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
         amountSats: number;
-        skipNotification?: boolean;
     }): Promise<void> {
         runInAction(() => {
             connection.trackSpending(amountSats);
@@ -2240,10 +2261,8 @@ export default class NostrWalletConnectStore {
             });
             this.findAndUpdateConnection(connection);
         });
-        await this.saveConnections();
-        if (!skipNotification) {
-            this.showPaymentSentNotification(amountSats, connection.name);
-        }
+        this.scheduleSave();
+        this.showPaymentSentNotification(amountSats, connection.name);
     }
 
     private async recordFailedPayment(
@@ -2283,7 +2302,7 @@ export default class NostrWalletConnectStore {
 
             this.findAndUpdateConnection(connection);
         });
-        await this.saveConnections();
+        this.scheduleSave();
     }
 
     // STORAGE OPERATIONS
@@ -2683,6 +2702,7 @@ export default class NostrWalletConnectStore {
                 try {
                     const { NostrConnectModule } = NativeModules;
                     if (nextAppState === 'background') {
+                        void this.flushScheduledSave();
                         await NostrConnectModule.startBackgroundMonitoring();
                     } else if (nextAppState === 'active') {
                         await NostrConnectModule.stopBackgroundMonitoring();
@@ -2843,6 +2863,7 @@ export default class NostrWalletConnectStore {
                     nextState === 'background' &&
                     previousState !== 'background'
                 ) {
+                    void this.flushScheduledSave();
                     console.log(
                         '[NWCAudio] App entering background – starting keep-alive'
                     );
