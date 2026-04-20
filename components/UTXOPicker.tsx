@@ -8,7 +8,6 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 
 import AccountFilter from '../components/AccountFilter';
@@ -223,73 +222,70 @@ export default class UTXOPicker extends React.Component<
         });
     }
 
-    private renderUtxoItem = ({ item }: ListRenderItemInfo<Utxo>) => {
-        const selectedSet = new Set(this.state.utxosSelected);
+    private renderUtxoItem = (
+        { item }: ListRenderItemInfo<Utxo>,
+        selectedSet: Set<string>
+    ) => {
         const key = item.getOutpoint;
         if (!key) {
             return null;
         }
         const message = this.state.utxoLabels[key];
 
+        const selected = selectedSet.has(key);
+
         return (
-            <ListItem
-                containerStyle={{
-                    flex: 1,
-                    flexDirection: 'column',
-                    backgroundColor: themeColor('background')
+            <TouchableOpacity
+                style={{
+                    ...styles.utxoRow
                 }}
                 onPress={() => this.toggleItem(item)}
+                activeOpacity={0.65}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
             >
                 <View style={styles.rowTop}>
                     <Text
-                        style={{
-                            flex: 1,
-                            alignSelf: 'flex-start',
-                            color: selectedSet.has(key)
-                                ? themeColor('highlight')
-                                : themeColor('text')
-                        }}
+                        style={[
+                            styles.utxoOutpoint,
+                            {
+                                color: selected
+                                    ? themeColor('highlight')
+                                    : themeColor('text')
+                            }
+                        ]}
                     >
                         {key}
                     </Text>
-                    {selectedSet.has(key) && (
+                    {selected && (
                         <Text
-                            style={{
-                                color: themeColor('highlight'),
-                                paddingLeft: 10,
-                                fontSize: 16,
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
+                            style={[
+                                styles.utxoCheck,
+                                { color: themeColor('highlight') }
+                            ]}
                         >
                             ✓
                         </Text>
                     )}
                 </View>
-                <View
-                    style={{
-                        alignSelf: 'flex-start'
-                    }}
-                >
+                <View style={styles.utxoAmountLine}>
                     <Amount
                         sats={item.getAmount}
                         sensitive={true}
-                        color={
-                            selectedSet.has(key) ? 'highlight' : 'secondaryText'
-                        }
+                        color={selected ? 'highlight' : 'secondaryText'}
                     />
                 </View>
-                {message && (
+                {message ? (
                     <Text
-                        style={{
-                            color: themeColor('secondaryText'),
-                            fontSize: 13,
-                            alignSelf: 'flex-start'
-                        }}
+                        style={[
+                            styles.utxoLabel,
+                            { color: themeColor('secondaryText') }
+                        ]}
                     >
                         {`${localeString('general.label')}: ${message}`}
                     </Text>
-                )}
-            </ListItem>
+                ) : null}
+            </TouchableOpacity>
         );
     };
 
@@ -303,6 +299,7 @@ export default class UTXOPicker extends React.Component<
             account
         } = this.state;
         const { utxos, loading, getUTXOs, accounts } = UTXOsStore;
+        const selectedSet = new Set(utxosSelected);
 
         return (
             <React.Fragment>
@@ -410,7 +407,12 @@ export default class UTXOPicker extends React.Component<
                             />
                         )}
 
-                        <View style={styles.body}>
+                        <View
+                            style={{
+                                ...styles.body,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
                             {loading ? (
                                 <View style={styles.loadingWrap}>
                                     <LoadingIndicator />
@@ -434,10 +436,13 @@ export default class UTXOPicker extends React.Component<
                                 </View>
                             ) : (
                                 <FlatList
+                                    showsVerticalScrollIndicator={false}
                                     data={utxos}
                                     contentContainerStyle={styles.listContent}
                                     extraData={utxosSelected}
-                                    renderItem={this.renderUtxoItem}
+                                    renderItem={(info) =>
+                                        this.renderUtxoItem(info, selectedSet)
+                                    }
                                     keyExtractor={(item: Utxo) =>
                                         item.getOutpoint ??
                                         `${item.txid}:${String(item.output)}`
@@ -576,8 +581,9 @@ const styles = StyleSheet.create({
     sheet: {
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        paddingHorizontal: 16,
-        paddingTop: 8
+        paddingTop: 16,
+        paddingBottom: 16,
+        paddingHorizontal: 10
     },
     sheetInner: {
         flex: 1
@@ -593,6 +599,7 @@ const styles = StyleSheet.create({
     sheetTitle: {
         fontSize: 20,
         fontWeight: '600',
+        paddingTop: 4,
         textAlign: 'center',
         fontFamily: 'PPNeueMontreal-Book'
     },
@@ -634,10 +641,36 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-        minHeight: 120
+        minHeight: 120,
+        padding: 10
     },
     listContent: {
-        paddingBottom: 12
+        paddingBottom: 12,
+        paddingTop: 12
+    },
+    utxoRow: {
+        flexDirection: 'column',
+        paddingVertical: 12
+    },
+    utxoOutpoint: {
+        flex: 1,
+        alignSelf: 'flex-start',
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    utxoCheck: {
+        paddingLeft: 10,
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    utxoAmountLine: {
+        alignSelf: 'flex-start',
+        marginTop: 2
+    },
+    utxoLabel: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 13,
+        marginTop: 4,
+        alignSelf: 'flex-start'
     },
     rowTop: {
         width: '100%',

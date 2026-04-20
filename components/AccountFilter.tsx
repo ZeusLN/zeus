@@ -105,6 +105,7 @@ function AccountFilter(props: AccountFilterProps) {
         <ScrollView
             style={{ minHeight: 55, maxHeight: 60, flexDirection: 'row' }}
             horizontal
+            showsHorizontalScrollIndicator={false}
         >
             {pills}
         </ScrollView>
