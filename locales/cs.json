@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Ověření certifikátu",
     "views.Settings.AddEditNode.createLndhub": "Vytvořit účet LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Uložit konfiguraci peněženky",
     "views.Settings.WalletConfiguration.setWalletActive": "Nastavit konfiguraci peněženky jako aktivní",
     "views.Settings.WalletConfiguration.walletActive": "Peněženka aktivní",
