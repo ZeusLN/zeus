@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Xác thực chứng chỉ",
     "views.Settings.AddEditNode.createLndhub": "Tạo tài khoản LNDHub",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Lưu Cấu hình Ví",
     "views.Settings.WalletConfiguration.setWalletActive": "Cấu hình Ví sang Kích hoạt",
     "views.Settings.WalletConfiguration.walletActive": "Wallet Active",
