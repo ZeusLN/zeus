@@ -3842,11 +3842,15 @@ export default class NostrWalletConnectStore {
                   code: this.toNip47ErrorCode(response.error.code)
               }
             : null;
-        const payload = {
-            result_type: method,
-            result: normalizedError ? null : response?.result ?? null,
-            error: normalizedError
+        const payload: any = {
+            result_type: method
         };
+
+        if (normalizedError) {
+            payload.error = normalizedError;
+        } else {
+            payload.result = response?.result ?? null;
+        }
         const content =
             encryptionScheme === 'nip44_v2'
                 ? nip44.encrypt(
@@ -3923,7 +3927,7 @@ export default class NostrWalletConnectStore {
                 return 'NOT_FOUND';
             case 'FAILED_TO_PAY_INVOICE':
             case 'INVOICE_EXPIRED':
-                return 'PAYMENT_FAILED';
+                return 'OTHER';
             case 'INTERNAL_ERROR':
                 return 'INTERNAL';
             default:

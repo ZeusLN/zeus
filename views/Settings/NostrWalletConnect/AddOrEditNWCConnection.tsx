@@ -1176,7 +1176,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             )}
                         </View>
 
-                        {hasActiveLightningAddress && !!activeLightningAddress && (
+                        {hasActiveLightningAddress && (
                             <View style={styles.section}>
                                 <View
                                     style={{
