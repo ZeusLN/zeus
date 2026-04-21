@@ -145,11 +145,10 @@ export default class AddOrEditNWCConnection extends React.Component<
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
         const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
-        const existingBudgetValue = this.state.budgetValue || 0;
         const hasLightningAddress = this.hasActiveLightningAddress();
         this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
-            budgetValue: existingBudgetValue,
+            budgetValue: prevState.budgetValue || 0,
             includeLightningAddress:
                 prevState.includeLightningAddressInitialized
                     ? prevState.includeLightningAddress
@@ -1177,75 +1176,74 @@ export default class AddOrEditNWCConnection extends React.Component<
                             )}
                         </View>
 
-                        {hasActiveLightningAddress &&
-                            !!activeLightningAddress && (
-                                <View style={styles.section}>
+                        {hasActiveLightningAddress && !!activeLightningAddress && (
+                            <View style={styles.section}>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        marginHorizontal: 15,
+                                        marginTop: 10
+                                    }}
+                                >
                                     <View
                                         style={{
-                                            flexDirection: 'row',
-                                            marginHorizontal: 15,
-                                            marginTop: 10
+                                            flex: 1,
+                                            justifyContent: 'center'
                                         }}
                                     >
-                                        <View
+                                        <Text
                                             style={{
-                                                flex: 1,
-                                                justifyContent: 'center'
+                                                color: themeColor('text'),
+                                                fontSize: 17,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontWeight: '400'
                                             }}
                                         >
-                                            <Text
-                                                style={{
-                                                    color: themeColor('text'),
-                                                    fontSize: 17,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    fontWeight: '400'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.includeLightningAddress'
-                                                )}
-                                            </Text>
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontSize: 14,
-                                                    marginTop: 4,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.includeLightningAddressDescription',
-                                                    {
-                                                        lightningAddress:
-                                                            activeLightningAddress
-                                                    }
-                                                )}
-                                            </Text>
-                                        </View>
-                                        <View
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.includeLightningAddress'
+                                            )}
+                                        </Text>
+                                        <Text
                                             style={{
-                                                alignSelf: 'center'
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 14,
+                                                marginTop: 4,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
-                                            <Switch
-                                                value={includeLightningAddress}
-                                                onValueChange={() =>
-                                                    this.updateStateWithChangeTracking(
-                                                        {
-                                                            includeLightningAddress:
-                                                                !includeLightningAddress
-                                                        }
-                                                    )
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.includeLightningAddressDescription',
+                                                {
+                                                    lightningAddress:
+                                                        activeLightningAddress
                                                 }
-                                            />
-                                        </View>
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={includeLightningAddress}
+                                            onValueChange={() =>
+                                                this.updateStateWithChangeTracking(
+                                                    {
+                                                        includeLightningAddress:
+                                                            !includeLightningAddress
+                                                    }
+                                                )
+                                            }
+                                        />
                                     </View>
                                 </View>
-                            )}
+                            </View>
+                        )}
 
                         {/* Permission Types */}
                         <View style={styles.section}>

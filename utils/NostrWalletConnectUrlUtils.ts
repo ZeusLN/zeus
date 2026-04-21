@@ -21,5 +21,7 @@ export const buildNostrWalletConnectUrl = ({
         queryParams.push(`lud16=${encodeURIComponent(normalizedLud16)}`);
     }
 
-    return `nostr+walletconnect://${walletServicePubkey}?${queryParams.join('&')}`;
+    return `nostr+walletconnect://${walletServicePubkey}?${queryParams.join(
+        '&'
+    )}`;
 };

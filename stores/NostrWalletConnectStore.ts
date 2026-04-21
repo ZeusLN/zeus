@@ -724,7 +724,7 @@ export default class NostrWalletConnectStore {
      * Update an existing NWC connection with new parameters.
      * @param connectionId The unique identifier of the connection to update.
      * @param updates Partial object containing the fields to update.
-     * @returns Promise<boolean> - True if update was successful, false otherwise.
+     * @returns Promise<{ nostrUrl?: string; success: boolean }> - Success flag and optional regenerated URL if relay or lightning address settings changed.
      * @throws Error if the connection is not found or update fails.
      */
     @action
@@ -750,13 +750,21 @@ export default class NostrWalletConnectStore {
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
             const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
-            const existingClientPrivateKey = relayUrlChanged
+            const includeLightningAddressChanged =
+                updates.includeLightningAddress !== undefined &&
+                updates.includeLightningAddress !==
+                    connection.includeLightningAddress;
+
+            const shouldReturnUrl =
+                relayUrlChanged || includeLightningAddressChanged;
+
+            const existingClientPrivateKey = shouldReturnUrl
                 ? await this.loadClientPrivateKey(connection.pubkey)
                 : undefined;
             const walletServicePubkey = this.walletServiceKeys?.publicKey;
 
             if (
-                relayUrlChanged &&
+                shouldReturnUrl &&
                 (!existingClientPrivateKey || !walletServicePubkey)
             ) {
                 this.setError(
@@ -802,15 +810,16 @@ export default class NostrWalletConnectStore {
 
             await this.saveConnections();
             await this.subscribeToConnection(connection);
-            if (relayUrlChanged) {
+            if (shouldReturnUrl) {
                 const lud16 = this.getConnectionLud16(
-                    connection.includeLightningAddress
+                    updates.includeLightningAddress ??
+                        connection.includeLightningAddress
                 );
 
                 return {
                     nostrUrl: buildNostrWalletConnectUrl({
                         walletServicePubkey: walletServicePubkey!,
-                        relayUrl: newRelayUrl,
+                        relayUrl: newRelayUrl || oldRelayUrl,
                         secret: existingClientPrivateKey!,
                         lud16
                     }),
@@ -3855,6 +3864,9 @@ export default class NostrWalletConnectStore {
         let tags = [];
         if (eventId) {
             tags.push(['e', eventId]);
+        }
+        if (encryptionScheme === 'nip44_v2') {
+            tags.push(['encryption', 'nip44_v2']);
         }
         tags.push(['p', connection.pubkey]);
         const unsignedEvent: UnsignedEvent = {

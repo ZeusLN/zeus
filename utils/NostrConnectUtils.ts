@@ -550,9 +550,8 @@ export default class NostrConnectUtils {
         if (activity.payment?.paymentHash) {
             return activity.payment.paymentHash;
         }
-        const invoiceString = NostrConnectUtils.extractInvoiceFromActivity(
-            activity
-        );
+        const invoiceString =
+            NostrConnectUtils.extractInvoiceFromActivity(activity);
         const invoicePaymentHash =
             NostrConnectUtils.extractPaymentHashFromInvoice(invoiceString);
         if (invoicePaymentHash) {
@@ -585,9 +584,7 @@ export default class NostrConnectUtils {
         return '';
     }
 
-    private static buildDeterministicPaymentHash(
-        fallbackKey: string
-    ): string {
+    private static buildDeterministicPaymentHash(fallbackKey: string): string {
         return bytesToHex(
             sha256(utf8ToBytes(`zeus-nwc-fallback:${fallbackKey}`))
         );
