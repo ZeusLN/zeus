@@ -2092,6 +2092,18 @@ export default class NostrWalletConnectStore {
             );
         }
         this.transactionsStore.reset();
+        
+        // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec
+        // fee_limit_msat takes precedence if both are provided
+        let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
+        const req = request as any;
+        if (req.fee_limit_msat !== undefined && req.fee_limit_msat > 0) {
+            // Convert millisatoshis to satoshis
+            feeLimitSat = Math.ceil(Number(req.fee_limit_msat) / 1000);
+        } else if (req.fee_limit_sat !== undefined && req.fee_limit_sat > 0) {
+            feeLimitSat = Number(req.fee_limit_sat);
+        }
+        
         const paymentData: {
             payment_request: string;
             fee_limit_sat: string;
@@ -2099,7 +2111,7 @@ export default class NostrWalletConnectStore {
             amount?: string;
         } = {
             payment_request: request.invoice,
-            fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
+            fee_limit_sat: feeLimitSat.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         };
         if (usedRequestAmount && request.amount) {
@@ -2499,20 +2511,9 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            // Per NIP-47 spec: amounts must be in whole millisatoshis
-            // Check that the amount is a whole satoshi (divisible by 1000)
-            // This ensures precision is not lost in satoshi-based storage
-            if (normalizedRequestAmountMsats % 1000 !== 0) {
-                return {
-                    amountSats: 0,
-                    usedRequestAmount: false,
-                    invalidRequestAmount: true
-                };
-            }
-
-            // Request amount is valid and positive
-            // Per NIP-47 spec, amounts are in millisatoshis.
-            // All backends (LND, LDK, CLN) support millisatoshi precision.
+            // Per NIP-47 spec: amounts are in millisatoshis (any positive integer).
+            // Backends (LND, LDK, CLN) all support arbitrary millisatoshi precision.
+            // Even fractional satoshi amounts (e.g., 123 msats = 0.123 sats) are valid.
             return {
                 amountSats: millisatsToSats(normalizedRequestAmountMsats),
                 usedRequestAmount: true,

@@ -375,9 +375,9 @@ export default class CLNRest {
         };
 
         // Set fee limit: prefer fee_limit_sat (in satoshis) over max_fee_percent
-        // per NIP-47 spec which provides fee_limit_msat for precision fee control
+        // CLN's maxfeesats parameter expects satoshis (1 sat = 1000 msats)
         if (data.fee_limit_sat) {
-            // Convert satoshis to millisatoshis for CLN maxfeesats parameter
+            // fee_limit_sat is already in satoshis, pass directly to CLN
             request.maxfeesats = Number(data.fee_limit_sat);
         } else if (data.max_fee_percent) {
             // Fallback to percentage-based fee limit if satoshi limit not provided
