@@ -1231,11 +1231,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     >
                                         <Switch
                                             value={includeLightningAddress}
-                                            onValueChange={() =>
+                                            onValueChange={(value: boolean) =>
                                                 this.updateStateWithChangeTracking(
                                                     {
                                                         includeLightningAddress:
-                                                            !includeLightningAddress,
+                                                            value,
                                                         includeLightningAddressInitialized: true
                                                     }
                                                 )

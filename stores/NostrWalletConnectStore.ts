@@ -2481,15 +2481,29 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        // Step 2: Try decoded invoice amount
-        const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
-        if (amount > 0) {
+        // Step 2: Try decoded invoice amount.
+        // Wrap the decode in try/catch so a malformed BOLT11 surfaces as an
+        // amount of 0 (caller maps to INVALID_INVOICE/INVALID_PARAMS) instead
+        // of bubbling up as an INTERNAL error.
+        let decodedAmount = 0;
+        try {
+            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
+                invoice
+            );
+            decodedAmount = Number(amount) || 0;
+        } catch (decodeErr) {
+            console.log(
+                'NWC: decodeInvoiceTags failed; treating as zero amount:',
+                decodeErr instanceof Error ? decodeErr.message : decodeErr
+            );
+        }
+        if (decodedAmount > 0) {
             console.log(
                 'NWC: Backend did not provide amount, using decoded invoice amount:',
-                amount
+                decodedAmount
             );
             return {
-                amountSats: amount,
+                amountSats: decodedAmount,
                 usedRequestAmount: false,
                 invalidRequestAmount: false
             };
@@ -3980,12 +3994,22 @@ export default class NostrWalletConnectStore {
                 return 'NOT_FOUND';
             case 'INVALID_PARAMS':
                 return 'INVALID_PARAMS';
+            case 'INVALID_INVOICE':
+                // An invalid/undecodable invoice is a request-parameter
+                // validation failure; surface as INVALID_PARAMS so clients
+                // can react deterministically (same NIP-47 spec category).
+                return 'INVALID_PARAMS';
             case 'INVOICE_EXPIRED':
                 // Expired invoice is not found/available
                 return 'NOT_FOUND';
             case 'FAILED_TO_PAY_INVOICE':
-                // Payment failure doesn't fit NIP-47 categories, use OTHER
-                return 'OTHER';
+                // Per NIP-47 §pay_invoice errors, payment-flow failures
+                // (timeout / no route / capacity) map to PAYMENT_FAILED.
+                return 'PAYMENT_FAILED';
+            case 'FAILED_TO_CREATE_INVOICE':
+                // No spec-defined code for invoice-creation failures;
+                // treat as an internal wallet-service error.
+                return 'INTERNAL';
             case 'INTERNAL_ERROR':
                 return 'INTERNAL';
             default:
