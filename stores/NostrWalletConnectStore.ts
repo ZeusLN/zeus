@@ -1117,6 +1117,17 @@ export default class NostrWalletConnectStore {
             this.connections[index] = connection;
         }
     }
+    private getLud16ForNwcConnectionString(): string | null {
+        if (!this.settingsStore.settings.lightningAddress?.enabled) {
+            return null;
+        }
+        const lud16 = this.lightningAddressStore.lightningAddress?.trim();
+        if (!lud16) {
+            return null;
+        }
+        return lud16;
+    }
+
     private generateConnectionSecret(relayUrl: string) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
@@ -1127,9 +1138,13 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
+        let connectionUrl = `nostr+walletconnect://${
             this.walletServiceKeys.publicKey
         }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        const lud16 = this.getLud16ForNwcConnectionString();
+        if (lud16) {
+            connectionUrl += `&lud16=${encodeURIComponent(lud16)}`;
+        }
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
     @action
