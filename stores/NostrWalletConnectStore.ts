@@ -4032,10 +4032,15 @@ export default class NostrWalletConnectStore {
     }
 
     // Maps internal error codes to NIP-47 specification error codes.
-    // NIP-47 defines: RATE_LIMITED, NOT_IMPLEMENTED, INSUFFICIENT_BALANCE,
-    // RESTRICTED, NOT_FOUND, INVALID_PARAMS, OTHER, and INTERNAL.
-    // Note: Some internal errors (e.g., FAILED_TO_PAY_INVOICE, INVOICE_EXPIRED)
-    // don't have direct NIP-47 equivalents and map to OTHER per spec.
+    // NIP-47 defines (canonical set across spec + per-method extensions):
+    //   RATE_LIMITED, NOT_IMPLEMENTED, INSUFFICIENT_BALANCE, QUOTA_EXCEEDED,
+    //   RESTRICTED, UNAUTHORIZED, INTERNAL, UNSUPPORTED_ENCRYPTION, OTHER,
+    //   PAYMENT_FAILED (pay_invoice / pay_keysend), NOT_FOUND (lookup_invoice),
+    //   INVALID_PARAMS (widely-supported request-validation extension).
+    // Internal codes that have no direct NIP-47 equivalent are mapped to the
+    // closest spec category — see per-case comments below for the rationale
+    // (e.g. INVALID_INVOICE → INVALID_PARAMS, INVOICE_EXPIRED → NOT_FOUND,
+    // FAILED_TO_PAY_INVOICE → PAYMENT_FAILED, FAILED_TO_CREATE_INVOICE → INTERNAL).
     private toNip47ErrorCode(code?: string): string {
         switch ((code || '').toUpperCase()) {
             case 'RATE_LIMITED':
