@@ -2441,6 +2441,7 @@ export default class NostrWalletConnectStore {
         usedRequestAmount: boolean;
         invalidRequestAmount: boolean;
     }> {
+        // Step 1: Try backend amount
         let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
         if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
             backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
@@ -2457,6 +2458,8 @@ export default class NostrWalletConnectStore {
                 invalidRequestAmount: false
             };
         }
+
+        // Step 2: Try decoded invoice amount
         const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
         if (amount > 0) {
             console.log(
@@ -2470,8 +2473,33 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        const normalizedRequestAmountMsats = Number(requestAmountMsats) || 0;
-        if (normalizedRequestAmountMsats > 0) {
+        // Step 3: Try request amount if provided
+        // Per NIP-47 spec, request amounts are in millisatoshis
+        const normalizedRequestAmountMsats = Number(requestAmountMsats);
+        const hasRequestAmount =
+            requestAmountMsats !== undefined && requestAmountMsats !== null;
+
+        if (hasRequestAmount) {
+            // Request amount was explicitly provided - validate it
+            if (!Number.isFinite(normalizedRequestAmountMsats)) {
+                // Request amount is NaN or Infinity
+                return {
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
+
+            if (normalizedRequestAmountMsats <= 0) {
+                // Request amount is 0 or negative
+                return {
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
+
+            // Request amount is valid and positive
             // Per NIP-47 spec, amounts are in millisatoshis and can be any positive value
             // including sub-satoshi amounts (e.g., 500 msats for micro-transactions).
             // All backends (LND, LDK, CLN) support millisatoshi precision.
@@ -2482,6 +2510,7 @@ export default class NostrWalletConnectStore {
             };
         }
 
+        // Step 4: No valid amount found anywhere
         return {
             amountSats: 0,
             usedRequestAmount: false,
