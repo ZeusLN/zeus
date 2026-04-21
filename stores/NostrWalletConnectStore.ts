@@ -2094,14 +2094,26 @@ export default class NostrWalletConnectStore {
         this.transactionsStore.reset();
 
         // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec
-        // fee_limit_msat takes precedence if both are provided
+        // fee_limit_msat takes precedence if both are provided.
+        // Use Number.isFinite() to defensively reject Infinity / NaN / unparseable
+        // values that would otherwise pass the `> 0` check (e.g. Infinity > 0).
         let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
         const req = request as any;
-        if (req.fee_limit_msat !== undefined && req.fee_limit_msat > 0) {
-            // Convert millisatoshis to satoshis
-            feeLimitSat = Math.ceil(Number(req.fee_limit_msat) / 1000);
-        } else if (req.fee_limit_sat !== undefined && req.fee_limit_sat > 0) {
-            feeLimitSat = Number(req.fee_limit_sat);
+        const reqFeeLimitMsat = Number(req.fee_limit_msat);
+        const reqFeeLimitSat = Number(req.fee_limit_sat);
+        if (
+            req.fee_limit_msat !== undefined &&
+            Number.isFinite(reqFeeLimitMsat) &&
+            reqFeeLimitMsat > 0
+        ) {
+            // Convert millisatoshis to satoshis (round UP — fee limit is a ceiling).
+            feeLimitSat = Math.ceil(reqFeeLimitMsat / 1000);
+        } else if (
+            req.fee_limit_sat !== undefined &&
+            Number.isFinite(reqFeeLimitSat) &&
+            reqFeeLimitSat > 0
+        ) {
+            feeLimitSat = reqFeeLimitSat;
         }
 
         const paymentData: {
@@ -2122,10 +2134,26 @@ export default class NostrWalletConnectStore {
             // payment to 0 sats. Underlying TransactionsStore.sendPayment
             // accepts integer satoshis only; msat-precision plumbing through
             // every backend is out of scope for this PR. Mirrors the same
-            // Math.ceil approach already used for fee_limit_msat above.
-            paymentData.amount = Math.ceil(
-                Number(request.amount) / 1000
-            ).toString();
+            // Math.ceil approach already used for fee_limit_msat above and
+            // for `getInvoiceAmount`'s sub-sat handling.
+            const requestedMsats = Number(request.amount);
+            const amountSatsCeil = Math.ceil(requestedMsats / 1000);
+            if (
+                Number.isFinite(requestedMsats) &&
+                requestedMsats % 1000 !== 0
+            ) {
+                console.warn(
+                    'NWC: sub-satoshi pay_invoice amount rounded UP for ' +
+                        'sat-precision pipeline.',
+                    {
+                        requestedMsats,
+                        chargedSats: amountSatsCeil,
+                        overpaymentMsats:
+                            amountSatsCeil * 1000 - requestedMsats
+                    }
+                );
+            }
+            paymentData.amount = amountSatsCeil.toString();
         }
         this.transactionsStore.sendPayment(paymentData);
 
