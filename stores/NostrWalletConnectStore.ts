@@ -110,17 +110,12 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io'
 ];
 
-const SUPPORTED_NWC_METHODS: Nip47SingleMethod[] = [
-    'get_info',
-    'get_balance',
-    'pay_invoice',
-    'make_invoice',
-    'lookup_invoice',
-    'list_transactions',
-    'sign_message'
-];
-
-const NWC_METHODS_REQUIRING_CONNECTION_PERMISSION = SUPPORTED_NWC_METHODS;
+// Per NIP-47 spec: get_info requires NO permissions and should always be available
+// All methods except get_info require explicit connection permissions
+const NWC_METHODS_REQUIRING_CONNECTION_PERMISSION =
+    NostrConnectUtils.getFullAccessPermissions().filter(
+        (method) => method !== 'get_info'
+    );
 
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
@@ -3313,7 +3308,11 @@ export default class NostrWalletConnectStore {
                         };
                     }
 
-                    if (SUPPORTED_NWC_METHODS.includes(request.method)) {
+                    if (
+                        NostrConnectUtils.getFullAccessPermissions().includes(
+                            request.method
+                        )
+                    ) {
                         await this.handleEventRequest(
                             connection,
                             request,
@@ -3704,7 +3703,7 @@ export default class NostrWalletConnectStore {
         try {
             if (
                 NWC_METHODS_REQUIRING_CONNECTION_PERMISSION.includes(
-                    request.method
+                    request.method as any
                 ) &&
                 !connection.hasPermission(request.method)
             ) {
@@ -3865,7 +3864,7 @@ export default class NostrWalletConnectStore {
                       connection.pubkey,
                       JSON.stringify(payload)
                   );
-        let tags = [];
+        let tags: string[][] = [];
         if (eventId) {
             tags.push(['e', eventId]);
         }
