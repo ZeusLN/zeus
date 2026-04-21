@@ -387,15 +387,16 @@ export default class CLNRest {
             request.maxfeepercent = data.max_fee_percent;
         }
 
-        // Only set amount_msat if data.amt is a positive, finite integer.
-        // - "Any amount" invoices work when amt is 0/undefined/NaN (amount_msat omitted)
-        // - Fixed amount invoices get the exact millisatoshi amount
-        // - Invalid amounts (0, NaN, Infinity, negative, fractional) are rejected
-        // - Math.floor guards against non-integer sat values being multiplied
-        //   by 1000 and producing fractional msats which CLN would reject.
-        const amount = Math.floor(Number(data.amt));
-        if (Number.isFinite(amount) && amount > 0) {
-            request.amount_msat = amount * 1000;
+        // Only set amount_msat if it resolves to a positive, finite integer.
+        // - "Any amount" invoices work when amt is 0/undefined/NaN (amount_msat omitted).
+        // - Fixed amount invoices get the exact millisatoshi amount.
+        // - Multiply by 1000 BEFORE flooring so any sub-satoshi precision in
+        //   data.amt (e.g. 1.5 sats → 1500 msat) is preserved rather than
+        //   truncated to whole sats. Math.floor guarantees an integer msat
+        //   value, which CLN's `msat` schema type requires.
+        const amountMsat = Math.floor(Number(data.amt) * 1000);
+        if (Number.isFinite(amountMsat) && amountMsat > 0) {
+            request.amount_msat = amountMsat;
         }
 
         return this.postRequest(

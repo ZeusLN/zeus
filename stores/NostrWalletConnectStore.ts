@@ -3525,7 +3525,7 @@ export default class NostrWalletConnectStore {
                           event.content,
                           nip44.getConversationKey(
                               hexToBytes(privateKey),
-                              hexToBytes(connection.pubkey)
+                              connection.pubkey
                           )
                       )
                     : nip04.decrypt(
@@ -3918,7 +3918,7 @@ export default class NostrWalletConnectStore {
                       JSON.stringify(payload),
                       nip44.getConversationKey(
                           hexToBytes(servicePrivateKey),
-                          hexToBytes(connection.pubkey)
+                          connection.pubkey
                       )
                   )
                 : nip04.encrypt(
