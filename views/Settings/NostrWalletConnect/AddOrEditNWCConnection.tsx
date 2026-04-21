@@ -1235,7 +1235,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                 this.updateStateWithChangeTracking(
                                                     {
                                                         includeLightningAddress:
-                                                            !includeLightningAddress
+                                                            !includeLightningAddress,
+                                                        includeLightningAddressInitialized: true
                                                     }
                                                 )
                                             }

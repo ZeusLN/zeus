@@ -2109,13 +2109,16 @@ export default class NostrWalletConnectStore {
             fee_limit_sat: string;
             timeout_seconds: string;
             amount?: string;
+            amount_msat?: string;
         } = {
             payment_request: request.invoice,
             fee_limit_sat: feeLimitSat.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         };
         if (usedRequestAmount && request.amount) {
-            paymentData.amount = millisatsToSats(request.amount).toString();
+            // Preserve millisatoshi precision for payment processing
+            // Use amount_msat parameter to maintain full precision (NIP-47 spec)
+            paymentData.amount_msat = request.amount.toString();
         }
         this.transactionsStore.sendPayment(paymentData);
 
@@ -2513,9 +2516,10 @@ export default class NostrWalletConnectStore {
 
             // Per NIP-47 spec: amounts are in millisatoshis (any positive integer).
             // Backends (LND, LDK, CLN) all support arbitrary millisatoshi precision.
-            // Even fractional satoshi amounts (e.g., 123 msats = 0.123 sats) are valid.
+            // NIP-47 spec requires support for ANY positive millisatoshi value (not just whole satoshis).
+            // Preserve millisatoshi precision through the payment pipeline.
             return {
-                amountSats: millisatsToSats(normalizedRequestAmountMsats),
+                amountSats: normalizedRequestAmountMsats,
                 usedRequestAmount: true,
                 invalidRequestAmount: false
             };
