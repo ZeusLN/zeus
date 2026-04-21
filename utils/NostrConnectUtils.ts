@@ -53,7 +53,9 @@ const PRESET_INDEX = {
 
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
-        return [];
+        // Support payment notifications as per NIP-47 spec
+        // These allow clients to be notified of wallet events
+        return ['payment_received', 'payment_sent'];
     }
 
     static get TIME_UNITS(): TimeUnit[] {

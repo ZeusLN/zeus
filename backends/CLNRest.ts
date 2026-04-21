@@ -371,9 +371,18 @@ export default class CLNRest {
     payLightningInvoice = (data: any) => {
         const request: any = {
             bolt11: data.payment_request,
-            maxfeepercent: data.max_fee_percent,
             retry_for: data.timeout_seconds
         };
+
+        // Set fee limit: prefer fee_limit_sat (in satoshis) over max_fee_percent
+        // per NIP-47 spec which provides fee_limit_msat for precision fee control
+        if (data.fee_limit_sat) {
+            // Convert satoshis to millisatoshis for CLN maxfeesats parameter
+            request.maxfeesats = Number(data.fee_limit_sat);
+        } else if (data.max_fee_percent) {
+            // Fallback to percentage-based fee limit if satoshi limit not provided
+            request.maxfeepercent = data.max_fee_percent;
+        }
 
         // Only set amount_msat if data.amt is a positive, finite number.
         // This ensures:

@@ -2499,9 +2499,19 @@ export default class NostrWalletConnectStore {
                 };
             }
 
+            // Per NIP-47 spec: amounts must be in whole millisatoshis
+            // Check that the amount is a whole satoshi (divisible by 1000)
+            // This ensures precision is not lost in satoshi-based storage
+            if (normalizedRequestAmountMsats % 1000 !== 0) {
+                return {
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
+
             // Request amount is valid and positive
-            // Per NIP-47 spec, amounts are in millisatoshis and can be any positive value
-            // including sub-satoshi amounts (e.g., 500 msats for micro-transactions).
+            // Per NIP-47 spec, amounts are in millisatoshis.
             // All backends (LND, LDK, CLN) support millisatoshi precision.
             return {
                 amountSats: millisatsToSats(normalizedRequestAmountMsats),
