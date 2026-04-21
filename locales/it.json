@@ -1739,7 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Fattura già pagata",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Richiesta di pagamento non valida",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Importo non valido",
-    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Importo non valido: l'importo deve essere un numero intero positivo di millisatoshi",
+    "stores.NostrWalletConnectStore.error.invalidAmountMsats": "Importo non valido: l'importo deve essere un numero intero positivo di millisatoshi",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu mint non configurato correttamente: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "Numero massimo di tentativi raggiunto",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "L'ID di connessione esiste già",

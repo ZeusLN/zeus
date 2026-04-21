@@ -1305,5 +1305,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Balance (ascending)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Balance (descending)",
     "views.OnChainAddresses.createAddress": "Create address",
-    "views.OnChainAddresses.changeAddresses": "Change addresses"
+    "views.OnChainAddresses.changeAddresses": "Change addresses",
+    "stores.NostrWalletConnectStore.error.invalidAmountMsats": "Invalid amount: amount must be a positive integer number of millisatoshis",
+    "backends.NWC.permissionDenied": "Permission denied for this operation"
 }

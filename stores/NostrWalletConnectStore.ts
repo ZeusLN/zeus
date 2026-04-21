@@ -2034,7 +2034,7 @@ export default class NostrWalletConnectStore {
         if (invalidRequestAmount) {
             return this.handleError(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.invalidAmountSats'
+                    'stores.NostrWalletConnectStore.error.invalidAmountMsats'
                 ),
                 ErrorCodes.INVALID_PARAMS
             );

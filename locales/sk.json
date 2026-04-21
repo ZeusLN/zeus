@@ -1016,9 +1016,9 @@
     "views.ActivityFilter.onChainPayments": "On-chain platby",
     "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
     "views.ActivityFilter.maximumAmount": "Maximum Amount (sats)",
-    "views.ActivityFilter.maximumAmountPlaceHolder":"No limit",
+    "views.ActivityFilter.maximumAmountPlaceHolder": "No limit",
     "views.ActivityFilter.memo": "Memo/Note",
-    "views.ActivityFilter.memoPlaceHolder":"Enter Memo/Note",
+    "views.ActivityFilter.memoPlaceHolder": "Enter Memo/Note",
     "views.ActivityFilter.inTransit": "In transit payments",
     "views.ActivityFilter.isFailed": "Failed payments",
     "views.ActivityFilter.standardInvoices": "Standard invoices",
@@ -1386,5 +1386,7 @@
     "views.OnChainAddresses.createAddress": "Create address",
     "views.OnChainAddresses.changeAddresses": "Change addresses",
     "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown"
+    "androidNotification.shutdown": "Shutdown",
+    "stores.NostrWalletConnectStore.error.invalidAmountMsats": "Invalid amount: amount must be a positive integer number of millisatoshis",
+    "backends.NWC.permissionDenied": "Permission denied for this operation"
 }

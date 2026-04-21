@@ -1697,5 +1697,7 @@
     "views.SwapSettings.customHost": "Enter a custom host",
     "views.SwapSettings.failureReason": "Failure reason",
     "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown"
+    "androidNotification.shutdown": "Shutdown",
+    "stores.NostrWalletConnectStore.error.invalidAmountMsats": "Invalid amount: amount must be a positive integer number of millisatoshis",
+    "backends.NWC.permissionDenied": "Permission denied for this operation"
 }
