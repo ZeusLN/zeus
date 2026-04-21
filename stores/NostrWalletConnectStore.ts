@@ -3658,46 +3658,48 @@ export default class NostrWalletConnectStore {
                 );
             } else {
                 switch (request.method) {
-                case 'get_info':
-                    response = await this.handleGetInfo(connection);
-                    break;
-                case 'get_balance':
-                    response = await this.handleGetBalance(connection);
-                    break;
-                case 'pay_invoice':
-                    response = await this.handlePayInvoice(
-                        connection,
-                        request.params,
-                        skipNotification
-                    );
-                    break;
-                case 'make_invoice':
-                    response = await this.handleMakeInvoice(
-                        connection,
-                        request.params
-                    );
-                    break;
-                case 'lookup_invoice':
-                    response = await this.handleLookupInvoice(request.params);
-                    break;
-                case 'list_transactions':
-                    response = await this.handleListTransactions(
-                        connection,
-                        request.params
-                    );
-                    break;
-                case 'sign_message':
-                    response = await this.handleSignMessage(request.params);
-                    break;
-                default:
-                    response = this.handleError(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                            { method: request.method }
-                        ),
-                        ErrorCodes.NOT_IMPLEMENTED
-                    );
-                    break;
+                    case 'get_info':
+                        response = await this.handleGetInfo(connection);
+                        break;
+                    case 'get_balance':
+                        response = await this.handleGetBalance(connection);
+                        break;
+                    case 'pay_invoice':
+                        response = await this.handlePayInvoice(
+                            connection,
+                            request.params,
+                            skipNotification
+                        );
+                        break;
+                    case 'make_invoice':
+                        response = await this.handleMakeInvoice(
+                            connection,
+                            request.params
+                        );
+                        break;
+                    case 'lookup_invoice':
+                        response = await this.handleLookupInvoice(
+                            request.params
+                        );
+                        break;
+                    case 'list_transactions':
+                        response = await this.handleListTransactions(
+                            connection,
+                            request.params
+                        );
+                        break;
+                    case 'sign_message':
+                        response = await this.handleSignMessage(request.params);
+                        break;
+                    default:
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.NOT_IMPLEMENTED
+                        );
+                        break;
                 }
             }
         } catch (error) {

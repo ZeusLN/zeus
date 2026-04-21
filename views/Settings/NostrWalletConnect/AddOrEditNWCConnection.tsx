@@ -150,13 +150,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: existingBudgetValue,
-            includeLightningAddress: hasLightningAddress
-                ? prevState.includeLightningAddressInitialized
+            includeLightningAddress:
+                prevState.includeLightningAddressInitialized
                     ? prevState.includeLightningAddress
-                    : true
-                : prevState.includeLightningAddressInitialized
-                ? prevState.includeLightningAddress
-                : false,
+                    : hasLightningAddress,
             includeLightningAddressInitialized:
                 prevState.includeLightningAddressInitialized ||
                 hasLightningAddress
@@ -662,7 +659,14 @@ export default class AddOrEditNWCConnection extends React.Component<
                     params
                 );
                 if (updated.success) {
-                    setTimeout(() => navigation.goBack(), 100);
+                    if (updated.nostrUrl) {
+                        navigation.navigate('NWCConnectionQR', {
+                            connectionId,
+                            nostrUrl: updated.nostrUrl
+                        });
+                    } else {
+                        setTimeout(() => navigation.goBack(), 100);
+                    }
                 } else {
                     throw new Error(
                         NostrWalletConnectStore.errorMessage ||
