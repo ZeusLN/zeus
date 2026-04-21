@@ -72,7 +72,6 @@ export default class NWCConnectionDetails extends React.Component<
             'focus',
             this.loadConnection
         );
-        this.loadConnection();
     }
     componentDidUpdate(
         _prevProps: NWCConnectionDetailsProps,
@@ -317,8 +316,8 @@ export default class NWCConnectionDetails extends React.Component<
                                     >
                                         <ClockIcon
                                             color={themeColor('bitcoin')}
-                                            width={20}
-                                            height={20}
+                                            width={30}
+                                            height={30}
                                         />
                                     </TouchableOpacity>
                                 )}
@@ -332,8 +331,8 @@ export default class NWCConnectionDetails extends React.Component<
                                 >
                                     <EditIcon
                                         fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
+                                        width={30}
+                                        height={30}
                                     />
                                 </TouchableOpacity>
                             </View>
