@@ -1255,12 +1255,11 @@ export default class NostrWalletConnectStore {
             );
             const handler: NWCWalletServiceRequestHandler = {};
 
-            if (connection.hasPermission('get_info')) {
-                handler.getInfo = () =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleGetInfo(connection)
-                    );
-            }
+            // Per NIP-47 spec: get_info MUST ALWAYS be available, regardless of permissions
+            handler.getInfo = () =>
+                this.withGlobalHandler(connection.id, () =>
+                    this.handleGetInfo(connection)
+                );
 
             if (connection.hasPermission('get_balance')) {
                 handler.getBalance = () =>
@@ -3911,6 +3910,11 @@ export default class NostrWalletConnectStore {
         return 'nip04';
     }
 
+    // Maps internal error codes to NIP-47 specification error codes.
+    // NIP-47 defines: RATE_LIMITED, NOT_IMPLEMENTED, INSUFFICIENT_BALANCE,
+    // RESTRICTED, NOT_FOUND, INVALID_PARAMS, OTHER, and INTERNAL.
+    // Note: Some internal errors (e.g., FAILED_TO_PAY_INVOICE, INVOICE_EXPIRED)
+    // don't have direct NIP-47 equivalents and map to OTHER per spec.
     private toNip47ErrorCode(code?: string): string {
         switch ((code || '').toUpperCase()) {
             case 'RATE_LIMITED':
@@ -3925,8 +3929,11 @@ export default class NostrWalletConnectStore {
                 return 'NOT_FOUND';
             case 'INVALID_PARAMS':
                 return 'INVALID_PARAMS';
-            case 'FAILED_TO_PAY_INVOICE':
             case 'INVOICE_EXPIRED':
+                // Expired invoice is not found/available
+                return 'NOT_FOUND';
+            case 'FAILED_TO_PAY_INVOICE':
+                // Payment failure doesn't fit NIP-47 categories, use OTHER
                 return 'OTHER';
             case 'INTERNAL_ERROR':
                 return 'INTERNAL';
