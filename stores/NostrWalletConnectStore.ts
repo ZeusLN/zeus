@@ -38,6 +38,8 @@ import {
     verifySignature
 } from 'nostr-tools';
 import * as nip04 from '@nostr/tools/nip04';
+import * as nip44 from '@nostr/tools/nip44';
+import { hexToBytes } from '@noble/hashes/utils';
 
 import {
     Platform,
@@ -150,12 +152,15 @@ interface NWCRequest {
     params: any;
 }
 
+type NwcEncryptionScheme = 'nip04' | 'nip44_v2';
+
 interface InvoiceEventType {
     eventStr: string;
     request: NWCRequest;
     connection: NWCConnection;
     eventId: string;
     amount: number;
+    encryptionScheme: NwcEncryptionScheme;
 }
 
 export interface PendingPayment {
@@ -165,6 +170,7 @@ export interface PendingPayment {
     eventId: string;
     connectionName: string;
     amount: number;
+    encryptionScheme?: NwcEncryptionScheme;
     isProcessed?: boolean;
     status?: boolean;
     errorMessage?: string;
@@ -3240,7 +3246,7 @@ export default class NostrWalletConnectStore {
         const results = await Promise.all(
             events.map(async (eventStr) => {
                 try {
-                    const { request, connection, eventId } =
+                    const { request, connection, eventId, encryptionScheme } =
                         await this.retryWithBackoff(
                             () => this.validateAndParsePendingEvent(eventStr),
                             3
@@ -3257,7 +3263,8 @@ export default class NostrWalletConnectStore {
                                 localeString('backends.NWC.permissionDenied'),
                                 ErrorCodes.RESTRICTED
                             ),
-                            eventId
+                            eventId,
+                            encryptionScheme
                         );
                         return null;
                     }
@@ -3275,14 +3282,16 @@ export default class NostrWalletConnectStore {
                             request,
                             connection,
                             eventId,
-                            amount
+                            amount,
+                            encryptionScheme
                         };
                     }
 
                     await this.publishNotImplementedNip47Response(
                         connection,
                         request,
-                        eventId
+                        eventId,
+                        encryptionScheme
                     );
                     return null;
                 } catch (error) {
@@ -3330,6 +3339,7 @@ export default class NostrWalletConnectStore {
         request: NWCRequest;
         connection: NWCConnection;
         eventId: string;
+        encryptionScheme: NwcEncryptionScheme;
     }> {
         let event: NostrEvent;
         try {
@@ -3380,11 +3390,17 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            const decryptedContent = nip04.decrypt(
-                privateKey,
-                connection.pubkey,
-                event.content
-            );
+            const encryptionScheme = this.getEventEncryptionScheme(event.tags);
+            const decryptedContent =
+                encryptionScheme === 'nip44_v2'
+                    ? nip44.decrypt(
+                          event.content,
+                          nip44.getConversationKey(
+                              hexToBytes(privateKey),
+                              connection.pubkey
+                          )
+                      )
+                    : nip04.decrypt(privateKey, connection.pubkey, event.content);
             request = JSON.parse(decryptedContent);
         } catch (error) {
             console.error('NWC: Failed to decrypt or parse event content', {
@@ -3424,7 +3440,12 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        return { request, connection, eventId: event.id };
+        return {
+            request,
+            connection,
+            eventId: event.id,
+            encryptionScheme: this.getEventEncryptionScheme(event.tags)
+        };
     }
 
     @action
@@ -3462,7 +3483,8 @@ export default class NostrWalletConnectStore {
                         connection,
                         event.request,
                         event.eventId,
-                        true // skip single payment Notification for pending events
+                        true, // skip single payment Notification for pending events
+                        event.encryptionScheme || 'nip04'
                     );
                     runInAction(async () => {
                         if (result.success) {
@@ -3634,7 +3656,8 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: NWCRequest,
         eventId: string,
-        skipNotification: boolean = false
+        skipNotification: boolean = false,
+        requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<{ success: boolean; errorMessage?: string }> {
         let response: any;
         try {
@@ -3728,7 +3751,8 @@ export default class NostrWalletConnectStore {
                 connection,
                 request.method,
                 response,
-                eventId
+                eventId,
+                requestEncryptionScheme
             );
         }
 
@@ -3743,7 +3767,8 @@ export default class NostrWalletConnectStore {
     private async publishNotImplementedNip47Response(
         connection: NWCConnection,
         request: NWCRequest,
-        eventId: string
+        eventId: string,
+        requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<void> {
         try {
             const response = this.handleError(
@@ -3757,7 +3782,8 @@ export default class NostrWalletConnectStore {
                 connection,
                 request.method,
                 response,
-                eventId
+                eventId,
+                requestEncryptionScheme
             );
         } catch (error) {
             console.warn(
@@ -3772,20 +3798,36 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         method: string,
         response: any,
-        eventId?: string
+        eventId?: string,
+        encryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<void> {
         const servicePrivateKey = this.walletServiceKeys!.privateKey;
         const servicePublicKey = this.walletServiceKeys!.publicKey;
-        const content = nip04.encrypt(
-            servicePrivateKey,
-            connection.pubkey,
-            JSON.stringify({
-                result_type: method,
-                ...(response?.error
-                    ? { error: response.error }
-                    : { result: response?.result })
-            })
-        );
+        const normalizedError = response?.error
+            ? {
+                  ...response.error,
+                  code: this.toNip47ErrorCode(response.error.code)
+              }
+            : null;
+        const payload = {
+            result_type: method,
+            result: normalizedError ? null : (response?.result ?? null),
+            error: normalizedError
+        };
+        const content =
+            encryptionScheme === 'nip44_v2'
+                ? nip44.encrypt(
+                      JSON.stringify(payload),
+                      nip44.getConversationKey(
+                          hexToBytes(servicePrivateKey),
+                          connection.pubkey
+                      )
+                  )
+                : nip04.encrypt(
+                      servicePrivateKey,
+                      connection.pubkey,
+                      JSON.stringify(payload)
+                  );
         let tags = [];
         if (eventId) {
             tags.push(['e', eventId]);
@@ -3817,6 +3859,40 @@ export default class NostrWalletConnectStore {
                 }
             }
         }, MAX_RELAY_ATTEMPTS);
+    }
+
+    private getEventEncryptionScheme(tags: string[][]): NwcEncryptionScheme {
+        const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
+        const raw = (encryptionTag?.[1] || '').toLowerCase();
+        if (!raw) {
+            return 'nip04';
+        }
+        if (raw.includes('nip44_v2')) {
+            return 'nip44_v2';
+        }
+        return 'nip04';
+    }
+
+    private toNip47ErrorCode(code?: string): string {
+        switch ((code || '').toUpperCase()) {
+            case 'RATE_LIMITED':
+                return 'RATE_LIMITED';
+            case 'NOT_IMPLEMENTED':
+                return 'NOT_IMPLEMENTED';
+            case 'INSUFFICIENT_BALANCE':
+                return 'INSUFFICIENT_BALANCE';
+            case 'RESTRICTED':
+                return 'RESTRICTED';
+            case 'NOT_FOUND':
+                return 'NOT_FOUND';
+            case 'FAILED_TO_PAY_INVOICE':
+            case 'INVOICE_EXPIRED':
+                return 'PAYMENT_FAILED';
+            case 'INTERNAL_ERROR':
+                return 'INTERNAL';
+            default:
+                return 'OTHER';
+        }
     }
 
     // IOS: handoff request to notification server

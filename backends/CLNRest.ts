@@ -368,17 +368,23 @@ export default class CLNRest {
             string: urlParams && urlParams[0]
         });
 
-    payLightningInvoice = (data: any) =>
-        this.postRequest(
+    payLightningInvoice = (data: any) => {
+        const request: any = {
+            bolt11: data.payment_request,
+            maxfeepercent: data.max_fee_percent,
+            retry_for: data.timeout_seconds
+        };
+
+        if (data.amt !== undefined && data.amt !== null) {
+            request.amount_msat = Number(data.amt) * 1000;
+        }
+
+        return this.postRequest(
             '/v1/pay',
-            {
-                bolt11: data.payment_request,
-                amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
+            request,
             data.timeout_seconds * 1000
         );
+    };
     sendKeysend = (data: any) => {
         return this.postRequest(
             '/v1/keysend',

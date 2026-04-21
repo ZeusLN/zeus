@@ -21,6 +21,8 @@ import Transaction from '../models/Transaction';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -548,11 +550,47 @@ export default class NostrConnectUtils {
         if (activity.payment?.paymentHash) {
             return activity.payment.paymentHash;
         }
+        const invoiceString = NostrConnectUtils.extractInvoiceFromActivity(
+            activity
+        );
+        const invoicePaymentHash =
+            NostrConnectUtils.extractPaymentHashFromInvoice(invoiceString);
+        if (invoicePaymentHash) {
+            return invoicePaymentHash;
+        }
         if (activity.invoice) {
             const invoiceHash = (activity.invoice as Invoice).payment_hash;
             if (invoiceHash) return invoiceHash;
         }
         return activity.id || '';
+    }
+
+    private static extractPaymentHashFromInvoice(invoice: string): string {
+        if (!invoice) {
+            return '';
+        }
+        try {
+            const decoded: any = bolt11.decode(invoice);
+            if (!decoded?.tags) {
+                return '';
+            }
+            for (const tag of decoded.tags) {
+                if (tag.tagName === 'payment_hash') {
+                    return String(tag.data || '');
+                }
+            }
+        } catch {
+            return '';
+        }
+        return '';
+    }
+
+    private static buildDeterministicPaymentHash(
+        fallbackKey: string
+    ): string {
+        return bytesToHex(
+            sha256(utf8ToBytes(`zeus-nwc-fallback:${fallbackKey}`))
+        );
     }
 
     private static extractAmountFromActivity(
@@ -890,8 +928,20 @@ export default class NostrConnectUtils {
                     const amount = Number(payment.getAmount) || 0;
                     const timestamp =
                         Number(payment.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = payment.paymentHash || '';
                     const invoice = payment.getPaymentRequest || '';
+                    const paymentHash =
+                        payment.paymentHash ||
+                        NostrConnectUtils.extractPaymentHashFromInvoice(
+                            invoice
+                        ) ||
+                        NostrConnectUtils.buildDeterministicPaymentHash(
+                            String(
+                                payment.id ||
+                                    payment.getPreimage ||
+                                    invoice ||
+                                    `payment-${Math.floor(timestamp)}-${amount}`
+                            )
+                        );
                     const feesPaid = satsToMillisats(
                         Number(payment.getFee) || 0
                     );
@@ -931,8 +981,18 @@ export default class NostrConnectUtils {
                     const amount = Number(invoice.getAmount) || 0;
                     const timestamp =
                         Number(invoice.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = invoice.payment_hash || '';
                     const invoiceString = invoice.getPaymentRequest || '';
+                    const paymentHash =
+                        invoice.payment_hash ||
+                        NostrConnectUtils.extractPaymentHashFromInvoice(
+                            invoiceString
+                        ) ||
+                        NostrConnectUtils.buildDeterministicPaymentHash(
+                            String(
+                                invoiceString ||
+                                    `invoice-${Math.floor(timestamp)}-${amount}`
+                            )
+                        );
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;
 
