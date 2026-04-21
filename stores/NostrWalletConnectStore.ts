@@ -138,6 +138,7 @@ export default class NostrWalletConnectStore {
     @observable public connections: NWCConnection[] = [];
     @observable private nwcWalletServices: Map<string, nwc.NWCWalletService> =
         new Map();
+    @observable public isInitialized: boolean = false;
     @observable private activeSubscriptions: Map<string, () => void> =
         new Map();
     @observable private publishedRelays: Set<string> = new Set();
@@ -202,59 +203,62 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeService = async () => {
+        if (this.isInitialized) {
+            console.log('NWC: skipping initialization - already initialized');
+            return;
+        }
         await this.loadInitialSettings();
         const hasActiveConnections = this.activeConnections.length > 0;
         if (!hasActiveConnections) return;
 
-        await retry({
-            fn: async () => {
-                runInAction(() => {
-                    this.error = false;
-                    this.loading = true;
-                    this.loadingMsg = localeString(
-                        'stores.NostrWalletConnectStore.initializingService'
-                    );
-                });
-                try {
-                    await this.initializeNWCWalletServices();
-                    await this.startService(hasActiveConnections);
-                    await this.loadMaxBudget();
-                    await this.checkAndResetAllBudgets();
-                    if (Platform.OS === 'android') {
-                        this.setupAndroidReconnectionListener();
-                        this.setupAppStateMonitoring();
-                        this.setupAndroidLogListener();
-                    }
-                    if (
-                        Platform.OS === 'ios' &&
-                        this.persistentNWCServiceEnabled
-                    ) {
-                        // (iOS: AppState + silent audio session).
-                        this.setupIOSAppStateMonitoring();
-                    }
-                    runInAction(() => {
-                        this.loadingMsg = undefined;
-                        this.loading = false;
-                    });
-                } catch (error) {
-                    console.error('Failed to initialize NWC service:', error);
-                    const errorMessage =
-                        (error instanceof Error
-                            ? error.message
-                            : String(error)) ||
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.failedToInitializeService'
-                        );
-                    runInAction(() => {
-                        this.setError(errorMessage);
-                        this.loading = false;
-                        this.loadingMsg = undefined;
-                    });
-                }
-            },
-            maxRetries: MAX_RELAY_ATTEMPTS,
-            exponentialBackoff: true
+        runInAction(() => {
+            this.error = false;
+            this.loading = true;
+            this.loadingMsg = localeString(
+                'stores.NostrWalletConnectStore.initializingService'
+            );
         });
+        try {
+            await this.initializeNWCWalletServices();
+            const started = await this.startService(hasActiveConnections);
+            if (!started) {
+                runInAction(() => {
+                    this.isInitialized = false;
+                    this.loading = false;
+                    this.loadingMsg = undefined;
+                });
+                return;
+            }
+            await this.loadMaxBudget();
+            await this.checkAndResetAllBudgets();
+            if (Platform.OS === 'android') {
+                this.setupAndroidReconnectionListener();
+                this.setupAppStateMonitoring();
+                this.setupAndroidLogListener();
+            }
+            if (Platform.OS === 'ios' && this.persistentNWCServiceEnabled) {
+                // (iOS: AppState + silent audio session).
+                this.setupIOSAppStateMonitoring();
+            }
+            runInAction(() => {
+                this.loadingMsg = undefined;
+                this.loading = false;
+                this.isInitialized = true;
+            });
+        } catch (error) {
+            console.error('Failed to initialize NWC service:', error);
+            const errorMessage =
+                (error instanceof Error ? error.message : String(error)) ||
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToInitializeService'
+                );
+            runInAction(() => {
+                this.setError(errorMessage);
+                this.loading = false;
+                this.loadingMsg = undefined;
+                this.isInitialized = false;
+            });
+        }
     };
 
     private async loadInitialSettings() {
@@ -336,6 +340,7 @@ export default class NostrWalletConnectStore {
             setTimeout(async () => {
                 await this.subscribeToAllConnections();
             }, SERVICE_START_DELAY_MS);
+            return true;
         } catch (error) {
             console.error('Failed to start NWC service:', error);
             const errorMessage =
@@ -384,6 +389,7 @@ export default class NostrWalletConnectStore {
             this.cashuEnabled = false;
             this.nwcWalletServices.clear();
             this.publishedRelays.clear();
+            this.isInitialized = false;
             await this.unsubscribeFromAllConnections();
         }
     };
