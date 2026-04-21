@@ -2109,16 +2109,23 @@ export default class NostrWalletConnectStore {
             fee_limit_sat: string;
             timeout_seconds: string;
             amount?: string;
-            amount_msat?: string;
         } = {
             payment_request: request.invoice,
             fee_limit_sat: feeLimitSat.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         };
         if (usedRequestAmount && request.amount) {
-            // Preserve millisatoshi precision for payment processing
-            // Use amount_msat parameter to maintain full precision (NIP-47 spec)
-            paymentData.amount_msat = request.amount.toString();
+            // Per NIP-47 spec, request.amount is in millisatoshis. Convert to
+            // satoshis using Math.ceil so sub-satoshi amounts round UP — this
+            // preserves the caller's intent (they get charged at least what
+            // was requested) and avoids a Math.floor truncating a small
+            // payment to 0 sats. Underlying TransactionsStore.sendPayment
+            // accepts integer satoshis only; msat-precision plumbing through
+            // every backend is out of scope for this PR. Mirrors the same
+            // Math.ceil approach already used for fee_limit_msat above.
+            paymentData.amount = Math.ceil(
+                Number(request.amount) / 1000
+            ).toString();
         }
         this.transactionsStore.sendPayment(paymentData);
 
@@ -2514,12 +2521,18 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            // Per NIP-47 spec: amounts are in millisatoshis (any positive integer).
-            // Backends (LND, LDK, CLN) all support arbitrary millisatoshi precision.
-            // NIP-47 spec requires support for ANY positive millisatoshi value (not just whole satoshis).
-            // Preserve millisatoshi precision through the payment pipeline.
+            // Per NIP-47 spec: request amounts are in millisatoshis (any positive
+            // integer). However, every downstream consumer of `amountSats` in
+            // this store treats it as integer satoshis (balance check at line
+            // ~2081, recordPayment, recordFailedPayment, notifications,
+            // trackSpending, etc). Plumbing msat precision through the entire
+            // payment pipeline + every backend is out of scope for this PR, so
+            // we round UP to the nearest satoshi using Math.ceil. This preserves
+            // the caller's intent (they get at least what they asked for), is
+            // consistent with the fee_limit_msat conversion above, and mirrors
+            // how `processPayInvoice` builds the actual payment amount.
             return {
-                amountSats: normalizedRequestAmountMsats,
+                amountSats: Math.ceil(normalizedRequestAmountMsats / 1000),
                 usedRequestAmount: true,
                 invalidRequestAmount: false
             };
