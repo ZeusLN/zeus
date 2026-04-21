@@ -3916,9 +3916,10 @@ export default class NostrWalletConnectStore {
         if (eventId) {
             tags.push(['e', eventId]);
         }
-        if (encryptionScheme === 'nip44_v2') {
-            tags.push(['encryption', 'nip44_v2']);
-        }
+        // Per NIP-47: response events SHOULD include an `encryption` tag
+        // identifying the scheme used (`nip04` or `nip44_v2`) so clients can
+        // decrypt without guessing. Always emit it for both schemes.
+        tags.push(['encryption', encryptionScheme]);
         tags.push(['p', connection.pubkey]);
         const unsignedEvent: UnsignedEvent = {
             kind: 23195,

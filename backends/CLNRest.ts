@@ -374,22 +374,26 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
 
-        // Set fee limit: prefer fee_limit_sat (in satoshis) over max_fee_percent
-        // CLN's maxfeesats parameter expects satoshis (1 sat = 1000 msats)
+        // Set fee limit: prefer fee_limit_sat (absolute) over max_fee_percent.
+        // Per CLN /v1/pay schema (doc/schemas/pay.json) the absolute-fee
+        // parameter is `maxfee` (type "msat", whole number is interpreted as
+        // millisatoshis). The previous parameter name `maxfeesats` is NOT a
+        // valid CLN field and is rejected by the schema's
+        // `additionalProperties: false`. Convert sat -> msat here.
         if (data.fee_limit_sat) {
-            // fee_limit_sat is already in satoshis, pass directly to CLN
-            request.maxfeesats = Number(data.fee_limit_sat);
+            request.maxfee = Number(data.fee_limit_sat) * 1000;
         } else if (data.max_fee_percent) {
-            // Fallback to percentage-based fee limit if satoshi limit not provided
+            // Fallback to percentage-based fee limit if absolute limit not provided
             request.maxfeepercent = data.max_fee_percent;
         }
 
-        // Only set amount_msat if data.amt is a positive, finite number.
-        // This ensures:
+        // Only set amount_msat if data.amt is a positive, finite integer.
         // - "Any amount" invoices work when amt is 0/undefined/NaN (amount_msat omitted)
         // - Fixed amount invoices get the exact millisatoshi amount
-        // - Invalid amounts (0, NaN, Infinity, negative) are rejected by CLN logic
-        const amount = Number(data.amt);
+        // - Invalid amounts (0, NaN, Infinity, negative, fractional) are rejected
+        // - Math.floor guards against non-integer sat values being multiplied
+        //   by 1000 and producing fractional msats which CLN would reject.
+        const amount = Math.floor(Number(data.amt));
         if (Number.isFinite(amount) && amount > 0) {
             request.amount_msat = amount * 1000;
         }
