@@ -2016,7 +2016,9 @@ export default class NostrWalletConnectStore {
             );
         if (invalidRequestAmount) {
             return this.handleError(
-                'Invalid amount: millisatoshi amount must be a whole number of satoshis',
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidAmount'
+                ),
                 ErrorCodes.INVALID_PARAMS
             );
         }
