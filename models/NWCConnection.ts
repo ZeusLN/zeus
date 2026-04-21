@@ -145,8 +145,6 @@ export default class NWCConnection extends BaseModel {
     constructor(data?: StoredNWCConnectionData) {
         super(data ? normalizeNWCConnectionData(data) : data);
 
-        this.includeLightningAddress = !!this.includeLightningAddress;
-
         this.totalSpendSats = Math.floor(Number(this.totalSpendSats || 0));
         this.maxAmountSats =
             this.maxAmountSats !== undefined

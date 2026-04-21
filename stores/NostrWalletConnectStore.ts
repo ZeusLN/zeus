@@ -110,6 +110,18 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io'
 ];
 
+const SUPPORTED_NWC_METHODS: Nip47SingleMethod[] = [
+    'get_info',
+    'get_balance',
+    'pay_invoice',
+    'make_invoice',
+    'lookup_invoice',
+    'list_transactions',
+    'sign_message'
+];
+
+const NWC_METHODS_REQUIRING_CONNECTION_PERMISSION = SUPPORTED_NWC_METHODS;
+
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
@@ -743,7 +755,10 @@ export default class NostrWalletConnectStore {
                 : undefined;
             const walletServicePubkey = this.walletServiceKeys?.publicKey;
 
-            if (relayUrlChanged && (!existingClientPrivateKey || !walletServicePubkey)) {
+            if (
+                relayUrlChanged &&
+                (!existingClientPrivateKey || !walletServicePubkey)
+            ) {
                 this.setError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
@@ -3289,6 +3304,17 @@ export default class NostrWalletConnectStore {
                         };
                     }
 
+                    if (SUPPORTED_NWC_METHODS.includes(request.method)) {
+                        await this.handleEventRequest(
+                            connection,
+                            request,
+                            eventId,
+                            true,
+                            encryptionScheme
+                        );
+                        return null;
+                    }
+
                     await this.publishNotImplementedNip47Response(
                         connection,
                         request,
@@ -3382,36 +3408,6 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-        let request: NWCRequest;
-        try {
-            const privateKey = this.walletServiceKeys!.privateKey;
-            if (!privateKey) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
-                    )
-                );
-            }
-            const encryptionScheme = this.getEventEncryptionScheme(event.tags);
-            const decryptedContent =
-                encryptionScheme === 'nip44_v2'
-                    ? nip44.decrypt(
-                          event.content,
-                          nip44.getConversationKey(
-                              hexToBytes(privateKey),
-                              connection.pubkey
-                          )
-                      )
-                    : nip04.decrypt(privateKey, connection.pubkey, event.content);
-            request = JSON.parse(decryptedContent);
-        } catch (error) {
-            console.error('NWC: Failed to decrypt or parse event content', {
-                error,
-                eventStr
-            });
-            throw error;
-        }
-
         if (!validateEvent(event)) {
             throw new Error(
                 localeString(
@@ -3442,11 +3438,45 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        const encryptionScheme = this.getEventEncryptionScheme(event.tags);
+        let request: NWCRequest;
+        try {
+            const privateKey = this.walletServiceKeys!.privateKey;
+            if (!privateKey) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
+                    )
+                );
+            }
+            const decryptedContent =
+                encryptionScheme === 'nip44_v2'
+                    ? nip44.decrypt(
+                          event.content,
+                          nip44.getConversationKey(
+                              hexToBytes(privateKey),
+                              connection.pubkey
+                          )
+                      )
+                    : nip04.decrypt(
+                          privateKey,
+                          connection.pubkey,
+                          event.content
+                      );
+            request = JSON.parse(decryptedContent);
+        } catch (error) {
+            console.error('NWC: Failed to decrypt or parse event content', {
+                error,
+                eventStr
+            });
+            throw error;
+        }
+
         return {
             request,
             connection,
             eventId: event.id,
-            encryptionScheme: this.getEventEncryptionScheme(event.tags)
+            encryptionScheme
         };
     }
 
@@ -3663,18 +3693,10 @@ export default class NostrWalletConnectStore {
     ): Promise<{ success: boolean; errorMessage?: string }> {
         let response: any;
         try {
-            const methodsRequiringPermission: Nip47SingleMethod[] = [
-                'get_info',
-                'get_balance',
-                'pay_invoice',
-                'make_invoice',
-                'lookup_invoice',
-                'list_transactions',
-                'sign_message'
-            ];
-
             if (
-                methodsRequiringPermission.includes(request.method) &&
+                NWC_METHODS_REQUIRING_CONNECTION_PERMISSION.includes(
+                    request.method
+                ) &&
                 !connection.hasPermission(request.method)
             ) {
                 response = this.handleError(
@@ -3813,7 +3835,7 @@ export default class NostrWalletConnectStore {
             : null;
         const payload = {
             result_type: method,
-            result: normalizedError ? null : (response?.result ?? null),
+            result: normalizedError ? null : response?.result ?? null,
             error: normalizedError
         };
         const content =
