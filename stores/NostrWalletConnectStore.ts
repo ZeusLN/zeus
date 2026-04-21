@@ -2092,7 +2092,7 @@ export default class NostrWalletConnectStore {
             );
         }
         this.transactionsStore.reset();
-        
+
         // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec
         // fee_limit_msat takes precedence if both are provided
         let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
@@ -2103,7 +2103,7 @@ export default class NostrWalletConnectStore {
         } else if (req.fee_limit_sat !== undefined && req.fee_limit_sat > 0) {
             feeLimitSat = Number(req.fee_limit_sat);
         }
-        
+
         const paymentData: {
             payment_request: string;
             fee_limit_sat: string;
@@ -2502,18 +2502,16 @@ export default class NostrWalletConnectStore {
             requestAmountMsats !== undefined && requestAmountMsats !== null;
 
         if (hasRequestAmount) {
-            // Request amount was explicitly provided - validate it
-            if (!Number.isFinite(normalizedRequestAmountMsats)) {
-                // Request amount is NaN or Infinity
-                return {
-                    amountSats: 0,
-                    usedRequestAmount: false,
-                    invalidRequestAmount: true
-                };
-            }
-
-            if (normalizedRequestAmountMsats <= 0) {
-                // Request amount is 0 or negative
+            // Request amount was explicitly provided - validate it.
+            // Per NIP-47 §payInvoice, `amount` is a non-negative integer
+            // specified in millisatoshis. Reject NaN / Infinity / non-positive
+            // / non-integer (e.g. 0.5) values — accepting a fractional msat
+            // would silently round up to 1 sat and overpay the caller.
+            if (
+                !Number.isFinite(normalizedRequestAmountMsats) ||
+                !Number.isInteger(normalizedRequestAmountMsats) ||
+                normalizedRequestAmountMsats <= 0
+            ) {
                 return {
                     amountSats: 0,
                     usedRequestAmount: false,

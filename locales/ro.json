@@ -1739,7 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Factură deja plătită",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Cerere de plată nevalidă",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Sumă nevalidă",
-    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Sumă nevalidă: suma în millisatoshi trebuie să corespundă unui număr întreg de satoshi",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Sumă nevalidă: suma trebuie să fie un număr întreg pozitiv de millisatoshi",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu mint nu este configurat corect: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "Numărul maxim de reîncercări a fost atins",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "ID-ul conexiunii există deja",

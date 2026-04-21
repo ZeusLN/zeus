@@ -1739,7 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktura již byla zaplacena",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Neplatný platební požadavek",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Neplatná částka",
-    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Neplatná částka: částka v millisatoshi musí odpovídat celému počtu satoshi",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Neplatná částka: částka musí být kladné celé číslo v millisatoshi",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu mint není správně nakonfigurován: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "Bylo dosaženo maximálního počtu opakování",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "ID připojení již existuje",

@@ -1739,7 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Rechnung bereits bezahlt",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Ungültige Zahlungsaufforderung",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Ungültiger Betrag",
-    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Ungültiger Betrag: Der Millisatoshi-Betrag muss einer ganzen Anzahl von Satoshis entsprechen",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Ungültiger Betrag: Der Betrag muss eine positive ganze Zahl in Millisatoshi sein",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu-Mint nicht richtig konfiguriert: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "Max retries reached",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "Verbindungs-ID existiert bereits",
