@@ -2472,14 +2472,9 @@ export default class NostrWalletConnectStore {
 
         const normalizedRequestAmountMsats = Number(requestAmountMsats) || 0;
         if (normalizedRequestAmountMsats > 0) {
-            if (normalizedRequestAmountMsats % 1000 !== 0) {
-                return {
-                    amountSats: 0,
-                    usedRequestAmount: false,
-                    invalidRequestAmount: true
-                };
-            }
-
+            // Per NIP-47 spec, amounts are in millisatoshis and can be any positive value
+            // including sub-satoshi amounts (e.g., 500 msats for micro-transactions).
+            // All backends (LND, LDK, CLN) support millisatoshi precision.
             return {
                 amountSats: millisatsToSats(normalizedRequestAmountMsats),
                 usedRequestAmount: true,

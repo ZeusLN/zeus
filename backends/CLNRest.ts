@@ -375,8 +375,14 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
 
-        if (data.amt !== undefined && data.amt !== null) {
-            request.amount_msat = Number(data.amt) * 1000;
+        // Only set amount_msat if data.amt is a positive, finite number.
+        // This ensures:
+        // - "Any amount" invoices work when amt is 0/undefined/NaN (amount_msat omitted)
+        // - Fixed amount invoices get the exact millisatoshi amount
+        // - Invalid amounts (0, NaN, Infinity, negative) are rejected by CLN logic
+        const amount = Number(data.amt);
+        if (Number.isFinite(amount) && amount > 0) {
+            request.amount_msat = amount * 1000;
         }
 
         return this.postRequest(
