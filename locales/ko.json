@@ -1739,6 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "이미 결제된 인보이스입니다",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "유효하지 않은 결제 요청",
     "stores.NostrWalletConnectStore.error.invalidAmount": "유효하지 않은 수량",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "유효하지 않은 금액: 밀리사토시 금액은 사토시의 정수여야 합니다",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu 민트가 올바르게 설정되지 않았습니다: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "최대 재시도 횟수에 도달했습니다",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "연결 ID가 이미 존재합니다",

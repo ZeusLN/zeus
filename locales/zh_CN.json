@@ -1739,6 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "发票已支付",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "支付请求无效",
     "stores.NostrWalletConnectStore.error.invalidAmount": "金额无效",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "金额无效：毫聪金额必须是聪的整数倍",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu 铸币厂未正确配置：{{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "已达到最大重试次数",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "该连接 ID 已存在",

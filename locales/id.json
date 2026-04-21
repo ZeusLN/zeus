@@ -1739,6 +1739,7 @@
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktur sudah dibayar",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Permintaan pembayaran tidak valid",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Jumlah tidak valid",
+    "stores.NostrWalletConnectStore.error.invalidAmountSats": "Jumlah tidak valid: jumlah millisatoshi harus berupa bilangan satoshi utuh",
     "stores.NostrWalletConnectStore.error.cashuMintNotConfigured": "Cashu mint tidak dikonfigurasi dengan benar: {{mintUrl}}",
     "stores.NostrWalletConnectStore.error.maxRetriesReached": "Percobaan ulang maksimal tercapai",
     "stores.NostrWalletConnectStore.error.connectionIdExists": "ID koneksi sudah ada",
