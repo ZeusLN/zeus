@@ -695,15 +695,16 @@ export default class NostrWalletConnectStore {
                     const { implementation } = this.settingsStore;
                     const currentNodeId = nodeInfo?.nodeId;
                     const currentImpl = implementation;
-                    const shouldFilter = !!currentNodeId && !!currentImpl;
+                    const hasNodeContext =
+                        Boolean(currentNodeId) && Boolean(currentImpl);
 
-                    const filtered = shouldFilter
+                    const filtered = hasNodeContext
                         ? connections.filter(
                               (c: any) =>
                                   c.nodePubkey === currentNodeId &&
                                   c.implementation === currentImpl
                           )
-                        : connections;
+                        : [];
 
                     this.connections = filtered.map((data: any) => {
                         const conn = new NWCConnection(data);
