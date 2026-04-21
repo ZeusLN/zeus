@@ -2533,18 +2533,46 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            // Per NIP-47 spec: request amounts are in millisatoshis (any positive
-            // integer). However, every downstream consumer of `amountSats` in
-            // this store treats it as integer satoshis (balance check at line
-            // ~2081, recordPayment, recordFailedPayment, notifications,
-            // trackSpending, etc). Plumbing msat precision through the entire
-            // payment pipeline + every backend is out of scope for this PR, so
-            // we round UP to the nearest satoshi using Math.ceil. This preserves
-            // the caller's intent (they get at least what they asked for), is
-            // consistent with the fee_limit_msat conversion above, and mirrors
-            // how `processPayInvoice` builds the actual payment amount.
+            // Per NIP-47 spec: request amounts are in millisatoshis (any
+            // positive integer). However, every downstream consumer of
+            // `amountSats` in this store treats it as integer satoshis: the
+            // pre-flight balance check (line ~2081), the connection-level
+            // budget enforcement (`validateBudgetBeforePayment`,
+            // `trackSpending`, `remainingBudget` — all `*Sats`-denominated in
+            // models/NWCConnection.ts), the user-facing notifications, and
+            // the backend `payLightningInvoice` interface
+            // (TransactionsStore.SendPaymentReq.amount — sats only).
+            //
+            // Rolling msat-precision through every layer above (model
+            // migration for `maxAmountSats`/`totalSpendSats`, every backend
+            // adapter, the UI) is a non-trivial refactor outside the NIP-47
+            // M1 scope, so for now we round UP to the nearest satoshi via
+            // Math.ceil. This is the safer rounding direction (caller gets
+            // at least what they asked for; payment never under-pays an
+            // invoice) and matches the round-up done in
+            // `processPayInvoice`.
+            //
+            // Known tradeoff: when the request specifies a sub-satoshi
+            // amount, the sender's budget will be charged for the rounded-up
+            // sat (e.g. a 500-msat request consumes 1 sat of budget).
+            // Emit a warning so this is auditable in logs until end-to-end
+            // msat precision lands.
+            const requestedMsats = normalizedRequestAmountMsats;
+            const amountSats = Math.ceil(requestedMsats / 1000);
+            if (requestedMsats % 1000 !== 0) {
+                console.warn(
+                    'NWC: sub-satoshi request amount rounded UP for ' +
+                        'sat-precision pipeline; budget will reflect rounded ' +
+                        'amount.',
+                    {
+                        requestedMsats,
+                        chargedSats: amountSats,
+                        overpaymentMsats: amountSats * 1000 - requestedMsats
+                    }
+                );
+            }
             return {
-                amountSats: Math.ceil(normalizedRequestAmountMsats / 1000),
+                amountSats,
                 usedRequestAmount: true,
                 invalidRequestAmount: false
             };
