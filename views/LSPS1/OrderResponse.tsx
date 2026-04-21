@@ -16,7 +16,6 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import UrlUtils from '../../utils/UrlUtils';
-import handleAnything from '../../utils/handleAnything';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
@@ -456,17 +455,25 @@ export default class LSPS1OrderResponse extends React.Component<
                                                     paddingVertical: 20
                                                 }}
                                                 onPress={() => {
-                                                    handleAnything(
-                                                        payment.bolt11
-                                                            ?.invoice ||
-                                                            payment.lightning_invoice ||
-                                                            payment.bolt11_invoice
-                                                    ).then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    });
+                                                    navigation.navigate(
+                                                        'LSPS1PaymentAwait',
+                                                        {
+                                                            orderId:
+                                                                orderResponse?.order_id,
+                                                            invoice:
+                                                                payment.bolt11
+                                                                    ?.invoice ||
+                                                                payment.lightning_invoice ||
+                                                                payment.bolt11_invoice,
+                                                            satAmount:
+                                                                payment.bolt11
+                                                                    ?.order_total_sat ||
+                                                                payment.order_total_sat ||
+                                                                payment.bolt11
+                                                                    ?.fee_total_sat ||
+                                                                payment.fee_total_sat
+                                                        }
+                                                    );
                                                 }}
                                             />
                                         </>

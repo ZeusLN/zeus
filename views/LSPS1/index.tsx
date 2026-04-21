@@ -34,7 +34,6 @@ import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import handleAnything from '../../utils/handleAnything';
 
 import Storage from '../../storage';
 
@@ -1338,17 +1337,26 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     );
                                                 }
 
-                                                // Navigate to payment
-                                                handleAnything(
-                                                    payment.bolt11?.invoice ||
-                                                        payment.lightning_invoice ||
-                                                        payment.bolt11_invoice
-                                                ).then(([route, props]) => {
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                });
+                                                // Navigate to payment-await screen
+                                                navigation.navigate(
+                                                    'LSPS1PaymentAwait',
+                                                    {
+                                                        orderId:
+                                                            result.order_id,
+                                                        invoice:
+                                                            payment.bolt11
+                                                                ?.invoice ||
+                                                            payment.lightning_invoice ||
+                                                            payment.bolt11_invoice,
+                                                        satAmount:
+                                                            payment.bolt11
+                                                                ?.order_total_sat ||
+                                                            payment.order_total_sat ||
+                                                            payment.bolt11
+                                                                ?.fee_total_sat ||
+                                                            payment.fee_total_sat
+                                                    }
+                                                );
                                             })
                                             .catch((error) =>
                                                 console.error(
