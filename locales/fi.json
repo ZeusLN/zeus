@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Varmenteen todentaminen",
     "views.Settings.AddEditNode.createLndhub": "Luo LNDHub-tili",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Tallenna lompakon konfiguraatio",
     "views.Settings.WalletConfiguration.setWalletActive": "Aseta lompakkokonfiguraatio aktiiviseksi",
     "views.Settings.WalletConfiguration.walletActive": "Lompakko aktiivinen",

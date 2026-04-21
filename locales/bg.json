@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "Rune",
     "views.Settings.AddEditNode.certificateVerification": "Потвърждаване на сертификат",
     "views.Settings.AddEditNode.createLndhub": "Създай LNDHub акаунт",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "Запази конфигурацията на портфейла",
     "views.Settings.WalletConfiguration.setWalletActive": "Запази конфигурацията на портфейла като активна",
     "views.Settings.WalletConfiguration.walletActive": "Портфейлът е активен",

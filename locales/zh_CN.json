@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "符文",
     "views.Settings.AddEditNode.certificateVerification": "证书认证",
     "views.Settings.AddEditNode.createLndhub": "创建 LNDHub 账号",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "保存钱包配置",
     "views.Settings.WalletConfiguration.setWalletActive": "将钱包配置设为活跃",
     "views.Settings.WalletConfiguration.walletActive": "活跃钱包",

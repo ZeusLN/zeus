@@ -363,6 +363,7 @@
     "views.Settings.AddEditNode.rune": "रून",
     "views.Settings.AddEditNode.certificateVerification": "प्रमाणपत्र सत्यापन",
     "views.Settings.AddEditNode.createLndhub": "LNDHub खाता बनाएं",
+    "views.Settings.WalletConfiguration.database": "Database",
     "views.Settings.WalletConfiguration.saveWallet": "वॉलेट कॉन्फ़िग सहेजें",
     "views.Settings.WalletConfiguration.setWalletActive": "वॉलेट कॉन्फ़िग को सक्रिय के रूप में सेट करें",
     "views.Settings.WalletConfiguration.walletActive": "वॉलेट सक्रिय",
