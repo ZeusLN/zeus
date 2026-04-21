@@ -119,11 +119,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
     };
 
-    async componentDidMount() {
+    componentDidMount() {
         const { navigation } = this.props;
-        await this.loadData();
-        this.unsubscribeFocus = navigation.addListener('focus', async () => {
-            await this.loadData();
+        this.unsubscribeFocus = navigation.addListener('focus', () => {
+            void this.loadData();
         });
     }
 
