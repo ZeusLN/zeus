@@ -719,8 +719,7 @@ export default class NostrWalletConnectStore {
      * Update an existing NWC connection with new parameters.
      * @param connectionId The unique identifier of the connection to update.
      * @param updates Partial object containing the fields to update.
-     * @returns Promise<{ nostrUrl?: string; success: boolean }> - Success flag and optional regenerated URL if relay or lightning address settings changed.
-     * @throws Error if the connection is not found or update fails.
+     * @returns Promise<{ nostrUrl?: string; success: boolean }> - Success flag (or error flag if connection not found or update fails) and optional regenerated URL if relay or lightning address settings changed.
      */
     @action
     public updateConnection = async (
@@ -3463,7 +3462,7 @@ export default class NostrWalletConnectStore {
                           event.content,
                           nip44.getConversationKey(
                               hexToBytes(privateKey),
-                              connection.pubkey
+                              hexToBytes(connection.pubkey)
                           )
                       )
                     : nip04.decrypt(
@@ -3856,7 +3855,7 @@ export default class NostrWalletConnectStore {
                       JSON.stringify(payload),
                       nip44.getConversationKey(
                           hexToBytes(servicePrivateKey),
-                          connection.pubkey
+                          hexToBytes(connection.pubkey)
                       )
                   )
                 : nip04.encrypt(
@@ -3924,6 +3923,8 @@ export default class NostrWalletConnectStore {
                 return 'RESTRICTED';
             case 'NOT_FOUND':
                 return 'NOT_FOUND';
+            case 'INVALID_PARAMS':
+                return 'INVALID_PARAMS';
             case 'FAILED_TO_PAY_INVOICE':
             case 'INVOICE_EXPIRED':
                 return 'OTHER';
