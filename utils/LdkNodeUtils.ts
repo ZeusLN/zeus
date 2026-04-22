@@ -8,31 +8,38 @@ import RNFS from 'react-native-fs';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
 
+import { localeString } from './LocaleUtils';
+import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
+
 export type SupportedNetwork =
     | 'mainnet'
     | 'testnet'
     | 'signet'
     | 'regtest'
     | 'mutinynet';
-import { localeString } from './LocaleUtils';
-import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
+
+export type EsploraServer = { key: string; value: string };
 
 // Default Esplora servers
-export const ESPLORA_SERVERS_MAINNET = [
-    'https://electrs.zeusln.com',
-    'https://electrs.getalbypro.com',
-    'https://blockstream.info/api',
-    'https://mempool.space/api'
+export const ESPLORA_SERVERS_MAINNET: EsploraServer[] = [
+    { key: 'Zeus', value: 'https://electrs.zeusln.com' },
+    { key: 'Alby', value: 'https://electrs.getalbypro.com' },
+    { key: 'Blockstream', value: 'https://blockstream.info/api' },
+    { key: 'Mempool.space', value: 'https://mempool.space/api' }
 ];
 
-export const ESPLORA_SERVERS_TESTNET = [
-    'https://mempool.space/testnet/api',
-    'https://blockstream.info/testnet/api'
+export const ESPLORA_SERVERS_TESTNET: EsploraServer[] = [
+    { key: 'Mempool.space', value: 'https://mempool.space/testnet/api' },
+    { key: 'Blockstream', value: 'https://blockstream.info/testnet/api' }
 ];
 
-export const ESPLORA_SERVERS_SIGNET = ['https://mempool.space/signet/api'];
+export const ESPLORA_SERVERS_SIGNET: EsploraServer[] = [
+    { key: 'Mempool.space', value: 'https://mempool.space/signet/api' }
+];
 
-export const ESPLORA_SERVERS_MUTINYNET = ['https://mutinynet.com/api'];
+export const ESPLORA_SERVERS_MUTINYNET: EsploraServer[] = [
+    { key: 'Mutinynet', value: 'https://mutinynet.com/api' }
+];
 
 // Default VSS (Versioned Storage Service) server
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
@@ -95,7 +102,7 @@ export function getNetworkType(network: SupportedNetwork): Network {
  */
 export function getEsploraServersForNetwork(
     network: SupportedNetwork
-): string[] {
+): EsploraServer[] {
     switch (network) {
         case 'mainnet':
             return ESPLORA_SERVERS_MAINNET;
@@ -106,7 +113,7 @@ export function getEsploraServersForNetwork(
         case 'mutinynet':
             return ESPLORA_SERVERS_MUTINYNET;
         case 'regtest':
-            return ['http://localhost:3000'];
+            return [{ key: 'Localhost', value: 'http://localhost:3000' }];
         default:
             return ESPLORA_SERVERS_MAINNET;
     }
@@ -116,20 +123,7 @@ export function getEsploraServersForNetwork(
  * Get default Esplora server for network
  */
 export function getDefaultEsploraServer(network: SupportedNetwork): string {
-    switch (network) {
-        case 'mainnet':
-            return ESPLORA_SERVERS_MAINNET[0];
-        case 'testnet':
-            return ESPLORA_SERVERS_TESTNET[0];
-        case 'signet':
-            return ESPLORA_SERVERS_SIGNET[0];
-        case 'mutinynet':
-            return ESPLORA_SERVERS_MUTINYNET[0];
-        case 'regtest':
-            return 'http://localhost:3000'; // Local regtest
-        default:
-            return ESPLORA_SERVERS_MAINNET[0];
-    }
+    return getEsploraServersForNetwork(network)[0]?.value || '';
 }
 
 /**
