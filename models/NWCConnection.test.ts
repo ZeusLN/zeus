@@ -2,13 +2,18 @@
  * Tests for NWCConnection budget race condition handling and tracking
  */
 
+// Mock native modules before any imports
+jest.mock('react-native-blob-util', () => ({}));
+
+// All mocks must come before the import
 jest.mock('../stores/Stores', () => ({}));
 jest.mock('../utils/BackendUtils');
-jest.mock('../utils/NostrConnectUtils');
-
-import NWCConnection from './NWCConnection';
-
-// Mock localeString to avoid dependency on locale system
+jest.mock('../utils/NostrConnectUtils', () => ({
+    default: {
+        getReadOnlyPermissions: jest.fn(() => []),
+        hasPaymentPermissions: jest.fn(() => false)
+    }
+}));
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string, params?: Record<string, any>) => {
         if (key.includes('invalidAmount')) return 'Invalid amount';
@@ -19,7 +24,122 @@ jest.mock('../utils/LocaleUtils', () => ({
     }
 }));
 
+import NWCConnection, { normalizeNWCConnectionData } from './NWCConnection';
+
 describe('NWCConnection', () => {
+    describe('includeLightningAddress Auto-Migration', () => {
+        it('should auto-migrate includeLightningAddress to true when lud16 is in metadata', () => {
+            const connectionData = {
+                id: 'existing-conn',
+                name: 'Existing Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: undefined,
+                metadata: { lud16: 'test@example.com' }
+            };
+
+            const normalized = normalizeNWCConnectionData(connectionData);
+            expect(normalized.includeLightningAddress).toBe(true);
+        });
+
+        it('should keep includeLightningAddress false for new connections with no lud16', () => {
+            const connectionData = {
+                id: 'new-conn',
+                name: 'New Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: undefined
+            };
+
+            const normalized = normalizeNWCConnectionData(connectionData);
+            expect(normalized.includeLightningAddress).toBe(false);
+        });
+
+        it('should respect explicit false value even if lud16 is present', () => {
+            const connectionData = {
+                id: 'existing-conn',
+                name: 'Existing Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: false,
+                metadata: { lud16: 'test@example.com' }
+            };
+
+            const normalized = normalizeNWCConnectionData(connectionData);
+            expect(normalized.includeLightningAddress).toBe(false);
+        });
+
+        it('should respect explicit true value', () => {
+            const connectionData = {
+                id: 'existing-conn',
+                name: 'Existing Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: true
+            };
+
+            const normalized = normalizeNWCConnectionData(connectionData);
+            expect(normalized.includeLightningAddress).toBe(true);
+        });
+
+        it('should handle connection with no metadata gracefully', () => {
+            const connectionData = {
+                id: 'conn-no-metadata',
+                name: 'Connection No Metadata',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: undefined
+            };
+
+            const normalized = normalizeNWCConnectionData(connectionData);
+            expect(normalized.includeLightningAddress).toBe(false);
+        });
+
+        it('should work in NWCConnection constructor with auto-migration', () => {
+            const connectionData = {
+                id: 'existing-conn-constructor',
+                name: 'Existing Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [] as any,
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus' as any,
+                includeLightningAddress: undefined,
+                metadata: { lud16: 'test@example.com' }
+            };
+
+            const connection = new NWCConnection(connectionData);
+            expect(connection.includeLightningAddress).toBe(true);
+        });
+    });
+
     describe('trackSpending - Budget Enforcement', () => {
         it('should successfully track spending within budget', () => {
             const connection = new NWCConnection({
