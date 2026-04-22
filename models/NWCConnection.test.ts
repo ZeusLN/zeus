@@ -2,6 +2,10 @@
  * Tests for NWCConnection budget race condition handling and tracking
  */
 
+jest.mock('../stores/Stores', () => ({}));
+jest.mock('../utils/BackendUtils');
+jest.mock('../utils/NostrConnectUtils');
+
 import NWCConnection from './NWCConnection';
 
 // Mock localeString to avoid dependency on locale system
@@ -348,6 +352,170 @@ describe('NWCConnection', () => {
             expect(connection.lastBudgetReset!.getTime()).toBeLessThanOrEqual(
                 afterReset.getTime()
             );
+        });
+    });
+
+    describe('Activity History Rotation', () => {
+        it('should add activity when below max items', () => {
+            const connection = new NWCConnection({
+                id: 'test-conn',
+                name: 'Test Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [],
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus'
+            });
+
+            const activity = {
+                id: 'activity-1',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const
+            };
+
+            connection.addActivity(activity);
+            expect(connection.activity.length).toBe(1);
+            expect(connection.activity[0]).toEqual(activity);
+        });
+
+        it('should maintain max items limit (1000)', () => {
+            const connection = new NWCConnection({
+                id: 'test-conn',
+                name: 'Test Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [],
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus'
+            });
+
+            // Add 1001 items
+            for (let i = 0; i < 1001; i++) {
+                const activity = {
+                    id: `activity-${i}`,
+                    type: 'pay_invoice' as const,
+                    payment_source: 'lightning' as const,
+                    status: 'success' as const
+                };
+                connection.addActivity(activity);
+            }
+
+            // Should only have 1000 items
+            expect(connection.activity.length).toBe(1000);
+            // First item should be activity-1 (activity-0 was shifted out)
+            expect(connection.activity[0].id).toBe('activity-1');
+            // Last item should be activity-1000
+            expect(connection.activity[999].id).toBe('activity-1000');
+        });
+
+        it('should remove oldest item when reaching max capacity', () => {
+            const connection = new NWCConnection({
+                id: 'test-conn',
+                name: 'Test Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [],
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus'
+            });
+
+            // Add exactly 1000 items
+            for (let i = 0; i < 1000; i++) {
+                const activity = {
+                    id: `activity-${i}`,
+                    type: 'pay_invoice' as const,
+                    payment_source: 'lightning' as const,
+                    status: 'success' as const
+                };
+                connection.addActivity(activity);
+            }
+
+            expect(connection.activity.length).toBe(1000);
+
+            // Add one more - should remove the first
+            const newActivity = {
+                id: 'activity-1000',
+                type: 'make_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'pending' as const
+            };
+            connection.addActivity(newActivity);
+
+            // Should still be 1000
+            expect(connection.activity.length).toBe(1000);
+            // First should now be activity-1 (activity-0 was shifted out)
+            expect(connection.activity[0].id).toBe('activity-1');
+            // Last should be the new activity
+            expect(connection.activity[999].id).toBe('activity-1000');
+        });
+
+        it('should preserve activity data integrity', () => {
+            const connection = new NWCConnection({
+                id: 'test-conn',
+                name: 'Test Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [],
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus'
+            });
+
+            const createdAtDate = new Date();
+            const activity = {
+                id: 'activity-test',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const,
+                satAmount: 1000,
+                error: undefined,
+                createdAt: createdAtDate
+            };
+
+            connection.addActivity(activity);
+            expect(connection.activity[0]).toEqual(activity);
+            expect(connection.activity[0].satAmount).toBe(1000);
+            expect(connection.activity[0].type).toBe('pay_invoice');
+            expect(connection.activity[0].createdAt).toEqual(createdAtDate);
+        });
+
+        it('should prevent unbounded memory growth', () => {
+            const connection = new NWCConnection({
+                id: 'test-conn',
+                name: 'Test Connection',
+                pubkey: 'test-pubkey',
+                relayUrl: 'wss://relay.example.com',
+                permissions: [],
+                createdAt: new Date(),
+                totalSpendSats: 0,
+                nodePubkey: 'node-pubkey',
+                implementation: 'zeus'
+            });
+
+            const lengthBefore = connection.activity.length;
+
+            // Add many items beyond max
+            for (let i = 0; i < 2000; i++) {
+                const activity = {
+                    id: `activity-${i}`,
+                    type: 'pay_invoice' as const,
+                    payment_source: 'lightning' as const,
+                    status: 'success' as const
+                };
+                connection.addActivity(activity);
+            }
+
+            // Should never exceed max (1000)
+            expect(connection.activity.length).toBe(1000);
+            expect(connection.activity.length).not.toBeGreaterThan(1000);
         });
     });
 });

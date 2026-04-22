@@ -118,6 +118,9 @@ const BUDGET_RENEWAL_MS = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// Prevents unbounded memory growth; activity older than ~100 payments at current velocity (~10/day) is archived
+const MAX_ACTIVITY_ITEMS = 1000;
+
 /**
  * NWCConnection represents a Nostr Wallet Connect (NIP-47) connection with optional budget controls.
  *
@@ -478,6 +481,14 @@ export default class NWCConnection extends BaseModel {
         }
         this.totalSpendSats += amountSats;
         return { success: true };
+    }
+
+    @action
+    public addActivity(item: ConnectionActivity): void {
+        if (this.activity.length >= MAX_ACTIVITY_ITEMS) {
+            this.activity.shift(); // Remove oldest item
+        }
+        this.activity.push(item);
     }
 
     public hasPermission(permission: Nip47SingleMethod): boolean {

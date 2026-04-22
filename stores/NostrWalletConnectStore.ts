@@ -1651,7 +1651,7 @@ export default class NostrWalletConnectStore {
                     );
                     if (invoice)
                         runInAction(() => {
-                            connection.activity.push({
+                            connection.addActivity({
                                 id: cashuInvoice.paymentRequest,
                                 status: 'pending',
                                 invoice: new CashuInvoice(invoice),
@@ -1670,7 +1670,11 @@ export default class NostrWalletConnectStore {
                         type: 'incoming',
                         state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
-                        payment_hash: paymentHash || '',
+                        payment_hash:
+                            paymentHash ||
+                            this.generatePaymentHashFallback(
+                                cashuInvoice.paymentRequest
+                            ),
                         amount: request.amount,
                         description: request.description,
                         description_hash: descriptionHash,
@@ -1769,7 +1773,9 @@ export default class NostrWalletConnectStore {
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash: paymentHash || generatePaymentHashFallback(paymentRequest),
+                        paymentHash:
+                            paymentHash ||
+                            this.generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
                         createdAt: new Date()
                     });
@@ -1778,7 +1784,9 @@ export default class NostrWalletConnectStore {
             } else {
                 const invoiceData = {
                     payment_request: paymentRequest,
-                    payment_hash: paymentHash || generatePaymentHashFallback(paymentRequest),
+                    payment_hash:
+                        paymentHash ||
+                        this.generatePaymentHashFallback(paymentRequest),
                     value: millisatsToSats(request.amount).toString(),
                     memo: request.description || '',
                     expiry: expiryTime.toString(),
@@ -1792,7 +1800,9 @@ export default class NostrWalletConnectStore {
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash: paymentHash || generatePaymentHashFallback(paymentRequest),
+                        paymentHash:
+                            paymentHash ||
+                            this.generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
                         createdAt: new Date()
                     });
@@ -1921,7 +1931,12 @@ export default class NostrWalletConnectStore {
                     type: 'incoming',
                     state,
                     invoice: invoice.getPaymentRequest,
-                    payment_hash: invoice.getRHash || request.payment_hash! || generatePaymentHashFallback(invoice.getPaymentRequest),
+                    payment_hash:
+                        invoice.getRHash ||
+                        request.payment_hash! ||
+                        this.generatePaymentHashFallback(
+                            invoice.getPaymentRequest
+                        ),
                     amount: satsToMillisats(invoice.getAmount), // Convert to msats
                     description: invoice.getMemo,
                     ...(invoice.isPaid && {
@@ -2720,15 +2735,19 @@ export default class NostrWalletConnectStore {
                     }
                 );
             }
-            connection.activity.push({
+            const paymentObj =
+                payment_source == 'cashu'
+                    ? new CashuPayment(decoded)
+                    : new Payment(decoded);
+            connection.addActivity({
                 id,
                 type,
-                payment:
-                    payment_source == 'cashu'
-                        ? new CashuPayment(decoded)
-                        : new Payment(decoded),
+                payment: paymentObj,
                 status: 'success',
-                payment_source
+                payment_source,
+                paymentHash: paymentObj instanceof Payment 
+                    ? paymentObj.paymentHash || paymentObj.id || this.generatePaymentHashFallback(paymentObj.id)
+                    : (decoded?.id || this.generatePaymentHashFallback(decoded?.id))
             });
             this.findAndUpdateConnection(connection);
         });
@@ -2770,7 +2789,7 @@ export default class NostrWalletConnectStore {
                 };
             } else {
                 // ➕ add new element
-                connection.activity.push(record);
+                connection.addActivity(record);
             }
 
             this.findAndUpdateConnection(connection);
@@ -4335,6 +4354,21 @@ export default class NostrWalletConnectStore {
         this.error = true;
         this.errorMessage = message;
     }
+
+    /**
+     * Generates a unique fallback payment hash with millisecond precision.
+     * Used when actual payment hash is unavailable.
+     * Format: timestamp-paymentIdPrefix-randomSuffix
+     * Example: 1703001234567-abcd1234-a2b4c6
+     */
+    private generatePaymentHashFallback(paymentId?: string): string {
+        const timestamp = Date.now(); // millisecond precision
+        const random = Math.random().toString(36).substring(2, 8); // 6-char alphanumeric
+        const id = paymentId ? paymentId.substring(0, 8) : ''; // first 8 chars of ID
+        // Clean up leading/trailing dashes
+        return `${timestamp}-${id}-${random}`.replace(/^-+|-+$/g, '');
+    }
+
     private handleError(
         message: string,
         code: ErrorCodes = ErrorCodes.INTERNAL_ERROR
