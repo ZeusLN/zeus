@@ -33,15 +33,17 @@ const POLL_INTERVAL_MS = 5000;
 const CUSTOM_MESSAGE_WAIT_MS = 3000;
 
 type PaymentAwaitState = 'polling' | 'completed' | 'failed';
+type LSPService = 'LSPS1' | 'LSPS7';
 
-interface LSPS1PaymentAwaitProps {
+interface LSPPaymentAwaitProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<
-        'LSPS1PaymentAwait',
+        'LSPS1PaymentAwait' | 'LSPS7PaymentAwait',
         {
             orderId: string;
             invoice: string;
             satAmount?: string | number;
+            service: LSPService;
         }
     >;
     LSPStore: LSPStore;
@@ -49,7 +51,7 @@ interface LSPS1PaymentAwaitProps {
     NodeInfoStore: NodeInfoStore;
 }
 
-interface LSPS1PaymentAwaitInternalState {
+interface LSPPaymentAwaitInternalState {
     paymentState: PaymentAwaitState;
     endpoint?: string;
     peer?: string;
@@ -59,16 +61,16 @@ interface LSPS1PaymentAwaitInternalState {
 
 @inject('LSPStore', 'ChannelsStore', 'NodeInfoStore')
 @observer
-export default class LSPS1PaymentAwait extends React.Component<
-    LSPS1PaymentAwaitProps,
-    LSPS1PaymentAwaitInternalState
+export default class LSPPaymentAwait extends React.Component<
+    LSPPaymentAwaitProps,
+    LSPPaymentAwaitInternalState
 > {
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
     private isPolling: boolean = false;
     private isUnmounted: boolean = false;
     private backPressSubscription: { remove: () => void } | null = null;
 
-    constructor(props: LSPS1PaymentAwaitProps) {
+    constructor(props: LSPPaymentAwaitProps) {
         super(props);
         this.state = {
             paymentState: 'polling'
@@ -105,7 +107,7 @@ export default class LSPS1PaymentAwait extends React.Component<
             }
         } catch (error) {
             console.error(
-                'LSPS1PaymentAwait: error loading order metadata',
+                'LSPPaymentAwait: error loading order metadata',
                 error
             );
         }
@@ -125,9 +127,11 @@ export default class LSPS1PaymentAwait extends React.Component<
         }
         const { LSPStore } = this.props;
         LSPStore.getOrderResponse = {};
+        LSPStore.getExtensionOrderResponse = {};
         LSPStore.error = false;
         LSPStore.error_msg = '';
         LSPStore.loadingLSPS1 = false;
+        LSPStore.loadingLSPS7 = false;
     }
 
     private handleBackPress = (): boolean => {
@@ -147,34 +151,48 @@ export default class LSPS1PaymentAwait extends React.Component<
         if (this.state.paymentState !== 'polling') return;
 
         const { LSPStore } = this.props;
-        const { orderId } = this.props.route.params;
+        const { orderId, service } = this.props.route.params;
         const { endpoint, peer, native } = this.state;
 
         this.isPolling = true;
 
         try {
             LSPStore.getOrderResponse = {};
+            LSPStore.getExtensionOrderResponse = {};
             LSPStore.error = false;
             LSPStore.error_msg = '';
 
-            if (native) {
-                await LSPStore.lsps1GetOrderNative(orderId);
-            } else if (endpoint && BackendUtils.supportsLSPS1rest()) {
-                await LSPStore.lsps1GetOrderREST(orderId, endpoint);
-            } else if (peer && BackendUtils.supportsLSPScustomMessage()) {
-                LSPStore.lsps1GetOrderCustomMessage(orderId, peer);
+            let response: any;
+
+            if (service === 'LSPS7') {
+                if (!peer) {
+                    this.isPolling = false;
+                    this.scheduleNextPoll();
+                    return;
+                }
+                LSPStore.lsps7GetOrderCustomMessage(orderId, peer);
                 await sleep(CUSTOM_MESSAGE_WAIT_MS);
+                response = LSPStore.getExtensionOrderResponse;
             } else {
-                this.isPolling = false;
-                this.scheduleNextPoll();
-                return;
+                if (native) {
+                    await LSPStore.lsps1GetOrderNative(orderId);
+                } else if (endpoint && BackendUtils.supportsLSPS1rest()) {
+                    await LSPStore.lsps1GetOrderREST(orderId, endpoint);
+                } else if (peer && BackendUtils.supportsLSPScustomMessage()) {
+                    LSPStore.lsps1GetOrderCustomMessage(orderId, peer);
+                    await sleep(CUSTOM_MESSAGE_WAIT_MS);
+                } else {
+                    this.isPolling = false;
+                    this.scheduleNextPoll();
+                    return;
+                }
+                response = LSPStore.getOrderResponse;
             }
 
             if (this.isUnmounted) return;
 
-            const response = LSPStore.getOrderResponse;
             if (response && Object.keys(response).length > 0) {
-                const result = (response as any)?.result || response;
+                const result = response?.result || response;
                 if (result?.order_state === LSPOrderState.COMPLETED) {
                     this.updateOrderInStorage(response);
                     this.setState({ paymentState: 'completed' });
@@ -192,7 +210,7 @@ export default class LSPS1PaymentAwait extends React.Component<
                 }
             }
         } catch (error) {
-            console.error('LSPS1PaymentAwait: poll error', error);
+            console.error('LSPPaymentAwait: poll error', error);
         }
 
         this.isPolling = false;
@@ -221,7 +239,7 @@ export default class LSPS1PaymentAwait extends React.Component<
             })
             .catch((error) => {
                 console.error(
-                    'LSPS1PaymentAwait: error updating order in storage',
+                    'LSPPaymentAwait: error updating order in storage',
                     error
                 );
             });
@@ -250,8 +268,9 @@ export default class LSPS1PaymentAwait extends React.Component<
     };
 
     private viewOrderDetails = () => {
-        const { orderId } = this.props.route.params;
-        this.props.navigation.replace('LSPS1Order', {
+        const { orderId, service } = this.props.route.params;
+        const target = service === 'LSPS7' ? 'LSPS7Order' : 'LSPS1Order';
+        this.props.navigation.replace(target, {
             orderId,
             orderShouldUpdate: true
         });
@@ -259,8 +278,13 @@ export default class LSPS1PaymentAwait extends React.Component<
 
     render() {
         const { navigation, LSPStore } = this.props;
-        const { invoice, satAmount } = this.props.route.params;
+        const { invoice, satAmount, service } = this.props.route.params;
         const { paymentState, failureMessage } = this.state;
+
+        const successSubtitle =
+            service === 'LSPS7'
+                ? localeString('views.LSPS7.leaseExtended')
+                : localeString('views.LSPS1.channelOnlineSoon');
 
         return (
             <Screen>
@@ -378,18 +402,19 @@ export default class LSPS1PaymentAwait extends React.Component<
                                     fontSize: 16
                                 }}
                             >
-                                {localeString('views.LSPS1.channelOnlineSoon')}
+                                {successSubtitle}
                             </Text>
                         </View>
                         <View>
-                            {BackendUtils.supportsPendingChannels() && (
-                                <Button
-                                    title={localeString(
-                                        'views.OpenChannel.viewStatus'
-                                    )}
-                                    onPress={this.viewChannelStatus}
-                                />
-                            )}
+                            {service === 'LSPS1' &&
+                                BackendUtils.supportsPendingChannels() && (
+                                    <Button
+                                        title={localeString(
+                                            'views.OpenChannel.viewStatus'
+                                        )}
+                                        onPress={this.viewChannelStatus}
+                                    />
+                                )}
                             <Button
                                 title={localeString(
                                     'views.SendingLightning.goToWallet'

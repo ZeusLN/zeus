@@ -91,11 +91,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1native()) {
+            console.log('fetching info with native lsps1');
             // Native LSPS1 - LSP is configured at node initialization
             LSPStore.lsps1GetInfoNative();
         } else if (BackendUtils.supportsLSPS1rest()) {
+            console.log('fetching info with rest lsps1');
             LSPStore.lsps1GetInfoREST();
         } else if (BackendUtils.supportsLSPScustomMessage()) {
+            console.log('fetching info with custom message lsps1');
             console.log('connecting');
             await this.connectPeer();
             console.log('connected');
@@ -1354,7 +1357,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             payment.order_total_sat ||
                                                             payment.bolt11
                                                                 ?.fee_total_sat ||
-                                                            payment.fee_total_sat
+                                                            payment.fee_total_sat,
+                                                        service: 'LSPS1'
                                                     }
                                                 );
                                             })

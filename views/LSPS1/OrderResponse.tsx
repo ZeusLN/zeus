@@ -471,7 +471,8 @@ export default class LSPS1OrderResponse extends React.Component<
                                                                 payment.order_total_sat ||
                                                                 payment.bolt11
                                                                     ?.fee_total_sat ||
-                                                                payment.fee_total_sat
+                                                                payment.fee_total_sat,
+                                                            service: 'LSPS1'
                                                         }
                                                     );
                                                 }}

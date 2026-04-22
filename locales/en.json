@@ -1661,6 +1661,7 @@
     "views.LSPS7.originalService": "Original service",
     "views.LSPS7.extensionOrderIds": "Extension Order IDs",
     "views.LSPS7.serviceInfoText1": "This service allows you to extend the duration of a purchased channel lease, or purchase a channel lease for a channel you have opened to the LSP.",
+    "views.LSPS7.leaseExtended": "Your channel lease has been extended",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
