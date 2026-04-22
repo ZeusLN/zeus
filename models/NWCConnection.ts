@@ -407,6 +407,26 @@ export default class NWCConnection extends BaseModel {
     @action
     public trackSpending(amountSats: number): void {
         this.validateAmount(amountSats);
+        // Defense-in-depth: even though `validateBudgetBeforePayment` is the
+        // primary gate before dispatch, `trackSpending` MUST never silently
+        // push `totalSpendSats` past `maxAmountSats`. If a future caller
+        // bypasses pre-flight validation (race / bug), surface a hard error
+        // instead of corrupting the budget invariant. No-op when the
+        // connection has no budget limit configured.
+        if (
+            this.hasBudgetLimit &&
+            this.totalSpendSats + amountSats > (this.maxAmountSats ?? 0)
+        ) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
+                    {
+                        amount: amountSats.toString(),
+                        remaining: this.remainingBudget.toString()
+                    }
+                )
+            );
+        }
         this.totalSpendSats += amountSats;
     }
 

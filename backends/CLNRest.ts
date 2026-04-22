@@ -394,9 +394,16 @@ export default class CLNRest {
         //   data.amt (e.g. 1.5 sats → 1500 msat) is preserved rather than
         //   truncated to whole sats. Math.floor guarantees an integer msat
         //   value, which CLN's `msat` schema type requires.
-        const amountMsat = Math.floor(Number(data.amt) * 1000);
-        if (Number.isFinite(amountMsat) && amountMsat > 0) {
-            request.amount_msat = amountMsat;
+        // - Pre-validate that data.amt is finite BEFORE multiplication so a
+        //   bogus upstream value (NaN / Infinity / non-numeric string) is
+        //   detected and the field is omitted entirely (CLN treats absent
+        //   amount_msat as "use the invoice amount").
+        const amtNumeric = Number(data.amt);
+        if (Number.isFinite(amtNumeric)) {
+            const amountMsat = Math.floor(amtNumeric * 1000);
+            if (Number.isFinite(amountMsat) && amountMsat > 0) {
+                request.amount_msat = amountMsat;
+            }
         }
 
         return this.postRequest(

@@ -743,7 +743,7 @@ export default class NostrWalletConnectStore {
             const connection = this.connections[connectionIndex];
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
-            const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
+            const relayUrlChanged = !!newRelayUrl && newRelayUrl !== oldRelayUrl;
             const includeLightningAddressChanged =
                 updates.includeLightningAddress !== undefined &&
                 updates.includeLightningAddress !==
