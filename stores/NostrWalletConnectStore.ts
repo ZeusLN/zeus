@@ -1763,13 +1763,13 @@ export default class NostrWalletConnectStore {
 
             if (invoice) {
                 runInAction(() => {
-                    connection.activity.push({
+                    connection.addActivity({
                         id: paymentRequest,
                         invoice: new Invoice(invoice),
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash,
+                        paymentHash: paymentHash || generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
                         createdAt: new Date()
                     });
@@ -1778,7 +1778,7 @@ export default class NostrWalletConnectStore {
             } else {
                 const invoiceData = {
                     payment_request: paymentRequest,
-                    payment_hash: paymentHash,
+                    payment_hash: paymentHash || generatePaymentHashFallback(paymentRequest),
                     value: millisatsToSats(request.amount).toString(),
                     memo: request.description || '',
                     expiry: expiryTime.toString(),
@@ -1786,13 +1786,13 @@ export default class NostrWalletConnectStore {
                     settled: false
                 };
                 runInAction(() => {
-                    connection.activity.push({
+                    connection.addActivity({
                         id: paymentRequest,
                         invoice: new Invoice(invoiceData),
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash,
+                        paymentHash: paymentHash || generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
                         createdAt: new Date()
                     });
@@ -1921,7 +1921,7 @@ export default class NostrWalletConnectStore {
                     type: 'incoming',
                     state,
                     invoice: invoice.getPaymentRequest,
-                    payment_hash: invoice.getRHash || request.payment_hash!,
+                    payment_hash: invoice.getRHash || request.payment_hash! || generatePaymentHashFallback(invoice.getPaymentRequest),
                     amount: satsToMillisats(invoice.getAmount), // Convert to msats
                     description: invoice.getMemo,
                     ...(invoice.isPaid && {
@@ -3658,8 +3658,13 @@ export default class NostrWalletConnectStore {
                       );
             request = JSON.parse(decryptedContent);
         } catch (error) {
+            const encryptionTag = event.tags.find((tag) => tag[0] === 'encryption')?.[1] || 'none';
             console.error('NWC: Failed to decrypt or parse event content', {
                 error,
+                encryptionScheme,
+                encryptionTag,
+                diagnostic: `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
+                    `If this persists, the client may be using a different encryption scheme than expected.`,
                 eventStr
             });
             throw error;
@@ -4088,31 +4093,72 @@ export default class NostrWalletConnectStore {
 
     private isSupportedEncryptionScheme(tags: string[][]): boolean {
         const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
-        const raw = (encryptionTag?.[1] || '').toLowerCase();
+        const schemeValue = encryptionTag?.[1];
 
         // No encryption tag or empty means default (nip04), which is supported
-        if (!raw) {
+        if (!schemeValue) {
             return true;
         }
 
-        // Check if it's one of the supported schemes
-        if (raw.includes('nip44_v2') || raw.includes('nip04')) {
+        // Validate that the scheme value is a string
+        if (typeof schemeValue !== 'string') {
+            console.warn('NWC: Invalid encryption tag value type', {
+                tagValue: schemeValue,
+                tagType: typeof schemeValue
+            });
+            return false;
+        }
+
+        const normalized = schemeValue.toLowerCase();
+        const validSchemes = ['nip04', 'nip44_v2'];
+
+        // Check if it's one of the supported schemes using exact match
+        if (validSchemes.includes(normalized)) {
             return true;
         }
 
         // Unknown encryption scheme
+        console.warn('NWC: Unsupported encryption scheme', {
+            scheme: normalized,
+            validSchemes
+        });
         return false;
     }
 
     private getEventEncryptionScheme(tags: string[][]): NwcEncryptionScheme {
         const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
-        const raw = (encryptionTag?.[1] || '').toLowerCase();
-        if (!raw) {
+        const schemeValue = encryptionTag?.[1];
+
+        // No encryption tag means default (nip04)
+        if (!schemeValue) {
             return 'nip04';
         }
-        if (raw.includes('nip44_v2')) {
+
+        // Validate that the scheme value is a string
+        if (typeof schemeValue !== 'string') {
+            console.warn('NWC: Invalid encryption tag value type, defaulting to nip04', {
+                tagValue: schemeValue,
+                tagType: typeof schemeValue
+            });
+            return 'nip04';
+        }
+
+        const normalized = schemeValue.toLowerCase();
+        const validSchemes = ['nip04', 'nip44_v2'];
+
+        // Use exact match for scheme detection
+        if (normalized === 'nip44_v2') {
             return 'nip44_v2';
         }
+
+        // Default to nip04 for unknown schemes
+        if (!validSchemes.includes(normalized)) {
+            console.warn('NWC: Unknown encryption scheme, defaulting to nip04', {
+                scheme: normalized,
+                validSchemes
+            });
+        }
+
         return 'nip04';
     }
 
