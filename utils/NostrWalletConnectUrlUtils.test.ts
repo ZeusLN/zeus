@@ -38,4 +38,90 @@ describe('NostrWalletConnectUrlUtils', () => {
             'nostr+walletconnect://service-pubkey?relay=wss%3A%2F%2Frelay.getalby.com%2Fv1&secret=secret-key'
         );
     });
+
+    describe('LUD-16 Lightning Address validation', () => {
+        it('accepts valid lightning addresses', () => {
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@example.com'
+                })
+            ).toContain('lud16=user%40example.com');
+
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'alice@ln.example.org'
+                })
+            ).toContain('lud16=alice%40ln.example.org');
+        });
+
+        it('rejects invalid lightning address format - no domain', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@invalid'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('rejects invalid lightning address format - missing localpart', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: '@example.com'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('rejects invalid lightning address format - missing domain', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('rejects invalid lightning address format - spaces in address', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user space@example.com'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('accepts lightning addresses with allowed special characters', () => {
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user.name@sub.example.com'
+                })
+            ).toContain('lud16=user.name%40sub.example.com');
+
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user-name@example.com'
+                })
+            ).toContain('lud16=user-name%40example.com');
+        });
+    });
 });

@@ -5,6 +5,14 @@ interface BuildNostrWalletConnectUrlParams {
     lud16?: string;
 }
 
+const validateLud16 = (address: string): boolean => {
+    if (!address) return true; // empty is ok (optional feature)
+    if (address.length > 256) return false; // max length per LUD-16
+    // LUD-16 format: localpart@domain
+    const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return regex.test(address);
+};
+
 export const buildNostrWalletConnectUrl = ({
     walletServicePubkey,
     relayUrl,
@@ -18,6 +26,9 @@ export const buildNostrWalletConnectUrl = ({
 
     const normalizedLud16 = lud16?.trim();
     if (normalizedLud16) {
+        if (!validateLud16(normalizedLud16)) {
+            throw new Error('Invalid Lightning Address format (must be name@domain)');
+        }
         queryParams.push(`lud16=${encodeURIComponent(normalizedLud16)}`);
     }
 
