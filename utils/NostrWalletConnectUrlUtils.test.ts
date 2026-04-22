@@ -123,5 +123,49 @@ describe('NostrWalletConnectUrlUtils', () => {
                 })
             ).toContain('lud16=user-name%40example.com');
         });
+
+        it('rejects invalid domain format - leading hyphen in domain label', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@-example.com'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('rejects invalid domain format - dash before TLD', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@example.-com'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('rejects invalid domain format - trailing hyphen in domain label', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@example-.com'
+                })
+            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+        });
+
+        it('accepts DNS-compliant domains with hyphens in middle of labels', () => {
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'test@my-domain.co.uk'
+                })
+            ).toContain('lud16=test%40my-domain.co.uk');
+        });
     });
 });
