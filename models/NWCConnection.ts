@@ -83,10 +83,23 @@ export type StoredNWCConnectionData = Omit<
 
 export const normalizeNWCConnectionData = (
     connection: StoredNWCConnectionData
-): NWCConnectionData => ({
-    ...connection,
-    includeLightningAddress: connection.includeLightningAddress ?? false
-});
+): NWCConnectionData => {
+    const normalizedData = {
+        ...connection,
+        includeLightningAddress: connection.includeLightningAddress ?? false
+    };
+
+    // Auto-migrate includeLightningAddress: if lud16 is set in metadata,
+    // enable it for existing connections
+    if (
+        !normalizedData.includeLightningAddress &&
+        connection.metadata?.lud16
+    ) {
+        normalizedData.includeLightningAddress = true;
+    }
+
+    return normalizedData;
+};
 export interface ConnectionWarning {
     type: ConnectionWarningType;
     severity: 'info' | 'warning' | 'error';
