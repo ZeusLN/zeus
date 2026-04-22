@@ -137,7 +137,7 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
-    @observable includeLightningAddress: boolean;
+    @observable includeLightningAddress: boolean = false;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
@@ -405,29 +405,38 @@ export default class NWCConnection extends BaseModel {
     }
 
     @action
-    public trackSpending(amountSats: number): void {
+    public trackSpending(amountSats: number): {
+        success: boolean;
+        errorMessage?: string;
+    } {
         this.validateAmount(amountSats);
         // Defense-in-depth: even though `validateBudgetBeforePayment` is the
         // primary gate before dispatch, `trackSpending` MUST never silently
         // push `totalSpendSats` past `maxAmountSats`. If a future caller
-        // bypasses pre-flight validation (race / bug), surface a hard error
-        // instead of corrupting the budget invariant. No-op when the
-        // connection has no budget limit configured.
+        // bypasses pre-flight validation (race / bug), return an error instead
+        // of corrupting the budget invariant. No-op when the connection has
+        // no budget limit configured. Callers should log/monitor this case.
         if (
             this.hasBudgetLimit &&
             this.totalSpendSats + amountSats > (this.maxAmountSats ?? 0)
         ) {
-            throw new Error(
-                localeString(
+            // Return error but don't throw — a successful payment shouldn't
+            // be reported as failed to the client just because concurrent
+            // tracking hit the budget limit (race condition). Caller can log
+            // this as a warning.
+            return {
+                success: false,
+                errorMessage: localeString(
                     'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
                     {
                         amount: amountSats.toString(),
                         remaining: this.remainingBudget.toString()
                     }
                 )
-            );
+            };
         }
         this.totalSpendSats += amountSats;
+        return { success: true };
     }
 
     public hasPermission(permission: Nip47SingleMethod): boolean {

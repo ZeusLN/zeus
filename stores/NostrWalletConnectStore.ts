@@ -2658,7 +2658,23 @@ export default class NostrWalletConnectStore {
         skipNotification?: boolean;
     }): Promise<void> {
         runInAction(() => {
-            connection.trackSpending(amountSats);
+            const trackResult = connection.trackSpending(amountSats);
+            // If tracking fails due to budget race (e.g., concurrent payments),
+            // log the warning but still record the successful payment. A payment
+            // that succeeded on-chain shouldn't be reported as an error to the
+            // client just because our in-app budget tracking had a race.
+            if (!trackResult.success) {
+                console.warn(
+                    'NWC: Budget limit exceeded during spend tracking',
+                    {
+                        connection: connection.name,
+                        amountSats,
+                        totalSpendSats: connection.totalSpendSats,
+                        maxAmountSats: connection.maxAmountSats,
+                        error: trackResult.errorMessage
+                    }
+                );
+            }
             connection.activity.push({
                 id,
                 type,
