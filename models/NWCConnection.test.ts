@@ -500,8 +500,6 @@ describe('NWCConnection', () => {
                 implementation: 'zeus'
             });
 
-            const lengthBefore = connection.activity.length;
-
             // Add many items beyond max
             for (let i = 0; i < 2000; i++) {
                 const activity = {
