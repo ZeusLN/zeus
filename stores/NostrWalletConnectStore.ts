@@ -1481,7 +1481,7 @@ export default class NostrWalletConnectStore {
             } else if (nodeInfo?.isSigNet) {
                 network = 'signet';
             }
-            const methods = connection.permissions || [];
+            const methods = [...(connection.permissions || [])];
             // Ensure get_info is always included, as per NIP-47: get_info requires no permissions
             if (!methods.includes('get_info')) {
                 methods.push('get_info');
