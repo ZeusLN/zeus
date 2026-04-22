@@ -2745,9 +2745,13 @@ export default class NostrWalletConnectStore {
                 payment: paymentObj,
                 status: 'success',
                 payment_source,
-                paymentHash: paymentObj instanceof Payment 
-                    ? paymentObj.paymentHash || paymentObj.id || this.generatePaymentHashFallback(paymentObj.id)
-                    : (decoded?.id || this.generatePaymentHashFallback(decoded?.id))
+                paymentHash:
+                    paymentObj instanceof Payment
+                        ? paymentObj.paymentHash ||
+                          paymentObj.id ||
+                          this.generatePaymentHashFallback(paymentObj.id)
+                        : decoded?.id ||
+                          this.generatePaymentHashFallback(decoded?.id)
             });
             this.findAndUpdateConnection(connection);
         });
@@ -4358,15 +4362,17 @@ export default class NostrWalletConnectStore {
     /**
      * Generates a unique fallback payment hash with millisecond precision.
      * Used when actual payment hash is unavailable.
-     * Format: timestamp-paymentIdPrefix-randomSuffix
-     * Example: 1703001234567-abcd1234-a2b4c6
+     * Format: timestamp-paymentIdPrefix-randomSuffix (or timestamp-randomSuffix if no ID)
+     * Examples: 1703001234567-abcd1234-a2b4c6 or 1703001234567-a2b4c6
      */
     private generatePaymentHashFallback(paymentId?: string): string {
         const timestamp = Date.now(); // millisecond precision
         const random = Math.random().toString(36).substring(2, 8); // 6-char alphanumeric
-        const id = paymentId ? paymentId.substring(0, 8) : ''; // first 8 chars of ID
-        // Clean up leading/trailing dashes
-        return `${timestamp}-${id}-${random}`.replace(/^-+|-+$/g, '');
+        if (paymentId) {
+            const id = paymentId.substring(0, 8); // first 8 chars of ID
+            return `${timestamp}-${id}-${random}`;
+        }
+        return `${timestamp}-${random}`;
     }
 
     private handleError(
