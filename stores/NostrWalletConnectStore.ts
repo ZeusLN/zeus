@@ -534,6 +534,22 @@ export default class NostrWalletConnectStore {
     }
 
     /**
+     * Validates that a relay URL uses the proper WebSocket scheme (wss:// or ws://).
+     * @param url The relay URL to validate.
+     * @returns true if valid WebSocket scheme, false otherwise.
+     * @throws Error if URL is invalid.
+     */
+    private validateRelayUrl = (url: string): boolean => {
+        try {
+            const parsed = new URL(url);
+            const scheme = parsed.protocol.toLowerCase();
+            return scheme === 'wss:' || scheme === 'ws:';
+        } catch {
+            return false;
+        }
+    };
+
+    /**
      * Creates a new NWC connection with the specified parameters.
      * @param params Configuration for the new connection.
      * @returns The connection URL or null if creation fails.
@@ -561,6 +577,12 @@ export default class NostrWalletConnectStore {
                     localeString(
                         'stores.NostrWalletConnectStore.error.connectionNameExists'
                     )
+                );
+            }
+
+            if (!this.validateRelayUrl(params.relayUrl)) {
+                throw new Error(
+                    'Invalid relay URL format. Relay URL must use wss:// or ws:// scheme (e.g., wss://relay.example.com)'
                 );
             }
 
@@ -743,7 +765,15 @@ export default class NostrWalletConnectStore {
             const connection = this.connections[connectionIndex];
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
-            const relayUrlChanged = !!newRelayUrl && newRelayUrl !== oldRelayUrl;
+
+            if (newRelayUrl && !this.validateRelayUrl(newRelayUrl)) {
+                throw new Error(
+                    'Invalid relay URL format. Relay URL must use wss:// or ws:// scheme (e.g., wss://relay.example.com)'
+                );
+            }
+
+            const relayUrlChanged =
+                !!newRelayUrl && newRelayUrl !== oldRelayUrl;
             const includeLightningAddressChanged =
                 updates.includeLightningAddress !== undefined &&
                 updates.includeLightningAddress !==
@@ -2111,8 +2141,12 @@ export default class NostrWalletConnectStore {
             Number.isFinite(reqFeeLimitMsat) &&
             reqFeeLimitMsat > 0
         ) {
-            // Convert millisatoshis to satoshis (round UP — fee limit is a ceiling).
-            feeLimitSat = Math.ceil(reqFeeLimitMsat / 1000);
+            // Convert millisatoshis to satoshis using Math.floor to respect the hard
+            // ceiling specified by the client. Per NIP-47, fee_limit_msat is the maximum
+            // fee the client will pay; rounding UP (ceil) would allow exceeding this limit.
+            // Tradeoff: Sub-satoshi fees are truncated (e.g., 1500 msat → 1 sat, not 2).
+            // This is acceptable per NIP-47 as the protocol operates in sat precision.
+            feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
         } else if (
             req.fee_limit_sat !== undefined &&
             Number.isFinite(reqFeeLimitSat) &&
@@ -2153,8 +2187,7 @@ export default class NostrWalletConnectStore {
                     {
                         requestedMsats,
                         chargedSats: amountSatsCeil,
-                        overpaymentMsats:
-                            amountSatsCeil * 1000 - requestedMsats
+                        overpaymentMsats: amountSatsCeil * 1000 - requestedMsats
                     }
                 );
             }
@@ -2669,14 +2702,21 @@ export default class NostrWalletConnectStore {
             // that succeeded on-chain shouldn't be reported as an error to the
             // client just because our in-app budget tracking had a race.
             if (!trackResult.success) {
+                const timestamp = new Date().toISOString();
                 console.warn(
-                    'NWC: Budget limit exceeded during spend tracking',
+                    '[NostrWalletConnectStore.finalizePayment] Budget limit exceeded during spend tracking',
                     {
-                        connection: connection.name,
+                        timestamp,
+                        connectionId: connection.id,
+                        connectionName: connection.name,
+                        activityId: id,
                         amountSats,
                         totalSpendSats: connection.totalSpendSats,
                         maxAmountSats: connection.maxAmountSats,
-                        error: trackResult.errorMessage
+                        budgetLimitReached: connection.budgetLimitReached,
+                        error: trackResult.errorMessage,
+                        severity: 'warning',
+                        category: 'budget_race_detected'
                     }
                 );
             }
@@ -3586,6 +3626,12 @@ export default class NostrWalletConnectStore {
         }
 
         const encryptionScheme = this.getEventEncryptionScheme(event.tags);
+
+        // Validate that the encryption scheme is supported
+        if (!this.isSupportedEncryptionScheme(event.tags)) {
+            throw new Error('UNSUPPORTED_ENCRYPTION');
+        }
+
         let request: NWCRequest;
         try {
             const privateKey = this.walletServiceKeys!.privateKey;
@@ -4040,6 +4086,24 @@ export default class NostrWalletConnectStore {
         }, MAX_RELAY_ATTEMPTS);
     }
 
+    private isSupportedEncryptionScheme(tags: string[][]): boolean {
+        const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
+        const raw = (encryptionTag?.[1] || '').toLowerCase();
+
+        // No encryption tag or empty means default (nip04), which is supported
+        if (!raw) {
+            return true;
+        }
+
+        // Check if it's one of the supported schemes
+        if (raw.includes('nip44_v2') || raw.includes('nip04')) {
+            return true;
+        }
+
+        // Unknown encryption scheme
+        return false;
+    }
+
     private getEventEncryptionScheme(tags: string[][]): NwcEncryptionScheme {
         const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
         const raw = (encryptionTag?.[1] || '').toLowerCase();
@@ -4070,10 +4134,14 @@ export default class NostrWalletConnectStore {
                 return 'NOT_IMPLEMENTED';
             case 'INSUFFICIENT_BALANCE':
                 return 'INSUFFICIENT_BALANCE';
+            case 'QUOTA_EXCEEDED':
+                return 'QUOTA_EXCEEDED';
             case 'RESTRICTED':
                 return 'RESTRICTED';
             case 'NOT_FOUND':
                 return 'NOT_FOUND';
+            case 'UNSUPPORTED_ENCRYPTION':
+                return 'UNSUPPORTED_ENCRYPTION';
             case 'INVALID_PARAMS':
                 return 'INVALID_PARAMS';
             case 'INVALID_INVOICE':
