@@ -55,6 +55,9 @@ export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
         // Support payment notifications as per NIP-47 spec
         // These allow clients to be notified of wallet events
+        // NOTE: 'hold_invoice_accepted' removed - not required by NIP-47 M1 spec
+        // M1 focuses on core payment operations (pay_invoice, make_invoice, lookup_invoice)
+        // Hold/multi-part invoice operations deferred to future spec versions
         return ['payment_received', 'payment_sent'];
     }
 
