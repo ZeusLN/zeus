@@ -90,9 +90,9 @@ export const normalizeNWCConnectionData = (
     };
 
     // Auto-migrate includeLightningAddress: if lud16 is set in metadata,
-    // enable it for existing connections
+    // enable it for existing connections (but only if not explicitly set)
     if (
-        !normalizedData.includeLightningAddress &&
+        normalizedData.includeLightningAddress === undefined &&
         connection.metadata?.lud16
     ) {
         normalizedData.includeLightningAddress = true;
