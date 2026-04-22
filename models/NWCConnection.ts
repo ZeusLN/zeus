@@ -420,6 +420,10 @@ export default class NWCConnection extends BaseModel {
             this.hasBudgetLimit &&
             this.totalSpendSats + amountSats > (this.maxAmountSats ?? 0)
         ) {
+            // Clamp totalSpendSats to preserve the budget invariant before returning failure.
+            // This ensures that even if a payment succeeds despite race conditions,
+            // the budget is marked as fully consumed and future payments are blocked.
+            this.totalSpendSats = this.maxAmountSats ?? 0;
             // Return error but don't throw — a successful payment shouldn't
             // be reported as failed to the client just because concurrent
             // tracking hit the budget limit (race condition). Caller can log
