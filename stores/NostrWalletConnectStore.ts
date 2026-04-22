@@ -539,7 +539,6 @@ export default class NostrWalletConnectStore {
      * Validates that a relay URL uses the proper WebSocket scheme (wss:// or ws://).
      * @param url The relay URL to validate.
      * @returns true if valid WebSocket scheme, false otherwise.
-     * @throws Error if URL is invalid.
      */
     private validateRelayUrl = (url: string): boolean => {
         try {
@@ -584,7 +583,7 @@ export default class NostrWalletConnectStore {
 
             if (!this.validateRelayUrl(params.relayUrl)) {
                 throw new Error(
-                    'Invalid relay URL format. Relay URL must use wss:// or ws:// scheme (e.g., wss://relay.example.com)'
+                    localeString('stores.NostrWalletConnectStore.error.invalidRelayUrl')
                 );
             }
 
@@ -770,7 +769,7 @@ export default class NostrWalletConnectStore {
 
             if (newRelayUrl && !this.validateRelayUrl(newRelayUrl)) {
                 throw new Error(
-                    'Invalid relay URL format. Relay URL must use wss:// or ws:// scheme (e.g., wss://relay.example.com)'
+                    localeString('stores.NostrWalletConnectStore.error.invalidRelayUrl')
                 );
             }
 
@@ -2189,9 +2188,9 @@ export default class NostrWalletConnectStore {
             // was requested) and avoids a Math.floor truncating a small
             // payment to 0 sats. Underlying TransactionsStore.sendPayment
             // accepts integer satoshis only; msat-precision plumbing through
-            // every backend is out of scope for this PR. Mirrors the same
-            // Math.ceil approach already used for fee_limit_msat above and
-            // for `getInvoiceAmount`'s sub-sat handling.
+            // every backend is out of scope for this PR. Note: fee_limit_msat
+            // uses Math.floor (hard ceiling per NIP-47), while request.amount
+            // uses Math.ceil (preserve payment intent).
             const requestedMsats = Number(request.amount);
             const amountSatsCeil = Math.ceil(requestedMsats / 1000);
             if (

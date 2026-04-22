@@ -131,7 +131,7 @@ const BUDGET_RENEWAL_MS = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-// Prevents unbounded memory growth; activity older than ~100 payments at current velocity (~10/day) is archived
+// Prevents unbounded memory growth; retains up to 1000 items with FIFO rotation (oldest dropped via shift)
 const MAX_ACTIVITY_ITEMS = 1000;
 
 /**
