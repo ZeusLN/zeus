@@ -393,8 +393,9 @@ export default class CLNRest {
         // - Fixed amount invoices get the exact millisatoshi amount.
         // - Multiply by 1000 BEFORE flooring so any sub-satoshi precision in
         //   data.amt (e.g. 1.5 sats → 1500 msat) is preserved rather than
-        //   truncated to whole sats. Math.floor guarantees an integer msat
-        //   value, which CLN's `msat` schema type requires.
+        //   truncated to whole sats. Math.floor (not ceil) respects hard limits by
+        //   truncating sub-msat precision: ensures amount stays ≤ requested value.
+        //   CLN's `msat` schema type requires an integer value.
         // - Pre-validate that data.amt is finite BEFORE multiplication so a
         //   bogus upstream value (NaN / Infinity / non-numeric string) is
         //   detected and the field is omitted entirely (CLN treats absent

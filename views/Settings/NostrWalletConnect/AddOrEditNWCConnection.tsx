@@ -1236,7 +1236,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                     {
                                                         includeLightningAddress:
                                                             value,
-                                                        includeLightningAddressInitialized: true
+                                                        includeLightningAddressInitialized:
+                                                            true
                                                     }
                                                 )
                                             }
