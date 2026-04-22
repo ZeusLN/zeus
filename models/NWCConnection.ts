@@ -118,6 +118,19 @@ const BUDGET_RENEWAL_MS = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * NWCConnection represents a Nostr Wallet Connect (NIP-47) connection with optional budget controls.
+ *
+ * IMPORTANT: Budget limits are enforced with best-effort semantics, NOT atomic guarantees.
+ * In concurrent payment scenarios, multiple payments can increment totalSpendSats before
+ * observing each other's increases, allowing temporary budget overages. The trackSpending()
+ * method implements defense-in-depth clamping, but this does NOT provide hard atomic enforcement.
+ *
+ * For applications requiring strict budget isolation per payment, implement mutex/locking
+ * at the application level before dispatching payments to this connection.
+ *
+ * @see trackSpending() for race condition documentation
+ */
 export default class NWCConnection extends BaseModel {
     id: string;
     @observable name: string;
@@ -410,6 +423,13 @@ export default class NWCConnection extends BaseModel {
         errorMessage?: string;
     } {
         this.validateAmount(amountSats);
+
+        // NOTE: This method does NOT guarantee atomic budget enforcement.
+        // In concurrent payment scenarios, multiple payments can race and both
+        // may increment totalSpendSats before either sees the other's increase.
+        // The clamping operation below mitigates but does not eliminate the race.
+        // For hard budget guarantees, use mutex/locking at application level.
+        //
         // Defense-in-depth: even though `validateBudgetBeforePayment` is the
         // primary gate before dispatch, `trackSpending` MUST never silently
         // push `totalSpendSats` past `maxAmountSats`. If a future caller
@@ -423,7 +443,24 @@ export default class NWCConnection extends BaseModel {
             // Clamp totalSpendSats to preserve the budget invariant before returning failure.
             // This ensures that even if a payment succeeds despite race conditions,
             // the budget is marked as fully consumed and future payments are blocked.
+            const totalBeforeClamp = this.totalSpendSats;
             this.totalSpendSats = this.maxAmountSats!;
+
+            // Log the race condition detection for telemetry/monitoring
+            console.warn(
+                '[NWCConnection.trackSpending] Budget race detected: concurrent payment incremented beyond maxAmountSats',
+                {
+                    connectionId: this.id,
+                    connectionName: this.name,
+                    totalSpendSatsBefore: totalBeforeClamp,
+                    attemptedAmount: amountSats,
+                    maxAmountSats: this.maxAmountSats,
+                    totalSpendSatsAfterClamp: this.totalSpendSats,
+                    overageAmount:
+                        totalBeforeClamp + amountSats - this.maxAmountSats!
+                }
+            );
+
             // Return error but don't throw — a successful payment shouldn't
             // be reported as failed to the client just because concurrent
             // tracking hit the budget limit (race condition). Caller can log
