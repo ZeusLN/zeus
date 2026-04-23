@@ -171,6 +171,29 @@ describe('NostrWalletConnectUrlUtils', () => {
             ).toContain('lud16=test%40my-domain.co.uk');
         });
 
+        it('accepts punycoded IDNA domains', () => {
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user@wallet.xn--p1ai'
+                })
+            ).toContain('lud16=user%40wallet.xn--p1ai');
+        });
+
+        it('accepts 64-character local parts', () => {
+            const localPart = 'a'.repeat(64);
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: `${localPart}@example.com`
+                })
+            ).toContain(`lud16=${encodeURIComponent(`${localPart}@example.com`)}`);
+        });
+
         it('accepts lightning addresses with plus sign for aliases (e.g. user+tag@domain)', () => {
             // Regression test: LUD-16 allows +tag format for address aliases
             expect(

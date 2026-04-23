@@ -12,7 +12,9 @@ export class InvalidLightningAddressError extends Error {
     }
 }
 
-const validateLud16 = (address: string): boolean => {
+export const isValidLightningAddress = (
+    address?: string | null
+): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
     // LUD-16 format: localpart@domain (DNS-compliant)
@@ -21,7 +23,7 @@ const validateLud16 = (address: string): boolean => {
     // - Cannot have consecutive dots
     // Domain labels must not start/end with hyphen, can have hyphens in middle
     const regex =
-        /^[a-zA-Z0-9_+\-]([a-zA-Z0-9._+\-]{0,61}[a-zA-Z0-9_+\-])?@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+        /^[a-zA-Z0-9_+\-]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
     
     // Additional validation: reject consecutive dots in local part
     const [localPart] = address.split('@');
@@ -45,7 +47,7 @@ export const buildNostrWalletConnectUrl = ({
 
     const normalizedLud16 = lud16?.trim();
     if (normalizedLud16) {
-        if (!validateLud16(normalizedLud16)) {
+        if (!isValidLightningAddress(normalizedLud16)) {
             throw new InvalidLightningAddressError();
         }
         queryParams.push(`lud16=${encodeURIComponent(normalizedLud16)}`);

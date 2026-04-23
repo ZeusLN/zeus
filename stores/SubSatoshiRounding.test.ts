@@ -250,23 +250,33 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             );
         });
 
-        it('allows valid sub-satoshi amounts (1-999 msat)', async () => {
-            // Regression test: sub-satoshi amounts should be accepted, not rejected
-            // as INVALID_INVOICE. They floor to 0 sats in budget, but that's valid.
+        it('rejects positive sub-satoshi request amounts below 1000 msat', async () => {
             const testCases = [1, 100, 500, 999];
             
             for (const msat of testCases) {
-                const result = await callStoreMethod<{
-                    amountSats: number;
-                    usedRequestAmount: boolean;
-                    invalidRequestAmount: boolean;
-                }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, msat);
+                const context = createLightningPayStoreContext();
+                const result = await callStoreMethod(
+                    'handleLightningPayInvoice',
+                    context,
+                    {} as never,
+                    {
+                        invoice: 'lnbc1testinvoice',
+                        amount: msat,
+                        fee_limit_msat: 2000,
+                        fee_limit_sat: 2
+                    }
+                );
 
                 expect(result).toEqual({
-                    amountSats: 0,
-                    usedRequestAmount: true,
-                    invalidRequestAmount: false
+                    result: undefined,
+                    error: {
+                        code: 'INVALID_PARAMS',
+                        message:
+                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    }
                 });
+                expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
+                expect(context.validateBudgetBeforePayment).not.toHaveBeenCalled();
             }
         });
 
@@ -284,27 +294,31 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             });
         });
 
-        it('charges 1 sat of budget for positive sub-satoshi requests', async () => {
+        it('rejects sub-satoshi fee limits below 1000 msat', async () => {
             const context = createLightningPayStoreContext();
 
-            await callStoreMethod(
+            const result = await callStoreMethod(
                 'handleLightningPayInvoice',
                 context,
                 {} as never,
                 {
                     invoice: 'lnbc1testinvoice',
-                    amount: 500,
-                    fee_limit_msat: 2000,
+                    amount: 1000,
+                    fee_limit_msat: 500,
                     fee_limit_sat: 2
                 }
             );
 
-            expect(context.validateBudgetBeforePayment).toHaveBeenCalled();
-            expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
-                expect.anything(),
-                1,
-                expect.any(String)
-            );
+            expect(result).toEqual({
+                result: undefined,
+                error: {
+                    code: 'INVALID_PARAMS',
+                    message:
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                }
+            });
+            expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(context.validateBudgetBeforePayment).not.toHaveBeenCalled();
         });
     });
 });

@@ -622,7 +622,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             params.lastBudgetReset = lastBudgetReset;
             const nostrUrl = await NostrWalletConnectStore.createConnection({
                 ...params,
-                id: undefined
+                id: undefined,
+                replaceConnectionId: connectionId
             });
             if (nostrUrl) {
                 const createdConnection =

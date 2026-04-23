@@ -218,7 +218,8 @@ export default class NWCConnectionDetails extends React.Component<
             const params = this.buildConnectionParams(connection);
             const nostrUrl = await NostrWalletConnectStore.createConnection({
                 ...params,
-                id: undefined
+                id: undefined,
+                replaceConnectionId: connection.id
             });
             if (nostrUrl) {
                 const createdConnection =

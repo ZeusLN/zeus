@@ -57,7 +57,8 @@ import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import {
     buildNostrWalletConnectUrl,
-    InvalidLightningAddressError
+    InvalidLightningAddressError,
+    isValidLightningAddress
 } from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
@@ -190,6 +191,7 @@ export interface PendingPayment {
 
 export interface CreateConnectionParams {
     id?: string; // For Regenerating connections with the same Id
+    replaceConnectionId?: string;
     name: string;
     relayUrl: string;
     permissions?: Nip47SingleMethod[];
@@ -587,12 +589,22 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+            const includeLightningAddress =
+                params.includeLightningAddress ?? false;
+            const lud16 = this.getConnectionLud16(includeLightningAddress);
+            if (!isValidLightningAddress(lud16)) {
+                throw new InvalidLightningAddressError();
+            }
+
             const existingConnection = this.connections.find(
                 (c) =>
                     c.name.trim().toLowerCase() ===
                     params.name.trim().toLowerCase()
             );
-            if (existingConnection) {
+            if (
+                existingConnection &&
+                existingConnection.id !== params.replaceConnectionId
+            ) {
                 throw new Error(
                     localeString(
                         'stores.NostrWalletConnectStore.error.connectionNameExists'
@@ -664,8 +676,6 @@ export default class NostrWalletConnectStore {
                 }
             }
 
-            const includeLightningAddress =
-                params.includeLightningAddress ?? false;
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
                 this.generateConnectionSecret(
                     params.relayUrl,
@@ -770,11 +780,15 @@ export default class NostrWalletConnectStore {
         connectionId: string,
         updates: Partial<NWCConnection>
     ): Promise<{ nostrUrl?: string; success: boolean }> => {
+        let connectionIndex = -1;
+        let originalConnectionData: Record<string, any> | undefined;
+        let previousUnsubscribe: (() => void) | undefined;
+        let acquiredNewSubscription = false;
         try {
             runInAction(() => {
                 this.error = false;
             });
-            const connectionIndex = this.connections.findIndex(
+            connectionIndex = this.connections.findIndex(
                 (c) => c.id === connectionId
             );
             if (connectionIndex === -1) {
@@ -785,6 +799,7 @@ export default class NostrWalletConnectStore {
                 );
             }
             const connection = this.connections[connectionIndex];
+            originalConnectionData = { ...connection };
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
 
@@ -805,6 +820,16 @@ export default class NostrWalletConnectStore {
 
             const shouldReturnUrl =
                 relayUrlChanged || includeLightningAddressChanged;
+            const nextIncludeLightningAddress =
+                updates.includeLightningAddress ??
+                connection.includeLightningAddress;
+            const nextLud16 = this.getConnectionLud16(
+                nextIncludeLightningAddress
+            );
+
+            if (!isValidLightningAddress(nextLud16)) {
+                throw new InvalidLightningAddressError();
+            }
 
             const existingClientPrivateKey = shouldReturnUrl
                 ? await this.loadClientPrivateKey(connection.pubkey)
@@ -823,35 +848,53 @@ export default class NostrWalletConnectStore {
                 return { success: false };
             }
 
-            const nextIncludeLightningAddress =
-                updates.includeLightningAddress ??
-                connection.includeLightningAddress;
             const updatedNostrUrl = shouldReturnUrl
                 ? buildNostrWalletConnectUrl({
                       walletServicePubkey: walletServicePubkey!,
                       relayUrl: newRelayUrl || oldRelayUrl,
                       secret: existingClientPrivateKey!,
-                      lud16: this.getConnectionLud16(
-                          nextIncludeLightningAddress
-                      )
+                      lud16: nextLud16
                   })
                 : undefined;
 
-            if (relayUrlChanged) {
-                await this.unsubscribeFromConnection(connectionId);
-                if (!this.nwcWalletServices.has(newRelayUrl)) {
+            previousUnsubscribe = relayUrlChanged
+                ? this.activeSubscriptions.get(connectionId)
+                : undefined;
+            const subscriptionConnection = relayUrlChanged
+                ? new NWCConnection({
+                      ...connection,
+                      ...updates,
+                      relayUrl: newRelayUrl || oldRelayUrl,
+                      includeLightningAddress: nextIncludeLightningAddress
+                  })
+                : undefined;
+
+            if (relayUrlChanged && subscriptionConnection) {
+                if (!this.nwcWalletServices.has(subscriptionConnection.relayUrl)) {
                     await this.initializeNWCWalletServices();
                 }
+                const subscribed = await this.subscribeToConnection(
+                    subscriptionConnection,
+                    { unsubscribeExisting: false }
+                );
+                if (!subscribed) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                        )
+                    );
+                }
+                acquiredNewSubscription = true;
             }
 
             runInAction(() => {
                 const oldBudgetRenewal = connection.budgetRenewal;
+                const hadBudget = connection.hasBudgetLimit;
                 const newBudgetRenewal = updates.budgetRenewal;
                 const newMaxAmountSats = updates.maxAmountSats;
 
                 Object.assign(connection, updates);
 
-                const hadBudget = connection.hasBudgetLimit;
                 const hasBudget =
                     newMaxAmountSats !== undefined && newMaxAmountSats > 0;
                 const budgetRenewalChanged =
@@ -871,7 +914,9 @@ export default class NostrWalletConnectStore {
             });
 
             await this.saveConnections();
-            await this.subscribeToConnection(connection);
+            if (relayUrlChanged && previousUnsubscribe) {
+                previousUnsubscribe();
+            }
             if (shouldReturnUrl) {
                 return {
                     nostrUrl: updatedNostrUrl,
@@ -880,6 +925,32 @@ export default class NostrWalletConnectStore {
             }
             return { success: true };
         } catch (error: any) {
+            if (acquiredNewSubscription) {
+                const activeUnsubscribe =
+                    this.activeSubscriptions.get(connectionId);
+                if (activeUnsubscribe && typeof activeUnsubscribe === 'function') {
+                    try {
+                        activeUnsubscribe();
+                    } catch {
+                        // ignore rollback unsubscribe failures
+                    }
+                }
+                if (previousUnsubscribe) {
+                    this.activeSubscriptions.set(
+                        connectionId,
+                        previousUnsubscribe
+                    );
+                } else {
+                    this.activeSubscriptions.delete(connectionId);
+                }
+            }
+            if (connectionIndex !== -1 && originalConnectionData) {
+                runInAction(() => {
+                    Object.assign(this.connections[connectionIndex], {
+                        ...originalConnectionData
+                    });
+                });
+            }
             const localizedError = this.localizeConnectionUrlBuildError(error);
             console.error('Failed to update NWC connection:', error);
             runInAction(() => {
@@ -1286,8 +1357,9 @@ export default class NostrWalletConnectStore {
     // SUBSCRIPTION MANAGEMENT
 
     private async subscribeToConnection(
-        connection: NWCConnection
-    ): Promise<void> {
+        connection: NWCConnection,
+        options?: { unsubscribeExisting?: boolean }
+    ): Promise<boolean> {
         if (!this.isServiceReady()) {
             runInAction(() => {
                 this.error = true;
@@ -1295,10 +1367,12 @@ export default class NostrWalletConnectStore {
                     'stores.NostrWalletConnectStore.error.serviceNotReady'
                 );
             });
-            return;
+            return false;
         }
         try {
-            await this.unsubscribeFromConnection(connection.id);
+            if (options?.unsubscribeExisting !== false) {
+                await this.unsubscribeFromConnection(connection.id);
+            }
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
             if (!serviceSecretKey) {
@@ -1387,11 +1461,13 @@ export default class NostrWalletConnectStore {
             await new Promise((resolve) =>
                 setTimeout(resolve, SUBSCRIPTION_DELAY_MS)
             ); //wait for 1 second to prevent rate limiting
+            return true;
         } catch (error: any) {
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
                 error?.message || String(error)
             );
+            return false;
         }
     }
 
@@ -2118,8 +2194,8 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INVALID_PARAMS
             );
         }
-        // Valid sub-satoshi amounts may floor to 0 sats; this is expected behavior.
-        // Only reject truly invalid invoices (no decoded amount from bolt11).
+        // When no explicit request amount is provided, the decoded invoice amount
+        // must still resolve to a positive satoshi value.
         if (!usedRequestAmount && amountSats <= 0) {
             return this.handleError(
                 localeString(
@@ -2146,6 +2222,34 @@ export default class NostrWalletConnectStore {
                     }
                 };
             }
+        }
+        // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec.
+        // fee_limit_msat takes precedence if both are provided.
+        // Validate it before any balance/budget checks so invalid values fail fast.
+        let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
+        const req = request as any;
+        const reqFeeLimitMsat = Number(req.fee_limit_msat);
+        const reqFeeLimitSat = Number(req.fee_limit_sat);
+        if (
+            req.fee_limit_msat !== undefined &&
+            Number.isFinite(reqFeeLimitMsat) &&
+            reqFeeLimitMsat > 0
+        ) {
+            if (reqFeeLimitMsat < 1000) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
+        } else if (
+            req.fee_limit_sat !== undefined &&
+            Number.isFinite(reqFeeLimitSat) &&
+            reqFeeLimitSat > 0
+        ) {
+            feeLimitSat = reqFeeLimitSat;
         }
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
@@ -2181,33 +2285,6 @@ export default class NostrWalletConnectStore {
         }
         this.transactionsStore.reset();
 
-        // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec
-        // fee_limit_msat takes precedence if both are provided.
-        // Use Number.isFinite() to defensively reject Infinity / NaN / unparseable
-        // values that would otherwise pass the `> 0` check (e.g. Infinity > 0).
-        let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
-        const req = request as any;
-        const reqFeeLimitMsat = Number(req.fee_limit_msat);
-        const reqFeeLimitSat = Number(req.fee_limit_sat);
-        if (
-            req.fee_limit_msat !== undefined &&
-            Number.isFinite(reqFeeLimitMsat) &&
-            reqFeeLimitMsat > 0
-        ) {
-            // Convert millisatoshis to satoshis using Math.floor to respect the hard
-            // ceiling specified by the client. Per NIP-47, fee_limit_msat is the maximum
-            // fee the client will pay; rounding UP (ceil) would allow exceeding this limit.
-            // Tradeoff: Sub-satoshi fees are truncated (e.g., 1500 msat → 1 sat, not 2).
-            // This is acceptable per NIP-47 as the protocol operates in sat precision.
-            feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
-        } else if (
-            req.fee_limit_sat !== undefined &&
-            Number.isFinite(reqFeeLimitSat) &&
-            reqFeeLimitSat > 0
-        ) {
-            feeLimitSat = reqFeeLimitSat;
-        }
-
         const paymentData: {
             payment_request: string;
             fee_limit_sat: string;
@@ -2221,12 +2298,19 @@ export default class NostrWalletConnectStore {
         if (usedRequestAmount && request.amount) {
             // Per NIP-47 spec, request.amount is in millisatoshis. Convert to
             // satoshis using Math.floor to avoid exceeding caller's intent
-            // (ensures we never charge more than requested). Sub-satoshi amounts
-            // will be truncated to integer sats; emit a warning for auditability
-            // until full msat-precision plumbing lands. Both fee_limit_msat and
-            // request.amount use Math.floor to ensure we never exceed limits.
+            // (ensures we never charge more than requested). Sub-satoshi request
+            // amounts (< 1000 msat) are rejected until the full msat plumbing
+            // exists end-to-end. Amounts >= 1000 msat floor to whole sats.
             const requestedMsats = Number(request.amount);
             const amountSatsFloor = Math.floor(requestedMsats / 1000);
+            if (requestedMsats < 1000) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
             if (
                 Number.isFinite(requestedMsats) &&
                 requestedMsats % 1000 !== 0
@@ -2667,13 +2751,18 @@ export default class NostrWalletConnectStore {
             // adapter, the UI) is a non-trivial refactor outside the NIP-47
             // M1 scope.
             //
-            // Known tradeoff: when the request specifies a sub-satoshi
-            // amount, the sender's budget will be charged for the floored
-            // sat (e.g. a 1500-msat request consumes 1 sat of budget).
-            // Emit a warning so this is auditable in logs until end-to-end
-            // msat precision lands.
+            // Known tradeoff: we only support full-satoshi request amounts in the
+            // sat-precision payment pipeline. Sub-satoshi amounts are rejected
+            // earlier; amounts >= 1000 msat floor to whole sats.
             const requestedMsats = normalizedRequestAmountMsats;
             const amountSats = Math.floor(requestedMsats / 1000);
+            if (requestedMsats < 1000) {
+                return {
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
             if (requestedMsats % 1000 !== 0) {
                 console.warn(
                     'NWC: sub-satoshi request amount truncated DOWN for ' +

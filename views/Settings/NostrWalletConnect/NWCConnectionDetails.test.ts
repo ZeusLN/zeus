@@ -107,7 +107,8 @@ describe('NWCConnectionDetails regenerateConnection', () => {
         expect(store.createConnection).toHaveBeenCalledWith(
             expect.objectContaining({
                 id: undefined,
-                relayUrl: 'wss://old.relay'
+                relayUrl: 'wss://old.relay',
+                replaceConnectionId: 'conn-1'
             })
         );
         expect(store.deleteConnection).not.toHaveBeenCalled();

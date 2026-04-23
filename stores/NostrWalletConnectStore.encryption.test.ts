@@ -246,8 +246,8 @@ describe('NostrWalletConnectStore updateConnection validation order', () => {
         expect((store as any).validateRelayUrl).toHaveBeenCalledWith(
             'wss://new.relay'
         );
-        expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('connection-pubkey');
         expect(lud16Spy).toHaveBeenCalledWith(true);
+        expect(loadClientPrivateKeySpy).not.toHaveBeenCalled();
         expect(unsubscribeSpy).not.toHaveBeenCalled();
         expect(initializeSpy).not.toHaveBeenCalled();
         expect(saveSpy).not.toHaveBeenCalled();
@@ -256,5 +256,271 @@ describe('NostrWalletConnectStore updateConnection validation order', () => {
         expect(consoleErrorSpy).toHaveBeenCalled();
         expect((store as any).errorMessage).toBe('INVALID_LIGHTNING_ADDRESS');
         expect(connection.relayUrl).toBe('wss://old.relay');
+    });
+});
+
+describe('NWCConnection replacement flow', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('allows regenerating a connection with the same name when replaceConnectionId is set', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const existingConnection = {
+            id: 'conn-1',
+            name: 'Shared Name',
+            pubkey: 'old-pubkey',
+            relayUrl: 'wss://old.relay',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 0,
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            activity: []
+        };
+        store.connections = [existingConnection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).nwcWalletServices = new Map([
+            ['wss://new.relay', {} as any]
+        ]);
+        (store as any).publishedRelays = new Set(['wss://new.relay']);
+        const generateSecretSpy = jest
+            .spyOn(store as any, 'generateConnectionSecret')
+            .mockReturnValue({
+                connectionUrl:
+                    'nostr+walletconnect://service-pubkey?relay=wss%3A%2F%2Fnew.relay&secret=new-secret',
+                connectionPrivateKey: 'new-secret',
+                connectionPublicKey: 'new-pubkey'
+            });
+        const storeClientKeysSpy = jest
+            .spyOn(store as any, 'storeClientKeys')
+            .mockResolvedValue(undefined);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        const subscribeSpy = jest
+            .spyOn(store as any, 'subscribeToConnection')
+            .mockResolvedValue(true);
+        const handoffSpy = jest
+            .spyOn(store as any, 'sendHandoffRequest')
+            .mockResolvedValue(undefined);
+
+        const url = await store.createConnection({
+            name: 'Shared Name',
+            relayUrl: 'wss://new.relay',
+            replaceConnectionId: 'conn-1'
+        });
+
+        expect(url).toContain('nostr+walletconnect://service-pubkey');
+        expect(generateSecretSpy).toHaveBeenCalled();
+        expect(storeClientKeysSpy).toHaveBeenCalled();
+        expect(saveSpy).toHaveBeenCalled();
+        expect(subscribeSpy).toHaveBeenCalled();
+        expect(handoffSpy).toHaveBeenCalled();
+        expect(store.connections).toHaveLength(2);
+    });
+
+    it('rejects invalid Lightning Addresses before wallet-service side effects', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: true,
+                lightningAddress: 'invalid..name@example.com'
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const loadWalletServiceKeysSpy = jest
+            .spyOn(store as any, 'loadWalletServiceKeys')
+            .mockResolvedValue(undefined);
+        const storeClientKeysSpy = jest
+            .spyOn(store as any, 'storeClientKeys')
+            .mockResolvedValue(undefined);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        const consoleWarnSpy = jest
+            .spyOn(console, 'warn')
+            .mockImplementation(() => undefined);
+
+        await expect(
+            store.createConnection({
+                name: 'Lightning Address Test',
+                relayUrl: 'wss://new.relay',
+                includeLightningAddress: true
+            })
+        ).rejects.toThrow(
+            'stores.NostrWalletConnectStore.error.invalidLightningAddress'
+        );
+
+        expect(loadWalletServiceKeysSpy).not.toHaveBeenCalled();
+        expect(storeClientKeysSpy).not.toHaveBeenCalled();
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it('restores the original connection when a relay resubscribe fails', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-2',
+            name: 'Relay Update',
+            pubkey: 'old-pubkey',
+            relayUrl: 'wss://old.relay',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 25,
+            maxAmountSats: 100,
+            budgetRenewal: 'weekly',
+            lastBudgetReset: new Date('2026-01-01T00:00:00Z'),
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            hasBudgetLimit: true,
+            resetBudget: jest.fn(function (this: any) {
+                this.totalSpendSats = 0;
+                this.lastBudgetReset = undefined;
+            }),
+            hasPermission: jest.fn(() => false),
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).nwcWalletServices = new Map([
+            ['wss://new.relay', {} as any]
+        ]);
+        const loadClientPrivateKeySpy = jest
+            .spyOn(store as any, 'loadClientPrivateKey')
+            .mockResolvedValue('client-secret');
+        jest.spyOn(
+            NostrWalletConnectStore.prototype as any,
+            'subscribeToConnection'
+        ).mockResolvedValue(false);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+            return undefined;
+        });
+
+        const result = await store.updateConnection('conn-2', {
+            relayUrl: 'wss://new.relay'
+        } as any);
+
+        expect(result).toEqual({ success: false });
+        expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('old-pubkey');
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(connection.relayUrl).toBe('wss://old.relay');
+        expect(connection.totalSpendSats).toBe(25);
+        expect(connection.maxAmountSats).toBe(100);
+        expect(connection.budgetRenewal).toBe('weekly');
+        expect(errorSpy).toHaveBeenCalled();
+    });
+
+    it('clears spend when the budget limit is removed', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-3',
+            name: 'Budget Reset',
+            pubkey: 'pubkey-3',
+            relayUrl: 'wss://relay.example',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 77,
+            maxAmountSats: 100,
+            budgetRenewal: 'never',
+            lastBudgetReset: new Date('2026-01-01T00:00:00Z'),
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            hasBudgetLimit: true,
+            resetBudget: jest.fn(function (this: any) {
+                this.totalSpendSats = 0;
+                this.lastBudgetReset = undefined;
+            }),
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+
+        const result = await store.updateConnection('conn-3', {} as any);
+
+        expect(result).toEqual({ success: true });
+        expect(saveSpy).toHaveBeenCalled();
+        expect((store.connections[0] as any).totalSpendSats).toBe(0);
+        expect((store.connections[0] as any).lastBudgetReset).toBeUndefined();
     });
 });
