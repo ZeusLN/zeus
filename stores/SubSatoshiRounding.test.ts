@@ -146,28 +146,32 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
     });
 
     describe('getInvoiceAmount', () => {
-        it('rejects non-whole-sat request amounts', async () => {
+        it('preserves positive sub-satoshi request amounts', async () => {
             const result = await callStoreMethod<{
+                amountMsats: number;
                 amountSats: number;
                 usedRequestAmount: boolean;
                 invalidRequestAmount: boolean;
             }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, 1500);
 
             expect(result).toEqual({
-                amountSats: 0,
-                usedRequestAmount: false,
-                invalidRequestAmount: true
+                amountMsats: 1500,
+                amountSats: 1,
+                usedRequestAmount: true,
+                invalidRequestAmount: false
             });
         });
 
         it('marks fractional millisatoshi request amounts as invalid', async () => {
             const result = await callStoreMethod<{
+                amountMsats: number;
                 amountSats: number;
                 usedRequestAmount: boolean;
                 invalidRequestAmount: boolean;
             }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, 1.5);
 
             expect(result).toEqual({
+                amountMsats: 0,
                 amountSats: 0,
                 usedRequestAmount: false,
                 invalidRequestAmount: true
@@ -196,8 +200,10 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith({
                 payment_request: 'lnbc1testinvoice',
                 fee_limit_sat: '0',
+                fee_limit_msat: '0',
                 timeout_seconds: '120',
-                amount: '1'
+                amount: '1',
+                amount_msat: '1000'
             });
             expect(response).toEqual({
                 result: {
@@ -231,9 +237,9 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             );
         });
 
-        it('rejects positive sub-satoshi request amounts below 1000 msat', async () => {
+        it('charges a minimum of 1 sat for positive sub-satoshi request amounts', async () => {
             const testCases = [1, 100, 500, 999];
-            
+
             for (const msat of testCases) {
                 const context = createLightningPayStoreContext();
                 const result = await callStoreMethod(
@@ -249,33 +255,45 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 );
 
                 expect(result).toEqual({
-                    result: undefined,
-                    error: {
-                        code: 'INVALID_PARAMS',
-                        message:
-                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
-                    }
+                    result: {
+                        preimage: 'test-preimage',
+                        fees_paid: 2000
+                    },
+                    error: undefined
                 });
-                expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
-                expect(context.validateBudgetBeforePayment).not.toHaveBeenCalled();
+                expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
+                    {},
+                    1,
+                    'INSUFFICIENT_BALANCE'
+                );
+                expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        amount: '1',
+                        amount_msat: String(msat),
+                        fee_limit_sat: '2',
+                        fee_limit_msat: '2000'
+                    })
+                );
             }
         });
 
         it('accepts request amounts exactly at 1000 msat boundary', async () => {
             const result = await callStoreMethod<{
+                amountMsats: number;
                 amountSats: number;
                 usedRequestAmount: boolean;
                 invalidRequestAmount: boolean;
             }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, 1000);
 
             expect(result).toEqual({
+                amountMsats: 1000,
                 amountSats: 1,
                 usedRequestAmount: true,
                 invalidRequestAmount: false
             });
         });
 
-        it('rejects non-whole-sat request amounts before sending the payment', async () => {
+        it('rounds positive sub-satoshi request amounts up for payment processing', async () => {
             const context = createLightningPayStoreContext();
 
             const result = await callStoreMethod(
@@ -291,18 +309,28 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             );
 
             expect(result).toEqual({
-                result: undefined,
-                error: {
-                    code: 'INVALID_PARAMS',
-                    message:
-                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
-                }
+                result: {
+                    preimage: 'test-preimage',
+                    fees_paid: 2000
+                },
+                error: undefined
             });
-            expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
-            expect(context.validateBudgetBeforePayment).not.toHaveBeenCalled();
+            expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
+                {},
+                1,
+                'INSUFFICIENT_BALANCE'
+            );
+            expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    amount: '1',
+                    amount_msat: '1500',
+                    fee_limit_sat: '2',
+                    fee_limit_msat: '2000'
+                })
+            );
         });
 
-        it('rejects non-whole-sat fee limits', async () => {
+        it('accepts exact millisatoshi fee limits', async () => {
             const context = createLightningPayStoreContext();
 
             const result = await callStoreMethod(
@@ -318,15 +346,25 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             );
 
             expect(result).toEqual({
-                result: undefined,
-                error: {
-                    code: 'INVALID_PARAMS',
-                    message:
-                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
-                }
+                result: {
+                    preimage: 'test-preimage',
+                    fees_paid: 2000
+                },
+                error: undefined
             });
-            expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
-            expect(context.validateBudgetBeforePayment).not.toHaveBeenCalled();
+            expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    amount: '1',
+                    amount_msat: '1000',
+                    fee_limit_sat: '1',
+                    fee_limit_msat: '1500'
+                })
+            );
+            expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
+                {},
+                1,
+                'INSUFFICIENT_BALANCE'
+            );
         });
     });
 });

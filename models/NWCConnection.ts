@@ -31,6 +31,7 @@ export interface ConnectionActivity {
     error?: string;
     preimage?: string;
     paymentHash?: string;
+    msatAmount?: number;
     satAmount?: number;
     createdAt?: Date;
     expiresAt?: Date;
