@@ -949,7 +949,8 @@ export default class WalletConfiguration extends React.Component<
     };
 
     createNewWallet = async (network: string = 'Mainnet') => {
-        const { recoveryCipherSeed, channelBackupsBase64 } = this.state;
+        const { recoveryCipherSeed, channelBackupsBase64, isSqlite } =
+            this.state;
         const { SettingsStore, SyncStore } = this.props;
         const { embeddedLndStarted } = SettingsStore;
 
@@ -989,7 +990,8 @@ export default class WalletConfiguration extends React.Component<
                 lndDir,
                 seedMnemonic: recoveryCipherSeed,
                 isTestnet: network === 'Testnet',
-                channelBackupsBase64
+                channelBackupsBase64,
+                isSqlite: isSqlite ?? false
             });
         } catch (error) {
             console.log('Error creating wallet:', error);
@@ -2973,7 +2975,10 @@ export default class WalletConfiguration extends React.Component<
                                                             network:
                                                                 embeddedLndNetwork,
                                                             nickname,
-                                                            photo
+                                                            photo,
+                                                            isSqlite:
+                                                                isSqlite ??
+                                                                false
                                                         }
                                                     )
                                                 }
