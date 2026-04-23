@@ -1214,7 +1214,8 @@ export async function createLndWallet({
     channelBackupsBase64,
     channelDbUri,
     channelDbFileName,
-    setStatus
+    setStatus,
+    isSqlite = false
 }: {
     lndDir: string;
     seedMnemonic?: string;
@@ -1224,6 +1225,7 @@ export async function createLndWallet({
     channelDbUri?: string;
     channelDbFileName?: string;
     setStatus?: (message: string | null) => void;
+    isSqlite?: boolean;
 }) {
     const {
         initialize,
@@ -1240,7 +1242,7 @@ export async function createLndWallet({
     await writeLndConfig({
         lndDir,
         isTestnet,
-        isSqlite: true
+        isSqlite
     });
     await initialize();
 

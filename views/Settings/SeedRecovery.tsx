@@ -97,6 +97,7 @@ interface SeedRecoveryProps {
             restoreRescueKey?: boolean;
             nickname?: string;
             photo?: string;
+            isSqlite?: boolean;
         }
     >;
 }
@@ -137,6 +138,7 @@ interface SeedRecoveryState {
     channelDbUri?: string;
     channelDbFileName?: string;
     olympusRestorePending: boolean;
+    embeddedLndIsSqlite: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore', 'ModalStore')
@@ -186,7 +188,8 @@ export default class SeedRecovery extends React.PureComponent<
             ldkPassphrase: '',
             ldkNodeDir: '',
             embeddedLdkNetwork: 'mainnet',
-            olympusRestorePending: false
+            olympusRestorePending: false,
+            embeddedLndIsSqlite: false
         };
     }
 
@@ -233,7 +236,9 @@ export default class SeedRecovery extends React.PureComponent<
             props.route.params?.implementation ?? 'embedded-lnd';
         const restoreSwaps = props.route.params?.restoreSwaps ?? false;
         const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
+        const isSqlite = props.route.params?.isSqlite ?? false;
         this.setState({
+            embeddedLndIsSqlite: isSqlite,
             network,
             implementation,
             restoreSwaps,
@@ -361,7 +366,8 @@ export default class SeedRecovery extends React.PureComponent<
             adminMacaroon,
             embeddedLndNetwork,
             seedPhrase,
-            lndDir
+            lndDir,
+            embeddedLndIsSqlite
         } = this.state;
         const { updateSettings, settings } = SettingsStore;
 
@@ -377,7 +383,7 @@ export default class SeedRecovery extends React.PureComponent<
             embeddedLndNetwork,
             implementation: 'embedded-lnd',
             lndDir,
-            isSqlite: true
+            isSqlite: embeddedLndIsSqlite
         };
 
         let nodes: any;
@@ -794,7 +800,8 @@ export default class SeedRecovery extends React.PureComponent<
 
                 const lndDir = uuidv4();
 
-                const { channelDbUri, channelDbFileName } = this.state;
+                const { channelDbUri, channelDbFileName, embeddedLndIsSqlite } =
+                    this.state;
 
                 try {
                     const response = await createLndWallet({
@@ -804,6 +811,7 @@ export default class SeedRecovery extends React.PureComponent<
                         channelBackupsBase64,
                         channelDbUri,
                         channelDbFileName,
+                        isSqlite: embeddedLndIsSqlite,
                         setStatus: (msg) =>
                             this.setState({
                                 successMsg: msg || ''
