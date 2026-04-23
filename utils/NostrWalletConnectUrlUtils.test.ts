@@ -1,4 +1,7 @@
-import { buildNostrWalletConnectUrl } from './NostrWalletConnectUrlUtils';
+import {
+    buildNostrWalletConnectUrl,
+    InvalidLightningAddressError
+} from './NostrWalletConnectUrlUtils';
 
 describe('NostrWalletConnectUrlUtils', () => {
     it('builds a connection URL without lud16 by default', () => {
@@ -68,7 +71,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user@invalid'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('rejects invalid lightning address format - missing localpart', () => {
@@ -79,7 +82,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: '@example.com'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('rejects invalid lightning address format - missing domain', () => {
@@ -90,7 +93,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user@'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('rejects invalid lightning address format - spaces in address', () => {
@@ -101,7 +104,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user space@example.com'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('accepts lightning addresses with allowed special characters', () => {
@@ -132,7 +135,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user@-example.com'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('rejects invalid domain format - dash before TLD', () => {
@@ -143,7 +146,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user@example.-com'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('rejects invalid domain format - trailing hyphen in domain label', () => {
@@ -154,7 +157,7 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: 'user@example-.com'
                 })
-            ).toThrow('Invalid Lightning Address format (must be name@domain)');
+            ).toThrow(InvalidLightningAddressError);
         });
 
         it('accepts DNS-compliant domains with hyphens in middle of labels', () => {

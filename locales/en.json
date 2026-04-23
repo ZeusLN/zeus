@@ -1721,6 +1721,7 @@
   "stores.NostrWalletConnectStore.error.failedToDeleteConnection": "Failed to delete connection",
   "stores.NostrWalletConnectStore.error.failedToUpdateConnection": "Failed to update connection",
   "stores.NostrWalletConnectStore.error.invalidRelayUrl": "Invalid relay URL format. Relay URL must use wss:// or ws:// scheme (e.g., wss://relay.example.com)",
+  "stores.NostrWalletConnectStore.error.invalidLightningAddress": "Invalid Lightning Address format (must be name@domain)",
   "stores.NostrWalletConnectStore.error.failedToStoreServiceKeys": "Failed to store service keys",
   "stores.NostrWalletConnectStore.error.failedToStorePrivateKey": "Failed to store private key",
   "stores.NostrWalletConnectStore.error.failedToSaveCashuSetting": "Failed to save Cashu setting",

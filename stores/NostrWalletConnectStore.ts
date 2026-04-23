@@ -55,7 +55,10 @@ import { v4 as uuidv4 } from 'uuid';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
-import { buildNostrWalletConnectUrl } from '../utils/NostrWalletConnectUrlUtils';
+import {
+    buildNostrWalletConnectUrl,
+    InvalidLightningAddressError
+} from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
@@ -550,6 +553,17 @@ export default class NostrWalletConnectStore {
         }
     };
 
+    private localizeConnectionUrlBuildError(error: unknown): Error {
+        if (error instanceof InvalidLightningAddressError) {
+            return new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidLightningAddress'
+                )
+            );
+        }
+        return error as Error;
+    }
+
     /**
      * Creates a new NWC connection with the specified parameters.
      * @param params Configuration for the new connection.
@@ -583,7 +597,9 @@ export default class NostrWalletConnectStore {
 
             if (!this.validateRelayUrl(params.relayUrl)) {
                 throw new Error(
-                    localeString('stores.NostrWalletConnectStore.error.invalidRelayUrl')
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
                 );
             }
 
@@ -693,7 +709,7 @@ export default class NostrWalletConnectStore {
             await this.sendHandoffRequest();
             return connectionUrl;
         } catch (error: any) {
-            throw error;
+            throw this.localizeConnectionUrlBuildError(error);
         }
     };
 
@@ -769,7 +785,9 @@ export default class NostrWalletConnectStore {
 
             if (newRelayUrl && !this.validateRelayUrl(newRelayUrl)) {
                 throw new Error(
-                    localeString('stores.NostrWalletConnectStore.error.invalidRelayUrl')
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
                 );
             }
 
@@ -853,10 +871,11 @@ export default class NostrWalletConnectStore {
             }
             return { success: true };
         } catch (error: any) {
+            const localizedError = this.localizeConnectionUrlBuildError(error);
             console.error('Failed to update NWC connection:', error);
             runInAction(() => {
                 this.setError(
-                    (error as Error).message ||
+                    localizedError.message ||
                         localeString(
                             'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
                         )

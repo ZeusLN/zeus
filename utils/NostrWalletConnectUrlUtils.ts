@@ -5,12 +5,20 @@ interface BuildNostrWalletConnectUrlParams {
     lud16?: string;
 }
 
+export class InvalidLightningAddressError extends Error {
+    constructor() {
+        super('INVALID_LIGHTNING_ADDRESS');
+        this.name = 'InvalidLightningAddressError';
+    }
+}
+
 const validateLud16 = (address: string): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
     // LUD-16 format: localpart@domain (DNS-compliant)
     // Domain labels must not start/end with hyphen, can have hyphens in middle
-    const regex = /^[a-zA-Z0-9._-]+@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+    const regex =
+        /^[a-zA-Z0-9._-]+@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
     return regex.test(address);
 };
 
@@ -28,7 +36,7 @@ export const buildNostrWalletConnectUrl = ({
     const normalizedLud16 = lud16?.trim();
     if (normalizedLud16) {
         if (!validateLud16(normalizedLud16)) {
-            throw new Error('Invalid Lightning Address format (must be name@domain)');
+            throw new InvalidLightningAddressError();
         }
         queryParams.push(`lud16=${encodeURIComponent(normalizedLud16)}`);
     }
