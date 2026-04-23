@@ -1,4 +1,14 @@
-jest.mock('@getalby/sdk', () => ({ nwc: {} }));
+jest.mock('@getalby/sdk', () => ({
+    nwc: {
+        NWCWalletService: class {
+            connected = false;
+            opts: any;
+            constructor(opts: any) {
+                this.opts = opts;
+            }
+        }
+    }
+}));
 jest.mock('nostr-tools', () => ({
     getPublicKey: jest.fn(),
     generatePrivateKey: jest.fn(),
@@ -17,7 +27,11 @@ jest.mock('@react-native-async-storage/async-storage', () => ({}));
 jest.mock('../storage', () => ({}));
 jest.mock('../models/NWCConnection', () => ({
     __esModule: true,
-    default: class NWCConnection {},
+    default: class NWCConnection {
+        constructor(props: any) {
+            Object.assign(this, props);
+        }
+    },
     BudgetRenewalType: {},
     ConnectionActivityType: {},
     ConnectionPaymentSourceType: {},
@@ -259,6 +273,17 @@ describe('NostrWalletConnectStore updateConnection validation order', () => {
     });
 });
 
+describe('NostrWalletConnectStore payment hash fallback', () => {
+    it('returns a 64-character hex hash', () => {
+        const hash = (NostrWalletConnectStore.prototype as any).generatePaymentHashFallback(
+            'payment-123'
+        );
+
+        expect(hash).toMatch(/^[0-9a-f]{64}$/i);
+        expect(hash).not.toContain('-');
+    });
+});
+
 describe('NWCConnection replacement flow', () => {
     afterEach(() => {
         jest.restoreAllMocks();
@@ -339,6 +364,66 @@ describe('NWCConnection replacement flow', () => {
         expect(subscribeSpy).toHaveBeenCalled();
         expect(handoffSpy).toHaveBeenCalled();
         expect(store.connections).toHaveLength(2);
+    });
+
+    it('creates a relay service for a new relay before resubscribing', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const existingConnection = {
+            id: 'conn-new-relay',
+            name: 'Relay Update',
+            pubkey: 'old-pubkey',
+            relayUrl: 'wss://old.relay',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 0,
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            activity: []
+        };
+        store.connections = [existingConnection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).nwcWalletServices = new Map();
+        const loadClientPrivateKeySpy = jest
+            .spyOn(store as any, 'loadClientPrivateKey')
+            .mockResolvedValue('client-secret');
+        const initializeSpy = jest
+            .spyOn(store as any, 'initializeNWCWalletServices')
+            .mockResolvedValue(undefined);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        jest.spyOn(store as any, 'subscribeToConnection').mockResolvedValue(true);
+
+        const result = await store.updateConnection('conn-new-relay', {
+            relayUrl: 'wss://new.relay'
+        });
+
+        expect(result).toEqual({ success: true, nostrUrl: expect.any(String) });
+        expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('old-pubkey');
+        expect(initializeSpy).not.toHaveBeenCalled();
+        expect(saveSpy).toHaveBeenCalled();
+        expect((store as any).nwcWalletServices.has('wss://new.relay')).toBe(true);
     });
 
     it('rejects invalid Lightning Addresses before wallet-service side effects', async () => {

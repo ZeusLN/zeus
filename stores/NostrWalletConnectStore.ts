@@ -7,6 +7,7 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 import 'websocket-polyfill';
 import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
+import createHash from 'create-hash';
 import type {
     Nip47GetInfoResponse,
     Nip47GetBalanceResponse,
@@ -870,6 +871,18 @@ export default class NostrWalletConnectStore {
                 : undefined;
 
             if (relayUrlChanged && subscriptionConnection) {
+                if (
+                    !this.nwcWalletServices.has(subscriptionConnection.relayUrl)
+                ) {
+                    runInAction(() => {
+                        this.nwcWalletServices.set(
+                            subscriptionConnection.relayUrl,
+                            new nwc.NWCWalletService({
+                                relayUrl: subscriptionConnection.relayUrl
+                            })
+                        );
+                    });
+                }
                 if (!this.nwcWalletServices.has(subscriptionConnection.relayUrl)) {
                     await this.initializeNWCWalletServices();
                 }
@@ -4488,19 +4501,12 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Generates a unique fallback payment hash with millisecond precision.
-     * Used when actual payment hash is unavailable.
-     * Format: timestamp-paymentIdPrefix-randomSuffix (or timestamp-randomSuffix if no ID)
-     * Examples: 1703001234567-abcd1234-a2b4c6 or 1703001234567-a2b4c6
+     * Generates a 32-byte hex fallback payment hash when the backend does not
+     * provide one.
      */
     private generatePaymentHashFallback(paymentId?: string): string {
-        const timestamp = Date.now(); // millisecond precision
-        const random = Math.random().toString(36).substring(2, 8); // 6-char alphanumeric
-        if (paymentId) {
-            const id = paymentId.substring(0, 8); // first 8 chars of ID
-            return `${timestamp}-${id}-${random}`;
-        }
-        return `${timestamp}-${random}`;
+        const fallbackSource = paymentId || `${Date.now()}:${Math.random()}`;
+        return createHash('sha256').update(fallbackSource).digest('hex');
     }
 
     private handleError(
