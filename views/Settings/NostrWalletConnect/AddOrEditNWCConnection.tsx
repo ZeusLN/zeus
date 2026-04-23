@@ -620,13 +620,37 @@ export default class AddOrEditNWCConnection extends React.Component<
             if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
-            await NostrWalletConnectStore.deleteConnection(connectionId);
-            const nostrUrl = await NostrWalletConnectStore.createConnection(
-                params
-            );
+            const nostrUrl = await NostrWalletConnectStore.createConnection({
+                ...params,
+                id: undefined
+            });
             if (nostrUrl) {
                 const createdConnection =
                     NostrWalletConnectStore.connections[0];
+                if (!createdConnection) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.connectionNotFound'
+                        )
+                    );
+                }
+                try {
+                    await NostrWalletConnectStore.deleteConnection(
+                        connectionId
+                    );
+                } catch (deleteError) {
+                    try {
+                        await NostrWalletConnectStore.deleteConnection(
+                            createdConnection.id
+                        );
+                    } catch (rollbackError) {
+                        console.warn(
+                            'Failed to roll back regenerated connection after delete failure:',
+                            rollbackError
+                        );
+                    }
+                    throw deleteError;
+                }
                 navigation.navigate('NWCConnectionQR', {
                     connectionId: createdConnection.id,
                     nostrUrl

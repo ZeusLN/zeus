@@ -176,3 +176,85 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         });
     });
 });
+
+describe('NostrWalletConnectStore updateConnection validation order', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('does not perform side effects when regenerated LUD-16 is invalid', async () => {
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-1',
+            pubkey: 'connection-pubkey',
+            relayUrl: 'wss://old.relay',
+            includeLightningAddress: false,
+            permissions: [],
+            totalSpendSats: 0,
+            maxAmountSats: 0,
+            budgetRenewal: 'never',
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            publicKey: 'wallet-service-pubkey'
+        };
+        (store as any).nwcWalletServices = new Map();
+        (store as any).validateRelayUrl = jest.fn(() => true);
+        const loadClientPrivateKeySpy = jest
+            .spyOn(store as any, 'loadClientPrivateKey')
+            .mockResolvedValue('client-secret');
+        const unsubscribeSpy = jest
+            .spyOn(store as any, 'unsubscribeFromConnection')
+            .mockResolvedValue(undefined);
+        const initializeSpy = jest
+            .spyOn(store as any, 'initializeNWCWalletServices')
+            .mockResolvedValue(undefined);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        const subscribeSpy = jest
+            .spyOn(store as any, 'subscribeToConnection')
+            .mockResolvedValue(undefined);
+        const lud16Spy = jest
+            .spyOn(store as any, 'getConnectionLud16')
+            .mockReturnValue('invalid..name@example.com');
+        const localizedErrorSpy = jest
+            .spyOn(store as any, 'localizeConnectionUrlBuildError')
+            .mockImplementation((error: unknown) => error as Error);
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
+
+        const result = await store.updateConnection('conn-1', {
+            relayUrl: 'wss://new.relay',
+            includeLightningAddress: true
+        });
+
+        expect(result).toEqual({ success: false });
+        expect((store as any).validateRelayUrl).toHaveBeenCalledWith(
+            'wss://new.relay'
+        );
+        expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('connection-pubkey');
+        expect(lud16Spy).toHaveBeenCalledWith(true);
+        expect(unsubscribeSpy).not.toHaveBeenCalled();
+        expect(initializeSpy).not.toHaveBeenCalled();
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(subscribeSpy).not.toHaveBeenCalled();
+        expect(localizedErrorSpy).toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect((store as any).errorMessage).toBe('INVALID_LIGHTNING_ADDRESS');
+        expect(connection.relayUrl).toBe('wss://old.relay');
+    });
+});

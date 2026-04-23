@@ -283,5 +283,28 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 invalidRequestAmount: false
             });
         });
+
+        it('charges 1 sat of budget for positive sub-satoshi requests', async () => {
+            const context = createLightningPayStoreContext();
+
+            await callStoreMethod(
+                'handleLightningPayInvoice',
+                context,
+                {} as never,
+                {
+                    invoice: 'lnbc1testinvoice',
+                    amount: 500,
+                    fee_limit_msat: 2000,
+                    fee_limit_sat: 2
+                }
+            );
+
+            expect(context.validateBudgetBeforePayment).toHaveBeenCalled();
+            expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
+                expect.anything(),
+                1,
+                expect.any(String)
+            );
+        });
     });
 });

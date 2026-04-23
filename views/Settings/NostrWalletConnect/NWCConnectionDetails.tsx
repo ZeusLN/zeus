@@ -216,13 +216,37 @@ export default class NWCConnectionDetails extends React.Component<
         this.setState({ regenerating: true, error: null });
         try {
             const params = this.buildConnectionParams(connection);
-            await NostrWalletConnectStore.deleteConnection(connection.id);
-            const nostrUrl = await NostrWalletConnectStore.createConnection(
-                params
-            );
+            const nostrUrl = await NostrWalletConnectStore.createConnection({
+                ...params,
+                id: undefined
+            });
             if (nostrUrl) {
                 const createdConnection =
                     NostrWalletConnectStore.connections[0];
+                if (!createdConnection) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.connectionNotFound'
+                        )
+                    );
+                }
+                try {
+                    await NostrWalletConnectStore.deleteConnection(
+                        connection.id
+                    );
+                } catch (deleteError) {
+                    try {
+                        await NostrWalletConnectStore.deleteConnection(
+                            createdConnection.id
+                        );
+                    } catch (rollbackError) {
+                        console.warn(
+                            'Failed to roll back regenerated connection after delete failure:',
+                            rollbackError
+                        );
+                    }
+                    throw deleteError;
+                }
                 navigation.navigate('NWCConnectionQR', {
                     connectionId: createdConnection.id,
                     nostrUrl

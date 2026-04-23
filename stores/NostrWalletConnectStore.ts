@@ -823,6 +823,20 @@ export default class NostrWalletConnectStore {
                 return { success: false };
             }
 
+            const nextIncludeLightningAddress =
+                updates.includeLightningAddress ??
+                connection.includeLightningAddress;
+            const updatedNostrUrl = shouldReturnUrl
+                ? buildNostrWalletConnectUrl({
+                      walletServicePubkey: walletServicePubkey!,
+                      relayUrl: newRelayUrl || oldRelayUrl,
+                      secret: existingClientPrivateKey!,
+                      lud16: this.getConnectionLud16(
+                          nextIncludeLightningAddress
+                      )
+                  })
+                : undefined;
+
             if (relayUrlChanged) {
                 await this.unsubscribeFromConnection(connectionId);
                 if (!this.nwcWalletServices.has(newRelayUrl)) {
@@ -859,18 +873,8 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
             await this.subscribeToConnection(connection);
             if (shouldReturnUrl) {
-                const lud16 = this.getConnectionLud16(
-                    updates.includeLightningAddress ??
-                        connection.includeLightningAddress
-                );
-
                 return {
-                    nostrUrl: buildNostrWalletConnectUrl({
-                        walletServicePubkey: walletServicePubkey!,
-                        relayUrl: newRelayUrl || oldRelayUrl,
-                        secret: existingClientPrivateKey!,
-                        lud16
-                    }),
+                    nostrUrl: updatedNostrUrl,
                     success: true
                 };
             }
