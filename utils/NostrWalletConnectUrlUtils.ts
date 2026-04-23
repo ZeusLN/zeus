@@ -16,10 +16,19 @@ const validateLud16 = (address: string): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
     // LUD-16 format: localpart@domain (DNS-compliant)
-    // Local part allows alphanumeric, dots, hyphens, underscores, and plus sign for aliases
+    // Local part: letters, numbers, dots, hyphens, underscores, plus sign
+    // - Cannot start or end with dots
+    // - Cannot have consecutive dots
     // Domain labels must not start/end with hyphen, can have hyphens in middle
     const regex =
-        /^[a-zA-Z0-9._+\-]+@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+        /^[a-zA-Z0-9_+\-]([a-zA-Z0-9._+\-]{0,61}[a-zA-Z0-9_+\-])?@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+    
+    // Additional validation: reject consecutive dots in local part
+    const [localPart] = address.split('@');
+    if (!localPart || localPart.includes('..')) {
+        return false;
+    }
+    
     return regex.test(address);
 };
 

@@ -2146,9 +2146,16 @@ export default class NostrWalletConnectStore {
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
+        // For budget enforcement, use at least 1 sat for any positive msat request.
+        // This prevents sub-satoshi amounts from bypassing budget limits.
+        // Example: 500 msat request floors to 0 sats for payment, but charges 1 sat to budget.
+        const budgetChargeAmountSats =
+            usedRequestAmount && amountSats === 0 && request.amount && request.amount > 0
+                ? 1
+                : amountSats;
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
-            amountSats,
+            budgetChargeAmountSats,
             ErrorCodes.INSUFFICIENT_BALANCE
         );
         if (!budgetCheck.success) {
@@ -2279,6 +2286,7 @@ export default class NostrWalletConnectStore {
                 payment_source: 'lightning',
                 connection,
                 amountSats,
+                budgetChargeAmountSats,
                 skipNotification
             });
 
@@ -2436,6 +2444,7 @@ export default class NostrWalletConnectStore {
                 type: 'pay_invoice',
                 payment_source: 'cashu',
                 amountSats: amount,
+                budgetChargeAmountSats: amount,
                 skipNotification,
                 connection
             });
@@ -2721,6 +2730,7 @@ export default class NostrWalletConnectStore {
         decoded,
         connection,
         amountSats,
+        budgetChargeAmountSats,
         skipNotification = false
     }: {
         id: string;
@@ -2729,10 +2739,14 @@ export default class NostrWalletConnectStore {
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
         amountSats: number;
+        budgetChargeAmountSats?: number;
         skipNotification?: boolean;
     }): Promise<void> {
         runInAction(() => {
-            const trackResult = connection.trackSpending(amountSats);
+            // Use budgetChargeAmountSats if provided (for sub-satoshi budget enforcement),
+            // otherwise use amountSats (payment amount)
+            const chargeAmount = budgetChargeAmountSats ?? amountSats;
+            const trackResult = connection.trackSpending(chargeAmount);
             // If tracking fails due to budget race (e.g., concurrent payments),
             // log the warning but still record the successful payment. A payment
             // that succeeded on-chain shouldn't be reported as an error to the

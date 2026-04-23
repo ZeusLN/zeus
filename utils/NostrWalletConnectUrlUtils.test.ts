@@ -193,5 +193,38 @@ describe('NostrWalletConnectUrlUtils', () => {
                 })
             ).toContain('lud16=user%2Btag%2Bsub%40example.com');
         });
+
+        it('rejects invalid local parts with consecutive dots', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user..name@example.com'
+                })
+            ).toThrow(InvalidLightningAddressError);
+        });
+
+        it('rejects local parts starting with dot', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: '.user@example.com'
+                })
+            ).toThrow(InvalidLightningAddressError);
+        });
+
+        it('rejects local parts ending with dot', () => {
+            expect(() =>
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user.@example.com'
+                })
+            ).toThrow(InvalidLightningAddressError);
+        });
     });
 });
