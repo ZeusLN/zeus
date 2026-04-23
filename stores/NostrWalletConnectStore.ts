@@ -561,7 +561,12 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-        return error as Error;
+        // Safely normalize any error type to Error instance
+        if (error instanceof Error) {
+            return error;
+        }
+        // Fallback for non-Error throws (e.g., strings, objects)
+        return new Error(String(error));
     }
 
     /**
@@ -2109,7 +2114,9 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INVALID_PARAMS
             );
         }
-        if (amountSats <= 0) {
+        // Valid sub-satoshi amounts may floor to 0 sats; this is expected behavior.
+        // Only reject truly invalid invoices (no decoded amount from bolt11).
+        if (!usedRequestAmount && amountSats <= 0) {
             return this.handleError(
                 localeString(
                     'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
@@ -2202,13 +2209,11 @@ export default class NostrWalletConnectStore {
         };
         if (usedRequestAmount && request.amount) {
             // Per NIP-47 spec, request.amount is in millisatoshis. Convert to
-            // satoshis using Math.ceil so sub-satoshi amounts round UP — this
-            // preserves the caller's intent (they get charged at least what
-            // was requested) and avoids a Math.floor truncating a small
-            // payment to 0 sats. Underlying TransactionsStore.sendPayment
-            // accepts integer satoshis only; msat-precision plumbing through
-            // every backend is out of scope for this PR. Both fee_limit_msat
-            // and request.amount use Math.floor to ensure we never exceed limits.
+            // satoshis using Math.floor to avoid exceeding caller's intent
+            // (ensures we never charge more than requested). Sub-satoshi amounts
+            // will be truncated to integer sats; emit a warning for auditability
+            // until full msat-precision plumbing lands. Both fee_limit_msat and
+            // request.amount use Math.floor to ensure we never exceed limits.
             const requestedMsats = Number(request.amount);
             const amountSatsFloor = Math.floor(requestedMsats / 1000);
             if (
@@ -2643,14 +2648,11 @@ export default class NostrWalletConnectStore {
             // the backend `payLightningInvoice` interface
             // (TransactionsStore.SendPaymentReq.amount — sats only).
             //
-            // Rolling msat-precision through every layer above (model
+            // We use Math.floor to ensure we never exceed the caller's budget.
+            // Rolling full msat-precision through every layer above (model
             // migration for `maxAmountSats`/`totalSpendSats`, every backend
             // adapter, the UI) is a non-trivial refactor outside the NIP-47
-            // M1 scope, so for now we round UP to the nearest satoshi via
-            // Math.ceil. This is the safer rounding direction (caller gets
-            // at least what they asked for; payment never under-pays an
-            // invoice) and matches the round-up done in
-            // `processPayInvoice`.
+            // M1 scope.
             //
             // Known tradeoff: when the request specifies a sub-satoshi
             // amount, the sender's budget will be charged for the floored

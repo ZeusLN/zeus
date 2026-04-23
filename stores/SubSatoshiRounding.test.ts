@@ -249,5 +249,39 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 })
             );
         });
+
+        it('allows valid sub-satoshi amounts (1-999 msat)', async () => {
+            // Regression test: sub-satoshi amounts should be accepted, not rejected
+            // as INVALID_INVOICE. They floor to 0 sats in budget, but that's valid.
+            const testCases = [1, 100, 500, 999];
+            
+            for (const msat of testCases) {
+                const result = await callStoreMethod<{
+                    amountSats: number;
+                    usedRequestAmount: boolean;
+                    invalidRequestAmount: boolean;
+                }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, msat);
+
+                expect(result).toEqual({
+                    amountSats: 0,
+                    usedRequestAmount: true,
+                    invalidRequestAmount: false
+                });
+            }
+        });
+
+        it('accepts request amounts exactly at 1000 msat boundary', async () => {
+            const result = await callStoreMethod<{
+                amountSats: number;
+                usedRequestAmount: boolean;
+                invalidRequestAmount: boolean;
+            }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {}, 1000);
+
+            expect(result).toEqual({
+                amountSats: 1,
+                usedRequestAmount: true,
+                invalidRequestAmount: false
+            });
+        });
     });
 });

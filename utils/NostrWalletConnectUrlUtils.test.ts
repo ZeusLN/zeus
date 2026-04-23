@@ -170,5 +170,28 @@ describe('NostrWalletConnectUrlUtils', () => {
                 })
             ).toContain('lud16=test%40my-domain.co.uk');
         });
+
+        it('accepts lightning addresses with plus sign for aliases (e.g. user+tag@domain)', () => {
+            // Regression test: LUD-16 allows +tag format for address aliases
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user+tag@example.com'
+                })
+            ).toContain('lud16=user%2Btag%40example.com');
+        });
+
+        it('accepts multiple plus signs for complex aliases', () => {
+            expect(
+                buildNostrWalletConnectUrl({
+                    walletServicePubkey: 'service-pubkey',
+                    relayUrl: 'wss://relay.getalby.com/v1',
+                    secret: 'secret-key',
+                    lud16: 'user+tag+sub@example.com'
+                })
+            ).toContain('lud16=user%2Btag%2Bsub%40example.com');
+        });
     });
 });
