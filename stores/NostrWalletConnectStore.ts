@@ -2188,26 +2188,25 @@ export default class NostrWalletConnectStore {
             // was requested) and avoids a Math.floor truncating a small
             // payment to 0 sats. Underlying TransactionsStore.sendPayment
             // accepts integer satoshis only; msat-precision plumbing through
-            // every backend is out of scope for this PR. Note: fee_limit_msat
-            // uses Math.floor (hard ceiling per NIP-47), while request.amount
-            // uses Math.ceil (preserve payment intent).
+            // every backend is out of scope for this PR. Both fee_limit_msat
+            // and request.amount use Math.floor to ensure we never exceed limits.
             const requestedMsats = Number(request.amount);
-            const amountSatsCeil = Math.ceil(requestedMsats / 1000);
+            const amountSatsFloor = Math.floor(requestedMsats / 1000);
             if (
                 Number.isFinite(requestedMsats) &&
                 requestedMsats % 1000 !== 0
             ) {
                 console.warn(
-                    'NWC: sub-satoshi pay_invoice amount rounded UP for ' +
+                    'NWC: sub-satoshi pay_invoice amount truncated DOWN for ' +
                         'sat-precision pipeline.',
                     {
                         requestedMsats,
-                        chargedSats: amountSatsCeil,
-                        overpaymentMsats: amountSatsCeil * 1000 - requestedMsats
+                        processedSats: amountSatsFloor,
+                        truncatedMsats: requestedMsats - amountSatsFloor * 1000
                     }
                 );
             }
-            paymentData.amount = amountSatsCeil.toString();
+            paymentData.amount = amountSatsFloor.toString();
         }
         this.transactionsStore.sendPayment(paymentData);
 
@@ -2635,21 +2634,21 @@ export default class NostrWalletConnectStore {
             // `processPayInvoice`.
             //
             // Known tradeoff: when the request specifies a sub-satoshi
-            // amount, the sender's budget will be charged for the rounded-up
-            // sat (e.g. a 500-msat request consumes 1 sat of budget).
+            // amount, the sender's budget will be charged for the floored
+            // sat (e.g. a 1500-msat request consumes 1 sat of budget).
             // Emit a warning so this is auditable in logs until end-to-end
             // msat precision lands.
             const requestedMsats = normalizedRequestAmountMsats;
-            const amountSats = Math.ceil(requestedMsats / 1000);
+            const amountSats = Math.floor(requestedMsats / 1000);
             if (requestedMsats % 1000 !== 0) {
                 console.warn(
-                    'NWC: sub-satoshi request amount rounded UP for ' +
-                        'sat-precision pipeline; budget will reflect rounded ' +
+                    'NWC: sub-satoshi request amount truncated DOWN for ' +
+                        'sat-precision pipeline; budget will reflect truncated ' +
                         'amount.',
                     {
                         requestedMsats,
-                        chargedSats: amountSats,
-                        overpaymentMsats: amountSats * 1000 - requestedMsats
+                        processedSats: amountSats,
+                        truncatedMsats: requestedMsats - amountSats * 1000
                     }
                 );
             }
