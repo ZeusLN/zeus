@@ -27,6 +27,7 @@ interface NWCSettingsState {
     error: string | null;
     enableCashu: boolean;
     persistentNWCService: boolean;
+    lud16Enabled: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -41,17 +42,21 @@ export default class NWCSettings extends React.Component<
             loading: false,
             error: null,
             enableCashu: false,
-            persistentNWCService: false
+            persistentNWCService: false,
+            lud16Enabled: true
         };
     }
 
     async componentDidMount() {
         const { NostrWalletConnectStore } = this.props;
 
+        await NostrWalletConnectStore.loadLud16Enabled();
+
         this.setState({
             enableCashu: NostrWalletConnectStore.cashuEnabled,
             persistentNWCService:
-                NostrWalletConnectStore.persistentNWCServiceEnabled
+                NostrWalletConnectStore.persistentNWCServiceEnabled,
+            lud16Enabled: NostrWalletConnectStore.lud16Enabled
         });
     }
 
@@ -65,7 +70,11 @@ export default class NWCSettings extends React.Component<
             this.setState({ enableCashu: !currentEnableCashu });
         } catch (error) {
             console.error('Failed to toggle Cashu wallet:', error);
-            this.setState({ error: 'Failed to update settings' });
+            this.setState({
+                error: localeString(
+                    'views.Settings.NostrWalletConnect.error.failedToUpdateNwcSetting'
+                )
+            });
         } finally {
             this.setState({ loading: false });
         }
@@ -87,7 +96,29 @@ export default class NWCSettings extends React.Component<
         } catch (error) {
             console.error('Failed to toggle persistent NWC service:', error);
             this.setState({
-                error: 'Failed to update persistent service setting'
+                error: localeString(
+                    'views.Settings.NostrWalletConnect.error.failedToUpdateNwcSetting'
+                )
+            });
+        } finally {
+            this.setState({ loading: false });
+        }
+    };
+
+    toggleLud16Enabled = async () => {
+        const { NostrWalletConnectStore } = this.props;
+        const current = this.state.lud16Enabled;
+
+        this.setState({ loading: true, error: null });
+        try {
+            await NostrWalletConnectStore.setLud16Enabled(!current);
+            this.setState({ lud16Enabled: !current });
+        } catch (error) {
+            console.error('Failed to toggle include LUD-16 in NWC URL:', error);
+            this.setState({
+                error: localeString(
+                    'views.Settings.NostrWalletConnect.error.failedToUpdateNwcSetting'
+                )
             });
         } finally {
             this.setState({ loading: false });
@@ -96,8 +127,13 @@ export default class NWCSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { loading, error, enableCashu, persistentNWCService } =
-            this.state;
+        const {
+            loading,
+            error,
+            enableCashu,
+            persistentNWCService,
+            lud16Enabled
+        } = this.state;
         const { settings } = SettingsStore;
 
         return (
@@ -244,6 +280,58 @@ export default class NWCSettings extends React.Component<
                                     </Text>
                                 </View>
                             )}
+
+                        {settings.lightningAddress?.enabled && (
+                            <View style={{ marginTop: 20 }}>
+                                <View style={{ flexDirection: 'row' }}>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 17
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrl'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={lud16Enabled}
+                                            onValueChange={
+                                                this.toggleLud16Enabled
+                                            }
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress ||
+                                                loading
+                                            }
+                                        />
+                                    </View>
+                                </View>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 14,
+                                        marginTop: 8,
+                                        lineHeight: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrlDescription'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
                     </ScrollView>
                 )}
             </Screen>
