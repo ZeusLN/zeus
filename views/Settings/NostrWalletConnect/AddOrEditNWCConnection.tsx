@@ -145,17 +145,13 @@ export default class AddOrEditNWCConnection extends React.Component<
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
         const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
-        const hasLightningAddress = this.hasActiveLightningAddress();
         this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: prevState.budgetValue || 0,
-            includeLightningAddress:
-                prevState.includeLightningAddressInitialized
-                    ? prevState.includeLightningAddress
-                    : hasLightningAddress,
-            includeLightningAddressInitialized:
-                prevState.includeLightningAddressInitialized ||
-                hasLightningAddress
+            includeLightningAddress: prevState.includeLightningAddressInitialized
+                ? prevState.includeLightningAddress
+                : false,
+            includeLightningAddressInitialized: true
         }));
     };
 

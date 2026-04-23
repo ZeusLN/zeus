@@ -168,6 +168,17 @@ interface NWCRequest {
 
 type NwcEncryptionScheme = 'nip04' | 'nip44_v2';
 
+class UnsupportedEncryptionError extends Error {
+    constructor(
+        public readonly connection: NWCConnection,
+        public readonly eventId: string,
+        public readonly encryptionScheme: NwcEncryptionScheme
+    ) {
+        super('UNSUPPORTED_ENCRYPTION');
+        this.name = 'UnsupportedEncryptionError';
+    }
+}
+
 interface InvoiceEventType {
     eventStr: string;
     request: NWCRequest;
@@ -582,6 +593,9 @@ export default class NostrWalletConnectStore {
     public createConnection = async (
         params: CreateConnectionParams
     ): Promise<string> => {
+        let createdConnectionId: string | undefined;
+        let createdConnectionPersisted = false;
+        let createdConnectionPublicKey: string | undefined;
         try {
             if (!params.name.trim()) {
                 throw new Error(
@@ -593,6 +607,9 @@ export default class NostrWalletConnectStore {
             const includeLightningAddress =
                 params.includeLightningAddress ?? false;
             const lud16 = this.getConnectionLud16(includeLightningAddress);
+            if (includeLightningAddress && !lud16) {
+                throw new InvalidLightningAddressError();
+            }
             if (!isValidLightningAddress(lud16)) {
                 throw new InvalidLightningAddressError();
             }
@@ -712,6 +729,8 @@ export default class NostrWalletConnectStore {
                 activity: params.activity || []
             };
 
+            createdConnectionId = connectionData.id;
+            createdConnectionPublicKey = connectionPublicKey;
             const connection = new NWCConnection(connectionData);
             await this.storeClientKeys(
                 connectionPublicKey,
@@ -720,11 +739,24 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.connections.unshift(connection);
             });
+            createdConnectionPersisted = true;
             await this.saveConnections();
             await this.subscribeToConnection(connection);
             await this.sendHandoffRequest();
             return connectionUrl;
         } catch (error: any) {
+            if (createdConnectionPersisted && createdConnectionId) {
+                try {
+                    await this.deleteConnection(createdConnectionId);
+                } catch (cleanupError) {
+                    console.warn(
+                        'NWC: Failed to roll back partially created connection:',
+                        cleanupError
+                    );
+                }
+            } else if (createdConnectionPublicKey) {
+                await this.deleteClientKeys(createdConnectionPublicKey);
+            }
             throw this.localizeConnectionUrlBuildError(error);
         }
     };
@@ -827,6 +859,9 @@ export default class NostrWalletConnectStore {
             const nextLud16 = this.getConnectionLud16(
                 nextIncludeLightningAddress
             );
+            if (nextIncludeLightningAddress && !nextLud16) {
+                throw new InvalidLightningAddressError();
+            }
 
             if (!isValidLightningAddress(nextLud16)) {
                 throw new InvalidLightningAddressError();
@@ -2245,10 +2280,14 @@ export default class NostrWalletConnectStore {
         const reqFeeLimitSat = Number(req.fee_limit_sat);
         if (
             req.fee_limit_msat !== undefined &&
-            Number.isFinite(reqFeeLimitMsat) &&
-            reqFeeLimitMsat > 0
+            req.fee_limit_msat !== null &&
+            Number.isFinite(reqFeeLimitMsat)
         ) {
-            if (reqFeeLimitMsat < 1000) {
+            if (
+                !Number.isInteger(reqFeeLimitMsat) ||
+                reqFeeLimitMsat < 0 ||
+                reqFeeLimitMsat % 1000 !== 0
+            ) {
                 return this.handleError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invalidAmountMsats'
@@ -2256,24 +2295,26 @@ export default class NostrWalletConnectStore {
                     ErrorCodes.INVALID_PARAMS
                 );
             }
-            feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
+            feeLimitSat = reqFeeLimitMsat / 1000;
         } else if (
             req.fee_limit_sat !== undefined &&
-            Number.isFinite(reqFeeLimitSat) &&
-            reqFeeLimitSat > 0
+            req.fee_limit_sat !== null &&
+            Number.isFinite(reqFeeLimitSat)
         ) {
+            if (!Number.isInteger(reqFeeLimitSat) || reqFeeLimitSat < 0) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
             feeLimitSat = reqFeeLimitSat;
         }
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
-        // For budget enforcement, use at least 1 sat for any positive msat request.
-        // This prevents sub-satoshi amounts from bypassing budget limits.
-        // Example: 500 msat request floors to 0 sats for payment, but charges 1 sat to budget.
-        const budgetChargeAmountSats =
-            usedRequestAmount && amountSats === 0 && request.amount && request.amount > 0
-                ? 1
-                : amountSats;
+        const budgetChargeAmountSats = amountSats;
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             budgetChargeAmountSats,
@@ -2309,36 +2350,7 @@ export default class NostrWalletConnectStore {
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         };
         if (usedRequestAmount && request.amount) {
-            // Per NIP-47 spec, request.amount is in millisatoshis. Convert to
-            // satoshis using Math.floor to avoid exceeding caller's intent
-            // (ensures we never charge more than requested). Sub-satoshi request
-            // amounts (< 1000 msat) are rejected until the full msat plumbing
-            // exists end-to-end. Amounts >= 1000 msat floor to whole sats.
-            const requestedMsats = Number(request.amount);
-            const amountSatsFloor = Math.floor(requestedMsats / 1000);
-            if (requestedMsats < 1000) {
-                return this.handleError(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
-                    ),
-                    ErrorCodes.INVALID_PARAMS
-                );
-            }
-            if (
-                Number.isFinite(requestedMsats) &&
-                requestedMsats % 1000 !== 0
-            ) {
-                console.warn(
-                    'NWC: sub-satoshi pay_invoice amount truncated DOWN for ' +
-                        'sat-precision pipeline.',
-                    {
-                        requestedMsats,
-                        processedSats: amountSatsFloor,
-                        truncatedMsats: requestedMsats - amountSatsFloor * 1000
-                    }
-                );
-            }
-            paymentData.amount = amountSatsFloor.toString();
+            paymentData.amount = amountSats.toString();
         }
         this.transactionsStore.sendPayment(paymentData);
 
@@ -2733,13 +2745,13 @@ export default class NostrWalletConnectStore {
         if (hasRequestAmount) {
             // Request amount was explicitly provided - validate it.
             // Per NIP-47 §payInvoice, `amount` is a non-negative integer
-            // specified in millisatoshis. Reject NaN / Infinity / non-positive
-            // / non-integer (e.g. 0.5) values — accepting a fractional msat
-            // would silently round up to 1 sat and overpay the caller.
+            // specified in millisatoshis. Because the rest of the payment
+            // pipeline is sat-precision, only exact sat multiples are supported.
             if (
                 !Number.isFinite(normalizedRequestAmountMsats) ||
                 !Number.isInteger(normalizedRequestAmountMsats) ||
-                normalizedRequestAmountMsats <= 0
+                normalizedRequestAmountMsats <= 0 ||
+                normalizedRequestAmountMsats % 1000 !== 0
             ) {
                 return {
                     amountSats: 0,
@@ -2748,46 +2760,8 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            // Per NIP-47 spec: request amounts are in millisatoshis (any
-            // positive integer). However, every downstream consumer of
-            // `amountSats` in this store treats it as integer satoshis: the
-            // pre-flight balance check (line ~2081), the connection-level
-            // budget enforcement (`validateBudgetBeforePayment`,
-            // `trackSpending`, `remainingBudget` — all `*Sats`-denominated in
-            // models/NWCConnection.ts), the user-facing notifications, and
-            // the backend `payLightningInvoice` interface
-            // (TransactionsStore.SendPaymentReq.amount — sats only).
-            //
-            // We use Math.floor to ensure we never exceed the caller's budget.
-            // Rolling full msat-precision through every layer above (model
-            // migration for `maxAmountSats`/`totalSpendSats`, every backend
-            // adapter, the UI) is a non-trivial refactor outside the NIP-47
-            // M1 scope.
-            //
-            // Known tradeoff: we only support full-satoshi request amounts in the
-            // sat-precision payment pipeline. Sub-satoshi amounts are rejected
-            // earlier; amounts >= 1000 msat floor to whole sats.
             const requestedMsats = normalizedRequestAmountMsats;
-            const amountSats = Math.floor(requestedMsats / 1000);
-            if (requestedMsats < 1000) {
-                return {
-                    amountSats: 0,
-                    usedRequestAmount: false,
-                    invalidRequestAmount: true
-                };
-            }
-            if (requestedMsats % 1000 !== 0) {
-                console.warn(
-                    'NWC: sub-satoshi request amount truncated DOWN for ' +
-                        'sat-precision pipeline; budget will reflect truncated ' +
-                        'amount.',
-                    {
-                        requestedMsats,
-                        processedSats: amountSats,
-                        truncatedMsats: requestedMsats - amountSats * 1000
-                    }
-                );
-            }
+            const amountSats = requestedMsats / 1000;
             return {
                 amountSats,
                 usedRequestAmount: true,
@@ -3674,6 +3648,14 @@ export default class NostrWalletConnectStore {
                     );
                     return null;
                 } catch (error) {
+                    if (error instanceof UnsupportedEncryptionError) {
+                        await this.publishUnsupportedEncryptionResponse(
+                            error.connection,
+                            error.eventId,
+                            error.encryptionScheme
+                        );
+                        return null;
+                    }
                     console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
                         error,
                         eventStr
@@ -3793,7 +3775,11 @@ export default class NostrWalletConnectStore {
 
         // Validate that the encryption scheme is supported
         if (!this.isSupportedEncryptionScheme(event.tags)) {
-            throw new Error('UNSUPPORTED_ENCRYPTION');
+            throw new UnsupportedEncryptionError(
+                connection,
+                event.id,
+                this.getEventEncryptionScheme(event.tags)
+            );
         }
 
         let request: NWCRequest;
@@ -4175,6 +4161,30 @@ export default class NostrWalletConnectStore {
             console.warn(
                 'NWC: Failed to publish NOT_IMPLEMENTED for pending event',
                 { eventId, method: request.method, error }
+            );
+        }
+    }
+
+    private async publishUnsupportedEncryptionResponse(
+        connection: NWCConnection,
+        eventId: string,
+        requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
+    ): Promise<void> {
+        try {
+            await this.publishEventToClient(
+                connection,
+                'unsupported_encryption',
+                this.handleError(
+                    'Unsupported encryption scheme',
+                    ErrorCodes.UNSUPPORTED_ENCRYPTION
+                ),
+                eventId,
+                requestEncryptionScheme
+            );
+        } catch (error) {
+            console.warn(
+                'NWC: Failed to publish UNSUPPORTED_ENCRYPTION for pending event',
+                { eventId, error }
             );
         }
     }

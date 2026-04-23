@@ -475,6 +475,113 @@ describe('NWCConnection replacement flow', () => {
         expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
+    it('rejects includeLightningAddress when no lightning address is active', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false,
+                lightningAddress: 'user@example.com'
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const loadWalletServiceKeysSpy = jest
+            .spyOn(store as any, 'loadWalletServiceKeys')
+            .mockResolvedValue(undefined);
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+
+        await expect(
+            store.createConnection({
+                name: 'Lightning Address Test',
+                relayUrl: 'wss://new.relay',
+                includeLightningAddress: true
+            })
+        ).rejects.toThrow(
+            'stores.NostrWalletConnectStore.error.invalidLightningAddress'
+        );
+
+        expect(loadWalletServiceKeysSpy).not.toHaveBeenCalled();
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(store.connections).toHaveLength(0);
+    });
+
+    it('publishes an unsupported-encryption response for pending events', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        store.connections = [
+            {
+                id: 'conn-unsupported',
+                pubkey: 'connection-pubkey',
+                relayUrl: 'wss://relay.example',
+                nodePubkey: 'node-pubkey',
+                implementation: 'cln-rest',
+                isActive: true,
+                permissions: [],
+                activity: []
+            } as any
+        ];
+        const unsupportedSpy = jest
+            .spyOn(store as any, 'publishUnsupportedEncryptionResponse')
+            .mockResolvedValue(undefined);
+        const mockedNostrTools = jest.requireMock('nostr-tools') as {
+            validateEvent: jest.Mock;
+            verifySignature: jest.Mock;
+            getEventHash: jest.Mock;
+        };
+        mockedNostrTools.validateEvent.mockReturnValue(true);
+        mockedNostrTools.verifySignature.mockReturnValue(true);
+        mockedNostrTools.getEventHash.mockReturnValue('event-1');
+
+        await (store as any).validatingPendingPaymentEvents([
+            JSON.stringify({
+                kind: 23194,
+                content: 'ciphertext',
+                created_at: 1,
+                pubkey: 'connection-pubkey',
+                id: 'event-1',
+                sig: 'sig',
+                tags: [['encryption', 'unsupported']]
+            })
+        ]);
+
+        expect(unsupportedSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'conn-unsupported' }),
+            'event-1',
+            'nip04'
+        );
+        mockedNostrTools.validateEvent.mockReset();
+        mockedNostrTools.verifySignature.mockReset();
+        mockedNostrTools.getEventHash.mockReset();
+    });
+
     it('restores the original connection when a relay resubscribe fails', async () => {
         const store = new NostrWalletConnectStore(
             {

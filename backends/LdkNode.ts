@@ -1261,9 +1261,10 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat =
+            data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+                ? Number(data.fee_limit_sat) * 1000
+                : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1301,9 +1302,10 @@ export default class LdkNode {
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
         const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat =
+            data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+                ? Number(data.fee_limit_sat) * 1000
+                : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;

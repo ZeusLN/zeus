@@ -381,7 +381,7 @@ export default class CLNRest {
         // valid CLN field and is rejected by the schema's
         // `additionalProperties: false`. Convert sat -> msat here, using
         // Math.floor to ensure the result is an integer (CLN schema requires it).
-        if (data.fee_limit_sat) {
+        if (data.fee_limit_sat !== undefined && data.fee_limit_sat !== null) {
             request.maxfee = Math.floor(Number(data.fee_limit_sat) * 1000);
         } else if (data.max_fee_percent) {
             // Fallback to percentage-based fee limit if absolute limit not provided
