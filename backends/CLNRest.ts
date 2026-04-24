@@ -425,7 +425,8 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
 
-        // Set fee limit: prefer fee_limit_sat (absolute) over max_fee_percent.
+        // Set fee limit: prefer fee_limit_msat (NIP-47 authoritative) over fee_limit_sat,
+        // then fall back to max_fee_percent if no absolute limit provided.
         // Per CLN /v1/pay schema (doc/schemas/pay.json) the absolute-fee
         // parameter is `maxfee` (type "msat", whole number is interpreted as
         // millisatoshis). The previous parameter name `maxfeesats` is NOT a
