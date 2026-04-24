@@ -110,6 +110,10 @@ const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
+// Replay cache limits: keep up to 1000 responses and processed event IDs
+// to prevent unbounded memory growth in long-running sessions
+const MAX_REPLAY_RESPONSES = 1000;
+const MAX_PROCESSED_REPLAY_EVENTS = 1000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -1197,7 +1201,7 @@ export default class NostrWalletConnectStore {
     private saveProcessedReplayEvents = async (
         eventIds: Set<string>
     ): Promise<boolean> => {
-        const orderedIds = Array.from(eventIds).slice(-1000);
+        const orderedIds = Array.from(eventIds).slice(-MAX_PROCESSED_REPLAY_EVENTS);
         this.processedReplayEventsCache = new Set(orderedIds);
         try {
             // Keep a bounded replay window across restarts without growing storage forever.
@@ -1307,6 +1311,15 @@ export default class NostrWalletConnectStore {
                 response,
                 encryptionScheme
             });
+            // Enforce cache size limit: keep only the most recent MAX_REPLAY_RESPONSES
+            // entries by converting to array, slicing, and reconstructing the map.
+            // This prevents unbounded memory growth in long-running sessions.
+            if (responses.size > MAX_REPLAY_RESPONSES) {
+                const entries = Array.from(responses.entries());
+                const trimmed = entries.slice(-MAX_REPLAY_RESPONSES);
+                const trimmedMap = new Map(trimmed);
+                return await this.saveReplayResponses(trimmedMap);
+            }
             return await this.saveReplayResponses(responses);
         });
     };
