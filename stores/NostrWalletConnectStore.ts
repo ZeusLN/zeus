@@ -103,6 +103,13 @@ export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
     'https://nwc-ios-handoff.zeusln.com/api/v1';
 
+// Mutex keys for serializing critical operations
+enum NWCMutexKey {
+    ProcessedReplayEvents = 'processed-replay-events',
+    ReplayResponses = 'replay-responses',
+    PayInvoice = 'pay_invoice'
+}
+
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
@@ -1226,7 +1233,7 @@ export default class NostrWalletConnectStore {
         if (!eventId) return false;
         // Serialize read-modify-write across all callers/connections so
         // concurrent updates can't lose entries (last-writer-wins on Storage).
-        return await this.withMutex('processed-replay-events', async () => {
+        return await this.withMutex(NWCMutexKey.ProcessedReplayEvents, async () => {
             const processed = await this.getProcessedReplayEvents();
             if (processed.has(eventId)) {
                 return true;
@@ -1314,7 +1321,7 @@ export default class NostrWalletConnectStore {
         encryptionScheme: NwcEncryptionScheme
     ): Promise<boolean> => {
         if (!eventId) return false;
-        return await this.withMutex('replay-responses', async () => {
+        return await this.withMutex(NWCMutexKey.ReplayResponses, async () => {
             const responses = await this.getReplayResponses();
             const now = Date.now();
             responses.set(eventId, {
@@ -1350,7 +1357,7 @@ export default class NostrWalletConnectStore {
 
     private removeReplayResponse = async (eventId: string): Promise<void> => {
         if (!eventId) return;
-        await this.withMutex('replay-responses', async () => {
+        await this.withMutex(NWCMutexKey.ReplayResponses, async () => {
             const responses = await this.getReplayResponses();
             if (responses.delete(eventId)) {
                 const saved = await this.saveReplayResponses(responses);
@@ -1667,12 +1674,28 @@ export default class NostrWalletConnectStore {
         });
         await Promise.all(promises);
         runInAction(() => {
+            const deletedPayments: string[] = [];
             connection.activity = connection.activity.filter((activity) => {
                 const isInvalidFailure =
                     activity.status === 'failed' &&
                     NostrConnectUtils.isIgnorableError(activity.error || '');
+                if (isInvalidFailure) {
+                    deletedPayments.push(activity.id);
+                }
                 return !isInvalidFailure;
             });
+            // Log payment deletions for audit trail
+            if (deletedPayments.length > 0) {
+                console.log(
+                    'Pruned ignorable failed payments from activity history',
+                    {
+                        connectionId: connection.id,
+                        connectionName: connection.name,
+                        prunedCount: deletedPayments.length,
+                        prunedIds: deletedPayments
+                    }
+                );
+            }
         });
         this.saveConnections();
         return { name: connection.name, activity: connection.activity };
@@ -2117,7 +2140,7 @@ export default class NostrWalletConnectStore {
     // (payment_preimage, payment_error, paymentError, ...). Two concurrent
     // dispatches would clobber each other regardless of connection id.
     private runPayInvoiceSerialized<T>(fn: () => Promise<T>): Promise<T> {
-        return this.withMutex('pay_invoice', fn);
+        return this.withMutex(NWCMutexKey.PayInvoice, fn);
     }
     // NWC REQUEST HANDLERS
 
@@ -3275,10 +3298,23 @@ export default class NostrWalletConnectStore {
                 this.showPaymentSentNotification(amount, connection.name);
             }
         }
+        // For Cashu: Check if actual amount charged differs from requested amount
+        // (due to sub-satoshi rounding or Cashu mint behavior)
+        const actualAmountSats = cashuInvoice.getAmount
+            ? Math.floor(Number(cashuInvoice.getAmount))
+            : amount;
+        const actualAmountMsats = satsToMillisats(actualAmountSats);
+        const amountWasRoundedUp = actualAmountMsats > amountMsats;
+
         return {
             result: {
                 preimage: cashuPreimage,
-                fees_paid: satsToMillisats(cashuInvoice.fee || 0)
+                fees_paid: satsToMillisats(cashuInvoice.fee || 0),
+                // Include actual amount charged if it differs from requested
+                // This helps client verify amount was rounded/adjusted
+                ...(amountWasRoundedUp && {
+                    amount_msat: actualAmountMsats.toString()
+                })
             },
             error: undefined
         };
