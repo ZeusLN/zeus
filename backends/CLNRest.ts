@@ -436,12 +436,22 @@ export default class CLNRest {
             data.fee_limit_msat !== undefined &&
             data.fee_limit_msat !== null
         ) {
-            request.maxfee = Number(data.fee_limit_msat);
+            const v = Number(data.fee_limit_msat);
+            if (Number.isFinite(v) && v >= 0) {
+                request.maxfee = Math.floor(v);
+            } else {
+                delete request.maxfee;
+            }
         } else if (
             data.fee_limit_sat !== undefined &&
             data.fee_limit_sat !== null
         ) {
-            request.maxfee = Math.floor(Number(data.fee_limit_sat) * 1000);
+            const v = Number(data.fee_limit_sat);
+            if (Number.isFinite(v) && v >= 0) {
+                request.maxfee = Math.floor(v * 1000);
+            } else {
+                delete request.maxfee;
+            }
         } else if (data.max_fee_percent) {
             // Fallback to percentage-based fee limit if absolute limit not provided
             request.maxfeepercent = data.max_fee_percent;

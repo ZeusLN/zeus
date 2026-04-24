@@ -236,7 +236,12 @@ export default class EmbeddedLND extends LND {
                     ? data.max_shard_size_msat
                     : data?.max_shard_amt !== undefined &&
                       data?.max_shard_amt !== null
-                    ? Number(data.max_shard_amt) * 1000
+                    ? (() => {
+                          const v = Number(data.max_shard_amt);
+                          return Number.isFinite(v) && v >= 0
+                              ? Math.trunc(v * 1000)
+                              : undefined;
+                      })()
                     : undefined,
             fee_limit_sat: data?.fee_limit_sat || 0,
             fee_limit_msat:

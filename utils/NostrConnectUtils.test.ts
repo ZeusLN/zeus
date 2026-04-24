@@ -89,7 +89,7 @@ describe('NostrConnectUtils msat handling', () => {
                         {
                             getAmount: 100,
                             getTimestamp: 1700000000,
-                            getPaymentRequest: '',
+                            getPaymentRequest: 'lnbc1decodedinvoice',
                             paymentHash: '',
                             getFee: 0,
                             getMemo: '',
@@ -110,7 +110,7 @@ describe('NostrConnectUtils msat handling', () => {
                         {
                             getAmount: 100,
                             getTimestamp: 1700000000,
-                            getPaymentRequest: '',
+                            getPaymentRequest: 'lnbc1decodedinvoice',
                             payment_hash: '',
                             getMemo: '',
                             expires_at: 0,
@@ -143,6 +143,27 @@ describe('NostrConnectUtils msat handling', () => {
             expect(transactions).toHaveLength(1);
             expect(transactions[0].payment_hash).toBe('a'.repeat(64));
             expect(transactions[0].state).toBe('settled');
+        });
+
+        it('does not synthesize a hash from connection activity invoice data', () => {
+            const transaction =
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                    {
+                        id: 'activity-1',
+                        type: 'make_invoice',
+                        status: 'success',
+                        paymentHash: '',
+                        satAmount: 1,
+                        msatAmount: 1000,
+                        invoice: {
+                            getPaymentRequest: 'lnbc1decodedinvoice',
+                            getMemo: 'memo',
+                            payment_hash: ''
+                        }
+                    } as any
+                );
+
+            expect(transaction.payment_hash).toBe('');
         });
     });
 });

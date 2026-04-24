@@ -1,3 +1,9 @@
+const mockNip04Encrypt = jest.fn();
+const mockNip04Decrypt = jest.fn();
+const mockNip44Encrypt = jest.fn();
+const mockNip44Decrypt = jest.fn();
+const mockNip44GetConversationKey = jest.fn();
+
 jest.mock('@getalby/sdk', () => ({
     nwc: {
         NWCWalletService: class {
@@ -18,8 +24,26 @@ jest.mock('nostr-tools', () => ({
     validateEvent: jest.fn(),
     verifySignature: jest.fn()
 }));
-jest.mock('@nostr/tools/nip04', () => ({}));
-jest.mock('@nostr/tools/nip44', () => ({}));
+jest.mock('@nostr/tools/nip04', () => ({
+    __esModule: true,
+    default: {
+        encrypt: mockNip04Encrypt,
+        decrypt: mockNip04Decrypt
+    },
+    encrypt: mockNip04Encrypt,
+    decrypt: mockNip04Decrypt
+}));
+jest.mock('@nostr/tools/nip44', () => ({
+    __esModule: true,
+    default: {
+        encrypt: mockNip44Encrypt,
+        decrypt: mockNip44Decrypt,
+        getConversationKey: mockNip44GetConversationKey
+    },
+    encrypt: mockNip44Encrypt,
+    decrypt: mockNip44Decrypt,
+    getConversationKey: mockNip44GetConversationKey
+}));
 jest.mock('@noble/hashes/utils', () => ({ hexToBytes: jest.fn() }));
 jest.mock('react-native-notifications', () => ({ Notifications: {} }));
 jest.mock('react-native-blob-util', () => ({}));
@@ -280,14 +304,53 @@ describe('NostrWalletConnectStore updateConnection validation order', () => {
     });
 });
 
-describe('NostrWalletConnectStore payment hash fallback', () => {
-    it('returns a 64-character hex hash', () => {
-        const hash = (NostrWalletConnectStore.prototype as any).generatePaymentHashFallback(
-            'payment-123'
+describe('NostrWalletConnectStore pay_invoice mutex', () => {
+    it('serializes concurrent pay_invoice work through the shared mutex', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
         );
+        const started: string[] = [];
+        let releaseFirst!: () => void;
+        const firstFinished = new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+        });
+        const first = (store as any).runPayInvoiceSerialized(async () => {
+            started.push('first-start');
+            await firstFinished;
+            started.push('first-end');
+        });
+        const second = (store as any).runPayInvoiceSerialized(async () => {
+            started.push('second-start');
+            started.push('second-end');
+        });
 
-        expect(hash).toMatch(/^[0-9a-f]{64}$/i);
-        expect(hash).not.toContain('-');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(started).toEqual(['first-start']);
+
+        releaseFirst();
+        await Promise.all([first, second]);
+
+        expect(started).toEqual([
+            'first-start',
+            'first-end',
+            'second-start',
+            'second-end'
+        ]);
     });
 });
 

@@ -87,7 +87,8 @@ import Storage from '../storage';
 type StoreMethodName =
     | 'savePendingPayments'
     | 'getPendingPayments'
-    | 'subscribeToConnection';
+    | 'subscribeToConnection'
+    | 'saveProcessedReplayEvents';
 
 const callStoreMethod = async <T>(
     methodName: StoreMethodName,
@@ -235,6 +236,31 @@ describe('NostrWalletConnectStore replay guards', () => {
                 connection: { id: 'conn-1', name: 'wallet' }
             }
         ]);
+    });
+
+    it('logs processed replay storage failures without throwing', async () => {
+        const context = createStore();
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
+        mockSetItem.mockRejectedValueOnce(new Error('disk full'));
+
+        await expect(
+            callStoreMethod<void>(
+                'saveProcessedReplayEvents',
+                context,
+                new Set(['event-1'])
+            )
+        ).resolves.toBeUndefined();
+
+        expect(mockSetItem).toHaveBeenCalledWith(
+            'zeus-nwc-processed-replay-events',
+            JSON.stringify(['event-1'])
+        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'failed to save processed replay events',
+            expect.any(Error)
+        );
     });
 
     it('skips duplicate subscriptions unless replacing the existing one', async () => {

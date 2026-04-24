@@ -7,7 +7,6 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 import 'websocket-polyfill';
 import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
-import createHash from 'create-hash';
 import type {
     Nip47GetInfoResponse,
     Nip47GetBalanceResponse,
@@ -1164,12 +1163,16 @@ export default class NostrWalletConnectStore {
     private saveProcessedReplayEvents = async (
         eventIds: Set<string>
     ): Promise<void> => {
-        // Keep a bounded replay window across restarts without growing storage forever.
-        const orderedIds = Array.from(eventIds).slice(-1000);
-        await Storage.setItem(
-            NWC_PROCESSED_REPLAY_EVENTS,
-            JSON.stringify(orderedIds)
-        );
+        try {
+            // Keep a bounded replay window across restarts without growing storage forever.
+            const orderedIds = Array.from(eventIds).slice(-1000);
+            await Storage.setItem(
+                NWC_PROCESSED_REPLAY_EVENTS,
+                JSON.stringify(orderedIds)
+            );
+        } catch (error) {
+            console.error('failed to save processed replay events', error);
+        }
     };
 
     private markProcessedReplayEvent = async (eventId: string): Promise<void> => {
@@ -2328,7 +2331,7 @@ export default class NostrWalletConnectStore {
                             activity
                         )
                     )
-                    .filter((tx) => tx.amount > 0)
+                    .filter((tx) => tx.amount > 0 && !!tx.payment_hash)
                     .sort((a, b) => b.created_at - a.created_at);
             } else {
                 await Promise.all([
@@ -3276,11 +3279,8 @@ export default class NostrWalletConnectStore {
                 msatAmount: exactAmountMsats,
                 paymentHash:
                     paymentObj instanceof Payment
-                        ? paymentObj.paymentHash ||
-                          paymentObj.id ||
-                          this.generatePaymentHashFallback(paymentObj.id)
-                        : decoded?.id ||
-                          this.generatePaymentHashFallback(decoded?.id)
+                        ? paymentObj.paymentHash
+                        : undefined
             });
             this.findAndUpdateConnection(connection);
         });
@@ -4582,10 +4582,13 @@ export default class NostrWalletConnectStore {
                         response = await this.handleGetBalance(connection);
                         break;
                     case 'pay_invoice':
-                        response = await this.handlePayInvoice(
-                            connection,
-                            request.params,
-                            skipNotification
+                        response = await this.runPayInvoiceSerialized(
+                            () =>
+                                this.handlePayInvoice(
+                                    connection,
+                                    request.params,
+                                    skipNotification
+                                )
                         );
                         break;
                     case 'make_invoice':
@@ -4641,13 +4644,27 @@ export default class NostrWalletConnectStore {
 
         // Only publish if we have a response
         if (response) {
-            await this.publishEventToClient(
-                connection,
-                request.method,
-                response,
-                eventId,
-                requestEncryptionScheme
-            );
+            try {
+                await this.publishEventToClient(
+                    connection,
+                    request.method,
+                    response,
+                    eventId,
+                    requestEncryptionScheme
+                );
+            } catch (error) {
+                console.warn('NWC: Failed to publish event response', {
+                    error,
+                    method: request.method,
+                    connection: connection.name,
+                    eventId
+                });
+                return {
+                    success: false,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error)
+                };
+            }
         }
 
         return {
@@ -4741,20 +4758,40 @@ export default class NostrWalletConnectStore {
         } else {
             payload.result = response?.result ?? null;
         }
-        const content =
-            encryptionScheme === 'nip44_v2'
-                ? nip44.encrypt(
-                      JSON.stringify(payload),
-                      nip44.getConversationKey(
-                          hexToBytes(servicePrivateKey),
-                          connection.pubkey
+        const payloadString = JSON.stringify(payload);
+        let content: string;
+        try {
+            content =
+                encryptionScheme === 'nip44_v2'
+                    ? nip44.encrypt(
+                          payloadString,
+                          nip44.getConversationKey(
+                              hexToBytes(servicePrivateKey),
+                              connection.pubkey
+                          )
                       )
-                  )
-                : nip04.encrypt(
-                      servicePrivateKey,
-                      connection.pubkey,
-                      JSON.stringify(payload)
-                  );
+                    : nip04.encrypt(
+                          servicePrivateKey,
+                          connection.pubkey,
+                          payloadString
+                      );
+        } catch (error) {
+            console.warn('NWC: Failed to encrypt response payload', {
+                method,
+                eventId,
+                encryptionScheme,
+                error
+            });
+            if (encryptionScheme === 'nip44_v2') {
+                content = nip04.encrypt(
+                    servicePrivateKey,
+                    connection.pubkey,
+                    payloadString
+                );
+            } else {
+                throw error;
+            }
+        }
         let tags: string[][] = [];
         if (eventId) {
             tags.push(['e', eventId]);
@@ -5040,20 +5077,6 @@ export default class NostrWalletConnectStore {
     @action private setError(message: string) {
         this.error = true;
         this.errorMessage = message;
-    }
-
-    /**
-     * Generates a 32-byte hex fallback identifier for LOCAL activity rows
-     * when the underlying handle (e.g. a Cashu mint quote id) is not a
-     * proper bolt11 payment_hash. NEVER use this for values returned to
-     * the NWC client (`payment_hash` in result payloads, lookups,
-     * notifications) — fabricated hashes prevent the client from
-     * correlating subsequent events. Callers in NWC response paths must
-     * surface INTERNAL_ERROR instead.
-     */
-    private generatePaymentHashFallback(paymentId?: string): string {
-        const fallbackSource = paymentId || `${Date.now()}:${Math.random()}`;
-        return createHash('sha256').update(fallbackSource).digest('hex');
     }
 
     private handleError(

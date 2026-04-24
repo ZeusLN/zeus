@@ -1263,9 +1263,15 @@ export default class LdkNode {
     payLightningInvoice = async (data: any): Promise<any> => {
         const maxTotalRoutingFeeMsat =
             data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
-                ? Number(data.fee_limit_msat)
+                ? (() => {
+                      const v = Number(data.fee_limit_msat);
+                      return Number.isFinite(v) ? Math.trunc(v) : undefined;
+                  })()
                 : data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
-                ? Number(data.fee_limit_sat) * 1000
+                ? (() => {
+                      const v = Number(data.fee_limit_sat);
+                      return Number.isFinite(v) ? Math.trunc(v * 1000) : undefined;
+                  })()
                 : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
@@ -1277,14 +1283,20 @@ export default class LdkNode {
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
-                amountMsat: Number(data.amount_msat),
+                amountMsat: (() => {
+                    const v = Number(data.amount_msat);
+                    return Number.isFinite(v) ? Math.trunc(v) : 0;
+                })(),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });
         } else if (data.amt) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
-                amountMsat: Number(data.amt) * 1000,
+                amountMsat: (() => {
+                    const v = Number(data.amt);
+                    return Number.isFinite(v) ? Math.trunc(v * 1000) : 0;
+                })(),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });
@@ -1314,7 +1326,10 @@ export default class LdkNode {
         const amt = Number(data.amt);
         const maxTotalRoutingFeeMsat =
             data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
-                ? Number(data.fee_limit_sat) * 1000
+                ? (() => {
+                      const v = Number(data.fee_limit_sat);
+                      return Number.isFinite(v) ? Math.trunc(v * 1000) : undefined;
+                  })()
                 : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)

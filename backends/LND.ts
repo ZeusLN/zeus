@@ -566,8 +566,12 @@ export default class LND {
                     }
                     if (request.max_shard_amt !== undefined) {
                         // Zeus tracks shard caps in sats, but router.send expects millisats.
-                        request.max_shard_size_msat =
-                            Number(request.max_shard_amt) * 1000;
+                        const v = Number(request.max_shard_amt);
+                        if (Number.isFinite(v) && v >= 0) {
+                            request.max_shard_size_msat = Math.trunc(v * 1000);
+                        } else {
+                            delete request.max_shard_size_msat;
+                        }
                         delete request.max_shard_amt;
                     }
                     return request;

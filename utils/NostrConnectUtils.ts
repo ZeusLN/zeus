@@ -5,6 +5,7 @@ import type {
     Nip47ListTransactionsRequest
 } from '@getalby/sdk/dist/nwc/types';
 
+import bolt11 from 'bolt11';
 import {
     BudgetRenewalType,
     PermissionType,
@@ -20,7 +21,6 @@ import Transaction from '../models/Transaction';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
-import bolt11 from 'bolt11';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -553,36 +553,9 @@ export default class NostrConnectUtils {
         if (activity.payment?.paymentHash) {
             return activity.payment.paymentHash;
         }
-        const invoiceString =
-            NostrConnectUtils.extractInvoiceFromActivity(activity);
-        const invoicePaymentHash =
-            NostrConnectUtils.extractPaymentHashFromInvoice(invoiceString);
-        if (invoicePaymentHash) {
-            return invoicePaymentHash;
-        }
         if (activity.invoice) {
             const invoiceHash = (activity.invoice as Invoice).payment_hash;
             if (invoiceHash) return invoiceHash;
-        }
-        return activity.id || '';
-    }
-
-    private static extractPaymentHashFromInvoice(invoice: string): string {
-        if (!invoice) {
-            return '';
-        }
-        try {
-            const decoded: any = bolt11.decode(invoice);
-            if (!decoded?.tags) {
-                return '';
-            }
-            for (const tag of decoded.tags) {
-                if (tag.tagName === 'payment_hash') {
-                    return String(tag.data || '');
-                }
-            }
-        } catch {
-            return '';
         }
         return '';
     }
@@ -928,14 +901,9 @@ export default class NostrConnectUtils {
                         Number(payment.getTimestamp) || Date.now() / 1000;
                     const invoice = payment.getPaymentRequest || '';
                     // Per NIP-47, payment_hash MUST be the canonical 32-byte
-                    // hash. Skip the deterministic-hash fallback: a synthetic
-                    // hash is worse than omitting the entry because it breaks
-                    // client-side correlation with later notifications.
-                    const paymentHash =
-                        payment.paymentHash ||
-                        NostrConnectUtils.extractPaymentHashFromInvoice(
-                            invoice
-                        );
+                    // hash. Skip every fallback so we never fabricate a hash
+                    // for activity that lacks one.
+                    const paymentHash = payment.paymentHash || '';
                     if (!paymentHash) return null;
                     const feesPaid = satsToMillisats(
                         Number(payment.getFee) || 0
@@ -978,11 +946,7 @@ export default class NostrConnectUtils {
                         Number(invoice.getTimestamp) || Date.now() / 1000;
                     const invoiceString = invoice.getPaymentRequest || '';
                     // See comment above on paymentHash — never fabricate.
-                    const paymentHash =
-                        invoice.payment_hash ||
-                        NostrConnectUtils.extractPaymentHashFromInvoice(
-                            invoiceString
-                        );
+                    const paymentHash = invoice.payment_hash || '';
                     if (!paymentHash) return null;
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;
