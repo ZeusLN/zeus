@@ -589,11 +589,12 @@ export default class TransactionsStore {
         if (payment_request) {
             data.payment_request = payment_request;
         }
-        // Prefer the exact msat amount here; backend adapters translate it to their RPC-specific field names.
+        // Preserve exact msat amount as string to avoid precision loss from Number() conversion
+        // which can exceed JS safe integer range (2^53-1). Backend adapters handle conversion.
         if (amount_msat !== undefined && amount_msat !== null) {
-            data.amount_msat = Number(amount_msat);
+            data.amount_msat = String(amount_msat);
         } else if (amount) {
-            data.amt = Number(amount);
+            data.amt = String(amount);
         }
 
         if (pubkey) {
@@ -618,9 +619,9 @@ export default class TransactionsStore {
         data.max_parts = max_parts ? max_parts : '1';
 
         if (fee_limit_msat !== undefined && fee_limit_msat !== null) {
-            data.fee_limit_msat = Number(fee_limit_msat);
+            data.fee_limit_msat = String(fee_limit_msat);
         } else if (fee_limit_sat) {
-            data.fee_limit_sat = Number(fee_limit_sat);
+            data.fee_limit_sat = String(fee_limit_sat);
         }
 
         // atomic multi-path payments

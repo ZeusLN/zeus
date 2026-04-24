@@ -1307,7 +1307,12 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: (() => {
                     const v = Number(data.amount_msat);
-                    return Number.isFinite(v) ? Math.trunc(v) : 0;
+                    if (!Number.isFinite(v)) {
+                        throw new Error(
+                            `Invalid amount_msat: expected finite number, got ${v}`
+                        );
+                    }
+                    return Math.trunc(v);
                 })(),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
@@ -1317,7 +1322,12 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: (() => {
                     const v = Number(data.amt);
-                    return Number.isFinite(v) ? Math.trunc(v * 1000) : 0;
+                    if (!Number.isFinite(v)) {
+                        throw new Error(
+                            `Invalid amt: expected finite number, got ${v}`
+                        );
+                    }
+                    return Math.trunc(v * 1000);
                 })(),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
@@ -1347,9 +1357,25 @@ export default class LdkNode {
         const pubkey = data.pubkey;
         const amountMsat =
             data.amount_msat !== undefined && data.amount_msat !== null
-                ? Number(data.amount_msat)
+                ? (() => {
+                      const v = Number(data.amount_msat);
+                      if (!Number.isFinite(v)) {
+                          throw new Error(
+                              `Invalid amount_msat: expected finite number, got ${v}`
+                          );
+                      }
+                      return v;
+                  })()
                 : data.amt !== undefined && data.amt !== null
-                ? Number(data.amt) * 1000
+                ? (() => {
+                      const v = Number(data.amt);
+                      if (!Number.isFinite(v)) {
+                          throw new Error(
+                              `Invalid amt: expected finite number, got ${v}`
+                          );
+                      }
+                      return v * 1000;
+                  })()
                 : 0;
         const maxTotalRoutingFeeMsat =
             data.fee_limit_sat !== undefined && data.fee_limit_sat !== null

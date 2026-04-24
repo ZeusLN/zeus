@@ -4966,6 +4966,9 @@ export default class NostrWalletConnectStore {
                 } as any);
             }
         }
+        // Separate processed (committed/published) from successful (success === true)
+        // Only notify users on actual successful payments, but clean up all processed events
+        const processedEventIds = new Set<string>();
         const successfulEventIds = new Set<string>();
         const successfulPayments: Array<{
             amount: number;
@@ -4974,11 +4977,15 @@ export default class NostrWalletConnectStore {
         for (const result of processingResults) {
             if (result.status === 'fulfilled') {
                 if (result.value?.result?.committed) {
-                    successfulEventIds.add(result.value.event.eventId);
-                    successfulPayments.push({
-                        amount: result.value.event.amount,
-                        connectionName: result.value.event.connectionName
-                    });
+                    processedEventIds.add(result.value.event.eventId);
+                    // Only count as successful if success === true
+                    if (result.value?.result?.success === true) {
+                        successfulEventIds.add(result.value.event.eventId);
+                        successfulPayments.push({
+                            amount: result.value.event.amount,
+                            connectionName: result.value.event.connectionName
+                        });
+                    }
                     await this.deletePendingPaymentById(
                         result.value.event.eventId
                     );
@@ -4986,7 +4993,7 @@ export default class NostrWalletConnectStore {
             }
         }
         remainingEvents = remainingEvents.filter(
-            (e) => !successfulEventIds.has(e.eventId)
+            (e) => !processedEventIds.has(e.eventId)
         );
         remainingTotal = remainingEvents.reduce((sum, e) => sum + e.amount, 0);
 
