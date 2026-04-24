@@ -1174,12 +1174,16 @@ export default class NostrWalletConnectStore {
 
     private markProcessedReplayEvent = async (eventId: string): Promise<void> => {
         if (!eventId) return;
-        const processed = await this.getProcessedReplayEvents();
-        if (processed.has(eventId)) {
-            return;
-        }
-        processed.add(eventId);
-        await this.saveProcessedReplayEvents(processed);
+        // Serialize read-modify-write across all callers/connections so
+        // concurrent updates can't lose entries (last-writer-wins on Storage).
+        await this.withMutex('processed-replay-events', async () => {
+            const processed = await this.getProcessedReplayEvents();
+            if (processed.has(eventId)) {
+                return;
+            }
+            processed.add(eventId);
+            await this.saveProcessedReplayEvents(processed);
+        });
     };
 
     private hasProcessedReplayEvent = async (eventId: string): Promise<boolean> => {
@@ -1564,7 +1568,9 @@ export default class NostrWalletConnectStore {
             handler.payInvoice = gated(
                 'pay_invoice',
                 (request: Nip47PayInvoiceRequest) =>
-                    this.handlePayInvoice(connection, request)
+                    this.runPayInvoiceSerialized(() =>
+                        this.handlePayInvoice(connection, request)
+                    )
             );
             handler.makeInvoice = gated(
                 'make_invoice',
@@ -1757,6 +1763,32 @@ export default class NostrWalletConnectStore {
         await this.markConnectionUsed(connectionId);
         return await handler();
     }
+
+    // Promise-chain mutex used to serialize side-effecting work that touches
+    // singleton stores (TransactionsStore / CashuStore) and budget tracking.
+    // Per-key chains let unrelated work proceed in parallel while preventing
+    // races inside a single critical section.
+    private mutexes: Map<string, Promise<unknown>> = new Map();
+    private withMutex<T>(key: string, fn: () => Promise<T>): Promise<T> {
+        const prev = this.mutexes.get(key) || Promise.resolve();
+        const next = prev
+            .catch(() => undefined)
+            .then(() => fn());
+        // Store a chain that swallows rejections so subsequent waiters aren't
+        // poisoned by an earlier failure.
+        this.mutexes.set(
+            key,
+            next.catch(() => undefined)
+        );
+        return next;
+    }
+    // pay_invoice serializes globally because the underlying TransactionsStore
+    // and CashuStore expose request-scoped state via singleton fields
+    // (payment_preimage, payment_error, paymentError, ...). Two concurrent
+    // dispatches would clobber each other regardless of connection id.
+    private runPayInvoiceSerialized<T>(fn: () => Promise<T>): Promise<T> {
+        return this.withMutex('pay_invoice', fn);
+    }
     // NWC REQUEST HANDLERS
 
     private async handleGetInfo(
@@ -1928,6 +1960,21 @@ export default class NostrWalletConnectStore {
                             dateTimeUtils.getCurrentTimestamp() +
                             (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
                     }
+                    const cashuPaymentHash = paymentHash || '';
+                    if (!cashuPaymentHash) {
+                        // Spec requires a real payment_hash; without one
+                        // clients can't correlate later lookup_invoice or
+                        // payment_received notifications. Surface an
+                        // internal error rather than fabricating a hash.
+                        // Validate BEFORE mutating local activity / firing
+                        // notifications so a hash-less invoice doesn't leave
+                        // us with stale "pending" history the client never
+                        // acknowledged.
+                        return this.handleError(
+                            'Cashu invoice missing payment_hash',
+                            ErrorCodes.INTERNAL_ERROR
+                        );
+                    }
                     const invoice = this.cashuStore.invoices?.find(
                         (invoice) =>
                             invoice.getPaymentRequest ===
@@ -1952,17 +1999,6 @@ export default class NostrWalletConnectStore {
                         connection.name,
                         request.description
                     );
-                    const cashuPaymentHash = paymentHash || '';
-                    if (!cashuPaymentHash) {
-                        // Spec requires a real payment_hash; without one
-                        // clients can't correlate later lookup_invoice or
-                        // payment_received notifications. Surface an
-                        // internal error rather than fabricating a hash.
-                        return this.handleError(
-                            'Cashu invoice missing payment_hash',
-                            ErrorCodes.INTERNAL_ERROR
-                        );
-                    }
                     const result = NostrConnectUtils.createNip47Transaction({
                         type: 'incoming',
                         state: 'pending',
@@ -2059,6 +2095,27 @@ export default class NostrWalletConnectStore {
                     (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
             }
 
+            if (!paymentHash) {
+                // Spec requires payment_hash; without one the client
+                // can't correlate settlement. Bail out with an internal
+                // error instead of fabricating a synthetic hash. Validate
+                // BEFORE mutating local activity / firing notifications so
+                // a hash-less invoice doesn't leave us with stale "pending"
+                // history that the client never acknowledged.
+                return this.handleError(
+                    'Backend returned no payment_hash for created invoice',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
+
+            // Reject sub-sat msat amounts in notifications: floor would
+            // misreport 999 msat as a 0-sat invoice. Round up so the
+            // displayed sat amount is never 0 for a non-zero invoice.
+            const notificationSats = Math.max(
+                1,
+                Math.ceil(request.amount / 1000)
+            );
+
             if (invoice) {
                 runInAction(() => {
                     connection.addActivity({
@@ -2067,9 +2124,7 @@ export default class NostrWalletConnectStore {
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash:
-                            paymentHash ||
-                            this.generatePaymentHashFallback(paymentRequest),
+                        paymentHash,
                         satAmount: millisatsToSats(request.amount),
                         msatAmount: request.amount,
                         createdAt: new Date()
@@ -2079,9 +2134,7 @@ export default class NostrWalletConnectStore {
             } else {
                 const invoiceData = {
                     payment_request: paymentRequest,
-                    payment_hash:
-                        paymentHash ||
-                        this.generatePaymentHashFallback(paymentRequest),
+                    payment_hash: paymentHash,
                     value: millisatsToSats(request.amount).toString(),
                     value_msat: request.amount.toString(),
                     memo: request.description || '',
@@ -2096,9 +2149,7 @@ export default class NostrWalletConnectStore {
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        paymentHash:
-                            paymentHash ||
-                            this.generatePaymentHashFallback(paymentRequest),
+                        paymentHash,
                         satAmount: millisatsToSats(request.amount),
                         msatAmount: request.amount,
                         createdAt: new Date()
@@ -2108,20 +2159,10 @@ export default class NostrWalletConnectStore {
             }
             this.saveConnections();
             this.showInvoiceCreatedNotification(
-                millisatsToSats(request.amount),
+                notificationSats,
                 connection.name,
                 request.description
             );
-
-            if (!paymentHash) {
-                // Spec requires payment_hash; without one the client
-                // can't correlate settlement. Bail out with an internal
-                // error instead of fabricating a synthetic hash.
-                return this.handleError(
-                    'Backend returned no payment_hash for created invoice',
-                    ErrorCodes.INTERNAL_ERROR
-                );
-            }
 
             const result = NostrConnectUtils.createNip47Transaction({
                 type: 'incoming',
@@ -2565,11 +2606,32 @@ export default class NostrWalletConnectStore {
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
+        // NIP-47 pay_invoice success requires a real 32-byte preimage. If we
+        // got here with no error but no preimage, treat it as INTERNAL_ERROR
+        // rather than returning success with an empty preimage.
+        if (!preimage || preimage.length === 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                ),
+                ErrorCodes.INTERNAL_ERROR
+            );
+        }
+
+        // Charge the budget IMMEDIATELY on confirmed success so a missing
+        // activity-row lookup (paymentsStore lag, MPP, normalization mismatch)
+        // can't let a successful payment escape budget accounting. The
+        // pay_invoice mutex + replay-marker guarantee idempotency.
+        this.chargeBudgetOnSuccess(connection, paymentChargeAmountSats, {
+            activityId: request.invoice,
+            method: 'pay_invoice'
+        });
+
         await this.paymentsStore.getPayments();
         const payment = this.paymentsStore.payments.find(
             (payment) => payment.getPaymentRequest === request.invoice
         );
-        if (payment)
+        if (payment) {
             await this.finalizePayment({
                 id: request.invoice,
                 type: 'pay_invoice',
@@ -2579,12 +2641,34 @@ export default class NostrWalletConnectStore {
                 amountSats,
                 amountMsats,
                 budgetChargeAmountSats: paymentChargeAmountSats,
-                skipNotification
+                skipNotification,
+                skipBudgetCharge: true
             });
+        } else {
+            const { paymentHash: decodedHash } =
+                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            await this.recordMinimalSuccessActivity({
+                connection,
+                invoice: request.invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                amountSats: paymentChargeAmountSats,
+                amountMsats,
+                preimage,
+                feesPaidMsats: satsToMillisats(Number(fees_paid) || 0),
+                paymentHash: decodedHash || ''
+            });
+            if (!skipNotification) {
+                this.showPaymentSentNotification(
+                    paymentChargeAmountSats,
+                    connection.name
+                );
+            }
+        }
 
         return {
             result: {
-                preimage: preimage || '',
+                preimage,
                 fees_paid: satsToMillisats(Number(fees_paid) || 0)
             },
             error: undefined
@@ -2746,6 +2830,27 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
         }
+        // NIP-47 pay_invoice success requires an actual 32-byte preimage.
+        // The bolt11 payment request is NOT a preimage; if the mint didn't
+        // return one, surface an internal error instead of returning a fake.
+        const cashuPreimage = cashuInvoice.getPreimage;
+        if (!cashuPreimage || cashuPreimage.length === 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                ),
+                ErrorCodes.INTERNAL_ERROR
+            );
+        }
+
+        // Charge budget unconditionally on confirmed success — see lightning
+        // path for rationale. Idempotency is enforced by the pay_invoice mutex
+        // and replay-event marker.
+        this.chargeBudgetOnSuccess(connection, amount, {
+            activityId: request.invoice,
+            method: 'pay_invoice'
+        });
+
         const payment = this.cashuStore.payments?.find(
             (payment) => payment.getPaymentRequest === request.invoice
         );
@@ -2759,15 +2864,30 @@ export default class NostrWalletConnectStore {
                 amountMsats,
                 budgetChargeAmountSats: amount,
                 skipNotification,
-                connection
+                connection,
+                skipBudgetCharge: true
             });
+        } else {
+            const { paymentHash: decodedHash } =
+                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            await this.recordMinimalSuccessActivity({
+                connection,
+                invoice: request.invoice,
+                type: 'pay_invoice',
+                payment_source: 'cashu',
+                amountSats: amount,
+                amountMsats,
+                preimage: cashuPreimage,
+                feesPaidMsats: satsToMillisats(cashuInvoice.fee || 0),
+                paymentHash: decodedHash || ''
+            });
+            if (!skipNotification) {
+                this.showPaymentSentNotification(amount, connection.name);
+            }
         }
         return {
             result: {
-                preimage:
-                    cashuInvoice.getPreimage ||
-                    cashuInvoice.getPaymentRequest ||
-                    '',
+                preimage: cashuPreimage,
                 fees_paid: satsToMillisats(cashuInvoice.fee || 0)
             },
             error: undefined
@@ -3006,6 +3126,86 @@ export default class NostrWalletConnectStore {
     }
 
     /**
+     * Charges the connection's budget on a confirmed-successful payment.
+     * Called UNCONDITIONALLY before finalizePayment so a failed payment-row
+     * lookup (e.g. paymentsStore lag) cannot let a successful payment escape
+     * budget accounting. Idempotency is enforced by the caller via the
+     * pay_invoice mutex + replay-event marker.
+     */
+    private chargeBudgetOnSuccess(
+        connection: NWCConnection,
+        chargeAmountSats: number,
+        context: { activityId: string; method: string }
+    ): void {
+        const trackResult = connection.trackSpending(chargeAmountSats);
+        if (!trackResult.success) {
+            console.warn(
+                '[NostrWalletConnectStore.chargeBudgetOnSuccess] Budget limit exceeded during spend tracking',
+                {
+                    timestamp: new Date().toISOString(),
+                    connectionId: connection.id,
+                    connectionName: connection.name,
+                    activityId: context.activityId,
+                    method: context.method,
+                    chargeAmountSats,
+                    totalSpendSats: connection.totalSpendSats,
+                    maxAmountSats: connection.maxAmountSats,
+                    budgetLimitReached: connection.budgetLimitReached,
+                    error: trackResult.errorMessage,
+                    severity: 'warning',
+                    category: 'budget_race_detected'
+                }
+            );
+        }
+    }
+
+    /**
+     * Records minimal activity for a successful payment when paymentsStore
+     * lookup fails (delayed listing / MPP / Cashu mint-quote latency).
+     * Uses the actually-paid amount and the real preimage / fees we already
+     * have from the wallet response so list_transactions stays accurate.
+     */
+    private async recordMinimalSuccessActivity(params: {
+        connection: NWCConnection;
+        invoice: string;
+        type: ConnectionActivityType;
+        payment_source: ConnectionPaymentSourceType;
+        amountSats: number;
+        amountMsats: number;
+        preimage: string;
+        feesPaidMsats: number;
+        paymentHash: string;
+    }): Promise<void> {
+        runInAction(() => {
+            const placeholder: any = {
+                getPaymentRequest: params.invoice,
+                paymentHash: params.paymentHash,
+                getPreimage: params.preimage,
+                payment_preimage: params.preimage,
+                fee: Math.floor(params.feesPaidMsats / 1000),
+                getAmount: params.amountSats,
+                amount: params.amountSats
+            };
+            const paymentObj =
+                params.payment_source == 'cashu'
+                    ? new CashuPayment(placeholder)
+                    : new Payment(placeholder);
+            params.connection.addActivity({
+                id: params.invoice,
+                type: params.type,
+                payment: paymentObj,
+                status: 'success',
+                payment_source: params.payment_source,
+                satAmount: params.amountSats,
+                msatAmount: params.amountMsats,
+                paymentHash: params.paymentHash
+            });
+            this.findAndUpdateConnection(params.connection);
+        });
+        await this.saveConnections();
+    }
+
+    /**
      * Processes payment completion: tracks spending, saves, and shows notification
      */
     private async finalizePayment({
@@ -3017,7 +3217,8 @@ export default class NostrWalletConnectStore {
         amountSats,
         amountMsats,
         budgetChargeAmountSats,
-        skipNotification = false
+        skipNotification = false,
+        skipBudgetCharge = false
     }: {
         id: string;
         type: ConnectionActivityType;
@@ -3028,6 +3229,10 @@ export default class NostrWalletConnectStore {
         amountMsats?: number;
         budgetChargeAmountSats?: number;
         skipNotification?: boolean;
+        // When true, skip trackSpending — caller has already charged the
+        // budget (see chargeBudgetOnSuccess) and we only need to record
+        // activity and notify here. Avoids double-charging.
+        skipBudgetCharge?: boolean;
     }): Promise<void> {
         runInAction(() => {
             // Use budgetChargeAmountSats if provided (for sub-satoshi budget enforcement),
@@ -3035,29 +3240,27 @@ export default class NostrWalletConnectStore {
             const chargeAmount = budgetChargeAmountSats ?? amountSats;
             const exactAmountMsats =
                 amountMsats ?? satsToMillisats(chargeAmount);
-            const trackResult = connection.trackSpending(chargeAmount);
-            // If tracking fails due to budget race (e.g., concurrent payments),
-            // log the warning but still record the successful payment. A payment
-            // that succeeded on-chain shouldn't be reported as an error to the
-            // client just because our in-app budget tracking had a race.
-            if (!trackResult.success) {
-                const timestamp = new Date().toISOString();
-                console.warn(
-                    '[NostrWalletConnectStore.finalizePayment] Budget limit exceeded during spend tracking',
-                    {
-                        timestamp,
-                        connectionId: connection.id,
-                        connectionName: connection.name,
-                        activityId: id,
-                        amountSats,
-                        totalSpendSats: connection.totalSpendSats,
-                        maxAmountSats: connection.maxAmountSats,
-                        budgetLimitReached: connection.budgetLimitReached,
-                        error: trackResult.errorMessage,
-                        severity: 'warning',
-                        category: 'budget_race_detected'
-                    }
-                );
+            if (!skipBudgetCharge) {
+                const trackResult = connection.trackSpending(chargeAmount);
+                if (!trackResult.success) {
+                    const timestamp = new Date().toISOString();
+                    console.warn(
+                        '[NostrWalletConnectStore.finalizePayment] Budget limit exceeded during spend tracking',
+                        {
+                            timestamp,
+                            connectionId: connection.id,
+                            connectionName: connection.name,
+                            activityId: id,
+                            amountSats,
+                            totalSpendSats: connection.totalSpendSats,
+                            maxAmountSats: connection.maxAmountSats,
+                            budgetLimitReached: connection.budgetLimitReached,
+                            error: trackResult.errorMessage,
+                            severity: 'warning',
+                            category: 'budget_race_detected'
+                        }
+                    );
+                }
             }
             const paymentObj =
                 payment_source == 'cashu'
@@ -3847,6 +4050,24 @@ export default class NostrWalletConnectStore {
                                 request.params?.invoice
                             );
                         if (isExpired) {
+                            // Surface a terminal PAYMENT_FAILED to the client
+                            // and persist the event so future restores don't
+                            // silently re-evaluate the same expired invoice.
+                            // (NIP-47: pay_invoice expired-at-pay-time is a
+                            // payment failure, not a missing record.)
+                            await this.publishEventToClient(
+                                connection,
+                                request.method,
+                                this.handleError(
+                                    localeString(
+                                        'stores.NostrWalletConnectStore.error.invoiceExpired'
+                                    ),
+                                    ErrorCodes.FAILED_TO_PAY_INVOICE
+                                ),
+                                eventId,
+                                encryptionScheme
+                            );
+                            await this.markProcessedReplayEvent(eventId);
                             return null;
                         }
                         return {
@@ -4508,7 +4729,7 @@ export default class NostrWalletConnectStore {
         const normalizedError = response?.error
             ? {
                   ...response.error,
-                  code: this.toNip47ErrorCode(response.error.code)
+                  code: this.toNip47ErrorCode(response.error.code, method)
               }
             : null;
         const payload: any = {
@@ -4652,7 +4873,7 @@ export default class NostrWalletConnectStore {
     // closest spec category — see per-case comments below for the rationale
     // (e.g. INVALID_INVOICE → INVALID_PARAMS, INVOICE_EXPIRED → NOT_FOUND,
     // FAILED_TO_PAY_INVOICE → PAYMENT_FAILED, FAILED_TO_CREATE_INVOICE → INTERNAL).
-    private toNip47ErrorCode(code?: string): string {
+    private toNip47ErrorCode(code?: string, method?: string): string {
         switch ((code || '').toUpperCase()) {
             case 'RATE_LIMITED':
                 return 'RATE_LIMITED';
@@ -4676,7 +4897,12 @@ export default class NostrWalletConnectStore {
                 // can react deterministically (same NIP-47 spec category).
                 return 'INVALID_PARAMS';
             case 'INVOICE_EXPIRED':
-                // Expired invoice is not found/available
+                // Per NIP-47, expired-at-pay-time is a payment failure for
+                // pay_invoice / pay_keysend, not a missing record. Other
+                // methods (e.g. lookup_invoice) keep the NOT_FOUND mapping.
+                if (method === 'pay_invoice' || method === 'pay_keysend') {
+                    return 'PAYMENT_FAILED';
+                }
                 return 'NOT_FOUND';
             case 'FAILED_TO_PAY_INVOICE':
                 // Per NIP-47 §pay_invoice errors, payment-flow failures

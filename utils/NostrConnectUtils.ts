@@ -21,8 +21,6 @@ import Transaction from '../models/Transaction';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -589,12 +587,6 @@ export default class NostrConnectUtils {
         return '';
     }
 
-    private static buildDeterministicPaymentHash(fallbackKey: string): string {
-        return bytesToHex(
-            sha256(utf8ToBytes(`zeus-nwc-fallback:${fallbackKey}`))
-        );
-    }
-
     private static extractAmountFromActivity(
         activity: ConnectionActivity
     ): number {
@@ -929,25 +921,22 @@ export default class NostrConnectUtils {
 
         // Convert Lightning payments
         if (lightningData.payments) {
-            const paymentTransactions = lightningData.payments.map(
-                (payment: Payment) => {
+            const paymentTransactions = lightningData.payments
+                .map((payment: Payment) => {
                     const amount = Number(payment.getAmount) || 0;
                     const timestamp =
                         Number(payment.getTimestamp) || Date.now() / 1000;
                     const invoice = payment.getPaymentRequest || '';
+                    // Per NIP-47, payment_hash MUST be the canonical 32-byte
+                    // hash. Skip the deterministic-hash fallback: a synthetic
+                    // hash is worse than omitting the entry because it breaks
+                    // client-side correlation with later notifications.
                     const paymentHash =
                         payment.paymentHash ||
                         NostrConnectUtils.extractPaymentHashFromInvoice(
                             invoice
-                        ) ||
-                        NostrConnectUtils.buildDeterministicPaymentHash(
-                            String(
-                                payment.id ||
-                                    payment.getPreimage ||
-                                    invoice ||
-                                    `payment-${Math.floor(timestamp)}-${amount}`
-                            )
                         );
+                    if (!paymentHash) return null;
                     const feesPaid = satsToMillisats(
                         Number(payment.getFee) || 0
                     );
@@ -975,30 +964,26 @@ export default class NostrConnectUtils {
                         created_at: timestamp,
                         expires_at: 0
                     });
-                }
-            );
+                })
+                .filter((tx): tx is Nip47Transaction => tx !== null);
             transactions.push(...paymentTransactions);
         }
 
         // Convert Lightning invoices
         if (lightningData.invoices) {
-            const invoiceTransactions = lightningData.invoices.map(
-                (invoice: Invoice) => {
+            const invoiceTransactions = lightningData.invoices
+                .map((invoice: Invoice) => {
                     const amount = Number(invoice.getAmount) || 0;
                     const timestamp =
                         Number(invoice.getTimestamp) || Date.now() / 1000;
                     const invoiceString = invoice.getPaymentRequest || '';
+                    // See comment above on paymentHash — never fabricate.
                     const paymentHash =
                         invoice.payment_hash ||
                         NostrConnectUtils.extractPaymentHashFromInvoice(
                             invoiceString
-                        ) ||
-                        NostrConnectUtils.buildDeterministicPaymentHash(
-                            String(
-                                invoiceString ||
-                                    `invoice-${Math.floor(timestamp)}-${amount}`
-                            )
                         );
+                    if (!paymentHash) return null;
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;
 
@@ -1019,8 +1004,8 @@ export default class NostrConnectUtils {
                         created_at: timestamp,
                         expires_at: expiresAt
                     });
-                }
-            );
+                })
+                .filter((tx): tx is Nip47Transaction => tx !== null);
             transactions.push(...invoiceTransactions);
         }
 

@@ -349,26 +349,47 @@ export default class LightningNodeConnect {
         // LNC mirrors LND router field names and expects the numeric inputs
         // as strings (LND uint64 fields). Stringify symmetrically so values
         // can never reach the wire as raw numbers (which lose precision past
-        // 2^53 and may be rejected by stricter protobuf wrappers).
+        // 2^53 and may be rejected by stricter protobuf wrappers). Validate
+        // for finiteness/positivity so a NaN/Infinity/negative upstream
+        // value can't be silently encoded as "NaN".
+        let amountSet = false;
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
-            request.amt_msat = String(data.amount_msat);
-            delete request.amt;
-            delete request.amount;
-        } else if (data.amt !== undefined && data.amt !== null) {
-            request.amt = String(data.amt);
+            const v = Number(data.amount_msat);
+            if (Number.isFinite(v) && v > 0) {
+                request.amt_msat = String(Math.trunc(v));
+                delete request.amt;
+                delete request.amount;
+                amountSet = true;
+            }
+        }
+        if (!amountSet && data.amt !== undefined && data.amt !== null) {
+            const v = Number(data.amt);
+            if (Number.isFinite(v) && v > 0) {
+                request.amt = String(Math.trunc(v));
+            }
             delete request.amount;
         }
         delete request.amount_msat;
         delete request.amount;
 
         if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
-            request.fee_limit_msat = String(data.fee_limit_msat);
+            const v = Number(data.fee_limit_msat);
+            if (Number.isFinite(v) && v >= 0) {
+                request.fee_limit_msat = String(Math.trunc(v));
+            } else {
+                delete request.fee_limit_msat;
+            }
             delete request.fee_limit_sat;
         } else if (
             data.fee_limit_sat !== undefined &&
             data.fee_limit_sat !== null
         ) {
-            request.fee_limit_sat = String(data.fee_limit_sat);
+            const v = Number(data.fee_limit_sat);
+            if (Number.isFinite(v) && v >= 0) {
+                request.fee_limit_sat = String(Math.trunc(v));
+            } else {
+                delete request.fee_limit_sat;
+            }
         }
 
         if (data.pubkey) delete request.pubkey;

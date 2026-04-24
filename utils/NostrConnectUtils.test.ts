@@ -80,4 +80,69 @@ describe('NostrConnectUtils msat handling', () => {
             description: 'exact msat invoice'
         });
     });
+
+    describe('convertLightningDataToNip47Transactions', () => {
+        it('omits payments without a real payment_hash (no synthetic fabrication)', () => {
+            const transactions =
+                NostrConnectUtils.convertLightningDataToNip47Transactions({
+                    payments: [
+                        {
+                            getAmount: 100,
+                            getTimestamp: 1700000000,
+                            getPaymentRequest: '',
+                            paymentHash: '',
+                            getFee: 0,
+                            getMemo: '',
+                            getPreimage: 'preimage-only',
+                            isFailed: false,
+                            isIncomplete: false
+                        } as any
+                    ]
+                });
+
+            expect(transactions).toEqual([]);
+        });
+
+        it('omits invoices without a real payment_hash (no synthetic fabrication)', () => {
+            const transactions =
+                NostrConnectUtils.convertLightningDataToNip47Transactions({
+                    invoices: [
+                        {
+                            getAmount: 100,
+                            getTimestamp: 1700000000,
+                            getPaymentRequest: '',
+                            payment_hash: '',
+                            getMemo: '',
+                            expires_at: 0,
+                            isPaid: false
+                        } as any
+                    ]
+                });
+
+            expect(transactions).toEqual([]);
+        });
+
+        it('keeps payments that carry a real payment_hash', () => {
+            const transactions =
+                NostrConnectUtils.convertLightningDataToNip47Transactions({
+                    payments: [
+                        {
+                            getAmount: 100,
+                            getTimestamp: 1700000000,
+                            getPaymentRequest: 'lnbc1real',
+                            paymentHash: 'a'.repeat(64),
+                            getFee: 1,
+                            getMemo: 'memo',
+                            getPreimage: 'preimage',
+                            isFailed: false,
+                            isIncomplete: false
+                        } as any
+                    ]
+                });
+
+            expect(transactions).toHaveLength(1);
+            expect(transactions[0].payment_hash).toBe('a'.repeat(64));
+            expect(transactions[0].state).toBe('settled');
+        });
+    });
 });

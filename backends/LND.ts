@@ -510,20 +510,35 @@ export default class LND {
                     // older callers still send sat aliases. Validate inputs
                     // are finite positive numbers before forwarding so a
                     // bogus upstream value (NaN / Infinity / "") doesn't
-                    // reach LND.
+                    // reach LND. Stringify uint64 numerics so REST/gRPC keep
+                    // full precision for large msat values (>2^53).
+                    let amountSet = false;
                     if (
                         data.amount_msat !== undefined &&
                         data.amount_msat !== null
                     ) {
                         const v = Number(data.amount_msat);
-                        if (Number.isFinite(v) && v > 0) request.amt_msat = v;
-                        delete request.amt;
-                        delete request.amount;
-                    } else if (data.amt !== undefined && data.amt !== null) {
+                        if (Number.isFinite(v) && v > 0) {
+                            request.amt_msat = String(Math.trunc(v));
+                            delete request.amt;
+                            delete request.amount;
+                            amountSet = true;
+                        }
+                    }
+                    if (
+                        !amountSet &&
+                        data.amt !== undefined &&
+                        data.amt !== null
+                    ) {
                         const v = Number(data.amt);
-                        if (Number.isFinite(v) && v > 0) request.amt = v;
+                        if (Number.isFinite(v) && v > 0) {
+                            request.amt = String(Math.trunc(v));
+                            amountSet = true;
+                        }
                         delete request.amount;
                     }
+                    // Strip the alias key after we've extracted from it so
+                    // it doesn't leak through to LND alongside amt_msat.
                     delete request.amount_msat;
                     delete request.amount;
 
@@ -531,13 +546,23 @@ export default class LND {
                         data.fee_limit_msat !== undefined &&
                         data.fee_limit_msat !== null
                     ) {
-                        request.fee_limit_msat = Number(data.fee_limit_msat);
+                        const v = Number(data.fee_limit_msat);
+                        if (Number.isFinite(v) && v >= 0) {
+                            request.fee_limit_msat = String(Math.trunc(v));
+                        } else {
+                            delete request.fee_limit_msat;
+                        }
                         delete request.fee_limit_sat;
                     } else if (
                         data.fee_limit_sat !== undefined &&
                         data.fee_limit_sat !== null
                     ) {
-                        request.fee_limit_sat = Number(data.fee_limit_sat);
+                        const v = Number(data.fee_limit_sat);
+                        if (Number.isFinite(v) && v >= 0) {
+                            request.fee_limit_sat = String(Math.trunc(v));
+                        } else {
+                            delete request.fee_limit_sat;
+                        }
                     }
                     if (request.max_shard_amt !== undefined) {
                         // Zeus tracks shard caps in sats, but router.send expects millisats.

@@ -287,24 +287,55 @@ export default class CLNRest {
         // integer; otherwise fall back to the sat-denominated value, and use
         // 'any' for amountless invoices. CLN rejects amount_msat: 0, so we
         // must NOT forward a 0 value_msat literal.
+        //
+        // Spec/correctness: an explicitly-supplied invalid value_msat (NaN,
+        // negative, 0) is treated as a hard validation error rather than
+        // silently falling through to data.value, so a buggy upstream
+        // doesn't end up creating an unrelated-amount invoice. A defined
+        // data.value still requires Number.isFinite + > 0 to be honored —
+        // otherwise undefined != 0 evaluates true and Number(undefined)*1000
+        // produces NaN, which CLN would reject opaquely.
         let amountMsat: number | string;
-        const valueMsatNum = Number(data.value_msat);
-        if (
-            data.value_msat !== undefined &&
-            data.value_msat !== null &&
-            Number.isFinite(valueMsatNum) &&
-            valueMsatNum > 0
-        ) {
-            amountMsat = Math.floor(valueMsatNum);
-        } else if (data.value != 0) {
-            amountMsat = Number(data.value) * 1000;
+        if (data.value_msat !== undefined && data.value_msat !== null) {
+            const v = Number(data.value_msat);
+            if (Number.isFinite(v) && v > 0) {
+                amountMsat = Math.floor(v);
+            } else if (Number.isFinite(v) && v === 0) {
+                // 0 means "no amount specified" → fall through to value check.
+                amountMsat = NaN;
+            } else {
+                // NaN / negative / non-finite — hard error so a buggy
+                // upstream can't end up creating an unrelated-amount invoice.
+                throw new Error('Invalid value_msat for createInvoice');
+            }
         } else {
-            amountMsat = 'any';
+            amountMsat = NaN;
+        }
+        if (Number.isNaN(amountMsat as number)) {
+            if (data.value !== undefined && data.value !== null) {
+                const v = Number(data.value);
+                if (Number.isFinite(v) && v > 0) {
+                    amountMsat = Math.floor(v) * 1000;
+                } else if (Number.isFinite(v) && v === 0) {
+                    amountMsat = 'any';
+                } else {
+                    throw new Error('Invalid value for createInvoice');
+                }
+            } else {
+                amountMsat = 'any';
+            }
         }
 
         return this.postRequest('/v1/invoice', {
             description: data.memo,
-            label: 'zeus.' + Math.random() * 1000000,
+            // Use a high-resolution unique label (nanosec timestamp + random
+            // suffix) so concurrent NWC create_invoice calls cannot collide
+            // on the same label string (CLN rejects duplicates).
+            label:
+                'zeus.' +
+                Date.now() +
+                '.' +
+                Math.floor(Math.random() * 1_000_000_000),
             amount_msat: amountMsat,
             expiry: Number(data.expiry_seconds),
             exposeprivatechannels: true

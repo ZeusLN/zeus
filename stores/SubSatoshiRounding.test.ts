@@ -119,6 +119,9 @@ const createLightningPayStoreContext = () => {
         waitForPaymentCompletion: jest.fn().mockResolvedValue(undefined),
         checkPaymentErrors: jest.fn().mockReturnValue(undefined),
         finalizePayment: jest.fn().mockResolvedValue(undefined),
+        chargeBudgetOnSuccess: jest.fn(),
+        recordMinimalSuccessActivity: jest.fn().mockResolvedValue(undefined),
+        showPaymentSentNotification: jest.fn(),
         handleError: jest.fn((message: string, code: string) => ({
             result: undefined,
             error: { code, message }

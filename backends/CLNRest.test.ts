@@ -121,4 +121,75 @@ describe('CLNRest createInvoice', () => {
         const [, body] = postRequestSpy.mock.calls[0] as [string, any];
         expect(body.amount_msat).toBe(21000);
     });
+
+    it("uses 'any' when value is undefined and value_msat omitted (no NaN)", async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.createInvoice({
+            memo: 'amountless',
+            expiry_seconds: '600',
+            private: false
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any];
+        expect(body.amount_msat).toBe('any');
+    });
+
+    it('throws on invalid value_msat (negative) instead of silent fallback', () => {
+        const cln = new CLNRest();
+        jest.spyOn(cln as any, 'postRequest').mockResolvedValue({});
+
+        expect(() =>
+            cln.createInvoice({
+                value: '21',
+                value_msat: '-1',
+                memo: 'bad',
+                expiry_seconds: '600',
+                private: false
+            })
+        ).toThrow('Invalid value_msat');
+    });
+
+    it('throws on non-numeric value_msat instead of silent fallback', () => {
+        const cln = new CLNRest();
+        jest.spyOn(cln as any, 'postRequest').mockResolvedValue({});
+
+        expect(() =>
+            cln.createInvoice({
+                value: '21',
+                value_msat: 'NaN',
+                memo: 'bad',
+                expiry_seconds: '600',
+                private: false
+            })
+        ).toThrow('Invalid value_msat');
+    });
+
+    it('uses high-resolution unique label to avoid collisions', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.createInvoice({
+            value: '1',
+            memo: 'a',
+            expiry_seconds: '600',
+            private: false
+        });
+        await cln.createInvoice({
+            value: '1',
+            memo: 'b',
+            expiry_seconds: '600',
+            private: false
+        });
+
+        const labelA = (postRequestSpy.mock.calls[0][1] as any).label as string;
+        const labelB = (postRequestSpy.mock.calls[1][1] as any).label as string;
+        expect(labelA).toMatch(/^zeus\.\d+\.\d+$/);
+        expect(labelA).not.toBe(labelB);
+    });
 });
