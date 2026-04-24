@@ -79,6 +79,7 @@ export default class LSPStore {
                     )
                 ) {
                     this.getExtendableChannels();
+                    this.nodeInfoStore.getNodeInfo();
                 }
             }
         );
