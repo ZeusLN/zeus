@@ -114,6 +114,9 @@ const PAYMENT_PROCESSING_DELAY_MS = 100;
 // to prevent unbounded memory growth in long-running sessions
 const MAX_REPLAY_RESPONSES = 1000;
 const MAX_PROCESSED_REPLAY_EVENTS = 1000;
+// Cache entries older than 24 hours are considered stale and rejected even if in cache
+// This prevents double-charging if a replay arrives after FIFO eviction but within event TTL
+const REPLAY_CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -157,6 +160,7 @@ interface StoredReplayResponse {
     method: Nip47SingleMethod;
     response: any;
     encryptionScheme: NwcEncryptionScheme;
+    cachedAt: number; // Timestamp when response was cached (ms since epoch)
 }
 
 interface NostrEvent {
@@ -1306,10 +1310,12 @@ export default class NostrWalletConnectStore {
         if (!eventId) return false;
         return await this.withMutex('replay-responses', async () => {
             const responses = await this.getReplayResponses();
+            const now = Date.now();
             responses.set(eventId, {
                 method,
                 response,
-                encryptionScheme
+                encryptionScheme,
+                cachedAt: now
             });
             // Enforce cache size limit: keep only the most recent MAX_REPLAY_RESPONSES
             // entries by converting to array, slicing, and reconstructing the map.
@@ -1335,22 +1341,60 @@ export default class NostrWalletConnectStore {
     };
 
     private getReplayResponse = async (
-        eventId: string
+        eventId: string,
+        eventCreatedAt?: number
     ): Promise<StoredReplayResponse | undefined> => {
         if (!eventId) return undefined;
         const responses = await this.getReplayResponses();
-        return responses.get(eventId);
+        const cached = responses.get(eventId);
+        if (!cached) return undefined;
+
+        // Validate cache entry is not stale. If the cached entry is older than
+        // REPLAY_CACHE_EXPIRATION_MS, consider it expired to prevent double-charging
+        // vulnerability: payment evicted from FIFO cache after 1000 events could be
+        // replayed without cache protection.
+        const now = Date.now();
+        const cacheAge = now - cached.cachedAt;
+        if (cacheAge > REPLAY_CACHE_EXPIRATION_MS) {
+            // Cache entry has expired; treat as a cache miss to prevent replay bypass
+            console.warn(
+                'NWC: Replay response cache entry expired (24h+ old), rejecting to prevent double-charging',
+                {
+                    eventId,
+                    cacheAge: `${Math.round(cacheAge / 1000)}s`,
+                    threshold: `${REPLAY_CACHE_EXPIRATION_MS / 1000}s`
+                }
+            );
+            return undefined;
+        }
+
+        // Additionally, if we have the event's created_at timestamp, verify the event
+        // is not older than the cache entry itself (prevents using stale events)
+        if (eventCreatedAt && eventCreatedAt * 1000 < cached.cachedAt) {
+            console.warn(
+                'NWC: Replay event created_at is older than cache entry timestamp, rejecting',
+                {
+                    eventId,
+                    eventCreatedAt,
+                    cachedAt: Math.round(cached.cachedAt / 1000)
+                }
+            );
+            return undefined;
+        }
+
+        return cached;
     };
 
     private async replayCachedResponse(
         connection: NWCConnection,
-        eventId: string
+        eventId: string,
+        eventCreatedAt?: number
     ): Promise<{
         success: boolean;
         errorMessage?: string;
         committed: boolean;
     } | null> {
-        const cached = await this.getReplayResponse(eventId);
+        const cached = await this.getReplayResponse(eventId, eventCreatedAt);
         if (!cached) {
             return null;
         }
@@ -1958,11 +2002,49 @@ export default class NostrWalletConnectStore {
     // Per-key chains let unrelated work proceed in parallel while preventing
     // races inside a single critical section.
     private mutexes: Map<string, Promise<unknown>> = new Map();
-    private withMutex<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    private withMutex<T>(
+        key: string,
+        fn: () => Promise<T>,
+        timeoutMs: number = 120000
+    ): Promise<T> {
         const prev = this.mutexes.get(key) || Promise.resolve();
-        const next = prev.catch(() => undefined).then(() => fn());
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+        const next = prev
+            .catch(() => undefined) // Swallow prev failures only
+            .then(() => {
+                // Create a timeout promise that rejects after specified duration
+                return Promise.race([
+                    fn(),
+                    new Promise<T>((_, reject) => {
+                        timeoutId = setTimeout(
+                            () =>
+                                reject(
+                                    new Error(
+                                        `Mutex operation timeout after ${timeoutMs}ms for key: ${key}`
+                                    )
+                                ),
+                            timeoutMs
+                        );
+                    })
+                ]).finally(() => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                });
+            })
+            .catch((err) => {
+                // Log errors in critical sections for observability
+                console.error(
+                    `[withMutex] Error in critical section '${key}': ${
+                        err instanceof Error ? err.message : String(err)
+                    }`,
+                    err
+                );
+                // Re-throw to propagate error to caller
+                throw err;
+            });
+
         // Store a chain that swallows rejections so subsequent waiters aren't
-        // poisoned by an earlier failure.
+        // poisoned by an earlier failure. The error is already logged above.
         this.mutexes.set(
             key,
             next.catch(() => undefined)
@@ -4275,6 +4357,15 @@ export default class NostrWalletConnectStore {
                             3
                         );
 
+                    // Extract event created_at for cache validation
+                    let eventCreatedAt: number | undefined;
+                    try {
+                        const event = JSON.parse(eventStr);
+                        eventCreatedAt = event.created_at;
+                    } catch (e) {
+                        // If parsing fails, proceed without created_at
+                    }
+
                     if (
                         request.method === 'pay_invoice' &&
                         !connection.hasPermission('pay_invoice')
@@ -4361,7 +4452,8 @@ export default class NostrWalletConnectStore {
                             const replayResult =
                                 await this.replayCachedResponse(
                                     connection,
-                                    eventId
+                                    eventId,
+                                    eventCreatedAt
                                 );
                             if (replayResult) {
                                 return null;
@@ -4557,37 +4649,27 @@ export default class NostrWalletConnectStore {
                                   conversationKey
                               );
                           } catch (nip44Error) {
-                              // NIP-44 decryption failed. Try NIP-04 as fallback
-                              // to handle clients that may have sent NIP-44-encrypted
-                              // content but we need to decrypt it as NIP-04.
-                              // This mirrors the encryption fallback behavior.
-                              console.warn(
-                                  'NWC: NIP-44 decryption failed, attempting NIP-04 fallback',
+                              // NIP-44 decryption failed. Per NIP-44 security model,
+                              // if a client explicitly declares NIP-44 encryption but
+                              // decryption fails, we must NOT silently downgrade to
+                              // NIP-04 (which would break security guarantees).
+                              // Instead, return an explicit error so clients can
+                              // understand the failure and retry appropriately.
+                              console.error(
+                                  'NWC: NIP-44 decryption failed - rejecting request to prevent security downgrade',
                                   {
                                       nip44Error,
-                                      eventId: event.id
+                                      eventId: event.id,
+                                      reason: 'NIP-44 explicitly declared but decryption failed; no implicit NIP-04 fallback'
                                   }
                               );
-                              try {
-                                  return nip04.decrypt(
-                                      privateKey,
-                                      connection.pubkey,
-                                      event.content
-                                  );
-                              } catch (nip04Error) {
-                                  // Both schemes failed; provide detailed error
-                                  throw new Error(
-                                      `Decryption failed: NIP-44 error: ${
-                                          nip44Error instanceof Error
-                                              ? nip44Error.message
-                                              : String(nip44Error)
-                                      }; NIP-04 fallback error: ${
-                                          nip04Error instanceof Error
-                                              ? nip04Error.message
-                                              : String(nip04Error)
-                                      }`
-                                  );
-                              }
+                              throw new Error(
+                                  `NIP-44 decryption failed and no fallback allowed per NIP-44 security model: ${
+                                      nip44Error instanceof Error
+                                          ? nip44Error.message
+                                          : String(nip44Error)
+                                  }`
+                              );
                           }
                       })()
                     : nip04.decrypt(
@@ -4671,6 +4753,16 @@ export default class NostrWalletConnectStore {
                 if (!connection) {
                     return null;
                 }
+
+                // Extract event created_at for cache validation
+                let eventCreatedAt: number | undefined;
+                try {
+                    const nostrEvent = JSON.parse(event.eventStr);
+                    eventCreatedAt = nostrEvent.created_at;
+                } catch (e) {
+                    // If parsing fails, proceed without created_at
+                }
+
                 let result: {
                     success: boolean;
                     errorMessage?: string;
@@ -4679,7 +4771,8 @@ export default class NostrWalletConnectStore {
                 if (await this.hasProcessedReplayEvent(event.eventId)) {
                     result = await this.replayCachedResponse(
                         connection,
-                        event.eventId
+                        event.eventId,
+                        eventCreatedAt
                     );
                     if (!result) {
                         return null;
