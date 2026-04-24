@@ -29,6 +29,21 @@ import type {
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import { settingsStore } from '../stores/Stores';
 
+const SIGNET_NETWORK = {
+    bech32: 'tbs',
+    pubKeyHash: 0x6f,
+    scriptHash: 0xc4,
+    validWitnessVersions: [0, 1]
+};
+
+const getBolt11Network = () => {
+    const { ldkNetwork } = settingsStore;
+    if (ldkNetwork === 'signet' || ldkNetwork === 'mutinynet') {
+        return SIGNET_NETWORK;
+    }
+    return undefined;
+};
+
 // Event callback type
 type EventCallback = (event: LdkNodeEvent) => void;
 
@@ -1187,7 +1202,7 @@ export default class LdkNode {
         // Decode the invoice to get the payment hash
         let paymentHash = '';
         try {
-            const decoded = bolt11.decode(invoice);
+            const decoded = bolt11.decode(invoice, getBolt11Network());
             const hashTag = decoded.tags.find(
                 (tag: any) => tag.tagName === 'payment_hash'
             );
@@ -1340,7 +1355,7 @@ export default class LdkNode {
      */
     decodePaymentRequest = async (urlParams?: Array<string>): Promise<any> => {
         const paymentRequest = (urlParams && urlParams[0]) || '';
-        const decoded: any = bolt11.decode(paymentRequest);
+        const decoded: any = bolt11.decode(paymentRequest, getBolt11Network());
 
         // Parse tags for additional fields
         for (let i = 0; i < decoded.tags.length; i++) {
