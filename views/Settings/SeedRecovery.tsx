@@ -300,12 +300,15 @@ export default class SeedRecovery extends React.PureComponent<
     };
 
     askForChannelBackupFirst = (onProceed: () => void) => {
+        const { embeddedLndIsSqlite } = this.state;
         this.props.ModalStore.toggleRestoreChannelModal({
             show: true,
-            onCheckOlympus: async () => {
-                this.handleImportChannelsFromOlympus(onProceed);
-            },
-            onImportFile: async () => {
+            ...(embeddedLndIsSqlite && {
+                onCheckOlympus: () => {
+                    this.handleImportChannelsFromOlympus(onProceed);
+                }
+            }),
+            onImportFile: () => {
                 this.handleImportFile(onProceed);
             },
             onContinueWithoutBackup: () => {

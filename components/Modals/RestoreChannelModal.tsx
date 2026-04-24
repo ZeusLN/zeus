@@ -35,7 +35,7 @@ export default class RestoreChannelModal extends React.Component<RestoreChannelM
                 isOpen={showRestoreChannelModal}
                 style={{
                     backgroundColor: 'transparent',
-                    height: 480,
+                    height: onCheckOlympus ? 480 : 420,
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
@@ -83,16 +83,18 @@ export default class RestoreChannelModal extends React.Component<RestoreChannelM
                         )}`}
                     </Text>
 
-                    <Button
-                        title={localeString(
-                            'views.Tools.migration.import.olympus'
-                        )}
-                        onPress={() => {
-                            if (onCheckOlympus) onCheckOlympus();
-                            toggleRestoreChannelModal({ show: false });
-                        }}
-                        containerStyle={{ marginBottom: 16 }}
-                    />
+                    {onCheckOlympus && (
+                        <Button
+                            title={localeString(
+                                'views.Tools.migration.import.olympus'
+                            )}
+                            onPress={() => {
+                                onCheckOlympus();
+                                toggleRestoreChannelModal({ show: false });
+                            }}
+                            containerStyle={{ marginBottom: 16 }}
+                        />
+                    )}
 
                     <Button
                         title={localeString(
