@@ -130,8 +130,9 @@ const BUDGET_RENEWAL_MS = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-// Prevents unbounded memory growth; retains up to 1000 items with FIFO rotation (oldest dropped via shift)
-const MAX_ACTIVITY_ITEMS = 1000;
+// Prevents unbounded memory growth; retains up to 500 items with FIFO rotation (oldest dropped via shift)
+// This balances memory efficiency with sufficient transaction history for user reference.
+const MAX_ACTIVITY_ITEMS = 500;
 
 /**
  * NWCConnection represents a Nostr Wallet Connect (NIP-47) connection with optional budget controls.
