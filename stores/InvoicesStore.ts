@@ -393,9 +393,11 @@ export default class InvoicesStore {
                 );
             } catch (e) {}
 
-            await this.lspStore.getZeroConfFee(
-                Number(new BigNumber(value).times(1000))
-            );
+            try {
+                await this.lspStore.getZeroConfFee(
+                    Number(new BigNumber(value).times(1000))
+                );
+            } catch (e) {}
 
             if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
                 req.value = new BigNumber(value).minus(
@@ -449,11 +451,20 @@ export default class InvoicesStore {
                     value !== '0' &&
                     !noLsp
                 ) {
-                    await this.lspStore
-                        .getZeroConfInvoice(invoice.getPaymentRequest)
-                        .then((response: any) => {
-                            jit_bolt11 = response;
+                    try {
+                        const response = await this.lspStore.getZeroConfInvoice(
+                            invoice.getPaymentRequest
+                        );
+                        jit_bolt11 = response as string;
+                    } catch (e: any) {
+                        // Clear error state so the unwrapped invoice
+                        // can be displayed without a stale error banner
+                        runInAction(() => {
+                            this.lspStore.flow_error = false;
+                            this.lspStore.flow_error_msg = '';
+                            this.lspStore.showLspSettings = false;
                         });
+                    }
                 }
 
                 if (lnurl) {

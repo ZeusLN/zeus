@@ -89,7 +89,6 @@ export default class LSPStore {
         if (!errorsOnly) {
             this.info = {};
             this.resetFee();
-            this.showLspSettings = false;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
         }
@@ -97,10 +96,17 @@ export default class LSPStore {
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
+        this.showLspSettings = false;
     };
 
     @action
-    public resetFee = () => (this.zeroConfFee = undefined);
+    public resetFee = () => {
+        this.zeroConfFee = undefined;
+        this.feeId = undefined;
+        this.flow_error = false;
+        this.flow_error_msg = '';
+        this.showLspSettings = false;
+    };
 
     @action
     public resetLSPS1Data = () => {
@@ -247,7 +253,19 @@ export default class LSPStore {
             )
                 .then((response: any) => {
                     const status = response.info().status;
-                    const data = response.json();
+                    let data: any;
+                    try {
+                        data = response.json();
+                    } catch (jsonErr) {
+                        runInAction(() => {
+                            this.flow_error = true;
+                            this.flow_error_msg = `${localeString(
+                                'stores.LSPStore.error'
+                            )}: HTTP ${status}`;
+                        });
+                        reject();
+                        return;
+                    }
                     if (status == 200) {
                         runInAction(() => {
                             this.zeroConfFee =
@@ -264,12 +282,23 @@ export default class LSPStore {
                         });
                         resolve(this.zeroConfFee);
                     } else {
-                        this.flow_error = true;
+                        runInAction(() => {
+                            this.flow_error = true;
+                            this.flow_error_msg = data?.message
+                                ? `${localeString('stores.LSPStore.error')}: ${
+                                      data.message
+                                  }`
+                                : `${localeString(
+                                      'stores.LSPStore.error'
+                                  )}: HTTP ${status}`;
+                        });
                         reject();
                     }
                 })
                 .catch(() => {
-                    this.flow_error = true;
+                    runInAction(() => {
+                        this.flow_error = true;
+                    });
                     reject();
                 });
         });
@@ -371,7 +400,19 @@ export default class LSPStore {
             )
                 .then(async (response: any) => {
                     const status = response.info().status;
-                    const data = response.json();
+                    let data: any;
+                    try {
+                        data = response.json();
+                    } catch (jsonErr) {
+                        runInAction(() => {
+                            this.flow_error = true;
+                            this.flow_error_msg = `${localeString(
+                                'stores.LSPStore.error'
+                            )}: HTTP ${status}`;
+                        });
+                        reject();
+                        return;
+                    }
                     if (status == 200 || status == 201) {
                         resolve(data.jit_bolt11);
                     } else {
@@ -391,7 +432,9 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    this.flow_error = true;
+                    runInAction(() => {
+                        this.flow_error = true;
+                    });
                     reject();
                 });
         });
