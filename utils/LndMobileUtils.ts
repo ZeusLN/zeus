@@ -76,6 +76,7 @@ export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
 export const NEUTRINO_PING_LAX_MS = 500;
 export const NEUTRINO_PING_THRESHOLD_MS = 1000;
+const NEUTRINO_PING_CONCURRENCY = 3;
 
 // Fetch-based latency check that runs entirely on the JS thread,
 // avoiding the native thread race condition in react-native-ping.
@@ -149,22 +150,28 @@ export async function pingPeer(
 type NeutrinoPingRow = { peer: string; ms: number | string };
 
 async function pingNeutrinoHosts(hosts: string[]): Promise<NeutrinoPingRow[]> {
-    return Promise.all(
-        hosts.map(async (peer) => {
-            try {
-                const result = await pingPeer(peer);
-                const ms = result.reachable ? result.ms : 'Unreachable';
-                log.d(
-                    `Neutrino ping ${peer} ${
-                        typeof ms === 'number' ? `${ms}ms` : ms
-                    }`
-                );
-                return { peer, ms };
-            } catch {
-                return { peer, ms: 'Timed out' };
-            }
-        })
-    );
+    const rows: NeutrinoPingRow[] = [];
+    for (let i = 0; i < hosts.length; i += NEUTRINO_PING_CONCURRENCY) {
+        const batch = hosts.slice(i, i + NEUTRINO_PING_CONCURRENCY);
+        const batchRows = await Promise.all(
+            batch.map(async (peer) => {
+                try {
+                    const result = await pingPeer(peer);
+                    const ms = result.reachable ? result.ms : 'Unreachable';
+                    log.d(
+                        `Neutrino ping ${peer} ${
+                            typeof ms === 'number' ? `${ms}ms` : ms
+                        }`
+                    );
+                    return { peer, ms };
+                } catch {
+                    return { peer, ms: 'Timed out' };
+                }
+            })
+        );
+        rows.push(...batchRows);
+    }
+    return rows;
 }
 
 function pickPeersUnderMs(
@@ -820,7 +827,7 @@ async function waitForLndReady({
         await waitForRpcReady();
         if (walletPassword && !syncStore.isSyncing) {
             log.d('Starting sync');
-            void syncStore.startSyncing().catch(() => {});
+            syncStore.startSyncing();
         }
         if (settingsStore?.settings?.rescan) {
             syncStore.startRescanTracking(0);
