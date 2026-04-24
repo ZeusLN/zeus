@@ -188,7 +188,7 @@ class UnsupportedEncryptionError extends Error {
     constructor(
         public readonly connection: NWCConnection,
         public readonly eventId: string,
-        public readonly encryptionScheme: NwcEncryptionScheme
+        public readonly encryptionScheme: string
     ) {
         super('UNSUPPORTED_ENCRYPTION');
         this.name = 'UnsupportedEncryptionError';
@@ -1377,8 +1377,23 @@ export default class NostrWalletConnectStore {
         // vulnerability: payment evicted from FIFO cache after 1000 events could be
         // replayed without cache protection.
         const now = Date.now();
-        const cacheAge = now - cached.cachedAt;
-        if (cacheAge > REPLAY_CACHE_EXPIRATION_MS) {
+        let cacheAge = now - cached.cachedAt;
+        if (cacheAge < 0) {
+            // System clock went backwards (NTP adjustment or similar).
+            // Clamp to 0 so the entry is treated as freshly cached rather than
+            // either expired or causing undefined behavior.
+            console.warn(
+                'NWC: Clock skew detected — system clock appears to have gone backwards',
+                {
+                    eventId,
+                    cacheAge: `${cacheAge}ms`,
+                    cachedAt: cached.cachedAt,
+                    now
+                }
+            );
+            cacheAge = 0;
+        }
+        if (cacheAge >= REPLAY_CACHE_EXPIRATION_MS) {
             // Cache entry has expired; treat as a cache miss to prevent replay bypass
             console.warn(
                 'NWC: Replay response cache entry expired (24h+ old), rejecting to prevent double-charging',
@@ -2033,12 +2048,36 @@ export default class NostrWalletConnectStore {
         const prev = this.mutexes.get(key) || Promise.resolve();
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
+        // operationCompletion resolves only when fn() actually finishes
+        // (whether it resolved, rejected, or the timeout fired but fn() is
+        // still in-flight).  Subsequent waiters chain on this so a timed-out
+        // but in-flight operation cannot run concurrently with the next one
+        // and cause a double-spend.
+        let operationResolve!: () => void;
+        const operationCompletion = new Promise<void>((resolve) => {
+            operationResolve = resolve;
+        });
+
         const next = prev
             .catch(() => undefined) // Swallow prev failures only
             .then(() => {
+                // Call fn() once; keep a handle so the chain can wait for
+                // its actual completion independently of the timeout race.
+                let opPromise: Promise<T>;
+                try {
+                    opPromise = fn();
+                } catch (syncError) {
+                    // fn() threw synchronously — release chain immediately.
+                    operationResolve();
+                    throw syncError;
+                }
+                // Signal actual completion (resolve OR reject) so the next
+                // mutex waiter knows it is safe to proceed.
+                opPromise.finally(() => operationResolve());
+
                 // Create a timeout promise that rejects after specified duration
                 return Promise.race([
-                    fn(),
+                    opPromise,
                     new Promise<T>((_, reject) => {
                         timeoutId = setTimeout(
                             () =>
@@ -2066,12 +2105,11 @@ export default class NostrWalletConnectStore {
                 throw err;
             });
 
-        // Store a chain that swallows rejections so subsequent waiters aren't
-        // poisoned by an earlier failure. The error is already logged above.
-        this.mutexes.set(
-            key,
-            next.catch(() => undefined)
-        );
+        // Store the actual-operation completion promise so subsequent waiters
+        // block until the in-flight fn() truly finishes, not just until the
+        // timeout races ahead.  This prevents a timed-out but still-running
+        // operation from executing concurrently with the next queued one.
+        this.mutexes.set(key, operationCompletion);
         return next;
     }
     // pay_invoice serializes globally because the underlying TransactionsStore
@@ -4523,6 +4561,16 @@ export default class NostrWalletConnectStore {
                         await this.markProcessedReplayEvent(error.eventId);
                         return null;
                     }
+                    // Mark event as processed on all error paths to prevent
+                    // replay attacks on app restart (even for decryption failures).
+                    try {
+                        const rawEvent = JSON.parse(eventStr);
+                        if (rawEvent?.id && typeof rawEvent.id === 'string') {
+                            await this.markProcessedReplayEvent(rawEvent.id);
+                        }
+                    } catch {
+                        // If we can't parse the event string, there's no id to mark.
+                    }
                     console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
                         error,
                         eventStr
@@ -4638,16 +4686,27 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const encryptionScheme = this.getEventEncryptionScheme(event.tags);
-
-        // Validate that the encryption scheme is supported
+        // Validate that the encryption scheme is supported BEFORE calling
+        // getEventEncryptionScheme so an unknown scheme throws UnsupportedEncryptionError
+        // (which the caller handles gracefully) rather than a generic Error.
         if (!this.isSupportedEncryptionScheme(event.tags)) {
+            // Capture the actual raw tag value for the error so it accurately
+            // reflects the unknown scheme rather than a normalized fallback.
+            const rawScheme =
+                event.tags.find(
+                    (tag) =>
+                        Array.isArray(tag) &&
+                        tag.length >= 2 &&
+                        tag[0] === 'encryption'
+                )?.[1] ?? 'unknown';
             throw new UnsupportedEncryptionError(
                 connection,
                 event.id,
-                this.getEventEncryptionScheme(event.tags)
+                String(rawScheme)
             );
         }
+
+        const encryptionScheme = this.getEventEncryptionScheme(event.tags);
 
         let request: NWCRequest;
         try {
@@ -5228,12 +5287,12 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         originalMethod: string,
         eventId: string,
-        // Accepted for legacy callers but intentionally ignored: the inbound
-        // scheme is by definition unsupported, so the response MUST fall
-        // back to NIP-04 (which every NIP-47 client supports). Sending the
-        // error encrypted with the same unsupported scheme would be
-        // unparseable by the client.
-        _requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
+        // Accepted for observability (logged) but intentionally ignored when
+        // choosing the response encryption: the inbound scheme is by definition
+        // unsupported, so the response MUST fall back to NIP-04 (which every
+        // NIP-47 client supports). Sending the error encrypted with the same
+        // unsupported scheme would be unparseable by the client.
+        _requestEncryptionScheme: string = 'nip04'
     ): Promise<void> {
         try {
             await this.publishEventToClient(
@@ -5402,36 +5461,28 @@ export default class NostrWalletConnectStore {
 
         // Validate that the scheme value is a string
         if (typeof schemeValue !== 'string') {
-            console.warn(
-                'NWC: Invalid encryption tag value type, defaulting to nip04',
-                {
-                    tagValue: schemeValue,
-                    tagType: typeof schemeValue
-                }
+            throw new Error(
+                `NWC: Invalid encryption tag value type: ${typeof schemeValue}`
             );
-            return 'nip04';
         }
 
         const normalized = schemeValue.toLowerCase();
-        const validSchemes = ['nip04', 'nip44_v2'];
 
         // Use exact match for scheme detection
         if (normalized === 'nip44_v2') {
             return 'nip44_v2';
         }
 
-        // Default to nip04 for unknown schemes
-        if (!validSchemes.includes(normalized)) {
-            console.warn(
-                'NWC: Unknown encryption scheme, defaulting to nip04',
-                {
-                    scheme: normalized,
-                    validSchemes
-                }
-            );
+        if (normalized === 'nip04') {
+            return 'nip04';
         }
 
-        return 'nip04';
+        // Unknown scheme: throw instead of silently falling back to NIP-04.
+        // Callers must check isSupportedEncryptionScheme() first; if they
+        // reach this path the event must be rejected, not silently downgraded.
+        throw new Error(
+            `NWC: Unknown encryption scheme '${normalized}' — refusing silent NIP-04 downgrade`
+        );
     }
 
     // Maps internal error codes to NIP-47 specification error codes.

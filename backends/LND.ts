@@ -536,14 +536,52 @@ export default class LND {
                     // bogus upstream value (NaN / Infinity / "") doesn't
                     // reach LND. Stringify uint64 numerics so REST/gRPC keep
                     // full precision for large msat values (>2^53).
+                    //
+                    // For values that exceed Number.MAX_SAFE_INTEGER we use
+                    // BigInt when the raw input is a string to avoid silent
+                    // precision loss.  Values beyond the LND uint64 ceiling
+                    // (2^63-1 msats) are rejected outright.
+                    const MAX_LND_MSAT = 9223372036854775807n; // 2^63-1
+                    const safeAmtMsatString = (raw: unknown): string | null => {
+                        if (raw === undefined || raw === null) return null;
+                        if (
+                            typeof raw === 'string' &&
+                            /^\d+$/.test(raw as string)
+                        ) {
+                            const bi = BigInt(raw as string);
+                            if (bi <= 0n || bi > MAX_LND_MSAT) return null;
+                            return bi.toString();
+                        }
+                        const v = Number(raw);
+                        if (!Number.isFinite(v) || v <= 0) return null;
+                        const bi = BigInt(Math.trunc(v));
+                        if (bi > MAX_LND_MSAT) return null;
+                        return bi.toString();
+                    };
+                    const safeFeeMsatString = (raw: unknown): string | null => {
+                        if (raw === undefined || raw === null) return null;
+                        if (
+                            typeof raw === 'string' &&
+                            /^\d+$/.test(raw as string)
+                        ) {
+                            const bi = BigInt(raw as string);
+                            if (bi < 0n || bi > MAX_LND_MSAT) return null;
+                            return bi.toString();
+                        }
+                        const v = Number(raw);
+                        if (!Number.isFinite(v) || v < 0) return null;
+                        const bi = BigInt(Math.trunc(v));
+                        if (bi > MAX_LND_MSAT) return null;
+                        return bi.toString();
+                    };
                     let amountSet = false;
                     if (
                         data.amount_msat !== undefined &&
                         data.amount_msat !== null
                     ) {
-                        const v = Number(data.amount_msat);
-                        if (Number.isFinite(v) && v > 0) {
-                            request.amt_msat = String(Math.trunc(v));
+                        const s = safeAmtMsatString(data.amount_msat);
+                        if (s !== null) {
+                            request.amt_msat = s;
                             delete request.amt;
                             delete request.amount;
                             amountSet = true;
@@ -554,9 +592,9 @@ export default class LND {
                         data.amt !== undefined &&
                         data.amt !== null
                     ) {
-                        const v = Number(data.amt);
-                        if (Number.isFinite(v) && v > 0) {
-                            request.amt = String(Math.trunc(v));
+                        const s = safeAmtMsatString(data.amt);
+                        if (s !== null) {
+                            request.amt = s;
                             amountSet = true;
                         }
                         delete request.amount;
@@ -570,9 +608,9 @@ export default class LND {
                         data.fee_limit_msat !== undefined &&
                         data.fee_limit_msat !== null
                     ) {
-                        const v = Number(data.fee_limit_msat);
-                        if (Number.isFinite(v) && v >= 0) {
-                            request.fee_limit_msat = String(Math.trunc(v));
+                        const s = safeFeeMsatString(data.fee_limit_msat);
+                        if (s !== null) {
+                            request.fee_limit_msat = s;
                         } else {
                             delete request.fee_limit_msat;
                         }
@@ -581,9 +619,9 @@ export default class LND {
                         data.fee_limit_sat !== undefined &&
                         data.fee_limit_sat !== null
                     ) {
-                        const v = Number(data.fee_limit_sat);
-                        if (Number.isFinite(v) && v >= 0) {
-                            request.fee_limit_sat = String(Math.trunc(v));
+                        const s = safeFeeMsatString(data.fee_limit_sat);
+                        if (s !== null) {
+                            request.fee_limit_sat = s;
                         } else {
                             delete request.fee_limit_sat;
                         }

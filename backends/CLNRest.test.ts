@@ -233,7 +233,9 @@ describe('CLNRest createInvoice', () => {
 
         const labelA = (postRequestSpy.mock.calls[0][1] as any).label as string;
         const labelB = (postRequestSpy.mock.calls[1][1] as any).label as string;
-        expect(labelA).toMatch(/^zeus\.\d+\.\d+$/);
+        expect(labelA).toMatch(
+            /^zeus\.[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        );
         expect(labelA).not.toBe(labelB);
     });
 });

@@ -185,18 +185,13 @@ describe('NostrWalletConnectStore encryption helpers', () => {
                 tags: [['encryption', 123 as unknown as string]],
                 label: 'number'
             }
-        ])('falls back to nip04 for an invalid $label', ({ tags }) => {
-            const warnSpy = jest
-                .spyOn(console, 'warn')
-                .mockImplementation(() => undefined);
-
-            expect(
+        ])('throws for an invalid $label instead of silently downgrading to nip04', ({ tags }) => {
+            expect(() =>
                 callStoreEncryptionMethod<'nip04' | 'nip44_v2'>(
                     'getEventEncryptionScheme',
                     tags
                 )
-            ).toBe('nip04');
-            expect(warnSpy).toHaveBeenCalled();
+            ).toThrow();
         });
     });
 
@@ -758,7 +753,7 @@ describe('NWCConnection replacement flow', () => {
             expect.objectContaining({ id: 'conn-unsupported' }),
             'unsupported_encryption',
             'event-1',
-            'nip04'
+            'unsupported'
         );
         mockedNostrTools.validateEvent.mockReset();
         mockedNostrTools.verifySignature.mockReset();

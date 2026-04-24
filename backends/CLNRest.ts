@@ -4,6 +4,7 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import { v4 as uuidv4 } from 'uuid';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
@@ -328,14 +329,9 @@ export default class CLNRest {
 
         return this.postRequest('/v1/invoice', {
             description: data.memo,
-            // Use a high-resolution unique label (nanosec timestamp + random
-            // suffix) so concurrent NWC create_invoice calls cannot collide
-            // on the same label string (CLN rejects duplicates).
-            label:
-                'zeus.' +
-                Date.now() +
-                '.' +
-                Math.floor(Math.random() * 1_000_000_000),
+            // Use UUID v4 for invoice labels: collision-free even under many
+            // concurrent NWC create_invoice calls (CLN rejects duplicate labels).
+            label: 'zeus.' + uuidv4(),
             amount_msat: amountMsat,
             expiry: Number(data.expiry_seconds),
             exposeprivatechannels: true
