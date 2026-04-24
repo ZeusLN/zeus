@@ -24,7 +24,14 @@ jest.mock('@noble/hashes/utils', () => ({ hexToBytes: jest.fn() }));
 jest.mock('react-native-notifications', () => ({ Notifications: {} }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('@react-native-async-storage/async-storage', () => ({}));
-jest.mock('../storage', () => ({}));
+jest.mock('../storage', () => ({
+    __esModule: true,
+    default: {
+        getItem: jest.fn(async () => null),
+        setItem: jest.fn(async () => undefined),
+        removeItem: jest.fn(async () => undefined)
+    }
+}));
 jest.mock('../models/NWCConnection', () => ({
     __esModule: true,
     default: class NWCConnection {

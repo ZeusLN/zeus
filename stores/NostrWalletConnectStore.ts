@@ -938,7 +938,7 @@ export default class NostrWalletConnectStore {
                 }
                 const subscribed = await this.subscribeToConnection(
                     subscriptionConnection,
-                    { unsubscribeExisting: false }
+                    { replaceExisting: true }
                 );
                 if (!subscribed) {
                     throw new Error(
@@ -1487,7 +1487,7 @@ export default class NostrWalletConnectStore {
 
     private async subscribeToConnection(
         connection: NWCConnection,
-        options?: { unsubscribeExisting?: boolean }
+        options?: { forceResubscribe?: boolean; replaceExisting?: boolean }
     ): Promise<boolean> {
         if (!this.isServiceReady()) {
             runInAction(() => {
@@ -1499,14 +1499,21 @@ export default class NostrWalletConnectStore {
             return false;
         }
         try {
-            if (
-                options?.unsubscribeExisting !== false &&
-                this.activeSubscriptions.has(connection.id)
-            ) {
-                return true;
-            }
-            if (options?.unsubscribeExisting !== false) {
-                await this.unsubscribeFromConnection(connection.id);
+            // Subscription state machine:
+            // - forceResubscribe (Android relay reconnect): tear down the
+            //   stale handle then create a fresh subscription. Without this
+            //   the early-return below silently skips re-subscribing after
+            //   a relay disconnect.
+            // - replaceExisting (updateConnection): leave the previous
+            //   handle in place; the caller will dispose of it after the new
+            //   subscription is confirmed (transactional swap).
+            // - default: idempotent skip when already subscribed.
+            if (this.activeSubscriptions.has(connection.id)) {
+                if (options?.forceResubscribe) {
+                    await this.unsubscribeFromConnection(connection.id);
+                } else if (!options?.replaceExisting) {
+                    return true;
+                }
             }
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
@@ -1523,55 +1530,62 @@ export default class NostrWalletConnectStore {
             );
             const handler: NWCWalletServiceRequestHandler = {};
 
+            // Always register every supported method handler and perform the
+            // per-connection permission check inside it. This makes the live
+            // path return RESTRICTED (matching the restored-event path) when
+            // the connection lacks a method permission, instead of letting
+            // the SDK respond with NOT_IMPLEMENTED. NIP-47 specifies
+            // RESTRICTED for "method not enabled for this connection".
+            const restrictedResponse = () =>
+                this.handleError(
+                    localeString('backends.NWC.permissionDenied'),
+                    ErrorCodes.RESTRICTED
+                );
+            const gated = <Req, Resp>(
+                method: Nip47SingleMethod,
+                handle: (request: Req) => any
+            ) =>
+                ((request: Req) =>
+                    this.withGlobalHandler(connection.id, () =>
+                        connection.hasPermission(method)
+                            ? handle(request)
+                            : (restrictedResponse() as Resp)
+                    )) as any;
+
             // Per NIP-47 spec: get_info MUST ALWAYS be available, regardless of permissions
             handler.getInfo = () =>
                 this.withGlobalHandler(connection.id, () =>
                     this.handleGetInfo(connection)
                 );
 
-            if (connection.hasPermission('get_balance')) {
-                handler.getBalance = () =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleGetBalance(connection)
-                    );
-            }
-
-            if (connection.hasPermission('pay_invoice')) {
-                handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handlePayInvoice(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('make_invoice')) {
-                handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleMakeInvoice(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('lookup_invoice')) {
-                handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleLookupInvoice(request)
-                    );
-            }
-
-            if (connection.hasPermission('list_transactions')) {
-                handler.listTransactions = (
-                    request: Nip47ListTransactionsRequest
-                ) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleListTransactions(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('sign_message')) {
-                handler.signMessage = (request: Nip47SignMessageRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleSignMessage(request)
-                    );
-            }
+            handler.getBalance = gated('get_balance', () =>
+                this.handleGetBalance(connection)
+            );
+            handler.payInvoice = gated(
+                'pay_invoice',
+                (request: Nip47PayInvoiceRequest) =>
+                    this.handlePayInvoice(connection, request)
+            );
+            handler.makeInvoice = gated(
+                'make_invoice',
+                (request: Nip47MakeInvoiceRequest) =>
+                    this.handleMakeInvoice(connection, request)
+            );
+            handler.lookupInvoice = gated(
+                'lookup_invoice',
+                (request: Nip47LookupInvoiceRequest) =>
+                    this.handleLookupInvoice(request)
+            );
+            handler.listTransactions = gated(
+                'list_transactions',
+                (request: Nip47ListTransactionsRequest) =>
+                    this.handleListTransactions(connection, request)
+            );
+            handler.signMessage = gated(
+                'sign_message',
+                (request: Nip47SignMessageRequest) =>
+                    this.handleSignMessage(request)
+            );
 
             const nwcWalletService = this.nwcWalletServices.get(
                 connection.relayUrl
@@ -1862,6 +1876,23 @@ export default class NostrWalletConnectStore {
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
             if (this.isCashuConfigured) {
+                // Cashu mints operate in whole sats; reject NIP-47 msat
+                // amounts that would otherwise be silently truncated. Per
+                // NIP-47 the spec error for a malformed amount is
+                // INVALID_PARAMS; clients can downgrade to a sat-aligned
+                // amount or pick a different connection.
+                if (
+                    typeof request.amount === 'number' &&
+                    request.amount > 0 &&
+                    request.amount % 1000 !== 0
+                ) {
+                    return this.handleError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                        ),
+                        ErrorCodes.INVALID_PARAMS
+                    );
+                }
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
                         value: millisatsToSats(request.amount).toString(),
@@ -1921,15 +1952,22 @@ export default class NostrWalletConnectStore {
                         connection.name,
                         request.description
                     );
+                    const cashuPaymentHash = paymentHash || '';
+                    if (!cashuPaymentHash) {
+                        // Spec requires a real payment_hash; without one
+                        // clients can't correlate later lookup_invoice or
+                        // payment_received notifications. Surface an
+                        // internal error rather than fabricating a hash.
+                        return this.handleError(
+                            'Cashu invoice missing payment_hash',
+                            ErrorCodes.INTERNAL_ERROR
+                        );
+                    }
                     const result = NostrConnectUtils.createNip47Transaction({
                         type: 'incoming',
                         state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
-                        payment_hash:
-                            paymentHash ||
-                            this.generatePaymentHashFallback(
-                                cashuInvoice.paymentRequest
-                            ),
+                        payment_hash: cashuPaymentHash,
                         amount: request.amount,
                         description: request.description,
                         description_hash: descriptionHash,
@@ -2075,6 +2113,16 @@ export default class NostrWalletConnectStore {
                 request.description
             );
 
+            if (!paymentHash) {
+                // Spec requires payment_hash; without one the client
+                // can't correlate settlement. Bail out with an internal
+                // error instead of fabricating a synthetic hash.
+                return this.handleError(
+                    'Backend returned no payment_hash for created invoice',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
+
             const result = NostrConnectUtils.createNip47Transaction({
                 type: 'incoming',
                 state: 'pending',
@@ -2186,16 +2234,22 @@ export default class NostrWalletConnectStore {
                     : invoice.isExpired
                     ? 'failed'
                     : 'pending';
+                const lookupPaymentHash =
+                    invoice.getRHash || request.payment_hash || '';
+                if (!lookupPaymentHash) {
+                    // Without a real payment_hash from the backend or
+                    // request, refuse to fabricate one — the client would
+                    // be unable to correlate this transaction.
+                    return this.handleError(
+                        'lookup_invoice missing payment_hash',
+                        ErrorCodes.INTERNAL_ERROR
+                    );
+                }
                 const result = NostrConnectUtils.createNip47Transaction({
                     type: 'incoming',
                     state,
                     invoice: invoice.getPaymentRequest,
-                    payment_hash:
-                        invoice.getRHash ||
-                        request.payment_hash! ||
-                        this.generatePaymentHashFallback(
-                            invoice.getPaymentRequest
-                        ),
+                    payment_hash: lookupPaymentHash,
                     amount: satsToMillisats(invoice.getAmount), // Convert to msats
                     description: invoice.getMemo,
                     ...(invoice.isPaid && {
@@ -2382,8 +2436,12 @@ export default class NostrWalletConnectStore {
                 };
             }
         }
+        // Charge the connection budget in whole sats but round UP from msats
+        // so a sub-sat payment (e.g. 1500 msat) cannot bypass the budget by
+        // appearing as 1 sat instead of 2. Math.ceil keeps budget accounting
+        // strictly >= the actual amount sent.
         const paymentChargeAmountSats =
-            amountMsats > 0 ? Math.max(amountSats, 1) : 0;
+            amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
         // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec.
         // fee_limit_msat takes precedence if both are provided.
         // Validate it before any balance/budget checks so invalid values fail fast.
@@ -2603,8 +2661,21 @@ export default class NostrWalletConnectStore {
         } else if (request.amount && Number.isInteger(Number(request.amount))) {
             amountMsats = Number(request.amount);
         }
+        // Cashu mints settle in whole sats. Reject any msat-precise amount
+        // (invoice or request override) so the wallet doesn't silently pay
+        // a different amount than the client requested.
+        if (amountMsats > 0 && amountMsats % 1000 !== 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                ),
+                ErrorCodes.INVALID_PARAMS
+            );
+        }
+        // Round up to whole sats so sub-sat msat amounts cannot bypass the
+        // budget; matches the lightning path's accounting.
         const amount =
-            amountMsats > 0 ? Math.max(millisatsToSats(amountMsats), 1) : 0;
+            amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
         if (!amountMsats || amount <= 0) {
             return this.handleError(
                 localeString(
@@ -3556,9 +3627,15 @@ export default class NostrWalletConnectStore {
                         const resubscribePromises =
                             connectionsToResubscribe.map(async (connection) => {
                                 try {
+                                    // Force a clean resubscribe after the
+                                    // relay reconnect — the default skip
+                                    // path would no-op because the stale
+                                    // unsubscribe handle is still in
+                                    // activeSubscriptions.
                                     const subscribed =
                                         await this.subscribeToConnection(
-                                            connection
+                                            connection,
+                                            { forceResubscribe: true }
                                         );
                                     if (!subscribed) {
                                         throw new Error(
@@ -3758,6 +3835,9 @@ export default class NostrWalletConnectStore {
                             eventId,
                             encryptionScheme
                         );
+                        // Persist before returning so the same restored event
+                        // doesn't re-publish RESTRICTED on every iOS restore.
+                        await this.markProcessedReplayEvent(eventId);
                         return null;
                     }
 
@@ -3794,6 +3874,12 @@ export default class NostrWalletConnectStore {
                             true,
                             encryptionScheme
                         );
+                        // Mark restored full-access methods (make_invoice,
+                        // sign_message, lookup_invoice, ...) as processed so
+                        // a re-delivered restore event doesn't re-execute
+                        // them (NIP-47 idempotency for non-pay_invoice
+                        // methods on iOS background restore).
+                        await this.markProcessedReplayEvent(eventId);
                         return null;
                     }
 
@@ -3803,6 +3889,10 @@ export default class NostrWalletConnectStore {
                         eventId,
                         encryptionScheme
                     );
+                    // Terminal NOT_IMPLEMENTED — persist so a restored
+                    // event of an unsupported method doesn't keep
+                    // re-publishing the error.
+                    await this.markProcessedReplayEvent(eventId);
                     return null;
                 } catch (error) {
                     if (error instanceof UnsupportedEncryptionError) {
@@ -3811,6 +3901,9 @@ export default class NostrWalletConnectStore {
                             error.eventId,
                             error.encryptionScheme
                         );
+                        // Terminal UNSUPPORTED_ENCRYPTION error: dedupe
+                        // restored deliveries.
+                        await this.markProcessedReplayEvent(error.eventId);
                         return null;
                     }
                     console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
@@ -4005,95 +4098,69 @@ export default class NostrWalletConnectStore {
                 totalAmount: remainingTotal
             });
 
-        const processingResults = await Promise.allSettled(
-            pendingEvents.map(async (event) => {
-                try {
-                    // Persisted replay guards stop a previously approved event from being re-run after a restart.
-                    if (await this.hasProcessedReplayEvent(event.eventId)) {
-                        return null;
-                    }
-                    // Ensure we have a proper NWCConnection instance
-                    // In case the connection was not restored properly
-                    const connection = this.getConnection(event.connection.id);
+        // Serialize per-connection processing so budget checks, payment
+        // dispatch, replay-marker persistence and trackSpending happen
+        // atomically for a given connection. Two approved pay_invoice
+        // requests for the same connection running in parallel could each
+        // pass the budget check before either has been recorded as spent,
+        // bypassing maxAmountSats. Different connections can still run in
+        // parallel.
+        const eventsByConnection = new Map<string, PendingPayment[]>();
+        for (const event of pendingEvents) {
+            const list = eventsByConnection.get(event.connection.id) || [];
+            list.push(event);
+            eventsByConnection.set(event.connection.id, list);
+        }
 
-                    if (!connection) {
-                        return;
-                    }
+        const processSingleEvent = async (event: PendingPayment) => {
+            try {
+                // Persisted replay guards stop a previously approved event
+                // from being re-run after a restart.
+                if (await this.hasProcessedReplayEvent(event.eventId)) {
+                    return null;
+                }
+                // Ensure we have a proper NWCConnection instance in case
+                // the connection was not restored properly.
+                const connection = this.getConnection(event.connection.id);
+                if (!connection) {
+                    return null;
+                }
 
-                    const result = await this.handleEventRequest(
-                        connection,
-                        event.request,
-                        event.eventId,
-                        true, // skip single payment Notification for pending events
-                        event.encryptionScheme || 'nip04'
-                    );
-                    runInAction(async () => {
-                        if (result.success) {
-                            await this.markProcessedReplayEvent(event.eventId);
-                            this.processedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            await this.updatePendingPayment({
-                                ...event,
-                                status: true,
-                                isProcessed: true
-                            });
-                        } else {
-                            this.failedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            if (result.errorMessage) {
-                                let formattedError = result.errorMessage;
-                                try {
-                                    const parsed = JSON.parse(
-                                        result.errorMessage
-                                    );
-                                    if (parsed.message) {
-                                        formattedError = parsed.message;
-                                    } else if (typeof parsed === 'string') {
-                                        formattedError = parsed;
-                                    }
-                                } catch {
-                                    formattedError = result.errorMessage;
-                                }
-                                await this.updatePendingPayment({
-                                    ...event,
-                                    status: false,
-                                    isProcessed: true,
-                                    errorMessage: formattedError
-                                });
-                                this.pendingPayInvoiceErrors.set(
-                                    event.eventId,
-                                    formattedError
-                                );
-                            }
-                        }
+                const result = await this.handleEventRequest(
+                    connection,
+                    event.request,
+                    event.eventId,
+                    true, // skip single payment notification for pending events
+                    event.encryptionScheme || 'nip04'
+                );
+                if (result.success) {
+                    // Persist BEFORE mutating MobX state so a concurrent
+                    // restore can't see "processed" via state but miss the
+                    // storage write.
+                    await this.markProcessedReplayEvent(event.eventId);
+                    await this.updatePendingPayment({
+                        ...event,
+                        status: true,
+                        isProcessed: true
                     });
-
-                    return { event, result };
-                } catch (error) {
-                    console.warn('NWC: Failed to process pending pay invoice', {
-                        error,
-                        eventId: event.eventId
-                    });
-                    runInAction(async () => {
-                        this.failedPendingPayInvoiceEventIds.push(
+                    runInAction(() => {
+                        this.processedPendingPayInvoiceEventIds.push(
                             event.eventId
                         );
-                        const message =
-                            error instanceof Error
-                                ? error.message
-                                : String(error);
-                        let formattedError = message;
+                    });
+                } else {
+                    let formattedError: string | undefined;
+                    if (result.errorMessage) {
+                        formattedError = result.errorMessage;
                         try {
-                            const parsed = JSON.parse(message);
+                            const parsed = JSON.parse(result.errorMessage);
                             if (parsed.message) {
                                 formattedError = parsed.message;
                             } else if (typeof parsed === 'string') {
                                 formattedError = parsed;
                             }
                         } catch {
-                            formattedError = message;
+                            // keep raw message
                         }
                         await this.updatePendingPayment({
                             ...event,
@@ -4101,15 +4168,87 @@ export default class NostrWalletConnectStore {
                             isProcessed: true,
                             errorMessage: formattedError
                         });
-                        this.pendingPayInvoiceErrors.set(
-                            event.eventId,
-                            formattedError
+                    }
+                    runInAction(() => {
+                        this.failedPendingPayInvoiceEventIds.push(
+                            event.eventId
                         );
+                        if (formattedError) {
+                            this.pendingPayInvoiceErrors.set(
+                                event.eventId,
+                                formattedError
+                            );
+                        }
                     });
-                    return { event, result: { success: false } };
                 }
+                return { event, result };
+            } catch (error) {
+                console.warn('NWC: Failed to process pending pay invoice', {
+                    error,
+                    eventId: event.eventId
+                });
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                let formattedError = message;
+                try {
+                    const parsed = JSON.parse(message);
+                    if (parsed.message) {
+                        formattedError = parsed.message;
+                    } else if (typeof parsed === 'string') {
+                        formattedError = parsed;
+                    }
+                } catch {
+                    formattedError = message;
+                }
+                await this.updatePendingPayment({
+                    ...event,
+                    status: false,
+                    isProcessed: true,
+                    errorMessage: formattedError
+                });
+                runInAction(() => {
+                    this.failedPendingPayInvoiceEventIds.push(event.eventId);
+                    this.pendingPayInvoiceErrors.set(
+                        event.eventId,
+                        formattedError
+                    );
+                });
+                return { event, result: { success: false } };
+            }
+        };
+
+        // Per-connection sequential, cross-connection parallel.
+        const groupResults = await Promise.allSettled(
+            Array.from(eventsByConnection.values()).map(async (group) => {
+                const out: Array<
+                    | { event: PendingPayment; result: any }
+                    | null
+                > = [];
+                for (const event of group) {
+                    out.push(await processSingleEvent(event));
+                }
+                return out;
             })
         );
+
+        const processingResults: PromiseSettledResult<
+            { event: PendingPayment; result: any } | null
+        >[] = [];
+        for (const group of groupResults) {
+            if (group.status === 'fulfilled') {
+                for (const item of group.value) {
+                    processingResults.push({
+                        status: 'fulfilled',
+                        value: item
+                    } as any);
+                }
+            } else {
+                processingResults.push({
+                    status: 'rejected',
+                    reason: group.reason
+                } as any);
+            }
+        }
         const successfulEventIds = new Set<string>();
         const successfulPayments: Array<{
             amount: number;
@@ -4330,7 +4469,12 @@ export default class NostrWalletConnectStore {
     private async publishUnsupportedEncryptionResponse(
         connection: NWCConnection,
         eventId: string,
-        requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
+        // Accepted for legacy callers but intentionally ignored: the inbound
+        // scheme is by definition unsupported, so the response MUST fall
+        // back to NIP-04 (which every NIP-47 client supports). Sending the
+        // error encrypted with the same unsupported scheme would be
+        // unparseable by the client.
+        _requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<void> {
         try {
             await this.publishEventToClient(
@@ -4341,7 +4485,7 @@ export default class NostrWalletConnectStore {
                     ErrorCodes.UNSUPPORTED_ENCRYPTION
                 ),
                 eventId,
-                requestEncryptionScheme
+                'nip04'
             );
         } catch (error) {
             console.warn(
@@ -4673,8 +4817,13 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Generates a 32-byte hex fallback payment hash when the backend does not
-     * provide one.
+     * Generates a 32-byte hex fallback identifier for LOCAL activity rows
+     * when the underlying handle (e.g. a Cashu mint quote id) is not a
+     * proper bolt11 payment_hash. NEVER use this for values returned to
+     * the NWC client (`payment_hash` in result payloads, lookups,
+     * notifications) — fabricated hashes prevent the client from
+     * correlating subsequent events. Callers in NWC response paths must
+     * surface INTERNAL_ERROR instead.
      */
     private generatePaymentHashFallback(paymentId?: string): string {
         const fallbackSource = paymentId || `${Date.now()}:${Math.random()}`;

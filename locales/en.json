@@ -2051,6 +2051,7 @@
   "views.Settings.NostrWalletConnect.chooseRelay": "Choose the Nostr relay for this connection",
   "views.Settings.NostrWalletConnect.includeLightningAddress": "Include Lightning Address",
   "views.Settings.NostrWalletConnect.includeLightningAddressDescription": "Append {{lightningAddress}} as lud16 in the generated connection URL.",
+  "views.Settings.NostrWalletConnect.includeLightningAddressMissing": "No active Lightning Address. Disable to remove lud16 from the connection URL or set up a Lightning Address to keep it included.",
   "views.LspExplanation.text1": "Zeus is a self-custodial lightning wallet. In order to send or receive a lightning payment, you must open a lightning payment channel, which has a setup fee.",
   "views.LspExplanation.text2": "Once the channel is set up, you'll only have to pay normal network fees until your channel exhausts its capacity.",
   "views.LspExplanation.buttonText": "Learn more about liquidity",

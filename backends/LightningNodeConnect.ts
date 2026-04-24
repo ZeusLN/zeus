@@ -346,13 +346,16 @@ export default class LightningNodeConnect {
             allow_self_payment: true
         };
 
-        // LNC mirrors LND router field names and expects the numeric inputs as strings.
+        // LNC mirrors LND router field names and expects the numeric inputs
+        // as strings (LND uint64 fields). Stringify symmetrically so values
+        // can never reach the wire as raw numbers (which lose precision past
+        // 2^53 and may be rejected by stricter protobuf wrappers).
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
             request.amt_msat = String(data.amount_msat);
             delete request.amt;
             delete request.amount;
         } else if (data.amt !== undefined && data.amt !== null) {
-            request.amt = data.amt;
+            request.amt = String(data.amt);
             delete request.amount;
         }
         delete request.amount_msat;

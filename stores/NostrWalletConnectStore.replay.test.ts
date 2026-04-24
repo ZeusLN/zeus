@@ -256,6 +256,8 @@ describe('NostrWalletConnectStore replay guards', () => {
             hasPermission: jest.fn(() => false)
         };
 
+        // Default call: an existing subscription is registered, so the
+        // store treats this as idempotent and skips re-subscribing.
         const alreadySubscribed = await callStoreMethod<boolean>(
             'subscribeToConnection',
             context,
@@ -265,13 +267,51 @@ describe('NostrWalletConnectStore replay guards', () => {
         expect(subscribe).not.toHaveBeenCalled();
         expect(context.unsubscribeFromConnection).not.toHaveBeenCalled();
 
+        // forceResubscribe (used by the Android reconnect path) tears
+        // down the prior handle and creates a fresh subscription.
         const resubscribed = await callStoreMethod<boolean>(
             'subscribeToConnection',
             context,
             connection,
-            { unsubscribeExisting: false }
+            { forceResubscribe: true }
         );
         expect(resubscribed).toBe(true);
+        expect(context.unsubscribeFromConnection).toHaveBeenCalledTimes(1);
+        expect(subscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('replaceExisting overwrites the active subscription without tearing it down', async () => {
+        const subscribe = jest.fn().mockResolvedValue(jest.fn());
+        const context = createStore();
+        context.isServiceReady = jest.fn(() => true);
+        context.walletServiceKeys = { privateKey: 'service-secret' };
+        const previousHandle = jest.fn();
+        context.activeSubscriptions = new Map([['conn-1', previousHandle]]);
+        context.nwcWalletServices = new Map([
+            ['wss://relay.example', { subscribe }]
+        ]);
+        context.retryWithBackoff = jest.fn(async (fn: () => Promise<any>) => fn());
+        context.unsubscribeFromConnection = jest.fn().mockResolvedValue(undefined);
+        const connection: any = {
+            id: 'conn-1',
+            name: 'wallet',
+            relayUrl: 'wss://relay.example',
+            pubkey: 'client-pubkey',
+            hasPermission: jest.fn(() => false)
+        };
+
+        const result = await callStoreMethod<boolean>(
+            'subscribeToConnection',
+            context,
+            connection,
+            { replaceExisting: true }
+        );
+
+        expect(result).toBe(true);
+        // updateConnection passes replaceExisting: true; the caller is
+        // responsible for disposing the old handle later, so the store
+        // must NOT call unsubscribeFromConnection itself.
+        expect(context.unsubscribeFromConnection).not.toHaveBeenCalled();
         expect(subscribe).toHaveBeenCalledTimes(1);
     });
 });

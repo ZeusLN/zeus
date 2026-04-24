@@ -315,14 +315,19 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 },
                 error: undefined
             });
+            // Budget must be charged ceil(msat/1000) so that fractional
+            // sub-sat amounts can never bypass maxAmountSats. 1500 msat
+            // → 2 sat budget charge.
             expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
                 {},
-                1,
+                2,
                 'INSUFFICIENT_BALANCE'
             );
             expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    amount: '1',
+                    // sat-denominated amount mirrors paymentChargeAmountSats
+                    // (ceil of msat/1000); amount_msat preserves exact value.
+                    amount: '2',
                     amount_msat: '1500',
                     fee_limit_sat: '2',
                     fee_limit_msat: '2000'

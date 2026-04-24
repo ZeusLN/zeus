@@ -282,19 +282,34 @@ export default class CLNRest {
                 invoices: invoiceList
             };
         });
-    createInvoice = (data: any) =>
-        this.postRequest('/v1/invoice', {
+    createInvoice = (data: any) => {
+        // Prefer exact value_msat from NWC when it resolves to a positive
+        // integer; otherwise fall back to the sat-denominated value, and use
+        // 'any' for amountless invoices. CLN rejects amount_msat: 0, so we
+        // must NOT forward a 0 value_msat literal.
+        let amountMsat: number | string;
+        const valueMsatNum = Number(data.value_msat);
+        if (
+            data.value_msat !== undefined &&
+            data.value_msat !== null &&
+            Number.isFinite(valueMsatNum) &&
+            valueMsatNum > 0
+        ) {
+            amountMsat = Math.floor(valueMsatNum);
+        } else if (data.value != 0) {
+            amountMsat = Number(data.value) * 1000;
+        } else {
+            amountMsat = 'any';
+        }
+
+        return this.postRequest('/v1/invoice', {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
-            amount_msat:
-                data.value_msat !== undefined && data.value_msat !== null
-                    ? Number(data.value_msat)
-                    : data.value != 0
-                    ? Number(data.value) * 1000
-                    : 'any',
+            amount_msat: amountMsat,
             expiry: Number(data.expiry_seconds),
             exposeprivatechannels: true
         });
+    };
 
     getPayments = () =>
         this.postRequest('/v1/sql', {
@@ -402,27 +417,26 @@ export default class CLNRest {
         }
 
         // Only set amount_msat if it resolves to a positive, finite integer.
-        // - "Any amount" invoices work when amt is 0/undefined/NaN (amount_msat omitted).
-        // - Fixed amount invoices get the exact millisatoshi amount.
-        // - Multiply by 1000 BEFORE flooring so any sub-satoshi precision in
-        //   data.amt (e.g. 1.5 sats → 1500 msat) is preserved rather than
-        //   truncated to whole sats. Math.floor (not ceil) respects hard limits by
-        //   truncating sub-msat precision: ensures amount stays ≤ requested value.
-        //   CLN's `msat` schema type requires an integer value.
-        // - Pre-validate that data.amt is finite BEFORE multiplication so a
-        //   bogus upstream value (NaN / Infinity / non-numeric string) is
-        //   detected and the field is omitted entirely (CLN treats absent
-        //   amount_msat as "use the invoice amount").
-        const amtNumeric = Number(
-            data.amount_msat !== undefined && data.amount_msat !== null
-                ? Number(data.amount_msat) / 1000
-                : data.amt
-        );
-        if (Number.isFinite(amtNumeric)) {
-            const amountMsat = Math.floor(amtNumeric * 1000);
-            if (Number.isFinite(amountMsat) && amountMsat > 0) {
-                request.amount_msat = amountMsat;
-            }
+        // - When amount_msat is provided, pass it through directly without
+        //   the /1000*1000 round-trip (IEEE-754 float arithmetic loses the
+        //   low msat bit for odd values >= 1001 and breaks NIP-47 msat
+        //   precision).
+        // - Otherwise convert sat → msat, multiplying BEFORE flooring so
+        //   sub-satoshi precision (e.g. 1.5 sats → 1500 msat) is preserved.
+        // - Floor (not ceil) ensures amount stays ≤ requested value; CLN's
+        //   `msat` schema type requires an integer value.
+        // - "Any amount" invoices work when amount/amt is 0/undefined/NaN
+        //   (amount_msat omitted).
+        let amountMsat: number | undefined;
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
+            const direct = Number(data.amount_msat);
+            if (Number.isFinite(direct)) amountMsat = Math.floor(direct);
+        } else if (data.amt !== undefined && data.amt !== null) {
+            const sats = Number(data.amt);
+            if (Number.isFinite(sats)) amountMsat = Math.floor(sats * 1000);
+        }
+        if (amountMsat !== undefined && amountMsat > 0) {
+            request.amount_msat = amountMsat;
         }
 
         return this.postRequest(

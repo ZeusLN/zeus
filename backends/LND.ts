@@ -506,16 +506,22 @@ export default class LND {
                         allow_self_payment: true
                     };
 
-                    // LND router RPC uses amt_msat/fee_limit_msat even when older callers still send sat aliases.
+                    // LND router RPC uses amt_msat/fee_limit_msat even when
+                    // older callers still send sat aliases. Validate inputs
+                    // are finite positive numbers before forwarding so a
+                    // bogus upstream value (NaN / Infinity / "") doesn't
+                    // reach LND.
                     if (
                         data.amount_msat !== undefined &&
                         data.amount_msat !== null
                     ) {
-                        request.amt_msat = Number(data.amount_msat);
+                        const v = Number(data.amount_msat);
+                        if (Number.isFinite(v) && v > 0) request.amt_msat = v;
                         delete request.amt;
                         delete request.amount;
                     } else if (data.amt !== undefined && data.amt !== null) {
-                        request.amt = Number(data.amt);
+                        const v = Number(data.amt);
+                        if (Number.isFinite(v) && v > 0) request.amt = v;
                         delete request.amount;
                     }
                     delete request.amount_msat;

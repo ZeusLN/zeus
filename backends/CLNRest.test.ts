@@ -66,3 +66,59 @@ describe('CLNRest fee limits', () => {
         expect(request.maxfeepercent).toBeUndefined();
     });
 });
+
+describe('CLNRest msat handling', () => {
+    it('forwards explicit amount_msat without lossy round-tripping', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1zeroamt',
+            amount_msat: 1234567
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any, number];
+        // Must keep exact msat precision – never divide by 1000 then multiply.
+        expect(body.amount_msat).toBe(1234567);
+    });
+});
+
+describe('CLNRest createInvoice', () => {
+    it("uses 'any' when value_msat is zero so CLN doesn't reject the request", async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.createInvoice({
+            value: '0',
+            value_msat: '0',
+            memo: 'zero',
+            expiry_seconds: '600',
+            private: false
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any];
+        expect(body.amount_msat).toBe('any');
+    });
+
+    it('forwards a positive value_msat verbatim', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.createInvoice({
+            value: '21',
+            value_msat: '21000',
+            memo: 'msat',
+            expiry_seconds: '600',
+            private: false
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any];
+        expect(body.amount_msat).toBe(21000);
+    });
+});

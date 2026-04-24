@@ -1197,7 +1197,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                             )}
                         </View>
 
-                        {hasActiveLightningAddress && (
+                        {(hasActiveLightningAddress ||
+                            includeLightningAddress) && (
                             <View style={styles.section}>
                                 <View
                                     style={{
@@ -1236,13 +1237,17 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                     'PPNeueMontreal-Book'
                                             }}
                                         >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.includeLightningAddressDescription',
-                                                {
-                                                    lightningAddress:
-                                                        activeLightningAddress
-                                                }
-                                            )}
+                                            {hasActiveLightningAddress
+                                                ? localeString(
+                                                      'views.Settings.NostrWalletConnect.includeLightningAddressDescription',
+                                                      {
+                                                          lightningAddress:
+                                                              activeLightningAddress
+                                                      }
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.NostrWalletConnect.includeLightningAddressMissing'
+                                                  )}
                                         </Text>
                                     </View>
                                     <View
@@ -1252,6 +1257,10 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     >
                                         <Switch
                                             value={includeLightningAddress}
+                                            disabled={
+                                                !hasActiveLightningAddress &&
+                                                !includeLightningAddress
+                                            }
                                             onValueChange={(value: boolean) =>
                                                 this.updateStateWithChangeTracking(
                                                     {
