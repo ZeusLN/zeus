@@ -4791,6 +4791,13 @@ export default class NostrWalletConnectStore {
                     errorMessage?: string;
                     committed: boolean;
                 } | null = null;
+
+                // Replay detection uses check-then-act pattern that is safe because:
+                // 1. hasProcessedReplayEvent is read-only (no state mutation)
+                // 2. replayCachedResponse is idempotent (returns null if cache misses)
+                // 3. markProcessedReplayEvent uses mutex for atomic read-modify-write
+                // This prevents double-execution even with concurrent connections processing
+                // the same eventId, as the first to successfully mark it gains exclusivity.
                 if (await this.hasProcessedReplayEvent(event.eventId)) {
                     result = await this.replayCachedResponse(
                         connection,
