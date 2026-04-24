@@ -18,6 +18,7 @@ import SettingsStore, {
     getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -276,39 +277,41 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     autoCorrect={false}
                                 />
                             </View>
-                            <ListItem containerStyle={styles.listItem}>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LSP.requestSimpleTaproot'
-                                    )}
-                                </ListItem.Title>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
-                                    }}
-                                >
-                                    <Switch
-                                        value={requestSimpleTaproot}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                requestSimpleTaproot:
-                                                    !requestSimpleTaproot
-                                            });
-                                            await updateSettings({
-                                                requestSimpleTaproot:
-                                                    !requestSimpleTaproot
-                                            });
+                            {BackendUtils.supportsSimpleTaprootChannels() && (
+                                <ListItem containerStyle={styles.listItem}>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
                                         }}
-                                    />
-                                </View>
-                            </ListItem>
+                                    >
+                                        {localeString(
+                                            'views.Settings.LSP.requestSimpleTaproot'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={requestSimpleTaproot}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    requestSimpleTaproot:
+                                                        !requestSimpleTaproot
+                                                });
+                                                await updateSettings({
+                                                    requestSimpleTaproot:
+                                                        !requestSimpleTaproot
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
+                            )}
 
                             {showReset && (
                                 <View style={{ marginTop: 20 }}>
