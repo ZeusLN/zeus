@@ -286,7 +286,12 @@ export default class CLNRest {
         this.postRequest('/v1/invoice', {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
-            amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
+            amount_msat:
+                data.value_msat !== undefined && data.value_msat !== null
+                    ? Number(data.value_msat)
+                    : data.value != 0
+                    ? Number(data.value) * 1000
+                    : 'any',
             expiry: Number(data.expiry_seconds),
             exposeprivatechannels: true
         });
@@ -381,7 +386,15 @@ export default class CLNRest {
         // valid CLN field and is rejected by the schema's
         // `additionalProperties: false`. Convert sat -> msat here, using
         // Math.floor to ensure the result is an integer (CLN schema requires it).
-        if (data.fee_limit_sat !== undefined && data.fee_limit_sat !== null) {
+        if (
+            data.fee_limit_msat !== undefined &&
+            data.fee_limit_msat !== null
+        ) {
+            request.maxfee = Number(data.fee_limit_msat);
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
             request.maxfee = Math.floor(Number(data.fee_limit_sat) * 1000);
         } else if (data.max_fee_percent) {
             // Fallback to percentage-based fee limit if absolute limit not provided
@@ -400,7 +413,11 @@ export default class CLNRest {
         //   bogus upstream value (NaN / Infinity / non-numeric string) is
         //   detected and the field is omitted entirely (CLN treats absent
         //   amount_msat as "use the invoice amount").
-        const amtNumeric = Number(data.amt);
+        const amtNumeric = Number(
+            data.amount_msat !== undefined && data.amount_msat !== null
+                ? Number(data.amount_msat) / 1000
+                : data.amt
+        );
         if (Number.isFinite(amtNumeric)) {
             const amountMsat = Math.floor(amtNumeric * 1000);
             if (Number.isFinite(amountMsat) && amountMsat > 0) {

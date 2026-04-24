@@ -1262,7 +1262,9 @@ export default class LdkNode {
      */
     payLightningInvoice = async (data: any): Promise<any> => {
         const maxTotalRoutingFeeMsat =
-            data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+            data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                ? Number(data.fee_limit_msat)
+                : data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
                 ? Number(data.fee_limit_sat) * 1000
                 : undefined;
         const maxPathCount = data.max_parts
@@ -1271,7 +1273,14 @@ export default class LdkNode {
 
         let paymentId: string;
 
-        if (data.amt) {
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
+            paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
+                invoice: data.payment_request,
+                amountMsat: Number(data.amount_msat),
+                maxTotalRoutingFeeMsat,
+                maxPathCount
+            });
+        } else if (data.amt) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,

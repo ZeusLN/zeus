@@ -1885,7 +1885,9 @@ export default class NostrWalletConnectStore {
                                 status: 'pending',
                                 invoice: new CashuInvoice(invoice),
                                 type: 'make_invoice',
-                                payment_source: 'cashu'
+                                payment_source: 'cashu',
+                                satAmount: millisatsToSats(request.amount),
+                                msatAmount: request.amount
                             });
                             this.findAndUpdateConnection(connection);
                         });
@@ -1926,6 +1928,7 @@ export default class NostrWalletConnectStore {
             const invoiceResult = await this.invoicesStore.createUnifiedInvoice(
                 {
                     value: millisatsToSats(request.amount).toString(),
+                    value_msat: request.amount.toString(),
                     memo: request.description || '',
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
@@ -2006,6 +2009,7 @@ export default class NostrWalletConnectStore {
                             paymentHash ||
                             this.generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
+                        msatAmount: request.amount,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);
@@ -2017,6 +2021,7 @@ export default class NostrWalletConnectStore {
                         paymentHash ||
                         this.generatePaymentHashFallback(paymentRequest),
                     value: millisatsToSats(request.amount).toString(),
+                    value_msat: request.amount.toString(),
                     memo: request.description || '',
                     expiry: expiryTime.toString(),
                     creation_date: Math.floor(Date.now() / 1000).toString(),
@@ -2033,6 +2038,7 @@ export default class NostrWalletConnectStore {
                             paymentHash ||
                             this.generatePaymentHashFallback(paymentRequest),
                         satAmount: millisatsToSats(request.amount),
+                        msatAmount: request.amount,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);

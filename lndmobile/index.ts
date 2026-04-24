@@ -300,7 +300,9 @@ export const sendPaymentV2Sync = async (
     const {
         payment_request,
         amt,
+        amt_msat,
         fee_limit_sat,
+        fee_limit_msat,
         last_hop_pubkey,
         route_hints,
         dest_custom_records,
@@ -319,7 +321,9 @@ export const sendPaymentV2Sync = async (
         no_inflight_updates: true,
         timeout_seconds,
         max_parts,
-        fee_limit_sat,
+        ...(fee_limit_msat !== undefined && fee_limit_msat !== null
+            ? { fee_limit_msat }
+            : { fee_limit_sat }),
         route_hints,
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,
@@ -327,7 +331,9 @@ export const sendPaymentV2Sync = async (
         outgoing_chan_ids,
         max_shard_size_msat,
         dest_custom_records,
-        amt,
+        ...(amt_msat !== undefined && amt_msat !== null
+            ? { amt_msat }
+            : { amt }),
         payment_hash,
         amp,
         dest

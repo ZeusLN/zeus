@@ -598,6 +598,10 @@ export default class NostrConnectUtils {
     private static extractAmountFromActivity(
         activity: ConnectionActivity
     ): number {
+        if (activity.msatAmount !== undefined) {
+            return Number(activity.msatAmount);
+        }
+
         if (activity.satAmount !== undefined) {
             return satsToMillisats(activity.satAmount);
         }

@@ -341,11 +341,34 @@ export default class LightningNodeConnect {
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
             .then((data: lnrpc.PayReq) => snakeize(data));
     payLightningInvoice = (data: any) => {
-        if (data.pubkey) delete data.pubkey;
-        return this.lnc.lnd.router.sendPaymentV2({
+        const request: any = {
             ...data,
             allow_self_payment: true
-        });
+        };
+
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
+            request.amt_msat = String(data.amount_msat);
+            delete request.amt;
+            delete request.amount;
+        } else if (data.amt !== undefined && data.amt !== null) {
+            request.amt = data.amt;
+            delete request.amount;
+        }
+        delete request.amount_msat;
+        delete request.amount;
+
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
+            request.fee_limit_msat = String(data.fee_limit_msat);
+            delete request.fee_limit_sat;
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
+            request.fee_limit_sat = String(data.fee_limit_sat);
+        }
+
+        if (data.pubkey) delete request.pubkey;
+        return this.lnc.lnd.router.sendPaymentV2(request);
     };
     closeChannel = async (urlParams?: Array<string>) => {
         let params: any = {

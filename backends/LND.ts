@@ -500,10 +500,45 @@ export default class LND {
         const call = () =>
             this.postRequest(
                 '/v2/router/send',
-                {
-                    ...data,
-                    allow_self_payment: true
-                },
+                (() => {
+                    const request: any = {
+                        ...data,
+                        allow_self_payment: true
+                    };
+
+                    if (
+                        data.amount_msat !== undefined &&
+                        data.amount_msat !== null
+                    ) {
+                        request.amt_msat = Number(data.amount_msat);
+                        delete request.amt;
+                        delete request.amount;
+                    } else if (data.amt !== undefined && data.amt !== null) {
+                        request.amt = Number(data.amt);
+                        delete request.amount;
+                    }
+                    delete request.amount_msat;
+                    delete request.amount;
+
+                    if (
+                        data.fee_limit_msat !== undefined &&
+                        data.fee_limit_msat !== null
+                    ) {
+                        request.fee_limit_msat = Number(data.fee_limit_msat);
+                        delete request.fee_limit_sat;
+                    } else if (
+                        data.fee_limit_sat !== undefined &&
+                        data.fee_limit_sat !== null
+                    ) {
+                        request.fee_limit_sat = Number(data.fee_limit_sat);
+                    }
+                    if (request.max_shard_amt !== undefined) {
+                        request.max_shard_size_msat =
+                            Number(request.max_shard_amt) * 1000;
+                        delete request.max_shard_amt;
+                    }
+                    return request;
+                })(),
                 data.timeout_seconds * 1000
             );
 

@@ -33,7 +33,10 @@ export default class NostrWalletConnect {
     createInvoice = async (data: any) => {
         const result = await this.nwc.makeInvoice({
             defaultMemo: data.memo,
-            amount: Number(data.value)
+            amount:
+                data.value_msat !== undefined && data.value_msat !== null
+                    ? Number(data.value_msat)
+                    : Number(data.value) * 1000
         });
 
         // NWC only returns { paymentRequest }. createUnifiedInvoice

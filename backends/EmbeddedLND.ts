@@ -224,9 +224,25 @@ export default class EmbeddedLND extends LND {
             payment_request: data.payment_request,
             payment_hash: data.payment_hash,
             amt: data?.amt,
+            amt_msat:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? data.amount_msat
+                    : undefined,
             max_parts: data?.max_parts,
-            max_shard_amt: data?.max_shard_amt,
+            max_shard_size_msat:
+                data.max_shard_size_msat !== undefined &&
+                data.max_shard_size_msat !== null
+                    ? data.max_shard_size_msat
+                    : data?.max_shard_amt !== undefined &&
+                      data?.max_shard_amt !== null
+                    ? Number(data.max_shard_amt) * 1000
+                    : undefined,
             fee_limit_sat: data?.fee_limit_sat || 0,
+            fee_limit_msat:
+                data.fee_limit_msat !== undefined &&
+                data.fee_limit_msat !== null
+                    ? data.fee_limit_msat
+                    : undefined,
             outgoing_chan_ids: data?.outgoing_chan_ids,
             last_hop_pubkey: data?.last_hop_pubkey,
             message: data?.message
@@ -236,7 +252,6 @@ export default class EmbeddedLND extends LND {
             timeout_seconds: data?.timeout_seconds || 60,
             allow_self_payment: true,
             multi_path: data?.multi_path,
-            max_shard_size_msat: data?.max_shard_size_msat,
             dest: data.dest
         };
 
