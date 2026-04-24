@@ -2705,6 +2705,7 @@ export default class CashuStore {
                 await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
 
                 // Clean up legacy per-wallet storage keys (now handled by CDK)
+                let proofsMigrated = false;
                 for (const mintUrl of this.mintUrls) {
                     const walletId = `${lndDir}==${mintUrl}`;
 
@@ -2723,6 +2724,7 @@ export default class CashuStore {
                                     'cashuA' +
                                     Buffer.from(tokenJson).toString('base64');
                                 await CashuDevKit.receive(encoded);
+                                proofsMigrated = true;
                                 if (__DEV__) {
                                     console.log(
                                         `CDK: Migrated ${proofs.length} stored proofs for ${mintUrl}`
@@ -2749,16 +2751,17 @@ export default class CashuStore {
                     // Keep -pubkey for display purposes
                 }
 
-                // Sync balances and fetch mint info from CDK
-                // (must be after stored proofs migration so all
-                // imported proofs are reflected in the balance)
-                await this.syncCDKBalances(true); // Include transactions on init
-                await Promise.all(
-                    this.mintUrls.map((mintUrl) => this.fetchMintInfo(mintUrl))
-                );
-
-                // Enrich tokens with proofs if missing (migration for old tokens)
-                await this.enrichTokensWithProofs();
+                // Only re-sync balances and mint info if proofs were actually
+                // migrated from local storage into CDK during cleanup above
+                if (proofsMigrated) {
+                    await this.syncCDKBalances(true);
+                    await Promise.all(
+                        this.mintUrls.map((mintUrl) =>
+                            this.fetchMintInfo(mintUrl)
+                        )
+                    );
+                    await this.enrichTokensWithProofs();
+                }
 
                 // Clean up legacy seed bytes if we have a valid seed phrase
                 // (seed bytes were used by old cashu-ts, CDK uses mnemonic directly)
