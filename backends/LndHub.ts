@@ -1,4 +1,5 @@
 import bolt11 from 'bolt11';
+import { signSync } from '@noble/secp256k1';
 
 import { settingsStore } from '../stores/Stores';
 
@@ -6,8 +7,7 @@ import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
-const EC = require('elliptic').ec;
-const ec = new EC('secp256k1');
+import '../zeus_modules/noble_ecc'; // ensures hmacSha256Sync is configured for signSync
 
 export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {
@@ -83,7 +83,7 @@ export default class LndHub extends LND {
             .update(Base64Utils.stringToUint8Array(message))
             .digest();
 
-        let signed, signature, key, linkingKeyPair;
+        let signed, signature, key;
         switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
                 key = new sha256Hash()
@@ -93,10 +93,9 @@ export default class LndHub extends LND {
                         )
                     )
                     .digest();
-                linkingKeyPair = ec.keyFromPrivate(key, true);
-                signed = linkingKeyPair
-                    .sign(messageHash, { canonical: true })
-                    .toDER('hex');
+                signed = Buffer.from(signSync(messageHash, key)).toString(
+                    'hex'
+                );
                 signature = new sha256Hash()
                     .update(Base64Utils.stringToUint8Array(signed))
                     .digest();
