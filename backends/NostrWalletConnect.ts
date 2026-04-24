@@ -33,6 +33,7 @@ export default class NostrWalletConnect {
     createInvoice = async (data: any) => {
         const result = await this.nwc.makeInvoice({
             defaultMemo: data.memo,
+            // The SDK expects invoice amounts in millisats, so convert sat-based callers at the edge.
             amount:
                 data.value_msat !== undefined && data.value_msat !== null
                     ? Number(data.value_msat)

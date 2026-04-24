@@ -1273,6 +1273,7 @@ export default class LdkNode {
 
         let paymentId: string;
 
+        // LDK's explicit-amount send path is msat-based, so preserve exact NWC amounts when we have them.
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,

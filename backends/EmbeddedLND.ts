@@ -220,6 +220,7 @@ export default class EmbeddedLND extends LND {
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {
+        // lndmobile follows router.send semantics, so normalize Zeus' sat/msat aliases before crossing the bridge.
         const sendPaymentReq = {
             payment_request: data.payment_request,
             payment_hash: data.payment_hash,

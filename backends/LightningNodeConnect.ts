@@ -346,6 +346,7 @@ export default class LightningNodeConnect {
             allow_self_payment: true
         };
 
+        // LNC mirrors LND router field names and expects the numeric inputs as strings.
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
             request.amt_msat = String(data.amount_msat);
             delete request.amt;

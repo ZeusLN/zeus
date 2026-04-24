@@ -1120,17 +1120,20 @@ export default class NostrWalletConnectStore {
             const existsPendingPayment = await Storage.getItem(
                 NWC_PENDING_PAYMENTS
             );
-            if (existsPendingPayment) {
-                const prev: PendingPayment[] = JSON.parse(existsPendingPayment);
-                await Storage.setItem(
-                    NWC_PENDING_PAYMENTS,
-                    JSON.stringify([...prev, ...pendingPayments])
-                );
-                return;
-            }
+            const prev: PendingPayment[] = existsPendingPayment
+                ? JSON.parse(existsPendingPayment)
+                : [];
+            const dedupedPayments = Array.from(
+                new Map(
+                    [...prev, ...pendingPayments].map((payment) => [
+                        payment.eventId,
+                        payment
+                    ])
+                ).values()
+            );
             await Storage.setItem(
                 NWC_PENDING_PAYMENTS,
-                JSON.stringify(pendingPayments)
+                JSON.stringify(dedupedPayments)
             );
         } catch (error) {
             console.error('failed to save pending payment');
@@ -1161,6 +1164,7 @@ export default class NostrWalletConnectStore {
     private saveProcessedReplayEvents = async (
         eventIds: Set<string>
     ): Promise<void> => {
+        // Keep a bounded replay window across restarts without growing storage forever.
         const orderedIds = Array.from(eventIds).slice(-1000);
         await Storage.setItem(
             NWC_PROCESSED_REPLAY_EVENTS,
@@ -1243,9 +1247,23 @@ export default class NostrWalletConnectStore {
             }
             const parsed = JSON.parse(pendingPayments);
             const payments = Array.isArray(parsed) ? parsed : [];
+            const dedupedPayments = Array.from(
+                new Map(
+                    payments.map((payment: PendingPayment) => [
+                        payment.eventId,
+                        payment
+                    ])
+                ).values()
+            );
             const restoredPayments = (
                 await Promise.all(
-                    payments.map(async (payment: PendingPayment) => {
+                    dedupedPayments.map(async (payment: PendingPayment) => {
+                        if (await this.hasProcessedReplayEvent(payment.eventId)) {
+                            await this.deletePendingPaymentById(
+                                payment.eventId
+                            );
+                            return null;
+                        }
                         const connection = this.getConnection(
                             payment.connection.id
                         );
@@ -1254,7 +1272,7 @@ export default class NostrWalletConnectStore {
                             await this.deletePendingPaymentById(
                                 payment.eventId
                             );
-                            return [];
+                            return null;
                         }
                         if (payment.isProcessed && !payment.status) {
                             if (
@@ -1481,6 +1499,12 @@ export default class NostrWalletConnectStore {
             return false;
         }
         try {
+            if (
+                options?.unsubscribeExisting !== false &&
+                this.activeSubscriptions.has(connection.id)
+            ) {
+                return true;
+            }
             if (options?.unsubscribeExisting !== false) {
                 await this.unsubscribeFromConnection(connection.id);
             }
@@ -2439,6 +2463,7 @@ export default class NostrWalletConnectStore {
             fee_limit_msat: feeLimitMsat.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         };
+        // Send both units so msat-aware backends keep the exact NWC amount while sat-only paths still work.
         if (amountMsats > 0) {
             paymentData.amount = paymentChargeAmountSats.toString();
             paymentData.amount_msat = amountMsats.toString();
@@ -3759,6 +3784,9 @@ export default class NostrWalletConnectStore {
                             request.method
                         )
                     ) {
+                        if (await this.hasProcessedReplayEvent(eventId)) {
+                            return null;
+                        }
                         await this.handleEventRequest(
                             connection,
                             request,
@@ -3980,6 +4008,7 @@ export default class NostrWalletConnectStore {
         const processingResults = await Promise.allSettled(
             pendingEvents.map(async (event) => {
                 try {
+                    // Persisted replay guards stop a previously approved event from being re-run after a restart.
                     if (await this.hasProcessedReplayEvent(event.eventId)) {
                         return null;
                     }

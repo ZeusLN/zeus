@@ -506,6 +506,7 @@ export default class LND {
                         allow_self_payment: true
                     };
 
+                    // LND router RPC uses amt_msat/fee_limit_msat even when older callers still send sat aliases.
                     if (
                         data.amount_msat !== undefined &&
                         data.amount_msat !== null
@@ -533,6 +534,7 @@ export default class LND {
                         request.fee_limit_sat = Number(data.fee_limit_sat);
                     }
                     if (request.max_shard_amt !== undefined) {
+                        // Zeus tracks shard caps in sats, but router.send expects millisats.
                         request.max_shard_size_msat =
                             Number(request.max_shard_amt) * 1000;
                         delete request.max_shard_amt;

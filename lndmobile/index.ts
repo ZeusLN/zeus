@@ -321,6 +321,7 @@ export const sendPaymentV2Sync = async (
         no_inflight_updates: true,
         timeout_seconds,
         max_parts,
+        // Router requests treat sat/msat variants as alternatives, so only forward one of each pair.
         ...(fee_limit_msat !== undefined && fee_limit_msat !== null
             ? { fee_limit_msat }
             : { fee_limit_sat }),
@@ -331,6 +332,7 @@ export const sendPaymentV2Sync = async (
         outgoing_chan_ids,
         max_shard_size_msat,
         dest_custom_records,
+        // Preserve sub-sat precision when present; older callers still fall back to whole sats.
         ...(amt_msat !== undefined && amt_msat !== null
             ? { amt_msat }
             : { amt }),

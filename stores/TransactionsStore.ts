@@ -589,6 +589,7 @@ export default class TransactionsStore {
         if (payment_request) {
             data.payment_request = payment_request;
         }
+        // Prefer the exact msat amount here; backend adapters translate it to their RPC-specific field names.
         if (amount_msat !== undefined && amount_msat !== null) {
             data.amount_msat = Number(amount_msat);
         } else if (amount) {
