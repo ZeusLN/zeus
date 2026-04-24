@@ -113,7 +113,9 @@ describe('NWCConnectionDetails regenerateConnection', () => {
         );
         expect(store.deleteConnection).not.toHaveBeenCalled();
         expect(navigation.navigate).not.toHaveBeenCalled();
-        expect((component as any).state.error).toBe('INVALID_LIGHTNING_ADDRESS');
+        expect((component as any).state.error).toBe(
+            'INVALID_LIGHTNING_ADDRESS'
+        );
         expect(errorSpy).toHaveBeenCalled();
     });
 });

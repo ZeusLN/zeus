@@ -12,9 +12,7 @@ export class InvalidLightningAddressError extends Error {
     }
 }
 
-export const isValidLightningAddress = (
-    address?: string | null
-): boolean => {
+export const isValidLightningAddress = (address?: string | null): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
     // LUD-16 format: localpart@domain (DNS-compliant)
@@ -24,13 +22,13 @@ export const isValidLightningAddress = (
     // Domain labels must not start/end with hyphen, can have hyphens in middle
     const regex =
         /^[a-zA-Z0-9_+\-]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
-    
+
     // Additional validation: reject consecutive dots in local part
     const [localPart] = address.split('@');
     if (!localPart || localPart.includes('..')) {
         return false;
     }
-    
+
     return regex.test(address);
 };
 

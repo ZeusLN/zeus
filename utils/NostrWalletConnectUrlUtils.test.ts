@@ -191,7 +191,9 @@ describe('NostrWalletConnectUrlUtils', () => {
                     secret: 'secret-key',
                     lud16: `${localPart}@example.com`
                 })
-            ).toContain(`lud16=${encodeURIComponent(`${localPart}@example.com`)}`);
+            ).toContain(
+                `lud16=${encodeURIComponent(`${localPart}@example.com`)}`
+            );
         });
 
         it('accepts lightning addresses with plus sign for aliases (e.g. user+tag@domain)', () => {

@@ -56,8 +56,8 @@ import NostrConnectUtils from './NostrConnectUtils';
 
 describe('NostrConnectUtils msat handling', () => {
     it('prefers msatAmount when exporting connection activity', () => {
-        const transaction = NostrConnectUtils.convertConnectionActivityToNip47Transaction(
-            {
+        const transaction =
+            NostrConnectUtils.convertConnectionActivityToNip47Transaction({
                 id: 'activity-1',
                 type: 'make_invoice',
                 status: 'pending',
@@ -68,8 +68,7 @@ describe('NostrConnectUtils msat handling', () => {
                     getPaymentRequest: 'lnbc1exact',
                     getMemo: 'exact msat invoice'
                 }
-            } as any
-        );
+            } as any);
 
         expect(transaction).toMatchObject({
             type: 'incoming',
@@ -168,42 +167,38 @@ describe('NostrConnectUtils msat handling', () => {
 
         it('does not synthesize a hash from connection activity invoice data', () => {
             const transaction =
-                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
-                    {
-                        id: 'activity-1',
-                        type: 'make_invoice',
-                        status: 'success',
-                        paymentHash: '',
-                        satAmount: 1,
-                        msatAmount: 1000,
-                        invoice: {
-                            getPaymentRequest: 'lnbc1decodedinvoice',
-                            getMemo: 'memo',
-                            payment_hash: ''
-                        }
-                    } as any
-                );
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction({
+                    id: 'activity-1',
+                    type: 'make_invoice',
+                    status: 'success',
+                    paymentHash: '',
+                    satAmount: 1,
+                    msatAmount: 1000,
+                    invoice: {
+                        getPaymentRequest: 'lnbc1decodedinvoice',
+                        getMemo: 'memo',
+                        payment_hash: ''
+                    }
+                } as any);
 
             expect(transaction.payment_hash).toBe('');
         });
 
         it('uses activity invoice getRHash when exporting connection activity', () => {
             const transaction =
-                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
-                    {
-                        id: 'activity-2',
-                        type: 'make_invoice',
-                        status: 'success',
-                        paymentHash: '',
-                        satAmount: 1,
-                        msatAmount: 1000,
-                        invoice: {
-                            getPaymentRequest: 'lnbc1decodedinvoice',
-                            getMemo: 'memo',
-                            getRHash: 'c'.repeat(64)
-                        }
-                    } as any
-                );
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction({
+                    id: 'activity-2',
+                    type: 'make_invoice',
+                    status: 'success',
+                    paymentHash: '',
+                    satAmount: 1,
+                    msatAmount: 1000,
+                    invoice: {
+                        getPaymentRequest: 'lnbc1decodedinvoice',
+                        getMemo: 'memo',
+                        getRHash: 'c'.repeat(64)
+                    }
+                } as any);
 
             expect(transaction.payment_hash).toBe('c'.repeat(64));
         });

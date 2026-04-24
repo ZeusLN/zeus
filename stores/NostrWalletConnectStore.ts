@@ -62,7 +62,7 @@ import {
 } from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
-import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
+import { satsToMillisats } from '../utils/AmountUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NWCConnection, {
@@ -2099,13 +2099,19 @@ export default class NostrWalletConnectStore {
                     ErrorCodes.INVALID_PARAMS
                 );
             }
+            // All msat-to-sat conversions use ceil (round UP) to ensure
+            // sub-sat amounts never bypass budget limits or appear cheaper to users.
+            // This ensures both backend requests and user-facing notifications show
+            // at least the amount needed to cover the millisatoshi value.
             const requestAmountSats =
                 requestAmountMsats > 0
-                    ? millisatsToSats(requestAmountMsats)
+                    ? Math.ceil(requestAmountMsats / 1000)
                     : 0;
+            // Use same amount for notifications to avoid confusion (1001 msat shows
+            // as 2 sats everywhere, not 1 sat to backend and 2 to user).
             const notificationSats =
                 requestAmountMsats > 0
-                    ? Math.max(1, Math.ceil(requestAmountMsats / 1000))
+                    ? Math.max(1, requestAmountSats)
                     : 0;
 
             if (this.isCashuConfigured) {
@@ -2951,8 +2957,22 @@ export default class NostrWalletConnectStore {
             );
         } else if ((invoice as any).millisatoshis) {
             amountMsats = Math.floor(Number((invoice as any).millisatoshis));
-        } else if (request.amount && Number.isInteger(Number(request.amount))) {
-            amountMsats = Number(request.amount);
+        } else if (request.amount !== undefined && request.amount !== null) {
+            const normalizedRequestAmount = Number(request.amount);
+            // Validate request amount same as lightning path: finite, integer, positive
+            if (
+                !Number.isFinite(normalizedRequestAmount) ||
+                !Number.isInteger(normalizedRequestAmount) ||
+                normalizedRequestAmount <= 0
+            ) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            amountMsats = normalizedRequestAmount;
         }
         // Cashu mints settle in whole sats. Reject any msat-precise amount
         // (invoice or request override) so the wallet doesn't silently pay
@@ -4511,7 +4531,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-             const decryptedContent =
+            const decryptedContent =
                 encryptionScheme === 'nip44_v2'
                     ? (() => {
                           try {
@@ -4519,16 +4539,42 @@ export default class NostrWalletConnectStore {
                                   hexToBytes(privateKey),
                                   connection.pubkey
                               );
-                              return nip44.decrypt(event.content, conversationKey);
-                          } catch (hexError) {
-                              // Distinguish hex conversion failures from decryption failures
-                              throw new Error(
-                                  `NIP-44: Failed to decode private key as hex: ${
-                                      hexError instanceof Error
-                                          ? hexError.message
-                                          : String(hexError)
-                                  }`
+                              return nip44.decrypt(
+                                  event.content,
+                                  conversationKey
                               );
+                          } catch (nip44Error) {
+                              // NIP-44 decryption failed. Try NIP-04 as fallback
+                              // to handle clients that may have sent NIP-44-encrypted
+                              // content but we need to decrypt it as NIP-04.
+                              // This mirrors the encryption fallback behavior.
+                              console.warn(
+                                  'NWC: NIP-44 decryption failed, attempting NIP-04 fallback',
+                                  {
+                                      nip44Error,
+                                      eventId: event.id
+                                  }
+                              );
+                              try {
+                                  return nip04.decrypt(
+                                      privateKey,
+                                      connection.pubkey,
+                                      event.content
+                                  );
+                              } catch (nip04Error) {
+                                  // Both schemes failed; provide detailed error
+                                  throw new Error(
+                                      `Decryption failed: NIP-44 error: ${
+                                          nip44Error instanceof Error
+                                              ? nip44Error.message
+                                              : String(nip44Error)
+                                      }; NIP-04 fallback error: ${
+                                          nip04Error instanceof Error
+                                              ? nip04Error.message
+                                              : String(nip04Error)
+                                      }`
+                                  );
+                              }
                           }
                       })()
                     : nip04.decrypt(
@@ -5200,9 +5246,7 @@ export default class NostrWalletConnectStore {
     private getEventEncryptionScheme(tags: string[][]): NwcEncryptionScheme {
         const encryptionTag = tags.find(
             (tag) =>
-                Array.isArray(tag) &&
-                tag.length >= 2 &&
-                tag[0] === 'encryption'
+                Array.isArray(tag) && tag.length >= 2 && tag[0] === 'encryption'
         );
         const schemeValue = encryptionTag?.[1];
 
@@ -5297,7 +5341,19 @@ export default class NostrWalletConnectStore {
             case 'INTERNAL_ERROR':
                 return 'INTERNAL';
             default:
-                return 'OTHER';
+                // Log unmapped error codes for monitoring; fallback to INTERNAL
+                // for safety (NIP-47 doesn't define 'OTHER' code).
+                if (code) {
+                    console.warn(
+                        'NWC: Unmapped error code in toNip47ErrorCode, falling back to INTERNAL',
+                        {
+                            originalCode: code,
+                            method,
+                            severity: 'warning'
+                        }
+                    );
+                }
+                return 'INTERNAL';
         }
     }
 

@@ -148,9 +148,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: prevState.budgetValue || 0,
-            includeLightningAddress: prevState.includeLightningAddressInitialized
-                ? prevState.includeLightningAddress
-                : false,
+            includeLightningAddress:
+                prevState.includeLightningAddressInitialized
+                    ? prevState.includeLightningAddress
+                    : false,
             includeLightningAddressInitialized: true
         }));
     };

@@ -171,7 +171,7 @@ describe('NostrWalletConnectStore msat plumbing', () => {
 
         expect(context.invoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
             expect.objectContaining({
-                value: '1',
+                value: '2',
                 value_msat: '1500',
                 memo: 'exact msat invoice',
                 noLsp: true
@@ -179,7 +179,7 @@ describe('NostrWalletConnectStore msat plumbing', () => {
         );
         expect(connection.addActivity).toHaveBeenCalledWith(
             expect.objectContaining({
-                satAmount: 1,
+                satAmount: 2,
                 msatAmount: 1500
             })
         );

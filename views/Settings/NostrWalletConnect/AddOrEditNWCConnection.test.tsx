@@ -1,4 +1,7 @@
-jest.mock('../../../assets/images/SVG/Caret Right-3.svg', () => 'CaretRight.svg');
+jest.mock(
+    '../../../assets/images/SVG/Caret Right-3.svg',
+    () => 'CaretRight.svg'
+);
 jest.mock('../../../components/Screen', () => 'Screen');
 jest.mock('../../../components/Header', () => 'Header');
 jest.mock('../../../components/text/Body', () => ({ Body: 'Body' }));
@@ -97,8 +100,8 @@ describe('AddOrEditNWCConnection lightning address defaults', () => {
         await component.updateMaxBudgetLimit();
 
         expect((component as any).state.includeLightningAddress).toBe(false);
-        expect((component as any).state.includeLightningAddressInitialized).toBe(
-            true
-        );
+        expect(
+            (component as any).state.includeLightningAddressInitialized
+        ).toBe(true);
     });
 });

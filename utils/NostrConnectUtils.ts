@@ -948,7 +948,8 @@ export default class NostrConnectUtils {
                         Number(invoice.getTimestamp) || Date.now() / 1000;
                     const invoiceString = invoice.getPaymentRequest || '';
                     // See comment above on paymentHash — never fabricate.
-                    const paymentHash = invoice.getRHash || invoice.payment_hash || '';
+                    const paymentHash =
+                        invoice.getRHash || invoice.payment_hash || '';
                     if (!paymentHash) return null;
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;

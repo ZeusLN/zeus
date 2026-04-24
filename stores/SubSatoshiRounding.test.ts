@@ -188,17 +188,12 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             const response = await callStoreMethod<{
                 result: { preimage: string; fees_paid: number };
                 error: undefined;
-            }>(
-                'handleLightningPayInvoice',
-                context,
-                {} as never,
-                {
-                    invoice: 'lnbc1testinvoice',
-                    amount: 1000,
-                    fee_limit_msat: 0,
-                    fee_limit_sat: 0
-                }
-            );
+            }>('handleLightningPayInvoice', context, {} as never, {
+                invoice: 'lnbc1testinvoice',
+                amount: 1000,
+                fee_limit_msat: 0,
+                fee_limit_sat: 0
+            });
 
             expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith({
                 payment_request: 'lnbc1testinvoice',
@@ -264,12 +259,12 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                     },
                     error: undefined
                 });
-                expect(context.validateBudgetBeforePayment).toHaveBeenCalledWith(
-                    {},
-                    1,
-                    'INSUFFICIENT_BALANCE'
-                );
-                expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
+                expect(
+                    context.validateBudgetBeforePayment
+                ).toHaveBeenCalledWith({}, 1, 'INSUFFICIENT_BALANCE');
+                expect(
+                    context.transactionsStore.sendPayment
+                ).toHaveBeenCalledWith(
                     expect.objectContaining({
                         amount: '1',
                         amount_msat: String(msat),
