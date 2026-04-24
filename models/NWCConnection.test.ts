@@ -501,7 +501,7 @@ describe('NWCConnection', () => {
             expect(connection.activity[0]).toEqual(activity);
         });
 
-        it('should maintain max items limit (1000)', () => {
+        it('should maintain max items limit (500)', () => {
             const connection = new NWCConnection({
                 id: 'test-conn',
                 name: 'Test Connection',
@@ -514,8 +514,8 @@ describe('NWCConnection', () => {
                 implementation: 'zeus'
             });
 
-            // Add 1001 items
-            for (let i = 0; i < 1001; i++) {
+            // Add 501 items
+            for (let i = 0; i < 501; i++) {
                 const activity = {
                     id: `activity-${i}`,
                     type: 'pay_invoice' as const,
@@ -525,12 +525,12 @@ describe('NWCConnection', () => {
                 connection.addActivity(activity);
             }
 
-            // Should only have 1000 items
-            expect(connection.activity.length).toBe(1000);
+            // Should only have 500 items
+            expect(connection.activity.length).toBe(500);
             // First item should be activity-1 (activity-0 was shifted out)
             expect(connection.activity[0].id).toBe('activity-1');
-            // Last item should be activity-1000
-            expect(connection.activity[999].id).toBe('activity-1000');
+            // Last item should be activity-500
+            expect(connection.activity[499].id).toBe('activity-500');
         });
 
         it('should remove oldest item when reaching max capacity', () => {
@@ -547,7 +547,7 @@ describe('NWCConnection', () => {
             });
 
             // Add exactly 1000 items
-            for (let i = 0; i < 1000; i++) {
+            for (let i = 0; i < 500; i++) {
                 const activity = {
                     id: `activity-${i}`,
                     type: 'pay_invoice' as const,
@@ -557,23 +557,23 @@ describe('NWCConnection', () => {
                 connection.addActivity(activity);
             }
 
-            expect(connection.activity.length).toBe(1000);
+            expect(connection.activity.length).toBe(500);
 
             // Add one more - should remove the first
             const newActivity = {
-                id: 'activity-1000',
+                id: 'activity-500',
                 type: 'make_invoice' as const,
                 payment_source: 'lightning' as const,
                 status: 'pending' as const
             };
             connection.addActivity(newActivity);
 
-            // Should still be 1000
-            expect(connection.activity.length).toBe(1000);
+            // Should still be 500
+            expect(connection.activity.length).toBe(500);
             // First should now be activity-1 (activity-0 was shifted out)
             expect(connection.activity[0].id).toBe('activity-1');
             // Last should be the new activity
-            expect(connection.activity[999].id).toBe('activity-1000');
+            expect(connection.activity[499].id).toBe('activity-500');
         });
 
         it('should preserve activity data integrity', () => {
@@ -631,9 +631,9 @@ describe('NWCConnection', () => {
                 connection.addActivity(activity);
             }
 
-            // Should never exceed max (1000)
-            expect(connection.activity.length).toBe(1000);
-            expect(connection.activity.length).not.toBeGreaterThan(1000);
+            // Should never exceed max (500)
+            expect(connection.activity.length).toBe(500);
+            expect(connection.activity.length).not.toBeGreaterThan(500);
         });
     });
 });

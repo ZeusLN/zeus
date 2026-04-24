@@ -159,7 +159,7 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
 
             expect(result).toEqual({
                 amountMsats: 1500,
-                amountSats: 1,
+                amountSats: 2,
                 usedRequestAmount: true,
                 invalidRequestAmount: false
             });
