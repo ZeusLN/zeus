@@ -122,6 +122,27 @@ describe('NostrConnectUtils msat handling', () => {
             expect(transactions).toEqual([]);
         });
 
+        it('uses invoice getRHash when exporting lightning invoices', () => {
+            const transactions =
+                NostrConnectUtils.convertLightningDataToNip47Transactions({
+                    invoices: [
+                        {
+                            getAmount: 100,
+                            getTimestamp: 1700000000,
+                            getPaymentRequest: 'lnbc1decodedinvoice',
+                            getRHash: 'b'.repeat(64),
+                            payment_hash: '',
+                            getMemo: '',
+                            expires_at: 0,
+                            isPaid: false
+                        } as any
+                    ]
+                });
+
+            expect(transactions).toHaveLength(1);
+            expect(transactions[0].payment_hash).toBe('b'.repeat(64));
+        });
+
         it('keeps payments that carry a real payment_hash', () => {
             const transactions =
                 NostrConnectUtils.convertLightningDataToNip47Transactions({
@@ -164,6 +185,27 @@ describe('NostrConnectUtils msat handling', () => {
                 );
 
             expect(transaction.payment_hash).toBe('');
+        });
+
+        it('uses activity invoice getRHash when exporting connection activity', () => {
+            const transaction =
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                    {
+                        id: 'activity-2',
+                        type: 'make_invoice',
+                        status: 'success',
+                        paymentHash: '',
+                        satAmount: 1,
+                        msatAmount: 1000,
+                        invoice: {
+                            getPaymentRequest: 'lnbc1decodedinvoice',
+                            getMemo: 'memo',
+                            getRHash: 'c'.repeat(64)
+                        }
+                    } as any
+                );
+
+            expect(transaction.payment_hash).toBe('c'.repeat(64));
         });
     });
 });

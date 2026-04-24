@@ -220,6 +220,78 @@ describe('NostrWalletConnectStore encryption helpers', () => {
             ).toBe(expected);
         });
     });
+
+    it('labels fallback nip04 responses with the actual encryption scheme', async () => {
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const relay = {
+            connect: jest.fn().mockResolvedValue(undefined),
+            publish: jest.fn().mockResolvedValue(undefined),
+            close: jest.fn()
+        };
+        const relayInit = jest.requireMock('nostr-tools').relayInit as jest.Mock;
+        const nip04Module = jest.requireMock('@nostr/tools/nip04') as {
+            encrypt: jest.Mock;
+            decrypt: jest.Mock;
+        };
+        const nip44Module = jest.requireMock('@nostr/tools/nip44') as {
+            encrypt: jest.Mock;
+            decrypt: jest.Mock;
+            getConversationKey: jest.Mock;
+        };
+        relayInit.mockReturnValue(relay);
+        nip04Module.encrypt = mockNip04Encrypt;
+        nip04Module.decrypt = mockNip04Decrypt;
+        nip44Module.encrypt = mockNip44Encrypt;
+        nip44Module.decrypt = mockNip44Decrypt;
+        nip44Module.getConversationKey = mockNip44GetConversationKey;
+        mockNip44GetConversationKey.mockReturnValue('conversation-key');
+        mockNip44Encrypt.mockImplementation(() => {
+            throw new Error('nip44 failed');
+        });
+        mockNip04Encrypt.mockReturnValue('fallback-content');
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).retryWithBackoff = jest
+            .fn(async (fn: () => Promise<void>) => fn())
+            .mockName('retryWithBackoff');
+
+        await (store as any).publishEventToClient(
+            { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
+            'pay_invoice',
+            { result: { preimage: 'preimage' } },
+            'event-1',
+            'nip44_v2'
+        );
+
+        expect(mockNip04Encrypt).toHaveBeenCalledWith(
+            'service-secret',
+            'client-pubkey',
+            expect.any(String)
+        );
+        expect(relay.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                content: 'fallback-content',
+                tags: expect.arrayContaining([
+                    ['e', 'event-1'],
+                    ['encryption', 'nip04'],
+                    ['p', 'client-pubkey']
+                ])
+            })
+        );
+    });
 });
 
 describe('NostrWalletConnectStore updateConnection validation order', () => {

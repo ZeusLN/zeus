@@ -554,7 +554,9 @@ export default class NostrConnectUtils {
             return activity.payment.paymentHash;
         }
         if (activity.invoice) {
-            const invoiceHash = (activity.invoice as Invoice).payment_hash;
+            const invoiceHash =
+                (activity.invoice as Invoice).getRHash ||
+                (activity.invoice as Invoice).payment_hash;
             if (invoiceHash) return invoiceHash;
         }
         return '';
@@ -946,7 +948,7 @@ export default class NostrConnectUtils {
                         Number(invoice.getTimestamp) || Date.now() / 1000;
                     const invoiceString = invoice.getPaymentRequest || '';
                     // See comment above on paymentHash — never fabricate.
-                    const paymentHash = invoice.payment_hash || '';
+                    const paymentHash = invoice.getRHash || invoice.payment_hash || '';
                     if (!paymentHash) return null;
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;

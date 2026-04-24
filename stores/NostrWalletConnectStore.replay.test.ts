@@ -88,7 +88,8 @@ type StoreMethodName =
     | 'savePendingPayments'
     | 'getPendingPayments'
     | 'subscribeToConnection'
-    | 'saveProcessedReplayEvents';
+    | 'saveProcessedReplayEvents'
+    | 'processPendingPaymentsEvents';
 
 const callStoreMethod = async <T>(
     methodName: StoreMethodName,
@@ -246,12 +247,12 @@ describe('NostrWalletConnectStore replay guards', () => {
         mockSetItem.mockRejectedValueOnce(new Error('disk full'));
 
         await expect(
-            callStoreMethod<void>(
+            callStoreMethod<boolean>(
                 'saveProcessedReplayEvents',
                 context,
                 new Set(['event-1'])
             )
-        ).resolves.toBeUndefined();
+        ).resolves.toBe(false);
 
         expect(mockSetItem).toHaveBeenCalledWith(
             'zeus-nwc-processed-replay-events',
@@ -261,6 +262,96 @@ describe('NostrWalletConnectStore replay guards', () => {
             'failed to save processed replay events',
             expect.any(Error)
         );
+    });
+
+    it('marks processed pending events even when response publication fails', async () => {
+        const context = createStore();
+        context.isInNWCPendingPaymentsView = true;
+        context.modalStore = {
+            toggleNWCPendingPaymentsModal: jest.fn()
+        } as any;
+        context.getConnection = jest.fn(() => ({
+            id: 'conn-1',
+            name: 'wallet'
+        }));
+        context.hasProcessedReplayEvent = jest.fn(async () => false);
+        context.handleEventRequest = jest.fn(async () => ({
+            success: false,
+            errorMessage: 'publish failed',
+            committed: true
+        }));
+        context.markProcessedReplayEvent = jest.fn(async () => true);
+        context.updatePendingPayment = jest.fn().mockResolvedValue(undefined);
+        context.deletePendingPaymentById = jest.fn().mockResolvedValue(true);
+        context.resetPendingPayInvoiceState = jest.fn();
+        context.showNotification = jest.fn();
+
+        await callStoreMethod<void>('processPendingPaymentsEvents', context, [
+            {
+                eventId: 'event-1',
+                amount: 10,
+                connection: { id: 'conn-1', name: 'wallet' },
+                connectionName: 'wallet',
+                request: { method: 'pay_invoice', params: {} },
+                encryptionScheme: 'nip04'
+            }
+        ] as any);
+
+        expect(context.handleEventRequest).toHaveBeenCalledTimes(1);
+        expect(context.markProcessedReplayEvent).toHaveBeenCalledWith('event-1');
+        expect(context.updatePendingPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                eventId: 'event-1',
+                status: true,
+                isProcessed: true
+            })
+        );
+        expect(context.deletePendingPaymentById).toHaveBeenCalledWith('event-1');
+    });
+
+    it('dedupes repeated pending events in the same restore batch', async () => {
+        const context = createStore();
+        context.isInNWCPendingPaymentsView = true;
+        context.modalStore = {
+            toggleNWCPendingPaymentsModal: jest.fn()
+        } as any;
+        context.getConnection = jest.fn(() => ({
+            id: 'conn-1',
+            name: 'wallet'
+        }));
+        context.hasProcessedReplayEvent = jest.fn(async () => false);
+        context.handleEventRequest = jest.fn(async () => ({
+            success: true,
+            committed: true
+        }));
+        context.markProcessedReplayEvent = jest.fn(async () => true);
+        context.updatePendingPayment = jest.fn().mockResolvedValue(undefined);
+        context.deletePendingPaymentById = jest.fn().mockResolvedValue(true);
+        context.resetPendingPayInvoiceState = jest.fn();
+        context.showNotification = jest.fn();
+
+        await callStoreMethod<void>('processPendingPaymentsEvents', context, [
+            {
+                eventId: 'event-1',
+                amount: 10,
+                connection: { id: 'conn-1', name: 'wallet' },
+                connectionName: 'wallet',
+                request: { method: 'pay_invoice', params: {} },
+                encryptionScheme: 'nip04'
+            },
+            {
+                eventId: 'event-1',
+                amount: 10,
+                connection: { id: 'conn-1', name: 'wallet' },
+                connectionName: 'wallet',
+                request: { method: 'pay_invoice', params: {} },
+                encryptionScheme: 'nip04'
+            }
+        ] as any);
+
+        expect(context.handleEventRequest).toHaveBeenCalledTimes(1);
+        expect(context.markProcessedReplayEvent).toHaveBeenCalledTimes(1);
+        expect(context.deletePendingPaymentById).toHaveBeenCalledTimes(1);
     });
 
     it('skips duplicate subscriptions unless replacing the existing one', async () => {

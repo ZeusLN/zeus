@@ -250,6 +250,7 @@ export default class NostrWalletConnectStore {
     private androidReconnectionListener: any = null;
     private appStateListener: any = null;
     private androidLogListener: any = null;
+    private processedReplayEventsCache: Set<string> | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1140,52 +1141,64 @@ export default class NostrWalletConnectStore {
     };
 
     private getProcessedReplayEvents = async (): Promise<Set<string>> => {
+        if (this.processedReplayEventsCache) {
+            return this.processedReplayEventsCache;
+        }
         try {
             const stored = await Storage.getItem(NWC_PROCESSED_REPLAY_EVENTS);
             if (!stored) {
-                return new Set();
+                this.processedReplayEventsCache = new Set();
+                return this.processedReplayEventsCache;
             }
             const parsed = JSON.parse(stored);
             if (!Array.isArray(parsed)) {
-                return new Set();
+                this.processedReplayEventsCache = new Set();
+                return this.processedReplayEventsCache;
             }
-            return new Set(
+            this.processedReplayEventsCache = new Set(
                 parsed.filter(
                     (eventId): eventId is string => typeof eventId === 'string'
                 )
             );
+            return this.processedReplayEventsCache;
         } catch (error) {
             console.error('failed to load processed replay events', error);
-            return new Set();
+            this.processedReplayEventsCache = new Set();
+            return this.processedReplayEventsCache;
         }
     };
 
     private saveProcessedReplayEvents = async (
         eventIds: Set<string>
-    ): Promise<void> => {
+    ): Promise<boolean> => {
+        const orderedIds = Array.from(eventIds).slice(-1000);
+        this.processedReplayEventsCache = new Set(orderedIds);
         try {
             // Keep a bounded replay window across restarts without growing storage forever.
-            const orderedIds = Array.from(eventIds).slice(-1000);
             await Storage.setItem(
                 NWC_PROCESSED_REPLAY_EVENTS,
                 JSON.stringify(orderedIds)
             );
+            return true;
         } catch (error) {
             console.error('failed to save processed replay events', error);
+            return false;
         }
     };
 
-    private markProcessedReplayEvent = async (eventId: string): Promise<void> => {
-        if (!eventId) return;
+    private markProcessedReplayEvent = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
         // Serialize read-modify-write across all callers/connections so
         // concurrent updates can't lose entries (last-writer-wins on Storage).
-        await this.withMutex('processed-replay-events', async () => {
+        return await this.withMutex('processed-replay-events', async () => {
             const processed = await this.getProcessedReplayEvents();
             if (processed.has(eventId)) {
-                return;
+                return true;
             }
             processed.add(eventId);
-            await this.saveProcessedReplayEvents(processed);
+            return await this.saveProcessedReplayEvents(processed);
         });
     };
 
@@ -2227,8 +2240,18 @@ export default class NostrWalletConnectStore {
                     matchingInvoice &&
                     matchingInvoice instanceof CashuInvoice
                 ) {
-                    let isPaid = matchingInvoice.isPaid || false;
-                    let amtSat = matchingInvoice.getAmount;
+                    const isPaid = matchingInvoice.isPaid || false;
+                    const amtSat = matchingInvoice.getAmount;
+                    const lookupPaymentHash =
+                        (matchingInvoice as CashuInvoice & {
+                            quote?: string;
+                        }).quote || request.payment_hash || '';
+                    if (!lookupPaymentHash) {
+                        return this.handleError(
+                            'lookup_invoice missing payment_hash',
+                            ErrorCodes.INTERNAL_ERROR
+                        );
+                    }
 
                     const timestamp =
                         Number(matchingInvoice.getTimestamp) ||
@@ -2241,14 +2264,8 @@ export default class NostrWalletConnectStore {
                         type: 'incoming',
                         state: isPaid ? 'settled' : 'pending',
                         invoice: matchingInvoice.getPaymentRequest,
-                        payment_hash: request.payment_hash!,
+                        payment_hash: lookupPaymentHash,
                         amount: satsToMillisats(amtSat || 0),
-                        ...(isPaid && {
-                            preimage:
-                                matchingInvoice.getPaymentRequest ||
-                                request.invoice ||
-                                request.payment_hash
-                        }),
                         description: matchingInvoice.getMemo,
                         settled_at: isPaid
                             ? matchingInvoice.settleDate.getTime() / 1000
@@ -2586,7 +2603,7 @@ export default class NostrWalletConnectStore {
         );
 
         if (paymentError) {
-            const { paymentRequest } =
+            const { paymentRequest, paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
             if (paymentRequest || request.invoice)
                 if (
@@ -2602,7 +2619,7 @@ export default class NostrWalletConnectStore {
                         amountMsats,
                         'lightning',
                         paymentError.error?.message || 'Payment failed',
-                        request.invoice
+                        decodedHash || ''
                     );
             return paymentError;
         }
@@ -2798,7 +2815,7 @@ export default class NostrWalletConnectStore {
             amount: amount.toString()
         });
         if (!cashuInvoice || this.cashuStore.paymentError) {
-            const { paymentRequest } =
+            const { paymentRequest, paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
             if (paymentRequest || request.invoice)
                 if (
@@ -2814,7 +2831,7 @@ export default class NostrWalletConnectStore {
                         amountMsats,
                         'cashu',
                         this.cashuStore.paymentErrorMsg || 'Payment failed',
-                        request.invoice
+                        decodedHash || ''
                     );
             return this.handleError(
                 this.cashuStore.paymentErrorMsg ||
@@ -4028,16 +4045,25 @@ export default class NostrWalletConnectStore {
                         request.method === 'pay_invoice' &&
                         !connection.hasPermission('pay_invoice')
                     ) {
-                        await this.publishEventToClient(
-                            connection,
-                            request.method,
-                            this.handleError(
-                                localeString('backends.NWC.permissionDenied'),
-                                ErrorCodes.RESTRICTED
-                            ),
-                            eventId,
-                            encryptionScheme
-                        );
+                        try {
+                            await this.publishEventToClient(
+                                connection,
+                                request.method,
+                                this.handleError(
+                                    localeString(
+                                        'backends.NWC.permissionDenied'
+                                    ),
+                                    ErrorCodes.RESTRICTED
+                                ),
+                                eventId,
+                                encryptionScheme
+                            );
+                        } catch (error) {
+                            console.warn(
+                                'NWC: Failed to publish RESTRICTED for pending event',
+                                { eventId, method: request.method, error }
+                            );
+                        }
                         // Persist before returning so the same restored event
                         // doesn't re-publish RESTRICTED on every iOS restore.
                         await this.markProcessedReplayEvent(eventId);
@@ -4055,18 +4081,25 @@ export default class NostrWalletConnectStore {
                             // silently re-evaluate the same expired invoice.
                             // (NIP-47: pay_invoice expired-at-pay-time is a
                             // payment failure, not a missing record.)
-                            await this.publishEventToClient(
-                                connection,
-                                request.method,
-                                this.handleError(
-                                    localeString(
-                                        'stores.NostrWalletConnectStore.error.invoiceExpired'
+                            try {
+                                await this.publishEventToClient(
+                                    connection,
+                                    request.method,
+                                    this.handleError(
+                                        localeString(
+                                            'stores.NostrWalletConnectStore.error.invoiceExpired'
+                                        ),
+                                        ErrorCodes.FAILED_TO_PAY_INVOICE
                                     ),
-                                    ErrorCodes.FAILED_TO_PAY_INVOICE
-                                ),
-                                eventId,
-                                encryptionScheme
-                            );
+                                    eventId,
+                                    encryptionScheme
+                                );
+                            } catch (error) {
+                                console.warn(
+                                    'NWC: Failed to publish PAYMENT_FAILED for expired pending event',
+                                    { eventId, method: request.method, error }
+                                );
+                            }
                             await this.markProcessedReplayEvent(eventId);
                             return null;
                         }
@@ -4303,7 +4336,10 @@ export default class NostrWalletConnectStore {
     public async processPendingPaymentsEvents(
         pendingEvents: PendingPayment[]
     ): Promise<void> {
-        let remainingEvents = [...pendingEvents];
+        const uniquePendingEvents = Array.from(
+            new Map(pendingEvents.map((event) => [event.eventId, event])).values()
+        );
+        let remainingEvents = [...uniquePendingEvents];
         let remainingTotal = remainingEvents.reduce(
             (sum, event) => sum + event.amount,
             0
@@ -4327,7 +4363,7 @@ export default class NostrWalletConnectStore {
         // bypassing maxAmountSats. Different connections can still run in
         // parallel.
         const eventsByConnection = new Map<string, PendingPayment[]>();
-        for (const event of pendingEvents) {
+        for (const event of uniquePendingEvents) {
             const list = eventsByConnection.get(event.connection.id) || [];
             list.push(event);
             eventsByConnection.set(event.connection.id, list);
@@ -4354,11 +4390,22 @@ export default class NostrWalletConnectStore {
                     true, // skip single payment notification for pending events
                     event.encryptionScheme || 'nip04'
                 );
-                if (result.success) {
+                if (result.committed) {
                     // Persist BEFORE mutating MobX state so a concurrent
                     // restore can't see "processed" via state but miss the
                     // storage write.
-                    await this.markProcessedReplayEvent(event.eventId);
+                    const persisted = await this.markProcessedReplayEvent(
+                        event.eventId
+                    );
+                    if (!persisted) {
+                        console.warn(
+                            'NWC: replay marker persistence failed after processing pending event',
+                            {
+                                eventId: event.eventId,
+                                method: event.request.method
+                            }
+                        );
+                    }
                     await this.updatePendingPayment({
                         ...event,
                         status: true,
@@ -4369,6 +4416,16 @@ export default class NostrWalletConnectStore {
                             event.eventId
                         );
                     });
+                    if (!result.success) {
+                        console.warn(
+                            'NWC: response publish failed after committing pending event',
+                            {
+                                eventId: event.eventId,
+                                method: event.request.method,
+                                errorMessage: result.errorMessage
+                            }
+                        );
+                    }
                 } else {
                     let formattedError: string | undefined;
                     if (result.errorMessage) {
@@ -4477,7 +4534,7 @@ export default class NostrWalletConnectStore {
         }> = [];
         for (const result of processingResults) {
             if (result.status === 'fulfilled') {
-                if (result.value?.result?.success) {
+                if (result.value?.result?.committed) {
                     successfulEventIds.add(result.value.event.eventId);
                     successfulPayments.push({
                         amount: result.value.event.amount,
@@ -4560,7 +4617,11 @@ export default class NostrWalletConnectStore {
         eventId: string,
         skipNotification: boolean = false,
         requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
-    ): Promise<{ success: boolean; errorMessage?: string }> {
+    ): Promise<{
+        success: boolean;
+        errorMessage?: string;
+        committed: boolean;
+    }> {
         let response: any;
         try {
             if (
@@ -4641,6 +4702,7 @@ export default class NostrWalletConnectStore {
         }
         const hasError = !!response?.error;
         const errorMessage = response?.error?.message;
+        const committed = !hasError;
 
         // Only publish if we have a response
         if (response) {
@@ -4662,14 +4724,16 @@ export default class NostrWalletConnectStore {
                 return {
                     success: false,
                     errorMessage:
-                        error instanceof Error ? error.message : String(error)
+                        error instanceof Error ? error.message : String(error),
+                    committed
                 };
             }
         }
 
         return {
             success: !hasError,
-            errorMessage: hasError ? errorMessage : undefined
+            errorMessage: hasError ? errorMessage : undefined,
+            committed
         };
     }
     /**
@@ -4760,6 +4824,7 @@ export default class NostrWalletConnectStore {
         }
         const payloadString = JSON.stringify(payload);
         let content: string;
+        let actualEncryptionScheme: NwcEncryptionScheme = encryptionScheme;
         try {
             content =
                 encryptionScheme === 'nip44_v2'
@@ -4788,6 +4853,7 @@ export default class NostrWalletConnectStore {
                     connection.pubkey,
                     payloadString
                 );
+                actualEncryptionScheme = 'nip04';
             } else {
                 throw error;
             }
@@ -4799,7 +4865,7 @@ export default class NostrWalletConnectStore {
         // Per NIP-47: response events SHOULD include an `encryption` tag
         // identifying the scheme used (`nip04` or `nip44_v2`) so clients can
         // decrypt without guessing. Always emit it for both schemes.
-        tags.push(['encryption', encryptionScheme]);
+        tags.push(['encryption', actualEncryptionScheme]);
         tags.push(['p', connection.pubkey]);
         const unsignedEvent: UnsignedEvent = {
             kind: 23195,
