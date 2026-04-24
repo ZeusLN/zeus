@@ -1232,7 +1232,13 @@ export default class NostrWalletConnectStore {
                 return true;
             }
             processed.add(eventId);
-            return await this.saveProcessedReplayEvents(processed);
+            const saved = await this.saveProcessedReplayEvents(processed);
+            if (!saved) {
+                throw new Error(
+                    `Critical: Failed to persist processed replay event marker for idempotency (eventId: ${eventId})`
+                );
+            }
+            return saved;
         });
     };
 
@@ -1324,9 +1330,21 @@ export default class NostrWalletConnectStore {
                 const entries = Array.from(responses.entries());
                 const trimmed = entries.slice(-MAX_REPLAY_RESPONSES);
                 const trimmedMap = new Map(trimmed);
-                return await this.saveReplayResponses(trimmedMap);
+                const saved = await this.saveReplayResponses(trimmedMap);
+                if (!saved) {
+                    throw new Error(
+                        `Critical: Failed to persist replay response cache for idempotency (eventId: ${eventId})`
+                    );
+                }
+                return saved;
             }
-            return await this.saveReplayResponses(responses);
+            const saved = await this.saveReplayResponses(responses);
+            if (!saved) {
+                throw new Error(
+                    `Critical: Failed to persist replay response cache for idempotency (eventId: ${eventId})`
+                );
+            }
+            return saved;
         });
     };
 
@@ -1335,7 +1353,12 @@ export default class NostrWalletConnectStore {
         await this.withMutex('replay-responses', async () => {
             const responses = await this.getReplayResponses();
             if (responses.delete(eventId)) {
-                await this.saveReplayResponses(responses);
+                const saved = await this.saveReplayResponses(responses);
+                if (!saved) {
+                    throw new Error(
+                        `Critical: Failed to persist replay response removal for idempotency (eventId: ${eventId})`
+                    );
+                }
             }
         });
     };
@@ -5261,19 +5284,21 @@ export default class NostrWalletConnectStore {
                           payloadString
                       );
         } catch (error) {
-            console.warn('NWC: Failed to encrypt response payload', {
+            console.error('NWC: Failed to encrypt response payload', {
                 method,
                 eventId,
                 encryptionScheme,
-                error
+                error: error instanceof Error ? error.message : String(error)
             });
+            // If NIP-44 was explicitly requested, reject instead of downgrading to NIP-04.
+            // This maintains security model consistency with request decryption, which also
+            // rejects NIP-44 failures. Symmetric security posture prevents downgrade attacks.
             if (encryptionScheme === 'nip44_v2') {
-                content = nip04.encrypt(
-                    servicePrivateKey,
-                    connection.pubkey,
-                    payloadString
+                throw new Error(
+                    `NIP-44 response encryption failed and fallback not allowed per NIP-44 security model: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`
                 );
-                actualEncryptionScheme = 'nip04';
             } else {
                 throw error;
             }
