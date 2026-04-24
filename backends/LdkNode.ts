@@ -1180,11 +1180,30 @@ export default class LdkNode {
         // Ensure expiry is a number (it comes as a string from the UI)
         const expirySecs = Number(data.expiry_seconds) || 3600;
 
-        if (data.value || data.value_msat) {
-            const amountMsat = data.value_msat
+        const valueMsat =
+            data.value_msat !== undefined && data.value_msat !== null
                 ? Number(data.value_msat)
-                : Number(data.value) * 1000;
+                : undefined;
+        const valueSat =
+            data.value !== undefined && data.value !== null
+                ? Number(data.value)
+                : undefined;
+        const normalizedValueMsat =
+            typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                ? valueMsat
+                : undefined;
+        const normalizedValueSat =
+            typeof valueSat === 'number' && Number.isFinite(valueSat)
+                ? valueSat
+                : undefined;
+        const amountMsat =
+            normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                ? Math.trunc(normalizedValueMsat)
+                : normalizedValueSat !== undefined && normalizedValueSat > 0
+                ? Math.trunc(normalizedValueSat * 1000)
+                : undefined;
 
+        if (amountMsat !== undefined && amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -1267,10 +1286,13 @@ export default class LdkNode {
                       const v = Number(data.fee_limit_msat);
                       return Number.isFinite(v) ? Math.trunc(v) : undefined;
                   })()
-                : data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+                : data.fee_limit_sat !== undefined &&
+                  data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
-                      return Number.isFinite(v) ? Math.trunc(v * 1000) : undefined;
+                      return Number.isFinite(v)
+                          ? Math.trunc(v * 1000)
+                          : undefined;
                   })()
                 : undefined;
         const maxPathCount = data.max_parts
@@ -1328,7 +1350,9 @@ export default class LdkNode {
             data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
-                      return Number.isFinite(v) ? Math.trunc(v * 1000) : undefined;
+                      return Number.isFinite(v)
+                          ? Math.trunc(v * 1000)
+                          : undefined;
                   })()
                 : undefined;
         const maxPathCount = data.max_parts

@@ -73,6 +73,7 @@ import NWCConnection, {
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
+import type { StoredNWCConnectionData } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
 import Payment from '../models/Payment';
@@ -822,8 +823,9 @@ export default class NostrWalletConnectStore {
         updates: Partial<NWCConnection>
     ): Promise<{ nostrUrl?: string; success: boolean }> => {
         let connectionIndex = -1;
-        let originalConnectionData: Record<string, any> | undefined;
+        let originalConnectionData: StoredNWCConnectionData | undefined;
         let previousUnsubscribe: (() => void) | undefined;
+        let restorePreviousSubscription = false;
         let acquiredNewSubscription = false;
         try {
             runInAction(() => {
@@ -921,6 +923,10 @@ export default class NostrWalletConnectStore {
                 : undefined;
 
             if (shouldResubscribe && subscriptionConnection) {
+                restorePreviousSubscription = !!previousUnsubscribe;
+                if (previousUnsubscribe) {
+                    await this.unsubscribeFromConnection(connectionId);
+                }
                 if (
                     !this.nwcWalletServices.has(subscriptionConnection.relayUrl)
                 ) {
@@ -933,7 +939,9 @@ export default class NostrWalletConnectStore {
                         );
                     });
                 }
-                if (!this.nwcWalletServices.has(subscriptionConnection.relayUrl)) {
+                if (
+                    !this.nwcWalletServices.has(subscriptionConnection.relayUrl)
+                ) {
                     await this.initializeNWCWalletServices();
                 }
                 const subscribed = await this.subscribeToConnection(
@@ -950,7 +958,7 @@ export default class NostrWalletConnectStore {
                 acquiredNewSubscription = true;
             }
 
-                runInAction(() => {
+            runInAction(() => {
                 const oldBudgetRenewal = connection.budgetRenewal;
                 const hadBudget = connection.hasBudgetLimit;
                 const newBudgetRenewal = updates.budgetRenewal;
@@ -977,9 +985,6 @@ export default class NostrWalletConnectStore {
             });
 
             await this.saveConnections();
-            if (shouldResubscribe && previousUnsubscribe) {
-                previousUnsubscribe();
-            }
             if (shouldReturnUrl) {
                 return {
                     nostrUrl: updatedNostrUrl,
@@ -991,7 +996,10 @@ export default class NostrWalletConnectStore {
             if (acquiredNewSubscription) {
                 const activeUnsubscribe =
                     this.activeSubscriptions.get(connectionId);
-                if (activeUnsubscribe && typeof activeUnsubscribe === 'function') {
+                if (
+                    activeUnsubscribe &&
+                    typeof activeUnsubscribe === 'function'
+                ) {
                     try {
                         activeUnsubscribe();
                     } catch {
@@ -1005,6 +1013,15 @@ export default class NostrWalletConnectStore {
                     );
                 } else {
                     this.activeSubscriptions.delete(connectionId);
+                }
+            }
+            if (restorePreviousSubscription && originalConnectionData) {
+                try {
+                    await this.subscribeToConnection(
+                        new NWCConnection(originalConnectionData)
+                    );
+                } catch {
+                    // ignore rollback resubscribe failure
                 }
             }
             if (connectionIndex !== -1 && originalConnectionData) {
@@ -1202,7 +1219,9 @@ export default class NostrWalletConnectStore {
         });
     };
 
-    private hasProcessedReplayEvent = async (eventId: string): Promise<boolean> => {
+    private hasProcessedReplayEvent = async (
+        eventId: string
+    ): Promise<boolean> => {
         if (!eventId) return false;
         const processed = await this.getProcessedReplayEvents();
         return processed.has(eventId);
@@ -1278,7 +1297,9 @@ export default class NostrWalletConnectStore {
             const restoredPayments = (
                 await Promise.all(
                     dedupedPayments.map(async (payment: PendingPayment) => {
-                        if (await this.hasProcessedReplayEvent(payment.eventId)) {
+                        if (
+                            await this.hasProcessedReplayEvent(payment.eventId)
+                        ) {
                             await this.deletePendingPaymentById(
                                 payment.eventId
                             );
@@ -1787,9 +1808,7 @@ export default class NostrWalletConnectStore {
     private mutexes: Map<string, Promise<unknown>> = new Map();
     private withMutex<T>(key: string, fn: () => Promise<T>): Promise<T> {
         const prev = this.mutexes.get(key) || Promise.resolve();
-        const next = prev
-            .catch(() => undefined)
-            .then(() => fn());
+        const next = prev.catch(() => undefined).then(() => fn());
         // Store a chain that swallows rejections so subsequent waiters aren't
         // poisoned by an earlier failure.
         this.mutexes.set(
@@ -1923,17 +1942,40 @@ export default class NostrWalletConnectStore {
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
+            const hasRequestAmount =
+                request.amount !== undefined && request.amount !== null;
+            const requestAmountMsats = hasRequestAmount
+                ? Number(request.amount)
+                : 0;
+            if (
+                hasRequestAmount &&
+                (!Number.isFinite(requestAmountMsats) ||
+                    !Number.isInteger(requestAmountMsats) ||
+                    requestAmountMsats < 0)
+            ) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            const requestAmountSats =
+                requestAmountMsats > 0
+                    ? millisatsToSats(requestAmountMsats)
+                    : 0;
+            const notificationSats =
+                requestAmountMsats > 0
+                    ? Math.max(1, Math.ceil(requestAmountMsats / 1000))
+                    : 0;
+
             if (this.isCashuConfigured) {
                 // Cashu mints operate in whole sats; reject NIP-47 msat
                 // amounts that would otherwise be silently truncated. Per
                 // NIP-47 the spec error for a malformed amount is
                 // INVALID_PARAMS; clients can downgrade to a sat-aligned
                 // amount or pick a different connection.
-                if (
-                    typeof request.amount === 'number' &&
-                    request.amount > 0 &&
-                    request.amount % 1000 !== 0
-                ) {
+                if (requestAmountMsats > 0 && requestAmountMsats % 1000 !== 0) {
                     return this.handleError(
                         localeString(
                             'stores.NostrWalletConnectStore.error.invalidAmountMsats'
@@ -1943,7 +1985,7 @@ export default class NostrWalletConnectStore {
                 }
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
-                        value: millisatsToSats(request.amount).toString(),
+                        value: requestAmountSats.toString(),
                         memo: request.description || ''
                     });
 
@@ -2004,14 +2046,14 @@ export default class NostrWalletConnectStore {
                                 invoice: new CashuInvoice(invoice),
                                 type: 'make_invoice',
                                 payment_source: 'cashu',
-                                satAmount: millisatsToSats(request.amount),
-                                msatAmount: request.amount
+                                satAmount: requestAmountSats,
+                                msatAmount: requestAmountMsats
                             });
                             this.findAndUpdateConnection(connection);
                         });
                     this.saveConnections();
                     this.showInvoiceCreatedNotification(
-                        millisatsToSats(request.amount),
+                        notificationSats,
                         connection.name,
                         request.description
                     );
@@ -2020,7 +2062,7 @@ export default class NostrWalletConnectStore {
                         state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
                         payment_hash: cashuPaymentHash,
-                        amount: request.amount,
+                        amount: requestAmountMsats,
                         description: request.description,
                         description_hash: descriptionHash,
                         expires_at: expiryTime
@@ -2041,8 +2083,8 @@ export default class NostrWalletConnectStore {
 
             const invoiceResult = await this.invoicesStore.createUnifiedInvoice(
                 {
-                    value: millisatsToSats(request.amount).toString(),
-                    value_msat: request.amount.toString(),
+                    value: requestAmountSats.toString(),
+                    value_msat: requestAmountMsats.toString(),
                     memo: request.description || '',
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
@@ -2124,14 +2166,6 @@ export default class NostrWalletConnectStore {
                 );
             }
 
-            // Reject sub-sat msat amounts in notifications: floor would
-            // misreport 999 msat as a 0-sat invoice. Round up so the
-            // displayed sat amount is never 0 for a non-zero invoice.
-            const notificationSats = Math.max(
-                1,
-                Math.ceil(request.amount / 1000)
-            );
-
             if (invoice) {
                 runInAction(() => {
                     connection.addActivity({
@@ -2141,8 +2175,8 @@ export default class NostrWalletConnectStore {
                         type: 'make_invoice',
                         payment_source: 'lightning',
                         paymentHash,
-                        satAmount: millisatsToSats(request.amount),
-                        msatAmount: request.amount,
+                        satAmount: requestAmountSats,
+                        msatAmount: requestAmountMsats,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);
@@ -2151,8 +2185,8 @@ export default class NostrWalletConnectStore {
                 const invoiceData = {
                     payment_request: paymentRequest,
                     payment_hash: paymentHash,
-                    value: millisatsToSats(request.amount).toString(),
-                    value_msat: request.amount.toString(),
+                    value: requestAmountSats.toString(),
+                    value_msat: requestAmountMsats.toString(),
                     memo: request.description || '',
                     expiry: expiryTime.toString(),
                     creation_date: Math.floor(Date.now() / 1000).toString(),
@@ -2166,8 +2200,8 @@ export default class NostrWalletConnectStore {
                         type: 'make_invoice',
                         payment_source: 'lightning',
                         paymentHash,
-                        satAmount: millisatsToSats(request.amount),
-                        msatAmount: request.amount,
+                        satAmount: requestAmountSats,
+                        msatAmount: requestAmountMsats,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);
@@ -2185,7 +2219,7 @@ export default class NostrWalletConnectStore {
                 state: 'pending',
                 invoice: paymentRequest,
                 payment_hash: paymentHash,
-                amount: request.amount,
+                amount: requestAmountMsats,
                 description: request.description,
                 description_hash: descriptionHash,
                 expires_at: expiryTime
@@ -2242,10 +2276,14 @@ export default class NostrWalletConnectStore {
                 ) {
                     const isPaid = matchingInvoice.isPaid || false;
                     const amtSat = matchingInvoice.getAmount;
+                    const decodedInvoice =
+                        await NostrConnectUtils.decodeInvoiceTags(
+                            matchingInvoice.getPaymentRequest
+                        );
                     const lookupPaymentHash =
-                        (matchingInvoice as CashuInvoice & {
-                            quote?: string;
-                        }).quote || request.payment_hash || '';
+                        decodedInvoice.paymentHash ||
+                        request.payment_hash ||
+                        '';
                     if (!lookupPaymentHash) {
                         return this.handleError(
                             'lookup_invoice missing payment_hash',
@@ -2348,7 +2386,7 @@ export default class NostrWalletConnectStore {
                             activity
                         )
                     )
-                    .filter((tx) => tx.amount > 0 && !!tx.payment_hash)
+                    .filter((tx) => !!tx.payment_hash)
                     .sort((a, b) => b.created_at - a.created_at);
             } else {
                 await Promise.all([
@@ -2454,12 +2492,11 @@ export default class NostrWalletConnectStore {
             amountSats,
             usedRequestAmount,
             invalidRequestAmount
-        } =
-            await this.getInvoiceAmount(
-                request.invoice,
-                invoiceInfo,
-                request.amount
-            );
+        } = await this.getInvoiceAmount(
+            request.invoice,
+            invoiceInfo,
+            request.amount
+        );
         if (invalidRequestAmount) {
             return this.handleError(
                 localeString(
@@ -2619,7 +2656,7 @@ export default class NostrWalletConnectStore {
                         amountMsats,
                         'lightning',
                         paymentError.error?.message || 'Payment failed',
-                        decodedHash || ''
+                        decodedHash || invoiceInfo.payment_hash || ''
                     );
             return paymentError;
         }
@@ -2667,6 +2704,14 @@ export default class NostrWalletConnectStore {
         } else {
             const { paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            const fallbackPaymentHash =
+                decodedHash || invoiceInfo.payment_hash || '';
+            if (!fallbackPaymentHash) {
+                return this.handleError(
+                    'fallback payment missing payment_hash',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
             await this.recordMinimalSuccessActivity({
                 connection,
                 invoice: request.invoice,
@@ -2676,7 +2721,7 @@ export default class NostrWalletConnectStore {
                 amountMsats,
                 preimage,
                 feesPaidMsats: satsToMillisats(Number(fees_paid) || 0),
-                paymentHash: decodedHash || ''
+                paymentHash: fallbackPaymentHash
             });
             if (!skipNotification) {
                 this.showPaymentSentNotification(
@@ -2778,8 +2823,7 @@ export default class NostrWalletConnectStore {
         }
         // Round up to whole sats so sub-sat msat amounts cannot bypass the
         // budget; matches the lightning path's accounting.
-        const amount =
-            amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
+        const amount = amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
         if (!amountMsats || amount <= 0) {
             return this.handleError(
                 localeString(
@@ -2890,6 +2934,12 @@ export default class NostrWalletConnectStore {
         } else {
             const { paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            if (!decodedHash) {
+                return this.handleError(
+                    'fallback payment missing payment_hash',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
             await this.recordMinimalSuccessActivity({
                 connection,
                 invoice: request.invoice,
@@ -2899,7 +2949,7 @@ export default class NostrWalletConnectStore {
                 amountMsats,
                 preimage: cashuPreimage,
                 feesPaidMsats: satsToMillisats(cashuInvoice.fee || 0),
-                paymentHash: decodedHash || ''
+                paymentHash: decodedHash
             });
             if (!skipNotification) {
                 this.showPaymentSentNotification(amount, connection.name);
@@ -3202,7 +3252,7 @@ export default class NostrWalletConnectStore {
                 paymentHash: params.paymentHash,
                 getPreimage: params.preimage,
                 payment_preimage: params.preimage,
-                fee: Math.floor(params.feesPaidMsats / 1000),
+                fee_msat: params.feesPaidMsats.toString(),
                 getAmount: params.amountSats,
                 amount: params.amountSats
             };
@@ -4312,12 +4362,15 @@ export default class NostrWalletConnectStore {
                       );
             request = JSON.parse(decryptedContent);
         } catch (error) {
-            const encryptionTag = event.tags.find((tag) => tag[0] === 'encryption')?.[1] || 'none';
+            const encryptionTag =
+                event.tags.find((tag) => tag[0] === 'encryption')?.[1] ||
+                'none';
             console.error('NWC: Failed to decrypt or parse event content', {
                 error,
                 encryptionScheme,
                 encryptionTag,
-                diagnostic: `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
+                diagnostic:
+                    `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
                     `If this persists, the client may be using a different encryption scheme than expected.`,
                 eventStr
             });
@@ -4337,7 +4390,9 @@ export default class NostrWalletConnectStore {
         pendingEvents: PendingPayment[]
     ): Promise<void> {
         const uniquePendingEvents = Array.from(
-            new Map(pendingEvents.map((event) => [event.eventId, event])).values()
+            new Map(
+                pendingEvents.map((event) => [event.eventId, event])
+            ).values()
         );
         let remainingEvents = [...uniquePendingEvents];
         let remainingTotal = remainingEvents.reduce(
@@ -4406,6 +4461,8 @@ export default class NostrWalletConnectStore {
                             }
                         );
                     }
+                }
+                if (result.success) {
                     await this.updatePendingPayment({
                         ...event,
                         status: true,
@@ -4416,16 +4473,6 @@ export default class NostrWalletConnectStore {
                             event.eventId
                         );
                     });
-                    if (!result.success) {
-                        console.warn(
-                            'NWC: response publish failed after committing pending event',
-                            {
-                                eventId: event.eventId,
-                                method: event.request.method,
-                                errorMessage: result.errorMessage
-                            }
-                        );
-                    }
                 } else {
                     let formattedError: string | undefined;
                     if (result.errorMessage) {
@@ -4458,6 +4505,16 @@ export default class NostrWalletConnectStore {
                             );
                         }
                     });
+                }
+                if (result.committed && !result.success) {
+                    console.warn(
+                        'NWC: response publish failed after committing pending event',
+                        {
+                            eventId: event.eventId,
+                            method: event.request.method,
+                            errorMessage: result.errorMessage
+                        }
+                    );
                 }
                 return { event, result };
             } catch (error) {
@@ -4498,10 +4555,10 @@ export default class NostrWalletConnectStore {
         // Per-connection sequential, cross-connection parallel.
         const groupResults = await Promise.allSettled(
             Array.from(eventsByConnection.values()).map(async (group) => {
-                const out: Array<
-                    | { event: PendingPayment; result: any }
-                    | null
-                > = [];
+                const out: Array<{
+                    event: PendingPayment;
+                    result: any;
+                } | null> = [];
                 for (const event of group) {
                     out.push(await processSingleEvent(event));
                 }
@@ -4509,9 +4566,10 @@ export default class NostrWalletConnectStore {
             })
         );
 
-        const processingResults: PromiseSettledResult<
-            { event: PendingPayment; result: any } | null
-        >[] = [];
+        const processingResults: PromiseSettledResult<{
+            event: PendingPayment;
+            result: any;
+        } | null>[] = [];
         for (const group of groupResults) {
             if (group.status === 'fulfilled') {
                 for (const item of group.value) {
@@ -4643,13 +4701,12 @@ export default class NostrWalletConnectStore {
                         response = await this.handleGetBalance(connection);
                         break;
                     case 'pay_invoice':
-                        response = await this.runPayInvoiceSerialized(
-                            () =>
-                                this.handlePayInvoice(
-                                    connection,
-                                    request.params,
-                                    skipNotification
-                                )
+                        response = await this.runPayInvoiceSerialized(() =>
+                            this.handlePayInvoice(
+                                connection,
+                                request.params,
+                                skipNotification
+                            )
                         );
                         break;
                     case 'make_invoice':
@@ -4702,7 +4759,7 @@ export default class NostrWalletConnectStore {
         }
         const hasError = !!response?.error;
         const errorMessage = response?.error?.message;
-        const committed = !hasError;
+        let committed = false;
 
         // Only publish if we have a response
         if (response) {
@@ -4714,6 +4771,7 @@ export default class NostrWalletConnectStore {
                     eventId,
                     requestEncryptionScheme
                 );
+                committed = true;
             } catch (error) {
                 console.warn('NWC: Failed to publish event response', {
                     error,
@@ -4940,10 +4998,13 @@ export default class NostrWalletConnectStore {
 
         // Validate that the scheme value is a string
         if (typeof schemeValue !== 'string') {
-            console.warn('NWC: Invalid encryption tag value type, defaulting to nip04', {
-                tagValue: schemeValue,
-                tagType: typeof schemeValue
-            });
+            console.warn(
+                'NWC: Invalid encryption tag value type, defaulting to nip04',
+                {
+                    tagValue: schemeValue,
+                    tagType: typeof schemeValue
+                }
+            );
             return 'nip04';
         }
 
@@ -4957,10 +5018,13 @@ export default class NostrWalletConnectStore {
 
         // Default to nip04 for unknown schemes
         if (!validSchemes.includes(normalized)) {
-            console.warn('NWC: Unknown encryption scheme, defaulting to nip04', {
-                scheme: normalized,
-                validSchemes
-            });
+            console.warn(
+                'NWC: Unknown encryption scheme, defaulting to nip04',
+                {
+                    scheme: normalized,
+                    validSchemes
+                }
+            );
         }
 
         return 'nip04';

@@ -31,13 +31,24 @@ export default class NostrWalletConnect {
         return { invoices };
     };
     createInvoice = async (data: any) => {
+        const rawAmountMsat =
+            data.value_msat !== undefined && data.value_msat !== null
+                ? Number(data.value_msat)
+                : undefined;
+        const rawAmountSat =
+            data.value !== undefined && data.value !== null
+                ? Number(data.value)
+                : undefined;
+        const amount =
+            rawAmountMsat !== undefined && Number.isFinite(rawAmountMsat)
+                ? Math.ceil(rawAmountMsat / 1000)
+                : rawAmountSat !== undefined && Number.isFinite(rawAmountSat)
+                ? Math.trunc(rawAmountSat)
+                : undefined;
+
         const result = await this.nwc.makeInvoice({
             defaultMemo: data.memo,
-            // The SDK expects invoice amounts in millisats, so convert sat-based callers at the edge.
-            amount:
-                data.value_msat !== undefined && data.value_msat !== null
-                    ? Number(data.value_msat)
-                    : Number(data.value) * 1000
+            ...(amount !== undefined && amount > 0 ? { amount } : {})
         });
 
         // NWC only returns { paymentRequest }. createUnifiedInvoice

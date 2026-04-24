@@ -62,7 +62,14 @@ jest.mock('../utils/NostrConnectUtils', () => ({
     __esModule: true,
     default: {
         decodeInvoiceTags: jest.fn(),
+        convertConnectionActivityToNip47Transaction: jest.fn(
+            (activity: any) => activity
+        ),
         createNip47Transaction: jest.fn((params: any) => params),
+        filterAndPaginateTransactions: jest.fn((transactions: any) => ({
+            transactions,
+            totalCount: transactions.length
+        })),
         getFullAccessPermissions: jest.fn(() => ['get_info', 'pay_invoice']),
         isIgnorableError: jest.fn(() => false)
     }
@@ -71,7 +78,7 @@ jest.mock('../utils/NostrConnectUtils', () => ({
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
 
-type StoreMethodName = 'handleMakeInvoice';
+type StoreMethodName = 'handleMakeInvoice' | 'handleListTransactions';
 
 const storePrototype = NostrWalletConnectStore.prototype as unknown as Record<
     StoreMethodName,
@@ -138,6 +145,10 @@ describe('NostrWalletConnectStore msat plumbing', () => {
             handleError: jest.fn((message: string, code: string) => ({
                 result: undefined,
                 error: { code, message }
+            })),
+            handleErrorResponse: jest.fn((message: string, code: string) => ({
+                result: undefined,
+                error: { code, message }
             }))
         };
 
@@ -165,5 +176,108 @@ describe('NostrWalletConnectStore msat plumbing', () => {
             })
         );
         expect(response.result.amount).toBe(1500);
+    });
+
+    it('allows amountless lightning make_invoice requests', async () => {
+        mockedNostrConnectUtils.decodeInvoiceTags.mockResolvedValue({
+            paymentHash: 'decoded-payment-hash',
+            descriptionHash: 'decoded-description-hash',
+            expiryTime: 1700000000
+        } as never);
+
+        const connection: any = {
+            name: 'Test wallet',
+            addActivity: jest.fn()
+        };
+
+        const context: any = {
+            isCashuConfigured: false,
+            invoicesStore: {
+                creatingInvoiceError: false,
+                error_msg: null,
+                createUnifiedInvoice: jest.fn().mockResolvedValue({
+                    rHash: 'payment-hash'
+                }),
+                payment_request: 'lnbc1variableinvoice',
+                getInvoices: jest.fn().mockResolvedValue(undefined),
+                invoices: [
+                    {
+                        payment_hash: 'payment-hash',
+                        paymentRequest: 'lnbc1variableinvoice'
+                    }
+                ]
+            },
+            showInvoiceCreatedNotification: jest.fn(),
+            saveConnections: jest.fn().mockResolvedValue(undefined),
+            findAndUpdateConnection: jest.fn(),
+            handleError: jest.fn((message: string, code: string) => ({
+                result: undefined,
+                error: { code, message }
+            }))
+        };
+
+        const response = await callStoreMethod<{
+            result: { amount: number };
+            error: undefined;
+        }>('handleMakeInvoice', context, connection, {
+            description: 'amountless invoice'
+        });
+
+        expect(context.invoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                value: '0',
+                value_msat: '0',
+                memo: 'amountless invoice',
+                noLsp: true
+            })
+        );
+        expect(connection.addActivity).toHaveBeenCalledWith(
+            expect.objectContaining({
+                satAmount: 0,
+                msatAmount: 0
+            })
+        );
+        expect(response.result.amount).toBe(0);
+    });
+
+    it('keeps zero-amount invoices in list_transactions when payment permissions are enabled', async () => {
+        const context: any = {
+            paymentsStore: { getPayments: jest.fn() },
+            invoicesStore: { getInvoices: jest.fn() },
+            transactionsStore: { getTransactions: jest.fn() },
+            cashuStore: {},
+            isCashuConfigured: false,
+            handleError: jest.fn((message: string, code: string) => ({
+                result: undefined,
+                error: { code, message }
+            }))
+        };
+        const connection: any = {
+            hasPaymentPermissions: jest.fn(() => true),
+            activity: [
+                {
+                    amount: 0,
+                    paymentHash: 'a'.repeat(64),
+                    created_at: 1700000000
+                }
+            ]
+        };
+
+        mockedNostrConnectUtils.convertConnectionActivityToNip47Transaction.mockImplementation(
+            (activity: any) => ({
+                ...activity,
+                payment_hash: activity.paymentHash
+            })
+        );
+
+        const response = await callStoreMethod<any>(
+            'handleListTransactions',
+            context,
+            connection,
+            { limit: 10 }
+        );
+
+        expect(response.result.transactions).toHaveLength(1);
+        expect(response.result.transactions[0].amount).toBe(0);
     });
 });

@@ -96,10 +96,12 @@ const callStoreMethod = async <T>(
     thisArg: unknown,
     ...args: any[]
 ): Promise<T> => {
-    const method = (thisArg as Record<
-        StoreMethodName,
-        (this: unknown, ...args: any[]) => unknown
-    >)[methodName];
+    const method = (
+        thisArg as Record<
+            StoreMethodName,
+            (this: unknown, ...args: any[]) => unknown
+        >
+    )[methodName];
 
     if (typeof method !== 'function') {
         throw new Error(
@@ -207,13 +209,13 @@ describe('NostrWalletConnectStore replay guards', () => {
 
         const context = createStore();
         context.getConnection = jest.fn((connectionId: string) =>
-                connectionId === 'conn-1'
-                    ? { id: 'conn-1', name: 'wallet' }
-                    : undefined
-            );
-        context.hasProcessedReplayEvent = jest.fn(async (eventId: string) =>
-                eventId === 'event-processed'
-            );
+            connectionId === 'conn-1'
+                ? { id: 'conn-1', name: 'wallet' }
+                : undefined
+        );
+        context.hasProcessedReplayEvent = jest.fn(
+            async (eventId: string) => eventId === 'event-processed'
+        );
         context.deletePendingPaymentById = jest.fn().mockResolvedValue(true);
 
         const pendingPayments = await callStoreMethod<any[]>(
@@ -278,7 +280,7 @@ describe('NostrWalletConnectStore replay guards', () => {
         context.handleEventRequest = jest.fn(async () => ({
             success: false,
             errorMessage: 'publish failed',
-            committed: true
+            committed: false
         }));
         context.markProcessedReplayEvent = jest.fn(async () => true);
         context.updatePendingPayment = jest.fn().mockResolvedValue(undefined);
@@ -298,15 +300,61 @@ describe('NostrWalletConnectStore replay guards', () => {
         ] as any);
 
         expect(context.handleEventRequest).toHaveBeenCalledTimes(1);
-        expect(context.markProcessedReplayEvent).toHaveBeenCalledWith('event-1');
         expect(context.updatePendingPayment).toHaveBeenCalledWith(
             expect.objectContaining({
                 eventId: 'event-1',
-                status: true,
+                status: false,
                 isProcessed: true
             })
         );
-        expect(context.deletePendingPaymentById).toHaveBeenCalledWith('event-1');
+        expect(context.markProcessedReplayEvent).not.toHaveBeenCalled();
+        expect(context.deletePendingPaymentById).not.toHaveBeenCalled();
+    });
+
+    it('marks terminal error responses as processed so they do not replay', async () => {
+        const context = createStore();
+        context.isInNWCPendingPaymentsView = true;
+        context.modalStore = {
+            toggleNWCPendingPaymentsModal: jest.fn()
+        } as any;
+        context.getConnection = jest.fn(() => ({
+            id: 'conn-1',
+            name: 'wallet'
+        }));
+        context.hasProcessedReplayEvent = jest.fn(async () => false);
+        context.handleEventRequest = jest.fn(async () => ({
+            success: false,
+            errorMessage: JSON.stringify({ message: 'invalid amount' }),
+            committed: true
+        }));
+        context.markProcessedReplayEvent = jest.fn(async () => true);
+        context.updatePendingPayment = jest.fn().mockResolvedValue(undefined);
+        context.deletePendingPaymentById = jest.fn().mockResolvedValue(true);
+        context.resetPendingPayInvoiceState = jest.fn();
+        context.showNotification = jest.fn();
+
+        await callStoreMethod<void>('processPendingPaymentsEvents', context, [
+            {
+                eventId: 'event-1',
+                amount: 10,
+                connection: { id: 'conn-1', name: 'wallet' },
+                connectionName: 'wallet',
+                request: { method: 'pay_invoice', params: {} },
+                encryptionScheme: 'nip04'
+            }
+        ] as any);
+
+        expect(context.markProcessedReplayEvent).toHaveBeenCalledWith(
+            'event-1'
+        );
+        expect(context.updatePendingPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                eventId: 'event-1',
+                status: false,
+                isProcessed: true,
+                errorMessage: 'invalid amount'
+            })
+        );
     });
 
     it('dedupes repeated pending events in the same restore batch', async () => {
@@ -363,8 +411,12 @@ describe('NostrWalletConnectStore replay guards', () => {
         context.nwcWalletServices = new Map([
             ['wss://relay.example', { subscribe }]
         ]);
-        context.retryWithBackoff = jest.fn(async (fn: () => Promise<any>) => fn());
-        context.unsubscribeFromConnection = jest.fn().mockResolvedValue(undefined);
+        context.retryWithBackoff = jest.fn(async (fn: () => Promise<any>) =>
+            fn()
+        );
+        context.unsubscribeFromConnection = jest
+            .fn()
+            .mockResolvedValue(undefined);
         const connection: any = {
             id: 'conn-1',
             name: 'wallet',
@@ -407,8 +459,12 @@ describe('NostrWalletConnectStore replay guards', () => {
         context.nwcWalletServices = new Map([
             ['wss://relay.example', { subscribe }]
         ]);
-        context.retryWithBackoff = jest.fn(async (fn: () => Promise<any>) => fn());
-        context.unsubscribeFromConnection = jest.fn().mockResolvedValue(undefined);
+        context.retryWithBackoff = jest.fn(async (fn: () => Promise<any>) =>
+            fn()
+        );
+        context.unsubscribeFromConnection = jest
+            .fn()
+            .mockResolvedValue(undefined);
         const connection: any = {
             id: 'conn-1',
             name: 'wallet',

@@ -187,7 +187,38 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .addInvoice({
                 memo: data.memo,
-                value_msat: data.value_msat || Number(data.value) * 1000,
+                ...(() => {
+                    const valueMsat =
+                        data.value_msat !== undefined &&
+                        data.value_msat !== null
+                            ? Number(data.value_msat)
+                            : undefined;
+                    const valueSat =
+                        data.value !== undefined && data.value !== null
+                            ? Number(data.value)
+                            : undefined;
+                    const normalizedValueMsat =
+                        typeof valueMsat === 'number' &&
+                        Number.isFinite(valueMsat)
+                            ? valueMsat
+                            : undefined;
+                    const normalizedValueSat =
+                        typeof valueSat === 'number' &&
+                        Number.isFinite(valueSat)
+                            ? valueSat
+                            : undefined;
+                    const amountMsat =
+                        normalizedValueMsat !== undefined &&
+                        normalizedValueMsat > 0
+                            ? Math.trunc(normalizedValueMsat)
+                            : normalizedValueSat !== undefined &&
+                              normalizedValueSat > 0
+                            ? Math.trunc(normalizedValueSat * 1000)
+                            : undefined;
+                    return amountMsat !== undefined
+                        ? { value_msat: amountMsat }
+                        : {};
+                })(),
                 expiry: data.expiry_seconds,
                 is_amp: data.is_amp,
                 is_blinded: data.is_blinded,

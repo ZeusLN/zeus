@@ -335,18 +335,42 @@ export default class LND {
             }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
         );
     createInvoice = (data: any) =>
-        this.postRequest('/v1/invoices', {
-            memo: data.memo,
-            value_msat: data.value_msat || Number(data.value) * 1000,
-            expiry: data.expiry_seconds,
-            is_amp: data.is_amp,
-            is_blinded: data.is_blinded,
-            private: data.private,
-            r_preimage: data.preimage
-                ? Base64Utils.hexToBase64(data.preimage)
-                : undefined,
-            route_hints: data.route_hints
-        });
+        (() => {
+            const valueMsat =
+                data.value_msat !== undefined && data.value_msat !== null
+                    ? Number(data.value_msat)
+                    : undefined;
+            const valueSat =
+                data.value !== undefined && data.value !== null
+                    ? Number(data.value)
+                    : undefined;
+            const normalizedValueMsat =
+                typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                    ? valueMsat
+                    : undefined;
+            const normalizedValueSat =
+                typeof valueSat === 'number' && Number.isFinite(valueSat)
+                    ? valueSat
+                    : undefined;
+            const amountMsat =
+                normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                    ? Math.trunc(normalizedValueMsat)
+                    : normalizedValueSat !== undefined && normalizedValueSat > 0
+                    ? Math.trunc(normalizedValueSat * 1000)
+                    : undefined;
+            return this.postRequest('/v1/invoices', {
+                memo: data.memo,
+                ...(amountMsat !== undefined ? { value_msat: amountMsat } : {}),
+                expiry: data.expiry_seconds,
+                is_amp: data.is_amp,
+                is_blinded: data.is_blinded,
+                private: data.private,
+                r_preimage: data.preimage
+                    ? Base64Utils.hexToBase64(data.preimage)
+                    : undefined,
+                route_hints: data.route_hints
+            });
+        })();
     getPayments = (
         params: { maxPayments?: number; reversed?: boolean } = {
             maxPayments: 500,

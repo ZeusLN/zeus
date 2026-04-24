@@ -108,8 +108,37 @@ export default class EmbeddedLND extends LND {
     getInvoices = async () => await listInvoices();
     createInvoice = async (data: any) =>
         await addInvoice({
-            amount: data.value ? Number(data.value) : undefined,
-            amount_msat: data.value_msat ? Number(data.value_msat) : undefined,
+            ...(() => {
+                const valueMsat =
+                    data.value_msat !== undefined && data.value_msat !== null
+                        ? Number(data.value_msat)
+                        : undefined;
+                const valueSat =
+                    data.value !== undefined && data.value !== null
+                        ? Number(data.value)
+                        : undefined;
+                const normalizedValueMsat =
+                    typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                        ? valueMsat
+                        : undefined;
+                const normalizedValueSat =
+                    typeof valueSat === 'number' && Number.isFinite(valueSat)
+                        ? valueSat
+                        : undefined;
+                const amountMsat =
+                    normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                        ? Math.trunc(normalizedValueMsat)
+                        : normalizedValueSat !== undefined &&
+                          normalizedValueSat > 0
+                        ? Math.trunc(normalizedValueSat * 1000)
+                        : undefined;
+                return amountMsat !== undefined
+                    ? {
+                          amount: Math.trunc(amountMsat / 1000),
+                          amount_msat: amountMsat
+                      }
+                    : {};
+            })(),
             memo: data.memo,
             expiry: data.expiry_seconds,
             is_amp: data.is_amp,
