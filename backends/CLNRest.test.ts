@@ -62,8 +62,32 @@ describe('CLNRest fee limits', () => {
             }),
             120000
         );
-        const [, request] = postRequestSpy.mock.calls[0] as [string, any, number];
+        const [, request] = postRequestSpy.mock.calls[0] as [
+            string,
+            any,
+            number
+        ];
         expect(request.maxfeepercent).toBeUndefined();
+    });
+
+    it('preserves an explicit max_fee_percent of 0', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1testinvoice',
+            timeout_seconds: 120,
+            max_fee_percent: 0
+        });
+
+        const [, request] = postRequestSpy.mock.calls[0] as [
+            string,
+            any,
+            number
+        ];
+        expect(request.maxfeepercent).toBe(0);
     });
 
     it('floors fractional fee_limit_msat values before sending to CLN', async () => {
@@ -78,7 +102,11 @@ describe('CLNRest fee limits', () => {
             fee_limit_msat: 1500.8
         });
 
-        const [, request] = postRequestSpy.mock.calls[0] as [string, any, number];
+        const [, request] = postRequestSpy.mock.calls[0] as [
+            string,
+            any,
+            number
+        ];
         expect(request.maxfee).toBe(1500);
     });
 });

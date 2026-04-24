@@ -432,10 +432,7 @@ export default class CLNRest {
         // valid CLN field and is rejected by the schema's
         // `additionalProperties: false`. Convert sat -> msat here, using
         // Math.floor to ensure the result is an integer (CLN schema requires it).
-        if (
-            data.fee_limit_msat !== undefined &&
-            data.fee_limit_msat !== null
-        ) {
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
             const v = Number(data.fee_limit_msat);
             if (Number.isFinite(v) && v >= 0) {
                 request.maxfee = Math.floor(v);
@@ -452,7 +449,10 @@ export default class CLNRest {
             } else {
                 delete request.maxfee;
             }
-        } else if (data.max_fee_percent) {
+        } else if (
+            data.max_fee_percent !== undefined &&
+            data.max_fee_percent !== null
+        ) {
             // Fallback to percentage-based fee limit if absolute limit not provided
             request.maxfeepercent = data.max_fee_percent;
         }
@@ -487,11 +487,25 @@ export default class CLNRest {
         );
     };
     sendKeysend = (data: any) => {
+        const rawAmountMsat =
+            data.amount_msat !== undefined && data.amount_msat !== null
+                ? Number(data.amount_msat)
+                : undefined;
+        const rawAmountSat =
+            data.amt !== undefined && data.amt !== null
+                ? Number(data.amt)
+                : undefined;
+        const amountMsat =
+            rawAmountMsat !== undefined && Number.isFinite(rawAmountMsat)
+                ? Math.floor(rawAmountMsat)
+                : rawAmountSat !== undefined && Number.isFinite(rawAmountSat)
+                ? Math.floor(rawAmountSat * 1000)
+                : 0;
         return this.postRequest(
             '/v1/keysend',
             {
                 destination: data.pubkey,
-                amount_msat: Number(data.amt && data.amt * 1000),
+                amount_msat: amountMsat,
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },

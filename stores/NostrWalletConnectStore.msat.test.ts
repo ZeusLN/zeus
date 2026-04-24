@@ -49,7 +49,10 @@ jest.mock('../models/CashuPayment', () => ({
 }));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
-    default: { decodePaymentRequest: jest.fn() }
+    default: {
+        decodePaymentRequest: jest.fn(),
+        lookupInvoice: jest.fn()
+    }
 }));
 jest.mock('../utils/AmountUtils', () => ({
     millisatsToSats: jest.fn((amount: number) => Math.floor(amount / 1000)),
@@ -76,9 +79,14 @@ jest.mock('../utils/NostrConnectUtils', () => ({
 }));
 
 import NostrConnectUtils from '../utils/NostrConnectUtils';
+import BackendUtils from '../utils/BackendUtils';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
 
-type StoreMethodName = 'handleMakeInvoice' | 'handleListTransactions';
+type StoreMethodName =
+    | 'getInvoiceAmount'
+    | 'handleMakeInvoice'
+    | 'handleListTransactions'
+    | 'handleLookupInvoice';
 
 const storePrototype = NostrWalletConnectStore.prototype as unknown as Record<
     StoreMethodName,
@@ -238,6 +246,57 @@ describe('NostrWalletConnectStore msat plumbing', () => {
             })
         );
         expect(response.result.amount).toBe(0);
+    });
+
+    it('rounds exact-msat invoice amounts up for display and budgeting', async () => {
+        const context: any = {};
+
+        const response = await callStoreMethod<{
+            amountMsats: number;
+            amountSats: number;
+            usedRequestAmount: boolean;
+            invalidRequestAmount: boolean;
+        }>('getInvoiceAmount', context, 'lnbc1exact', {
+            num_satoshis: 1,
+            num_msat: 1500
+        });
+
+        expect(response.amountMsats).toBe(1500);
+        expect(response.amountSats).toBe(2);
+        expect(response.usedRequestAmount).toBe(false);
+        expect(response.invalidRequestAmount).toBe(false);
+    });
+
+    it('falls back to invoice-only lookup on lightning backends', async () => {
+        mockedNostrConnectUtils.decodeInvoiceTags.mockResolvedValue({
+            paymentHash: 'decoded-payment-hash',
+            descriptionHash: 'decoded-description-hash',
+            expiryTime: 1700000000
+        } as never);
+
+        const lookupInvoiceSpy = jest
+            .spyOn(BackendUtils, 'lookupInvoice')
+            .mockResolvedValue({
+                r_hash: 'decoded-payment-hash',
+                payment_request: 'lnbc1invoice',
+                settled: false
+            } as never);
+
+        const context: any = {
+            isCashuConfigured: false,
+            handleError: jest.fn((message: string, code: string) => ({
+                result: undefined,
+                error: { code, message }
+            }))
+        };
+
+        await callStoreMethod<any>('handleLookupInvoice', context, {
+            invoice: 'lnbc1invoice'
+        });
+
+        expect(lookupInvoiceSpy).toHaveBeenCalledWith({
+            r_hash: 'decoded-payment-hash'
+        });
     });
 
     it('keeps zero-amount invoices in list_transactions when payment permissions are enabled', async () => {

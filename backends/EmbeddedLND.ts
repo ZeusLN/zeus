@@ -292,10 +292,17 @@ export default class EmbeddedLND extends LND {
 
         return await sendPaymentV2Sync(sendPaymentReq);
     };
-    sendKeysend = async (data: any) =>
-        await sendKeysendPaymentV2({
+    sendKeysend = async (data: any) => {
+        const request: any = {
             dest: data.pubkey,
-            amt: data.amt,
+            amt:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? Math.floor(Number(data.amount_msat) / 1000)
+                    : data.amt,
+            amount_msat:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? Math.floor(Number(data.amount_msat))
+                    : undefined,
             dest_custom_records: data.dest_custom_records,
             payment_hash: data.payment_hash,
             fee_limit_sat: data.fee_limit_sat,
@@ -303,7 +310,9 @@ export default class EmbeddedLND extends LND {
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,
             amp: data.amp
-        });
+        };
+        return await sendKeysendPaymentV2(request);
+    };
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =

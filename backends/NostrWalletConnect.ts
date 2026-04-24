@@ -41,7 +41,17 @@ export default class NostrWalletConnect {
                 : undefined;
         const amount =
             rawAmountMsat !== undefined && Number.isFinite(rawAmountMsat)
-                ? Math.ceil(rawAmountMsat / 1000)
+                ? (() => {
+                      if (rawAmountMsat <= 0) {
+                          return undefined;
+                      }
+                      if (rawAmountMsat % 1000 !== 0) {
+                          throw new Error(
+                              'value_msat must be sat-aligned for make_invoice'
+                          );
+                      }
+                      return Math.trunc(rawAmountMsat / 1000);
+                  })()
                 : rawAmountSat !== undefined && Number.isFinite(rawAmountSat)
                 ? Math.trunc(rawAmountSat)
                 : undefined;

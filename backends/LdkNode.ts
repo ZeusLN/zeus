@@ -1345,7 +1345,12 @@ export default class LdkNode {
      */
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
-        const amt = Number(data.amt);
+        const amountMsat =
+            data.amount_msat !== undefined && data.amount_msat !== null
+                ? Number(data.amount_msat)
+                : data.amt !== undefined && data.amt !== null
+                ? Number(data.amt) * 1000
+                : 0;
         const maxTotalRoutingFeeMsat =
             data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
                 ? (() => {
@@ -1362,7 +1367,7 @@ export default class LdkNode {
         const paymentId =
             await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
                 nodeId: pubkey,
-                amountMsat: amt * 1000,
+                amountMsat: Math.floor(amountMsat),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });

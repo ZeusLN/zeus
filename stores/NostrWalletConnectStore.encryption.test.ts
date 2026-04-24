@@ -176,9 +176,15 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         });
 
         it.each([
-            { tags: [['encryption', 'nip44_v2_extra']], label: 'partial match' },
+            {
+                tags: [['encryption', 'nip44_v2_extra']],
+                label: 'partial match'
+            },
             { tags: [['encryption', 'unsupported']], label: 'unknown scheme' },
-            { tags: [['encryption', 123 as unknown as string]], label: 'number' }
+            {
+                tags: [['encryption', 123 as unknown as string]],
+                label: 'number'
+            }
         ])('falls back to nip04 for an invalid $label', ({ tags }) => {
             const warnSpy = jest
                 .spyOn(console, 'warn')
@@ -204,7 +210,9 @@ describe('NostrWalletConnectStore encryption helpers', () => {
             { tags: [['encryption', 'prefix_nip44_v2']], expected: false },
             { tags: [['encryption', 'unsupported']], expected: false },
             {
-                tags: [['encryption', { scheme: 'nip04' } as unknown as string]],
+                tags: [
+                    ['encryption', { scheme: 'nip04' } as unknown as string]
+                ],
                 expected: false
             }
         ])('returns $expected for %j', ({ tags, expected }) => {
@@ -239,7 +247,8 @@ describe('NostrWalletConnectStore encryption helpers', () => {
             publish: jest.fn().mockResolvedValue(undefined),
             close: jest.fn()
         };
-        const relayInit = jest.requireMock('nostr-tools').relayInit as jest.Mock;
+        const relayInit = jest.requireMock('nostr-tools')
+            .relayInit as jest.Mock;
         const nip04Module = jest.requireMock('@nostr/tools/nip04') as {
             encrypt: jest.Mock;
             decrypt: jest.Mock;
@@ -290,6 +299,39 @@ describe('NostrWalletConnectStore encryption helpers', () => {
                     ['p', 'client-pubkey']
                 ])
             })
+        );
+    });
+
+    it('publishes unsupported-encryption responses with the original method', async () => {
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const publishSpy = jest
+            .spyOn(store as any, 'publishEventToClient')
+            .mockResolvedValue(undefined);
+
+        await (store as any).publishUnsupportedEncryptionResponse(
+            { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
+            'pay_invoice',
+            'event-unsupported',
+            'nip44_v2'
+        );
+
+        expect(publishSpy).toHaveBeenCalledWith(
+            { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
+            'pay_invoice',
+            expect.any(Object),
+            'event-unsupported',
+            'nip04'
         );
     });
 });
@@ -555,7 +597,9 @@ describe('NWCConnection replacement flow', () => {
         const saveSpy = jest
             .spyOn(store as any, 'saveConnections')
             .mockResolvedValue(undefined);
-        jest.spyOn(store as any, 'subscribeToConnection').mockResolvedValue(true);
+        jest.spyOn(store as any, 'subscribeToConnection').mockResolvedValue(
+            true
+        );
 
         const result = await store.updateConnection('conn-new-relay', {
             relayUrl: 'wss://new.relay'
@@ -565,7 +609,9 @@ describe('NWCConnection replacement flow', () => {
         expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('old-pubkey');
         expect(initializeSpy).not.toHaveBeenCalled();
         expect(saveSpy).toHaveBeenCalled();
-        expect((store as any).nwcWalletServices.has('wss://new.relay')).toBe(true);
+        expect((store as any).nwcWalletServices.has('wss://new.relay')).toBe(
+            true
+        );
     });
 
     it('rejects invalid Lightning Addresses before wallet-service side effects', async () => {
@@ -716,6 +762,7 @@ describe('NWCConnection replacement flow', () => {
 
         expect(unsupportedSpy).toHaveBeenCalledWith(
             expect.objectContaining({ id: 'conn-unsupported' }),
+            'unsupported_encryption',
             'event-1',
             'nip04'
         );

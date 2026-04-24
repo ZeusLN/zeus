@@ -4,6 +4,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
         bolt11: {
             sendBolt11: jest.fn(),
             sendBolt11UsingAmount: jest.fn()
+        },
+        spontaneous: {
+            sendSpontaneousPayment: jest.fn()
         }
     }
 }));
@@ -43,6 +46,32 @@ describe('LdkNode fee limits', () => {
             payment_preimage: 'preimage',
             payment_route: {},
             status: 'SUCCEEDED'
+        });
+    });
+});
+
+describe('LdkNode keysend msat handling', () => {
+    it('forwards amount_msat without truncating to sats', async () => {
+        const node = new LdkNode();
+        const sendSpontaneousSpy = jest
+            .spyOn(LdkNodeInjection.spontaneous, 'sendSpontaneousPayment')
+            .mockResolvedValue('payment-id');
+        jest.spyOn(node as any, 'awaitPaymentCompletion').mockResolvedValue({
+            hash: 'payment-hash',
+            preimage: 'preimage'
+        });
+
+        await node.sendKeysend({
+            pubkey: 'pubkey',
+            amount_msat: 1500,
+            fee_limit_sat: 0
+        });
+
+        expect(sendSpontaneousSpy).toHaveBeenCalledWith({
+            nodeId: 'pubkey',
+            amountMsat: 1500,
+            maxTotalRoutingFeeMsat: 0,
+            maxPathCount: undefined
         });
     });
 });

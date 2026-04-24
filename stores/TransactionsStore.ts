@@ -649,7 +649,8 @@ export default class TransactionsStore {
 
         // max fee percent for c-lightning
         if (
-            max_fee_percent &&
+            max_fee_percent !== undefined &&
+            max_fee_percent !== null &&
             this.settingsStore.implementation === 'cln-rest'
         ) {
             data.max_fee_percent = max_fee_percent;
