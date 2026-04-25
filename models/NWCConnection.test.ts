@@ -181,6 +181,7 @@ describe('NWCConnection', () => {
             expect(result.success).toBe(false);
             expect(result.errorMessage).toBeDefined();
             expect(result.errorMessage).toContain('exceeds budget');
+            expect(result.errorMessage).toContain('Remaining: 200');
             // Budget should be clamped to max
             expect(connection.totalSpendSats).toBe(1000);
         });

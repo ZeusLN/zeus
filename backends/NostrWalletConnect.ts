@@ -45,12 +45,10 @@ export default class NostrWalletConnect {
                       if (rawAmountMsat <= 0) {
                           return undefined;
                       }
-                      if (rawAmountMsat % 1000 !== 0) {
-                          throw new Error(
-                              'value_msat must be sat-aligned for make_invoice'
-                          );
-                      }
-                      return Math.trunc(rawAmountMsat / 1000);
+                      // WebLN makeInvoice accepts sat-denominated amounts;
+                      // round up so valid NIP-47 msat requests never create
+                      // a lower-value invoice.
+                      return Math.max(1, Math.ceil(rawAmountMsat / 1000));
                   })()
                 : rawAmountSat !== undefined && Number.isFinite(rawAmountSat)
                 ? Math.trunc(rawAmountSat)

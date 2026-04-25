@@ -464,6 +464,10 @@ export default class NWCConnection extends BaseModel {
             // This ensures that even if a payment succeeds despite race conditions,
             // the budget is marked as fully consumed and future payments are blocked.
             const totalBeforeClamp = this.totalSpendSats;
+            const remainingBeforeClamp = Math.max(
+                0,
+                this.maxAmountSats! - totalBeforeClamp
+            );
             this.totalSpendSats = this.maxAmountSats!;
 
             // Log the race condition detection for telemetry/monitoring
@@ -491,7 +495,7 @@ export default class NWCConnection extends BaseModel {
                     'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
                     {
                         amount: amountSats.toString(),
-                        remaining: this.remainingBudget.toString()
+                        remaining: remainingBeforeClamp.toString()
                     }
                 )
             };

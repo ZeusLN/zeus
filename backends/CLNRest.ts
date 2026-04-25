@@ -416,9 +416,17 @@ export default class CLNRest {
         });
 
     payLightningInvoice = (data: any) => {
+        const timeoutSeconds = (() => {
+            const value =
+                data.timeout_seconds !== undefined &&
+                data.timeout_seconds !== null
+                    ? Number(data.timeout_seconds)
+                    : 60;
+            return Number.isFinite(value) && value >= 0 ? value : 60;
+        })();
         const request: any = {
             bolt11: data.payment_request,
-            retry_for: data.timeout_seconds
+            retry_for: timeoutSeconds
         };
 
         // Set fee limit: prefer fee_limit_msat (NIP-47 authoritative) over fee_limit_sat,
@@ -477,11 +485,7 @@ export default class CLNRest {
             request.amount_msat = amountMsat;
         }
 
-        return this.postRequest(
-            '/v1/pay',
-            request,
-            data.timeout_seconds * 1000
-        );
+        return this.postRequest('/v1/pay', request, timeoutSeconds * 1000);
     };
     sendKeysend = (data: any) => {
         const rawAmountMsat =

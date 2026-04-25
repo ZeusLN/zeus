@@ -2266,7 +2266,7 @@ export default class NostrWalletConnectStore {
                 }
                 // Signal actual completion (resolve OR reject) so the next
                 // mutex waiter knows it is safe to proceed.
-                opPromise.finally(() => operationResolve());
+                opPromise.then(operationResolve, operationResolve);
 
                 // Create a timeout promise that rejects after specified duration
                 return Promise.race([
@@ -4787,6 +4787,15 @@ export default class NostrWalletConnectStore {
                             // been committed or cached; transient errors
                             // should retry after restart.
                             if (!result.committed) {
+                                if (
+                                    result.errorMessage ===
+                                    REPLAY_MARKER_PERSISTENCE_ERROR
+                                ) {
+                                    await this.markCommittedRestoreMarkerFailure(
+                                        eventId
+                                    );
+                                    return null;
+                                }
                                 throw new Error(
                                     result.errorMessage ||
                                         'Failed to process restored NWC event'
@@ -5587,17 +5596,29 @@ export default class NostrWalletConnectStore {
         const errorMessage = response?.error?.message;
         let committed = !!response;
         let published = false;
+        let cachePersisted = false;
 
         // Only publish if we have a response
         if (response) {
             try {
                 if (eventId) {
-                    await this.cacheReplayResponse(
-                        eventId,
-                        request.method,
-                        response,
-                        requestEncryptionScheme
-                    );
+                    try {
+                        cachePersisted = await this.cacheReplayResponse(
+                            eventId,
+                            request.method,
+                            response,
+                            requestEncryptionScheme
+                        );
+                    } catch (cacheError) {
+                        console.error(
+                            'NWC: Failed to persist replay response before publish',
+                            {
+                                eventId,
+                                method: request.method,
+                                error: cacheError
+                            }
+                        );
+                    }
                 }
                 await this.publishEventToClient(
                     connection,
@@ -5607,7 +5628,7 @@ export default class NostrWalletConnectStore {
                     requestEncryptionScheme
                 );
                 published = true;
-                if (eventId && !retainReplayResponse) {
+                if (eventId && cachePersisted && !retainReplayResponse) {
                     await this.removeReplayResponse(eventId);
                 }
             } catch (error) {
@@ -5620,8 +5641,21 @@ export default class NostrWalletConnectStore {
                 return {
                     success: false,
                     errorMessage:
-                        error instanceof Error ? error.message : String(error),
-                    committed,
+                        eventId && !cachePersisted && !published
+                            ? REPLAY_MARKER_PERSISTENCE_ERROR
+                            : error instanceof Error
+                            ? error.message
+                            : String(error),
+                    committed: cachePersisted || published ? committed : false,
+                    published
+                };
+            }
+
+            if (eventId && !cachePersisted && !published) {
+                return {
+                    success: false,
+                    errorMessage: REPLAY_MARKER_PERSISTENCE_ERROR,
+                    committed: false,
                     published
                 };
             }
@@ -5767,52 +5801,110 @@ export default class NostrWalletConnectStore {
             notification_type: notificationType,
             notification
         });
-        const encryptedPayload = this.encryptPayloadForClient(
-            connection,
-            payloadString,
-            'nip44_v2',
-            { notificationType }
-        );
-        const tags: string[][] = [
-            ['p', connection.pubkey],
-            ['encryption', encryptedPayload.encryptionScheme],
-            ['notification_type', notificationType]
+        const encryptedPayloads = [
+            this.encryptPayloadForClient(
+                connection,
+                payloadString,
+                'nip44_v2',
+                { notificationType }
+            )
         ];
-        const unsignedEvent: UnsignedEvent = {
-            kind: this.getNotificationEventKind(
-                encryptedPayload.encryptionScheme
-            ),
-            tags,
-            content: encryptedPayload.content,
-            created_at: dateTimeUtils.getCurrentTimestamp(),
-            pubkey: servicePublicKey
-        };
-        const signedEvent = {
-            ...unsignedEvent,
-            id: getEventHash(unsignedEvent),
-            sig: getSignature(unsignedEvent, servicePrivateKey)
-        };
 
-        await this.retryWithBackoff(async () => {
-            if (!this.validateRelayUrl(connection.relayUrl)) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+        // Clients subscribe to a single notification kind based on the
+        // encryption they negotiated. Publish a NIP-04 copy too when NIP-44
+        // succeeds so older/NIP-04-only clients receive advertised events.
+        if (encryptedPayloads[0].encryptionScheme === 'nip44_v2') {
+            try {
+                encryptedPayloads.push(
+                    this.encryptPayloadForClient(
+                        connection,
+                        payloadString,
+                        'nip04',
+                        { notificationType }
                     )
                 );
+            } catch (error) {
+                console.warn(
+                    'NWC: Failed to prepare NIP-04 notification copy',
+                    {
+                        notificationType,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                    }
+                );
             }
-            const relay = relayInit(connection.relayUrl);
-            try {
-                await relay.connect();
-                await relay.publish(signedEvent);
-            } finally {
-                try {
-                    relay.close();
-                } catch (error) {
-                    console.error('NWC: Failed to close relay:', error);
+        }
+
+        const publishEncryptedNotification = async (encryptedPayload: {
+            content: string;
+            encryptionScheme: NwcEncryptionScheme;
+        }) => {
+            const tags: string[][] = [
+                ['p', connection.pubkey],
+                ['encryption', encryptedPayload.encryptionScheme],
+                ['notification_type', notificationType]
+            ];
+            const unsignedEvent: UnsignedEvent = {
+                kind: this.getNotificationEventKind(
+                    encryptedPayload.encryptionScheme
+                ),
+                tags,
+                content: encryptedPayload.content,
+                created_at: dateTimeUtils.getCurrentTimestamp(),
+                pubkey: servicePublicKey
+            };
+            const signedEvent = {
+                ...unsignedEvent,
+                id: getEventHash(unsignedEvent),
+                sig: getSignature(unsignedEvent, servicePrivateKey)
+            };
+
+            await this.retryWithBackoff(async () => {
+                if (!this.validateRelayUrl(connection.relayUrl)) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                        )
+                    );
                 }
-            }
-        }, MAX_RELAY_ATTEMPTS);
+                const relay = relayInit(connection.relayUrl);
+                try {
+                    await relay.connect();
+                    await relay.publish(signedEvent);
+                } finally {
+                    try {
+                        relay.close();
+                    } catch (error) {
+                        console.error('NWC: Failed to close relay:', error);
+                    }
+                }
+            }, MAX_RELAY_ATTEMPTS);
+        };
+
+        const publishResults = await Promise.allSettled(
+            encryptedPayloads.map(publishEncryptedNotification)
+        );
+        const failures = publishResults.filter(
+            (result): result is PromiseRejectedResult =>
+                result.status === 'rejected'
+        );
+        if (failures.length === publishResults.length) {
+            throw (
+                failures[0]?.reason || new Error('Notification publish failed')
+            );
+        }
+        if (failures.length > 0) {
+            console.warn('NWC: Some notification publishes failed', {
+                notificationType,
+                failures: failures.map((failure) =>
+                    failure.reason instanceof Error
+                        ? failure.reason.message
+                        : String(failure.reason)
+                )
+            });
+        }
     }
 
     private async publishEventToClient(

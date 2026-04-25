@@ -309,7 +309,7 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         );
     });
 
-    it('publishes payment_sent notifications as NIP-47 notification events', async () => {
+    it('publishes payment_sent notifications for both NIP-44 and NIP-04 clients', async () => {
         mockNip04Encrypt.mockReset();
         mockNip44Encrypt.mockReset();
         mockNip44GetConversationKey.mockReset();
@@ -335,6 +335,7 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         relayInit.mockReturnValue(relay);
         mockNip44GetConversationKey.mockReturnValue('conversation-key');
         mockNip44Encrypt.mockReturnValue('nip44-notification-content');
+        mockNip04Encrypt.mockReturnValue('nip04-notification-content');
         (store as any).walletServiceKeys = {
             privateKey: 'service-secret',
             publicKey: 'service-pubkey'
@@ -373,6 +374,17 @@ describe('NostrWalletConnectStore encryption helpers', () => {
                 tags: expect.arrayContaining([
                     ['p', 'client-pubkey'],
                     ['encryption', 'nip44_v2'],
+                    ['notification_type', 'payment_sent']
+                ])
+            })
+        );
+        expect(relay.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                kind: 23196,
+                content: 'nip04-notification-content',
+                tags: expect.arrayContaining([
+                    ['p', 'client-pubkey'],
+                    ['encryption', 'nip04'],
                     ['notification_type', 'payment_sent']
                 ])
             })

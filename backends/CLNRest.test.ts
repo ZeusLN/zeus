@@ -126,6 +126,28 @@ describe('CLNRest msat handling', () => {
         const [, body] = postRequestSpy.mock.calls[0] as [string, any, number];
         // Must keep exact msat precision – never divide by 1000 then multiply.
         expect(body.amount_msat).toBe(1234567);
+        expect(body.retry_for).toBe(60);
+        expect(postRequestSpy.mock.calls[0][2]).toBe(60000);
+    });
+
+    it('defaults invalid payment timeouts before calling CLN', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1zeroamt',
+            timeout_seconds: 'not-a-number'
+        });
+
+        const [, body, timeout] = postRequestSpy.mock.calls[0] as [
+            string,
+            any,
+            number
+        ];
+        expect(body.retry_for).toBe(60);
+        expect(timeout).toBe(60000);
     });
 });
 

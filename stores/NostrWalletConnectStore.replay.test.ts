@@ -94,6 +94,7 @@ type StoreMethodName =
     | 'replayCachedResponse'
     | 'subscribeToConnection'
     | 'saveProcessedReplayEvents'
+    | 'handleEventRequest'
     | 'processPendingPaymentsEvents'
     | 'validatingPendingPaymentEvents';
 
@@ -459,6 +460,90 @@ describe('NostrWalletConnectStore replay guards', () => {
                 eventStr: '{"id":"event-1"}'
             })
         );
+    });
+
+    it('publishes committed responses when replay cache persistence fails', async () => {
+        const context = createStore();
+        const connection = {
+            id: 'conn-1',
+            name: 'wallet',
+            relayUrl: 'wss://relay.example',
+            pubkey: 'client-pubkey',
+            hasPermission: jest.fn(() => true)
+        };
+        const response = { result: { alias: 'wallet' }, error: undefined };
+        context.handleGetInfo = jest.fn(async () => response);
+        context.cacheReplayResponse = jest.fn(async () => {
+            throw new Error('storage failed');
+        });
+        context.publishEventToClient = jest.fn().mockResolvedValue(undefined);
+        context.removeReplayResponse = jest.fn().mockResolvedValue(undefined);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        const result = await callStoreMethod<any>(
+            'handleEventRequest',
+            context,
+            connection,
+            { method: 'get_info', params: {} },
+            'event-1',
+            true,
+            'nip04'
+        );
+
+        expect(result).toEqual({
+            success: true,
+            errorMessage: undefined,
+            committed: true,
+            published: true
+        });
+        expect(context.publishEventToClient).toHaveBeenCalledWith(
+            connection,
+            'get_info',
+            response,
+            'event-1',
+            'nip04'
+        );
+        expect(context.removeReplayResponse).not.toHaveBeenCalled();
+    });
+
+    it('keeps responses uncommitted when cache and publish both fail', async () => {
+        const context = createStore();
+        const connection = {
+            id: 'conn-1',
+            name: 'wallet',
+            relayUrl: 'wss://relay.example',
+            pubkey: 'client-pubkey',
+            hasPermission: jest.fn(() => true)
+        };
+        context.handleGetInfo = jest.fn(async () => ({
+            result: { alias: 'wallet' },
+            error: undefined
+        }));
+        context.cacheReplayResponse = jest.fn(async () => {
+            throw new Error('storage failed');
+        });
+        context.publishEventToClient = jest
+            .fn()
+            .mockRejectedValue(new Error('relay failed'));
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+        const result = await callStoreMethod<any>(
+            'handleEventRequest',
+            context,
+            connection,
+            { method: 'get_info', params: {} },
+            'event-1',
+            true,
+            'nip04'
+        );
+
+        expect(result).toEqual({
+            success: false,
+            errorMessage: 'Failed to persist replay marker',
+            committed: false,
+            published: false
+        });
     });
 
     it('replays cached restored full-access responses before re-executing handlers', async () => {
