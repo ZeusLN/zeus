@@ -185,14 +185,17 @@ describe('NostrWalletConnectStore encryption helpers', () => {
                 tags: [['encryption', 123 as unknown as string]],
                 label: 'number'
             }
-        ])('throws for an invalid $label instead of silently downgrading to nip04', ({ tags }) => {
-            expect(() =>
-                callStoreEncryptionMethod<'nip04' | 'nip44_v2'>(
-                    'getEventEncryptionScheme',
-                    tags
-                )
-            ).toThrow();
-        });
+        ])(
+            'throws for an invalid $label instead of silently downgrading to nip04',
+            ({ tags }) => {
+                expect(() =>
+                    callStoreEncryptionMethod<'nip04' | 'nip44_v2'>(
+                        'getEventEncryptionScheme',
+                        tags
+                    )
+                ).toThrow();
+            }
+        );
     });
 
     describe('isSupportedEncryptionScheme', () => {
@@ -224,7 +227,10 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         });
     });
 
-    it('rejects nip44 responses when nip44 encryption fails', async () => {
+    it('falls back to nip04 responses when nip44 encryption fails', async () => {
+        mockNip04Encrypt.mockReset();
+        mockNip44Encrypt.mockReset();
+        mockNip44GetConversationKey.mockReset();
         const store = new NostrWalletConnectStore(
             {} as any,
             {} as any,
@@ -273,22 +279,104 @@ describe('NostrWalletConnectStore encryption helpers', () => {
             .fn(async (fn: () => Promise<void>) => fn())
             .mockName('retryWithBackoff');
 
-        // Should throw instead of falling back to NIP-04
-        await expect(
-            (store as any).publishEventToClient(
-                { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
-                'pay_invoice',
-                { result: { preimage: 'preimage' } },
-                'event-1',
-                'nip44_v2'
-            )
-        ).rejects.toThrow('NIP-44 response encryption failed');
+        await (store as any).publishEventToClient(
+            { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
+            'pay_invoice',
+            { result: { preimage: 'preimage' } },
+            'event-1',
+            'nip44_v2'
+        );
 
-        // NIP-04 should NOT have been called (no fallback)
-        expect(mockNip04Encrypt).not.toHaveBeenCalled();
+        expect(mockNip04Encrypt).toHaveBeenCalledWith(
+            'service-secret',
+            'client-pubkey',
+            JSON.stringify({
+                result_type: 'pay_invoice',
+                result: { preimage: 'preimage' }
+            })
+        );
 
-        // Relay publish should NOT have been called (error thrown before publish)
-        expect(relay.publish).not.toHaveBeenCalled();
+        expect(relay.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                kind: 23195,
+                content: 'fallback-content',
+                tags: expect.arrayContaining([
+                    ['e', 'event-1'],
+                    ['encryption', 'nip04'],
+                    ['p', 'client-pubkey']
+                ])
+            })
+        );
+    });
+
+    it('publishes payment_sent notifications as NIP-47 notification events', async () => {
+        mockNip04Encrypt.mockReset();
+        mockNip44Encrypt.mockReset();
+        mockNip44GetConversationKey.mockReset();
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const relay = {
+            connect: jest.fn().mockResolvedValue(undefined),
+            publish: jest.fn().mockResolvedValue(undefined),
+            close: jest.fn()
+        };
+        const relayInit = jest.requireMock('nostr-tools')
+            .relayInit as jest.Mock;
+        relayInit.mockReturnValue(relay);
+        mockNip44GetConversationKey.mockReturnValue('conversation-key');
+        mockNip44Encrypt.mockReturnValue('nip44-notification-content');
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).retryWithBackoff = jest
+            .fn(async (fn: () => Promise<void>) => fn())
+            .mockName('retryWithBackoff');
+
+        await (store as any).publishNip47Notification(
+            {
+                id: 'connection-1',
+                relayUrl: 'wss://relay.example',
+                pubkey: 'client-pubkey'
+            },
+            'payment_sent',
+            {
+                type: 'outgoing',
+                state: 'settled',
+                invoice: 'lnbc1...',
+                description: '',
+                description_hash: '',
+                preimage: 'preimage',
+                payment_hash: 'payment-hash',
+                amount: 1000,
+                fees_paid: 0,
+                settled_at: 123,
+                created_at: 123,
+                expires_at: 0
+            }
+        );
+
+        expect(relay.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                kind: 23197,
+                content: 'nip44-notification-content',
+                tags: expect.arrayContaining([
+                    ['p', 'client-pubkey'],
+                    ['encryption', 'nip44_v2'],
+                    ['notification_type', 'payment_sent']
+                ])
+            })
+        );
     });
 
     it('publishes unsupported-encryption responses with the original method', async () => {
@@ -454,6 +542,38 @@ describe('NostrWalletConnectStore pay_invoice mutex', () => {
             'second-start',
             'second-end'
         ]);
+    });
+
+    it('keeps the pay_invoice mutex alive longer than payment completion waits', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const withMutexSpy = jest
+            .spyOn(store as any, 'withMutex')
+            .mockResolvedValue('ok');
+
+        await (store as any).runPayInvoiceSerialized(async () => 'ok');
+
+        expect(withMutexSpy).toHaveBeenCalledWith(
+            'pay_invoice',
+            expect.any(Function),
+            150000
+        );
     });
 });
 

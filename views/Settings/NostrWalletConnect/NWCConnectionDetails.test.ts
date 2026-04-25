@@ -52,6 +52,62 @@ describe('NWCConnectionDetails regenerateConnection', () => {
         jest.restoreAllMocks();
     });
 
+    const createComponent = (storeOverrides: any = {}) =>
+        new NWCConnectionDetails({
+            navigation: {
+                addListener: jest.fn().mockReturnValue(jest.fn()),
+                navigate: jest.fn()
+            } as any,
+            route: { params: { connectionId: 'conn-1' } } as any,
+            NostrWalletConnectStore: {
+                lightningAddressStore: {
+                    lightningAddressActivated: false,
+                    lightningAddress: ''
+                },
+                ...storeOverrides
+            } as any,
+            ModalStore: {
+                toggleInfoModal: jest.fn()
+            } as any
+        });
+
+    const baseConnection = {
+        id: 'conn-1',
+        name: 'Test connection',
+        relayUrl: 'wss://old.relay',
+        permissions: [],
+        includeLightningAddress: true,
+        totalSpendSats: 0,
+        lastBudgetReset: undefined,
+        activity: []
+    };
+
+    it('preserves lud16 regeneration when Lightning Address is still active', () => {
+        const component = createComponent({
+            lightningAddressStore: {
+                lightningAddressActivated: true,
+                lightningAddress: 'alice@example.com'
+            }
+        });
+
+        const params = component.buildConnectionParams(baseConnection as any);
+
+        expect(params.includeLightningAddress).toBe(true);
+    });
+
+    it('omits lud16 regeneration when Lightning Address was deactivated', () => {
+        const component = createComponent({
+            lightningAddressStore: {
+                lightningAddressActivated: false,
+                lightningAddress: ''
+            }
+        });
+
+        const params = component.buildConnectionParams(baseConnection as any);
+
+        expect(params.includeLightningAddress).toBeUndefined();
+    });
+
     it('does not delete the existing connection when regeneration fails validation', async () => {
         const navigation = {
             addListener: jest.fn().mockReturnValue(jest.fn()),

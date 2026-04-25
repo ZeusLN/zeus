@@ -299,7 +299,7 @@ export default class EmbeddedLND extends LND {
                 data.amount_msat !== undefined && data.amount_msat !== null
                     ? Math.floor(Number(data.amount_msat) / 1000)
                     : data.amt,
-            amount_msat:
+            amt_msat:
                 data.amount_msat !== undefined && data.amount_msat !== null
                     ? Math.floor(Number(data.amount_msat))
                     : undefined,

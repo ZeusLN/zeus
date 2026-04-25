@@ -175,6 +175,13 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     buildConnectionParams = (connection: NWCConnection): any => {
+        const { NostrWalletConnectStore } = this.props;
+        const lightningAddressStore =
+            NostrWalletConnectStore.lightningAddressStore;
+        const canIncludeLightningAddress =
+            connection.includeLightningAddress &&
+            lightningAddressStore?.lightningAddressActivated &&
+            !!lightningAddressStore?.lightningAddress;
         const params: any = {
             id: connection.id,
             name: connection.name,
@@ -185,6 +192,9 @@ export default class NWCConnectionDetails extends React.Component<
             lastBudgetReset: connection.lastBudgetReset,
             activity: connection.activity
         };
+        if (canIncludeLightningAddress) {
+            params.includeLightningAddress = true;
+        }
         if (connection.maxAmountSats && connection.maxAmountSats > 0) {
             params.budgetAmount = connection.maxAmountSats;
         }
