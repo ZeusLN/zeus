@@ -78,6 +78,16 @@ export default class LSPStore {
                             channel.remotePubkey === lspPubkey
                     )
                 ) {
+                    // For backends that use custom messages as the LSPS7 fallback
+                    // (e.g. LND REST — supportsLSPS1rest=true so subscription is
+                    // skipped at startup), set up the subscription lazily here,
+                    // just before sending the LSPS7 custom message.
+                    if (
+                        BackendUtils.supportsLSPScustomMessage() &&
+                        !BackendUtils.supportsLSPS7native()
+                    ) {
+                        this.subscribeCustomMessages();
+                    }
                     this.getExtendableChannels();
                 }
             }
@@ -551,6 +561,10 @@ export default class LSPStore {
 
             await index.subscribeCustomMessages();
         } else {
+            // Set sentinel immediately so subsequent calls are blocked by the
+            // guard at the top of this function (analogous to how the
+            // embedded-lnd branch sets customMessagesSubscriber via addListener).
+            this.customMessagesSubscriber = true;
             BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
@@ -563,8 +577,12 @@ export default class LSPStore {
                     }
                 },
                 (error: any) => {
+                    runInAction(() => {
+                        this.customMessagesSubscriber = undefined;
+                    });
                     console.error(
-                        'sub custom messages error: ' + error.message
+                        'subscribeCustomMessages WebSocket error:',
+                        error
                     );
                 }
             );
