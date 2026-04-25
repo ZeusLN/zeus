@@ -969,6 +969,91 @@ describe('NWCConnection replacement flow', () => {
         expect(errorSpy).toHaveBeenCalled();
     });
 
+    it('re-subscribes the original connection after a post-subscribe rollback', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-rollback',
+            name: 'Rollback Update',
+            pubkey: 'old-pubkey',
+            relayUrl: 'wss://old.relay',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 0,
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        (store as any).nwcWalletServices = new Map([
+            ['wss://new.relay', {} as any]
+        ]);
+
+        const previousUnsubscribe = jest.fn();
+        const newUnsubscribe = jest.fn();
+        const restoredUnsubscribe = jest.fn();
+        (store as any).activeSubscriptions.set(
+            'conn-rollback',
+            previousUnsubscribe
+        );
+
+        jest.spyOn(store as any, 'loadClientPrivateKey').mockResolvedValue(
+            'client-secret'
+        );
+        const subscribeSpy = jest
+            .spyOn(store as any, 'subscribeToConnection')
+            .mockImplementation(async (nextConnection: any) => {
+                (store as any).activeSubscriptions.set(
+                    nextConnection.id,
+                    subscribeSpy.mock.calls.length === 1
+                        ? newUnsubscribe
+                        : restoredUnsubscribe
+                );
+                return true;
+            });
+        jest.spyOn(store as any, 'saveConnections').mockRejectedValue(
+            new Error('save failed')
+        );
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        const result = await store.updateConnection('conn-rollback', {
+            relayUrl: 'wss://new.relay'
+        } as any);
+
+        expect(result).toEqual({ success: false });
+        expect(previousUnsubscribe).toHaveBeenCalled();
+        expect(newUnsubscribe).toHaveBeenCalled();
+        expect(subscribeSpy).toHaveBeenCalledTimes(2);
+        expect(subscribeSpy.mock.calls[1][1]).toEqual({
+            forceResubscribe: true
+        });
+        expect(
+            (store as any).activeSubscriptions.get('conn-rollback')
+        ).toBe(restoredUnsubscribe);
+        expect(connection.relayUrl).toBe('wss://old.relay');
+    });
+
     it('clears spend when the budget limit is removed', async () => {
         const store = new NostrWalletConnectStore(
             {

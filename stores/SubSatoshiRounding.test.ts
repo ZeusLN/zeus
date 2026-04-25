@@ -180,6 +180,31 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 invalidRequestAmount: true
             });
         });
+
+        it('preserves CLN-style msat strings from decoded invoices', async () => {
+            mockedNostrConnectUtils.decodeInvoiceTags.mockResolvedValue({
+                amount: 1
+            } as never);
+
+            const result = await callStoreMethod<{
+                amountMsats: number;
+                amountSats: number;
+                usedRequestAmount: boolean;
+                invalidRequestAmount: boolean;
+            }>('getInvoiceAmount', {}, 'lnbc1testinvoice', {
+                num_msat: '1500msat'
+            });
+
+            expect(result).toEqual({
+                amountMsats: 1500,
+                amountSats: 2,
+                usedRequestAmount: false,
+                invalidRequestAmount: false
+            });
+            expect(
+                mockedNostrConnectUtils.decodeInvoiceTags
+            ).not.toHaveBeenCalled();
+        });
     });
 
     describe('handleLightningPayInvoice', () => {

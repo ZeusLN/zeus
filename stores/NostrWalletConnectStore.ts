@@ -1044,19 +1044,13 @@ export default class NostrWalletConnectStore {
                         // ignore rollback unsubscribe failures
                     }
                 }
-                if (previousUnsubscribe) {
-                    this.activeSubscriptions.set(
-                        connectionId,
-                        previousUnsubscribe
-                    );
-                } else {
-                    this.activeSubscriptions.delete(connectionId);
-                }
+                this.activeSubscriptions.delete(connectionId);
             }
             if (restorePreviousSubscription && originalConnectionData) {
                 try {
                     await this.subscribeToConnection(
-                        new NWCConnection(originalConnectionData)
+                        new NWCConnection(originalConnectionData),
+                        { forceResubscribe: true }
                     );
                 } catch {
                     // ignore rollback resubscribe failure
@@ -3621,6 +3615,16 @@ export default class NostrWalletConnectStore {
     }> {
         // Step 1: Try backend amount
         let backendAmountMsats = 0;
+        const parseBackendMsat = (value: unknown): number => {
+            const normalized =
+                typeof value === 'string'
+                    ? value.trim().replace(/\s*msat$/i, '')
+                    : value;
+            const amount = Number(normalized);
+            return Number.isFinite(amount) && amount > 0
+                ? Math.floor(amount)
+                : 0;
+        };
         const numMsatFields = [
             invoiceInfo.num_msat,
             invoiceInfo.amount_msat,
@@ -3631,7 +3635,7 @@ export default class NostrWalletConnectStore {
             (value) => value !== undefined && value !== null
         );
         if (exactMsatField !== undefined && exactMsatField !== null) {
-            backendAmountMsats = Math.floor(Number(exactMsatField) || 0);
+            backendAmountMsats = parseBackendMsat(exactMsatField);
         } else if (invoiceInfo.num_satoshis !== undefined) {
             backendAmountMsats = satsToMillisats(
                 Math.floor(Number(invoiceInfo.num_satoshis) || 0)
