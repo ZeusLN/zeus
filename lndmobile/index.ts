@@ -414,6 +414,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
     const {
         dest,
         amt,
+        amt_msat,
         dest_custom_records,
         payment_hash,
         fee_limit_sat,
@@ -425,7 +426,6 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
 
     const options: routerrpc.ISendPaymentRequest = {
         dest: Base64Utils.hexToBytes(dest),
-        amt,
         dest_custom_records,
         payment_hash,
         dest_features: [lnrpc.FeatureBit.TLV_ONION_REQ],
@@ -435,7 +435,11 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         fee_limit_sat,
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
-        amp
+        amp,
+        // Preserve sub-sat precision when present; older callers still fall back to whole sats.
+        ...(amt_msat !== undefined && amt_msat !== null
+            ? { amt_msat }
+            : { amt })
     };
 
     return new Promise(async (resolve, reject) => {

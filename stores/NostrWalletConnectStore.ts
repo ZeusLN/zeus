@@ -4445,7 +4445,7 @@ export default class NostrWalletConnectStore {
             return;
         }
 
-        const results = await Promise.all(
+        const results = await Promise.allSettled(
             events.map(async (eventStr) => {
                 try {
                     const { request, connection, eventId, encryptionScheme } =
@@ -4557,19 +4557,35 @@ export default class NostrWalletConnectStore {
                             }
                             return null;
                         }
-                        await this.handleEventRequest(
-                            connection,
-                            request,
-                            eventId,
-                            true,
-                            encryptionScheme
-                        );
-                        // Mark restored full-access methods (make_invoice,
-                        // sign_message, lookup_invoice, ...) as processed so
-                        // a re-delivered restore event doesn't re-execute
-                        // them (NIP-47 idempotency for non-pay_invoice
-                        // methods on iOS background restore).
-                        await this.markProcessedReplayEvent(eventId);
+                        try {
+                            await this.handleEventRequest(
+                                connection,
+                                request,
+                                eventId,
+                                true,
+                                encryptionScheme
+                            );
+                            // Mark restored full-access methods (make_invoice,
+                            // sign_message, lookup_invoice, ...) as processed so
+                            // a re-delivered restore event doesn't re-execute
+                            // them (NIP-47 idempotency for non-pay_invoice
+                            // methods on iOS background restore).
+                            // Only mark as processed on success; transient errors
+                            // should retry after restart.
+                            await this.markProcessedReplayEvent(eventId);
+                        } catch (handleError) {
+                            // Transient or retryable error from handleEventRequest:
+                            // do NOT mark processed. Let it retry after restart.
+                            console.warn(
+                                'NWC: Transient error in handleEventRequest for full-access method',
+                                {
+                                    eventId,
+                                    method: request.method,
+                                    error: handleError
+                                }
+                            );
+                            throw handleError;
+                        }
                         return null;
                     }
 
@@ -4597,33 +4613,33 @@ export default class NostrWalletConnectStore {
                         await this.markProcessedReplayEvent(error.eventId);
                         return null;
                     }
-                    // Mark event as processed on all error paths to prevent
-                    // replay attacks on app restart (even for decryption failures).
-                    try {
-                        const rawEvent = JSON.parse(eventStr);
-                        if (rawEvent?.id && typeof rawEvent.id === 'string') {
-                            await this.markProcessedReplayEvent(rawEvent.id);
-                        }
-                    } catch {
-                        // If we can't parse the event string, there's no id to mark.
-                    }
-                    console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
+                    // Transient/retryable error: DO NOT mark event as processed.
+                    // Transient failures (decryption issues, parsing problems, internal
+                    // handleEventRequest exceptions, network timeouts) should be retried
+                    // after restart. Only mark terminal outcomes as processed.
+                    // Rethrow to propagate to map result.
+                    console.warn('NWC: PROCESS PENDING EVENTS ERROR (transient, will retry)', {
                         error,
                         eventStr
                     });
-                    return null;
+                    throw error;
                 }
             })
         );
 
         const pendingEvents = results
-            .filter((r): r is InvoiceEventType => r !== null)
-            .map((event) => ({
-                ...event,
-                connectionName: event.connection.name,
-                status: false,
-                isProcessed: false
-            }));
+            .filter((r): r is PromiseFulfilledResult<InvoiceEventType | null> => 
+                r.status === 'fulfilled' && r.value !== null
+            )
+            .map((result) => {
+                const event = result.value!;
+                return {
+                    ...event,
+                    connectionName: event.connection.name,
+                    status: false,
+                    isProcessed: false
+                };
+            });
 
         const dedupedPendingEvents = Array.from(
             new Map(
