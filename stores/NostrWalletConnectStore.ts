@@ -5451,6 +5451,13 @@ export default class NostrWalletConnectStore {
         };
 
         await this.retryWithBackoff(async () => {
+            if (!this.validateRelayUrl(connection.relayUrl)) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
+                );
+            }
             const relay = relayInit(connection.relayUrl);
             try {
                 await relay.connect();
@@ -5776,6 +5783,14 @@ export default class NostrWalletConnectStore {
         error?: string | null;
     }> {
         try {
+            if (!this.validateRelayUrl(relayUrl)) {
+                return {
+                    status: false,
+                    error: localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
+                };
+            }
             const relay = relayInit(relayUrl);
             const timeout = new Promise<void>((_, reject) =>
                 setTimeout(
