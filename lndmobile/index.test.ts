@@ -78,6 +78,25 @@ describe('sendKeysendPaymentV2', () => {
         expect(options).not.toHaveProperty('amt');
     });
 
+    it('forwards fee_limit_msat when provided for keysend', async () => {
+        await sendKeysendPaymentV2({
+            dest: '11'.repeat(33),
+            amt: 2,
+            fee_limit_msat: 2500
+        });
+
+        expect(mockSendStreamCommand).toHaveBeenCalledWith(
+            expect.objectContaining({
+                options: expect.objectContaining({
+                    fee_limit_msat: 2500
+                })
+            }),
+            false
+        );
+        const options = mockSendStreamCommand.mock.calls[0][0].options;
+        expect(options).not.toHaveProperty('fee_limit_sat');
+    });
+
     it('keeps whole-sat keysend behavior when amt_msat is absent', async () => {
         await sendKeysendPaymentV2({
             dest: '11'.repeat(33),

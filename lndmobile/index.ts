@@ -417,6 +417,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         amt_msat,
         dest_custom_records,
         payment_hash,
+        fee_limit_msat,
         fee_limit_sat,
         max_shard_size_msat,
         max_parts,
@@ -432,7 +433,9 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts: max_parts || 1,
-        fee_limit_sat,
+        ...(fee_limit_msat !== undefined && fee_limit_msat !== null
+            ? { fee_limit_msat }
+            : { fee_limit_sat }),
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
         amp,

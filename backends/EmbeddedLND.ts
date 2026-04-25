@@ -305,7 +305,14 @@ export default class EmbeddedLND extends LND {
                     : undefined,
             dest_custom_records: data.dest_custom_records,
             payment_hash: data.payment_hash,
-            fee_limit_sat: data.fee_limit_sat,
+            fee_limit_msat:
+                data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                    ? data.fee_limit_msat
+                    : undefined,
+            fee_limit_sat:
+                data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                    ? undefined
+                    : data.fee_limit_sat,
             max_shard_size_msat: data.max_shard_size_msat,
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,

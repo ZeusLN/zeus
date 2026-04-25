@@ -407,6 +407,16 @@ describe('NostrWalletConnectStore replay guards', () => {
         );
     });
 
+    it('rejects insecure ws relays before connecting', async () => {
+        const context = createStore();
+        const result = await (context as any).pingRelay('ws://relay.example');
+
+        expect(result).toEqual({
+            status: false,
+            error: 'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+        });
+    });
+
     it('records committed restored full-access requests when marker persistence fails', async () => {
         const context = createStore();
         const connection = {

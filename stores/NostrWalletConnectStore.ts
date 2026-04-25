@@ -593,15 +593,15 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Validates that a relay URL uses the proper WebSocket scheme (wss:// or ws://).
+     * Validates that a relay URL uses the secure WebSocket scheme.
      * @param url The relay URL to validate.
-     * @returns true if valid WebSocket scheme, false otherwise.
+     * @returns true if valid secure WebSocket scheme, false otherwise.
      */
     private validateRelayUrl = (url: string): boolean => {
         try {
             const parsed = new URL(url);
             const scheme = parsed.protocol.toLowerCase();
-            return scheme === 'wss:' || scheme === 'ws:';
+            return scheme === 'wss:';
         } catch {
             return false;
         }
@@ -2790,7 +2790,11 @@ export default class NostrWalletConnectStore {
 
                     const result = NostrConnectUtils.createNip47Transaction({
                         type: 'incoming',
-                        state: isPaid ? 'settled' : 'pending',
+                        state: isPaid
+                            ? 'settled'
+                            : matchingInvoice.isExpired
+                            ? 'failed'
+                            : 'pending',
                         invoice: matchingInvoice.getPaymentRequest,
                         payment_hash: lookupPaymentHash,
                         amount: satsToMillisats(amtSat || 0),
@@ -2837,6 +2841,13 @@ export default class NostrWalletConnectStore {
                     : invoice.isExpired
                     ? 'failed'
                     : 'pending';
+                const expiresAt =
+                    invoice.expires_at ||
+                    (invoice.originalTimeUntilExpiryInSeconds != null
+                        ? Math.floor(
+                              invoice.getCreationDate.getTime() / 1000
+                          ) + invoice.originalTimeUntilExpiryInSeconds
+                        : undefined);
                 const resolvedLookupPaymentHash =
                     invoice.getRHash || request.payment_hash || '';
                 const result = NostrConnectUtils.createNip47Transaction({
@@ -2852,7 +2863,7 @@ export default class NostrWalletConnectStore {
                     description_hash: invoice.getDescriptionHash,
                     settled_at: invoice.settleDate.getTime() / 1000,
                     created_at: invoice.getCreationDate.getTime() / 1000,
-                    expires_at: invoice.getCreationDate.getTime() / 1000
+                    expires_at: expiresAt
                 });
                 return {
                     result,
@@ -2955,8 +2966,9 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
-            this.messageSignStore.signMessage(request.message);
-            const signature = this.messageSignStore.signature;
+            const signature = await this.messageSignStore.signMessage(
+                request.message
+            );
             return {
                 result: {
                     message: request.message,
