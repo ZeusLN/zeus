@@ -444,58 +444,54 @@ export default class NWCConnection extends BaseModel {
     } {
         this.validateAmount(amountSats);
 
-        // NOTE: This method does NOT guarantee atomic budget enforcement.
-        // In concurrent payment scenarios, multiple payments can race and both
-        // may increment totalSpendSats before either sees the other's increase.
-        // The clamping operation below mitigates but does not eliminate the race.
-        // For hard budget guarantees, use mutex/locking at application level.
+        // NOTE: Budget enforcement leverages a per-connection mutex at the
+        // NostrWalletConnectStore level (`runPayInvoiceSerialized`), which
+        // ensures `validateBudgetBeforePayment` and `trackSpending` execute
+        // atomically. This guarantees a single payment cannot bypass validation.
+        // However, this method MUST remain robust to edge cases:
+        // 1. Caller may bypass mutex (bug/logic error)
+        // 2. Amount may be inaccurate if multiple paths charge budget
         //
-        // Defense-in-depth: even though `validateBudgetBeforePayment` is the
-        // primary gate before dispatch, `trackSpending` MUST never silently
-        // push `totalSpendSats` past `maxAmountSats`. If a future caller
-        // bypasses pre-flight validation (race / bug), return an error instead
-        // of corrupting the budget invariant. No-op when the connection has
-        // no budget limit configured. Callers should log/monitor this case.
+        // Defense-in-depth: if tracking would exceed budget limit, fail the
+        // operation instead of silently clamping. This preserves the budget
+        // invariant while providing clear error feedback for debugging.
+        // Callers should log/monitor any trackSpending failures.
         if (
             this.hasBudgetLimit &&
             this.totalSpendSats + amountSats > (this.maxAmountSats ?? 0)
         ) {
-            // Clamp totalSpendSats to preserve the budget invariant before returning failure.
-            // This ensures that even if a payment succeeds despite race conditions,
-            // the budget is marked as fully consumed and future payments are blocked.
-            const totalBeforeClamp = this.totalSpendSats;
-            const remainingBeforeClamp = Math.max(
+            // Record the overage for telemetry/monitoring
+            const totalBeforeAttempt = this.totalSpendSats;
+            const remainingBeforeAttempt = Math.max(
                 0,
-                this.maxAmountSats! - totalBeforeClamp
+                this.maxAmountSats! - totalBeforeAttempt
             );
-            this.totalSpendSats = this.maxAmountSats!;
+            const overage = totalBeforeAttempt + amountSats - this.maxAmountSats!;
 
-            // Log the race condition detection for telemetry/monitoring
             console.warn(
-                '[NWCConnection.trackSpending] Budget race detected: concurrent payment incremented beyond maxAmountSats',
+                '[NWCConnection.trackSpending] Budget race detected: concurrent payment would exceed maxAmountSats',
                 {
                     connectionId: this.id,
                     connectionName: this.name,
-                    totalSpendSatsBefore: totalBeforeClamp,
+                    totalSpendSatsBefore: totalBeforeAttempt,
                     attemptedAmount: amountSats,
                     maxAmountSats: this.maxAmountSats,
-                    totalSpendSatsAfterClamp: this.totalSpendSats,
-                    overageAmount:
-                        totalBeforeClamp + amountSats - this.maxAmountSats!
+                    remainingBefore: remainingBeforeAttempt,
+                    overage
                 }
             );
 
-            // Return error but don't throw — a successful payment shouldn't
-            // be reported as failed to the client just because concurrent
-            // tracking hit the budget limit (race condition). Caller can log
-            // this as a warning.
+            // Clamp totalSpendSats to preserve invariant for future validation,
+            // then return error. This prevents subtle budget-tracking corruption.
+            this.totalSpendSats = this.maxAmountSats!;
+
             return {
                 success: false,
                 errorMessage: localeString(
                     'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
                     {
                         amount: amountSats.toString(),
-                        remaining: remainingBeforeClamp.toString()
+                        remaining: remainingBeforeAttempt.toString()
                     }
                 )
             };
@@ -506,6 +502,26 @@ export default class NWCConnection extends BaseModel {
 
     @action
     public addActivity(item: ConnectionActivity): void {
+        // Validation: payment activities MUST have a valid 64-char hex payment hash
+        // per NIP-47 spec. Reject empty/null hashes to prevent corrupted records.
+        if (item.type && ['pay_invoice', 'make_invoice'].includes(item.type)) {
+            if (!item.paymentHash || !/^[a-f0-9]{64}$/.test(item.paymentHash)) {
+                console.error(
+                    '[NWCConnection.addActivity] Payment activity missing or invalid paymentHash',
+                    {
+                        connectionId: this.id,
+                        type: item.type,
+                        invoice: item.invoice?.getPaymentRequest || '',
+                        paymentHash: item.paymentHash || 'MISSING'
+                    }
+                );
+                // Don't add corrupt activity records; let caller handle the error
+                throw new Error(
+                    `Payment activity requires valid 64-char hex paymentHash (type: ${item.type})`
+                );
+            }
+        }
+
         if (this.activity.length >= MAX_ACTIVITY_ITEMS) {
             this.activity.shift(); // Remove oldest item
         }

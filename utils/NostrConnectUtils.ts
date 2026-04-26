@@ -545,18 +545,33 @@ export default class NostrConnectUtils {
     private static extractPaymentHashFromActivity(
         activity: ConnectionActivity
     ): string {
-        if (activity.paymentHash) {
+        // Try to find a valid payment hash (64-char hex per NIP-47)
+        if (activity.paymentHash && /^[a-f0-9]{64}$/.test(activity.paymentHash)) {
             return activity.paymentHash;
         }
-        if (activity.payment?.paymentHash) {
+        if (activity.payment?.paymentHash && /^[a-f0-9]{64}$/.test(activity.payment.paymentHash)) {
             return activity.payment.paymentHash;
         }
         if (activity.invoice) {
             const invoiceHash =
                 (activity.invoice as Invoice).getRHash ||
                 (activity.invoice as Invoice).payment_hash;
-            if (invoiceHash) return invoiceHash;
+            // Validate invoice hash is 64-char hex before returning
+            if (invoiceHash && /^[a-f0-9]{64}$/.test(invoiceHash)) {
+                return invoiceHash;
+            }
         }
+        
+        // No valid hash found — this is a compliance violation
+        // Return empty string; caller should validate before creating NIP-47 transaction
+        console.error(
+            '[NostrConnectUtils.extractPaymentHashFromActivity] No valid payment hash found',
+            {
+                activityType: activity.type,
+                activityId: activity.id,
+                providedHash: activity.paymentHash || 'MISSING'
+            }
+        );
         return '';
     }
 

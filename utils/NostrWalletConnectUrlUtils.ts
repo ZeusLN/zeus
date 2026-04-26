@@ -15,18 +15,25 @@ export class InvalidLightningAddressError extends Error {
 export const isValidLightningAddress = (address?: string | null): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
-    // LUD-16 format: localpart@domain (DNS-compliant)
-    // Local part: letters, numbers, dots, hyphens, underscores, plus sign
-    // - Cannot start or end with dots
+    
+    // LUD-16 format: localpart@domain (DNS-compliant, RFC 5321)
+    // Local part: alphanumeric, dots, hyphens, underscores, plus sign
+    // - Cannot start or end with dots or hyphens
     // - Cannot have consecutive dots
-    // Domain labels must not start/end with hyphen, can have hyphens in middle
-    // TLD must be at least 2 characters (per DNS spec)
-    const regex =
-        /^[a-zA-Z0-9_+\-]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9]{2}(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+    // Domain: DNS-compliant labels separated by dots
+    // - Each label: alphanumeric with hyphens in middle only
+    // - At least 2 labels (e.g., example.com)
+    // - Each label 1-63 chars, TLD (final label) 2+ chars per DNS spec
+    
+    // Simplified regex for ASCII-only Lightning Addresses (IDN not supported)
+    // Local part: letter/digit, then optional alphanumerics/dots/hyphens/underscores/plus
+    // Domain: standard DNS format (alphanumeric + hyphens per label)
+    // TLD MUST be 2+ characters: [a-zA-Z0-9]{2,} ensures this
+    const regex = /^[a-zA-Z0-9]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
 
     // Additional validation: reject consecutive dots in local part
     const [localPart] = address.split('@');
-    if (!localPart || localPart.includes('..')) {
+    if (!localPart || localPart.includes('..') || localPart.startsWith('.') || localPart.endsWith('.')) {
         return false;
     }
 

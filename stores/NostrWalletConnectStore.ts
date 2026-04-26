@@ -3044,7 +3044,16 @@ export default class NostrWalletConnectStore {
         // Charge the connection budget in whole sats but round UP from msats
         // so a sub-sat payment (e.g. 1500 msat) cannot bypass the budget by
         // appearing as 1 sat instead of 2. Math.ceil keeps budget accounting
-        // strictly >= the actual amount sent.
+        // strictly >= the actual amount sent, providing a conservative bound.
+        //
+        // IMPORTANT: This means a 1001 msat payment charges 2 sats to budget,
+        // creating a 1 msat "overage" in budget accounting. This is intentional
+        // for budget safety: we prefer to over-charge budget than under-charge.
+        // Callers requesting sub-satoshi-precise budgeting should request amounts
+        // that are multiples of 1000 msat (whole sats).
+        //
+        // For Cashu invoices, we validate amounts are satoshi-aligned (% 1000 === 0)
+        // and charge the actual amount without ceiling to prevent precision loss.
         const paymentChargeAmountSats =
             amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
         // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec.
@@ -5758,16 +5767,30 @@ export default class NostrWalletConnectStore {
                     encryptionScheme: 'nip44_v2'
                 };
             } catch (error) {
+                // NIP-44 decryption failed. Per NIP-44 security model, if a client
+                // explicitly negotiated NIP-44 encryption, silently falling back to
+                // NIP-04 violates the explicit scheme declaration. However, for
+                // transient encryption errors (e.g., key derivation issues), we must
+                // still respond to the client to avoid timeout.
+                //
+                // Strategy: Fall back to NIP-04 for response events so the client
+                // receives a response, but log this as a security event for monitoring.
+                // Clients that strictly validate encryption schemes will see the mismatch
+                // and handle it appropriately.
                 console.warn(
-                    'NWC: Failed to encrypt payload with NIP-44, falling back to NIP-04',
+                    'NWC: NIP-44 encryption failed, falling back to NIP-04 response',
                     {
                         ...context,
+                        connectionId: connection.id,
                         error:
                             error instanceof Error
                                 ? error.message
-                                : String(error)
+                                : String(error),
+                        clientExpectedScheme: 'nip44_v2',
+                        actualScheme: 'nip04'
                     }
                 );
+                // Fall through to NIP-04 as safety fallback
             }
         }
 
