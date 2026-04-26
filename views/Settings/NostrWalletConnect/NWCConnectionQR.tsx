@@ -138,6 +138,8 @@ export default class NWCConnectionQR extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
+                    navigateBackOnBackPress={false}
+                    onBack={this.handleGoBack}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.NostrWalletConnect.connectionSecret'
@@ -147,7 +149,6 @@ export default class NWCConnectionQR extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    navigation={navigation}
                 />
                 <ScrollView
                     style={{
