@@ -37,6 +37,10 @@ import SwapStore from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
 import Swap, { SwapState, SwapType } from '../../models/Swap';
+import {
+    SubmarineClaimTransaction,
+    ReverseClaimTransaction
+} from '../../models/ClaimTransaction';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -602,29 +606,6 @@ export default class SwapDetails extends React.Component<
         return result;
     };
 
-    getPrivateKeyHex = (keys: any): string | null => {
-        const dObject = keys?.__D;
-
-        if (!dObject) {
-            console.error('keys.__D is undefined');
-            return null;
-        }
-
-        let dBytes: number[];
-        if (Array.isArray(dObject)) {
-            dBytes = dObject;
-        } else if (dObject?.data && Array.isArray(dObject.data)) {
-            dBytes = dObject.data;
-        } else {
-            console.error('Unexpected key format:', typeof dObject);
-            return null;
-        }
-
-        return dBytes
-            .map((byte) => byte.toString(16).padStart(2, '0'))
-            .join('');
-    };
-
     /**
      * Create and send a claim transaction
      */
@@ -635,20 +616,15 @@ export default class SwapDetails extends React.Component<
         endpoint: string
     ): Promise<boolean> => {
         try {
-            const privateKeyHex = this.getPrivateKeyHex(keys);
-            if (!privateKeyHex) return false;
+            const claim = SubmarineClaimTransaction.build({
+                swap: new Swap({ ...createdResponse, keys }),
+                endpoint,
+                claimTxDetails
+            });
+            if (!claim) return false;
 
             try {
-                await createClaimTransaction({
-                    endpoint,
-                    swapId: createdResponse.id,
-                    claimLeaf: createdResponse.swapTree.claimLeaf.output,
-                    refundLeaf: createdResponse.swapTree.refundLeaf.output,
-                    privateKey: privateKeyHex,
-                    servicePubKey: createdResponse.claimPublicKey,
-                    transactionHash: claimTxDetails.transactionHash,
-                    pubNonce: claimTxDetails.pubNonce
-                });
+                await createClaimTransaction(claim);
 
                 console.log('Claim transaction submitted successfully.');
                 return true;
@@ -676,38 +652,29 @@ export default class SwapDetails extends React.Component<
         fee: string
     ): Promise<boolean> => {
         try {
-            const privateKeyHex = this.getPrivateKeyHex(keys);
-            if (!privateKeyHex) return false;
+            const claim = ReverseClaimTransaction.build({
+                swap: new Swap({
+                    ...createdResponse,
+                    keys,
+                    preimage,
+                    lockupAddress,
+                    destinationAddress
+                }),
+                endpoint,
+                transactionHex,
+                feeRate: Number(fee || 2),
+                minerFee: this.props.SwapStore?.claimMinerFee || 0,
+                isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
+            });
+            if (!claim) return false;
 
             // allow some retries in case of alt network
             // tx propagation issues
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
-                    const preimageHex =
-                        typeof preimage === 'string'
-                            ? preimage
-                            : Buffer.isBuffer(preimage)
-                            ? preimage.toString('hex')
-                            : preimage?.data
-                            ? Buffer.from(preimage.data).toString('hex')
-                            : '';
 
-                    await createReverseClaimTransaction({
-                        endpoint,
-                        swapId: createdResponse.id,
-                        claimLeaf: createdResponse.swapTree.claimLeaf.output,
-                        refundLeaf: createdResponse.swapTree.refundLeaf.output,
-                        privateKey: privateKeyHex,
-                        servicePubKey: createdResponse.refundPublicKey,
-                        preimageHex,
-                        transactionHex,
-                        lockupAddress,
-                        destinationAddress,
-                        feeRate: Number(fee || 2),
-                        minerFee: this.props.SwapStore?.claimMinerFee || 0,
-                        isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
-                    });
+                    await createReverseClaimTransaction(claim);
 
                     console.log(
                         'Reverse claim transaction submitted successfully.',
