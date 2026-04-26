@@ -48,13 +48,16 @@ export default class EsploraServer extends React.Component<
             (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
             'mainnet';
         const servers = getEsploraServersForNetwork(network);
+        const presetUrls = servers.map((s) => s.value);
 
-        const isPreset = saved === '' || servers.includes(saved);
+        const isPreset = saved === '' || presetUrls.includes(saved);
 
         this.state = {
-            selectedValue: isPreset ? saved || servers[0] : CUSTOM_VALUE,
+            selectedValue: isPreset
+                ? saved || servers[0]?.value || ''
+                : CUSTOM_VALUE,
             customServer: isPreset ? '' : saved,
-            savedEsploraServer: isPreset ? saved || servers[0] : saved
+            savedEsploraServer: isPreset ? saved || servers[0].value : saved
         };
     }
 
@@ -88,12 +91,12 @@ export default class EsploraServer extends React.Component<
             (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet';
         const servers = getEsploraServersForNetwork(network);
         const defaultServer = getDefaultEsploraServer(network);
+        const defaultServerLabel =
+            servers.find((s) => s.value === defaultServer)?.key ||
+            defaultServer;
 
         const dropdownValues = [
-            ...servers.map((url) => ({
-                key: url,
-                value: url
-            })),
+            ...servers,
             {
                 key: localeString('general.custom'),
                 value: CUSTOM_VALUE
@@ -182,7 +185,8 @@ export default class EsploraServer extends React.Component<
                                     'views.Settings.EmbeddedNode.defaultServer'
                                 )}
                                 :{' '}
-                                {defaultServer || localeString('general.none')}
+                                {defaultServerLabel ||
+                                    localeString('general.none')}
                             </Text>
                         </View>
 
