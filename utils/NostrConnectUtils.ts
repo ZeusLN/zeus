@@ -560,20 +560,31 @@ export default class NostrConnectUtils {
     private static extractPaymentHashFromActivity(
         activity: ConnectionActivity
     ): string {
+        const normalizeHash = (hash?: string): string | undefined => {
+            if (!hash) return undefined;
+            const normalized = hash.toLowerCase();
+            return /^[a-f0-9]{64}$/.test(normalized) ? normalized : undefined;
+        };
+
         // Try to find a valid payment hash (64-char hex per NIP-47)
-        if (activity.paymentHash && /^[a-f0-9]{64}$/.test(activity.paymentHash)) {
-            return activity.paymentHash;
+        const activityHash = normalizeHash(activity.paymentHash);
+        if (activityHash) {
+            return activityHash;
         }
-        if (activity.payment?.paymentHash && /^[a-f0-9]{64}$/.test(activity.payment.paymentHash)) {
-            return activity.payment.paymentHash;
+
+        const paymentHash = normalizeHash(activity.payment?.paymentHash);
+        if (paymentHash) {
+            return paymentHash;
         }
+
         if (activity.invoice) {
             const invoiceHash =
                 (activity.invoice as Invoice).getRHash ||
                 (activity.invoice as Invoice).payment_hash;
+            const normalizedInvoiceHash = normalizeHash(invoiceHash);
             // Validate invoice hash is 64-char hex before returning
-            if (invoiceHash && /^[a-f0-9]{64}$/.test(invoiceHash)) {
-                return invoiceHash;
+            if (normalizedInvoiceHash) {
+                return normalizedInvoiceHash;
             }
         }
         

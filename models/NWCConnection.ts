@@ -506,6 +506,13 @@ export default class NWCConnection extends BaseModel {
                 )
             };
         }
+
+        // Do not apply the blocked attempt to spending. Only clamp if state
+        // is already inconsistent due to an earlier race or external mutation.
+        if (this.hasBudgetLimit && this.totalSpendSats > (this.maxAmountSats ?? 0)) {
+            this.totalSpendSats = this.maxAmountSats ?? this.totalSpendSats;
+        }
+
         this.totalSpendSats += amountSats;
         return { success: true };
     }
@@ -515,7 +522,7 @@ export default class NWCConnection extends BaseModel {
         // Log warning for payment activities without valid paymentHash
         // per NIP-47 spec. paymentHash should be 64-char hex when present.
         if (item.type && ['pay_invoice', 'make_invoice'].includes(item.type)) {
-            if (item.paymentHash && !/^[a-f0-9]{64}$/.test(item.paymentHash)) {
+            if (item.paymentHash && !/^[a-f0-9]{64}$/i.test(item.paymentHash)) {
                 console.warn(
                     '[NWCConnection.addActivity] Payment activity has invalid paymentHash format',
                     {

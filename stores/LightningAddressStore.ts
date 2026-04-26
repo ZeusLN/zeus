@@ -1450,10 +1450,17 @@ export default class LightningAddressStore {
             await Storage.setItem(HASHES_STORAGE_STRING, '');
             this.reset();
             if (this.lightningAddressChangeHandler) {
-                await this.lightningAddressChangeHandler(
-                    null,
-                    previousLightningAddress
-                );
+                try {
+                    await this.lightningAddressChangeHandler(
+                        null,
+                        previousLightningAddress
+                    );
+                } catch (changeHandlerError) {
+                    console.warn(
+                        'lightningAddressChangeHandler failed after deleteAddress success',
+                        changeHandlerError
+                    );
+                }
             }
 
             runInAction(() => {

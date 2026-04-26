@@ -18,7 +18,7 @@ export const isValidLightningAddress = (address?: string | null): boolean => {
     
     // LUD-16 format: localpart@domain (DNS-compliant, RFC 5321)
     // Local part: alphanumeric, dots, hyphens, underscores, plus sign
-    // - Cannot start or end with dots or hyphens
+    // - Cannot start or end with dots
     // - Cannot have consecutive dots
     // Domain: DNS-compliant labels separated by dots
     // - Each label: alphanumeric with hyphens in middle only (supports punycode)

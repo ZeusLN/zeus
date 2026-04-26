@@ -3,30 +3,10 @@
  * Tests for rounding, clock skew, concurrency, and migration
  */
 
+import {
+    normalizeNWCConnectionData
+} from '../models/NWCConnection';
 import { isValidLightningAddress } from '../utils/NostrWalletConnectUrlUtils';
-
-// Jest mocks to prevent native module loading
-jest.mock('../models/NWCConnection', () => ({
-    normalizeNWCConnectionData: (connection: any) => {
-        let includeLightningAddress = connection.includeLightningAddress;
-        if (
-            includeLightningAddress === undefined &&
-            connection.metadata?.lud16
-        ) {
-            console.log(
-                'Migrating NWC connection to v2 (enabling Lightning Address support)',
-                { connectionId: connection.id, connectionName: connection.name }
-            );
-            includeLightningAddress = true;
-        }
-        return {
-            ...connection,
-            includeLightningAddress: includeLightningAddress ?? false
-        };
-    }
-}));
-
-const { normalizeNWCConnectionData } = require('../models/NWCConnection');
 
 describe('NWC Critical Edge Cases', () => {
     /**

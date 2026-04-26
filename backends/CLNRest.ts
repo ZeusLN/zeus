@@ -23,7 +23,7 @@ const calls = new Map<string, Promise<any>>();
 export default class CLNRest {
     private defaultTimeout: number = 30000;
 
-    private parsePositiveInteger = (value: unknown): BigNumber | undefined => {
+    private parsePositiveNumber = (value: unknown): BigNumber | undefined => {
         if (value === undefined || value === null) {
             return undefined;
         }
@@ -31,7 +31,7 @@ export default class CLNRest {
         if (!parsed.isFinite() || parsed.isNegative()) {
             return undefined;
         }
-        return parsed.integerValue(BigNumber.ROUND_FLOOR);
+        return parsed;
     };
 
     private formatIntegerForCln = (value: BigNumber): number | string =>
@@ -311,34 +311,36 @@ export default class CLNRest {
         // data.value still requires Number.isFinite + > 0 to be honored —
         // otherwise undefined != 0 evaluates true and Number(undefined)*1000
         // produces NaN, which CLN would reject opaquely.
-        let amountMsat: number | string;
+        let amountMsat: string = 'any';
+        let shouldCheckValue = true;
+
         if (data.value_msat !== undefined && data.value_msat !== null) {
-            const v = Number(data.value_msat);
-            if (Number.isFinite(v) && v > 0) {
-                amountMsat = Math.floor(v);
-            } else if (Number.isFinite(v) && v === 0) {
-                // 0 means "no amount specified" → fall through to value check.
-                amountMsat = NaN;
-            } else {
-                // NaN / negative / non-finite — hard error so a buggy
-                // upstream can't end up creating an unrelated-amount invoice.
+            const valueMsat = this.parsePositiveNumber(data.value_msat);
+            if (valueMsat === undefined) {
                 throw new Error('Invalid value_msat for createInvoice');
             }
-        } else {
-            amountMsat = NaN;
+            if (!valueMsat.isZero()) {
+                amountMsat = this.formatIntegerForCln(
+                    valueMsat.integerValue(BigNumber.ROUND_FLOOR)
+                ).toString();
+                shouldCheckValue = false;
+            }
         }
-        if (Number.isNaN(amountMsat as number)) {
+
+        if (shouldCheckValue) {
             if (data.value !== undefined && data.value !== null) {
-                const v = Number(data.value);
-                if (Number.isFinite(v) && v > 0) {
-                    amountMsat = Math.floor(v) * 1000;
-                } else if (Number.isFinite(v) && v === 0) {
-                    amountMsat = 'any';
-                } else {
+                const valueSat = this.parsePositiveNumber(data.value);
+                if (valueSat === undefined) {
                     throw new Error('Invalid value for createInvoice');
                 }
-            } else {
-                amountMsat = 'any';
+
+                if (!valueSat.isZero()) {
+                    amountMsat = this.formatIntegerForCln(
+                        valueSat
+                            .times(1000)
+                            .integerValue(BigNumber.ROUND_FLOOR)
+                    ).toString();
+                }
             }
         }
 
@@ -456,17 +458,21 @@ export default class CLNRest {
         // `additionalProperties: false`. Convert sat -> msat here, using
         // Math.floor to ensure the result is an integer (CLN schema requires it).
         if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
-            const v = this.parsePositiveInteger(data.fee_limit_msat);
+            const v = this.parsePositiveNumber(data.fee_limit_msat);
             if (v !== undefined) {
-                request.maxfee = this.formatIntegerForCln(v);
+                request.maxfee = this.formatIntegerForCln(
+                    v.integerValue(BigNumber.ROUND_FLOOR)
+                );
             }
         } else if (
             data.fee_limit_sat !== undefined &&
             data.fee_limit_sat !== null
         ) {
-            const v = this.parsePositiveInteger(data.fee_limit_sat);
+            const v = this.parsePositiveNumber(data.fee_limit_sat);
             if (v !== undefined) {
-                request.maxfee = this.formatIntegerForCln(v.times(1000));
+                request.maxfee = this.formatIntegerForCln(
+                    v.times(1000).integerValue(BigNumber.ROUND_FLOOR)
+                );
             }
         } else if (
             data.max_fee_percent !== undefined &&
@@ -489,11 +495,14 @@ export default class CLNRest {
         //   (amount_msat omitted).
         let amountMsat: BigNumber | undefined;
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
-            amountMsat = this.parsePositiveInteger(data.amount_msat);
+            const v = this.parsePositiveNumber(data.amount_msat);
+            if (v !== undefined) {
+                amountMsat = v.integerValue(BigNumber.ROUND_FLOOR);
+            }
         } else if (data.amt !== undefined && data.amt !== null) {
-            const sats = this.parsePositiveInteger(data.amt);
+            const sats = this.parsePositiveNumber(data.amt);
             if (sats !== undefined) {
-                amountMsat = sats.times(1000);
+                amountMsat = sats.times(1000).integerValue(BigNumber.ROUND_FLOOR);
             }
         }
         if (amountMsat !== undefined && amountMsat.gt(0)) {
@@ -503,13 +512,13 @@ export default class CLNRest {
         return this.postRequest('/v1/pay', request, timeoutSeconds * 1000);
     };
     sendKeysend = (data: any) => {
-        const rawAmountMsat = this.parsePositiveInteger(data.amount_msat);
-        const rawAmountSat = this.parsePositiveInteger(data.amt);
+        const rawAmountMsat = this.parsePositiveNumber(data.amount_msat);
+        const rawAmountSat = this.parsePositiveNumber(data.amt);
         const amountMsat =
             rawAmountMsat !== undefined
-                ? rawAmountMsat
+                ? rawAmountMsat.integerValue(BigNumber.ROUND_FLOOR)
                 : rawAmountSat !== undefined
-                ? rawAmountSat.times(1000)
+                ? rawAmountSat.times(1000).integerValue(BigNumber.ROUND_FLOOR)
                 : undefined;
         return this.postRequest(
             '/v1/keysend',

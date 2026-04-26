@@ -469,13 +469,11 @@ describe('NWC Encryption Robustness Tests', () => {
             const encrypted = cryptoProvider.encryptNip44(plaintext, key1);
 
             // Decryption with wrong key should fail gracefully
-            const decrypted = cryptoProvider.decryptNip44(
-                encrypted as string,
-                key2
-            );
             // May succeed but produce garbage, or fail - either is acceptable
             // as long as no crash occurs
-            expect(decrypted).not.toThrow;
+            expect(() =>
+                cryptoProvider.decryptNip44(encrypted as string, key2)
+            ).not.toThrow();
         });
 
         it('should not crash on decryption of non-hex data', () => {
