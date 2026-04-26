@@ -148,15 +148,17 @@ const MAX_ACTIVITY_ITEMS = 500;
 /**
  * NWCConnection represents a Nostr Wallet Connect (NIP-47) connection with optional budget controls.
  *
- * IMPORTANT: Budget limits are enforced with best-effort semantics, NOT atomic guarantees.
- * In concurrent payment scenarios, multiple payments can increment totalSpendSats before
- * observing each other's increases, allowing temporary budget overages. The trackSpending()
- * method implements defense-in-depth clamping, but this does NOT provide hard atomic enforcement.
+ * IMPORTANT: Budget enforcement is serialized only for the intended in-process payment flow.
+ * When callers use the connection's mutex-protected path, budget validation and spend tracking
+ * are performed sequentially so `validateBudgetBeforePayment` and `trackSpending()` observe a
+ * consistent connection state within that critical section.
  *
- * For applications requiring strict budget isolation per payment, implement mutex/locking
- * at the application level before dispatching payments to this connection.
+ * This is not a universal hard guarantee across all access paths. Budget overages can still occur
+ * if state is mutated outside the mutex-protected flow, if callers bypass the lock, or if multiple
+ * app instances/processes enforce the same budget independently. For strict cross-call or
+ * cross-process budget isolation, coordinate access at the application level.
  *
- * @see trackSpending() for race condition documentation
+ * @see trackSpending() for serialization and remaining race-condition details
  */
 export default class NWCConnection extends BaseModel {
     id: string;

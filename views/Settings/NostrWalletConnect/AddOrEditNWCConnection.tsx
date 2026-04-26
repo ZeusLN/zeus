@@ -285,7 +285,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         // Production: wss://<domain>:<port> with subdomains allowed
         // Testing:   ws://localhost:<port> or ws://127.0.0.1:<port> (no subdomains)
         // Prevents: double dots, leading dots, invalid domain parts
-        const pattern = /^(wss:\/\/([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+(:\d+)?(\/.*)?|ws:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/.*)?)?$/;
+        const pattern = /^(wss:\/\/([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(:\d+)?(\/.*)?|ws:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/.*)?)$/;
         return pattern.test(url);
     };
 

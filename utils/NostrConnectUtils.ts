@@ -47,7 +47,7 @@ export interface BudgetRenewalOption {
  * If adding a new notification type, update this enum AND add the publishing logic.
  */
 export enum PublishedNotificationType {
-    PaymentSent = 'payment_sent'
+    PaymentSent = 'payment_sent',
     // PaymentReceived = 'payment_received' -- requires settlement watcher, not yet implemented
 }
 

@@ -1284,13 +1284,15 @@ export default class LdkNode {
             data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_msat);
-                      return Number.isFinite(v) ? Math.trunc(v) : undefined;
+                                            return Number.isFinite(v) && v >= 0
+                                                    ? Math.trunc(v)
+                                                    : undefined;
                   })()
                 : data.fee_limit_sat !== undefined &&
                   data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
-                      return Number.isFinite(v)
+                                            return Number.isFinite(v) && v >= 0
                           ? Math.trunc(v * 1000)
                           : undefined;
                   })()
@@ -1307,9 +1309,9 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: (() => {
                     const v = Number(data.amount_msat);
-                    if (!Number.isFinite(v)) {
+                    if (!Number.isFinite(v) || v <= 0) {
                         throw new Error(
-                            `Invalid amount_msat: expected finite number, got ${v}`
+                            `Invalid amount_msat: expected positive finite number, got ${v}`
                         );
                     }
                     return Math.trunc(v);
@@ -1322,9 +1324,9 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: (() => {
                     const v = Number(data.amt);
-                    if (!Number.isFinite(v)) {
+                    if (!Number.isFinite(v) || v <= 0) {
                         throw new Error(
-                            `Invalid amt: expected finite number, got ${v}`
+                            `Invalid amt: expected positive finite number, got ${v}`
                         );
                     }
                     return Math.trunc(v * 1000);
@@ -1359,9 +1361,9 @@ export default class LdkNode {
             data.amount_msat !== undefined && data.amount_msat !== null
                 ? (() => {
                       const v = Number(data.amount_msat);
-                      if (!Number.isFinite(v)) {
+                      if (!Number.isFinite(v) || v <= 0) {
                           throw new Error(
-                              `Invalid amount_msat: expected finite number, got ${v}`
+                              `Invalid amount_msat: expected positive finite number, got ${v}`
                           );
                       }
                       return v;
@@ -1369,9 +1371,9 @@ export default class LdkNode {
                 : data.amt !== undefined && data.amt !== null
                 ? (() => {
                       const v = Number(data.amt);
-                      if (!Number.isFinite(v)) {
+                      if (!Number.isFinite(v) || v <= 0) {
                           throw new Error(
-                              `Invalid amt: expected finite number, got ${v}`
+                              `Invalid amt: expected positive finite number, got ${v}`
                           );
                       }
                       return v * 1000;
@@ -1381,7 +1383,7 @@ export default class LdkNode {
             data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
-                      return Number.isFinite(v)
+                      return Number.isFinite(v) && v >= 0
                           ? Math.trunc(v * 1000)
                           : undefined;
                   })()
