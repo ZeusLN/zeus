@@ -56,12 +56,13 @@ import NostrConnectUtils from './NostrConnectUtils';
 
 describe('NostrConnectUtils msat handling', () => {
     it('prefers msatAmount when exporting connection activity', () => {
+        const validHash = 'a'.repeat(64); // Valid 64-char hex hash
         const transaction =
             NostrConnectUtils.convertConnectionActivityToNip47Transaction({
                 id: 'activity-1',
                 type: 'make_invoice',
                 status: 'pending',
-                paymentHash: 'payment-hash',
+                paymentHash: validHash,
                 satAmount: 1,
                 msatAmount: 1500,
                 invoice: {
@@ -74,7 +75,7 @@ describe('NostrConnectUtils msat handling', () => {
             type: 'incoming',
             state: 'pending',
             invoice: 'lnbc1exact',
-            payment_hash: 'payment-hash',
+            payment_hash: validHash,
             amount: 1500,
             description: 'exact msat invoice'
         });

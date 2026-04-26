@@ -502,22 +502,17 @@ export default class NWCConnection extends BaseModel {
 
     @action
     public addActivity(item: ConnectionActivity): void {
-        // Validation: payment activities MUST have a valid 64-char hex payment hash
-        // per NIP-47 spec. Reject empty/null hashes to prevent corrupted records.
+        // Log warning for payment activities without valid paymentHash
+        // per NIP-47 spec. paymentHash should be 64-char hex when present.
         if (item.type && ['pay_invoice', 'make_invoice'].includes(item.type)) {
-            if (!item.paymentHash || !/^[a-f0-9]{64}$/.test(item.paymentHash)) {
-                console.error(
-                    '[NWCConnection.addActivity] Payment activity missing or invalid paymentHash',
+            if (item.paymentHash && !/^[a-f0-9]{64}$/.test(item.paymentHash)) {
+                console.warn(
+                    '[NWCConnection.addActivity] Payment activity has invalid paymentHash format',
                     {
                         connectionId: this.id,
                         type: item.type,
-                        invoice: item.invoice?.getPaymentRequest || '',
-                        paymentHash: item.paymentHash || 'MISSING'
+                        paymentHash: item.paymentHash
                     }
-                );
-                // Don't add corrupt activity records; let caller handle the error
-                throw new Error(
-                    `Payment activity requires valid 64-char hex paymentHash (type: ${item.type})`
                 );
             }
         }

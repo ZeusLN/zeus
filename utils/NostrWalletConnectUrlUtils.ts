@@ -21,15 +21,15 @@ export const isValidLightningAddress = (address?: string | null): boolean => {
     // - Cannot start or end with dots or hyphens
     // - Cannot have consecutive dots
     // Domain: DNS-compliant labels separated by dots
-    // - Each label: alphanumeric with hyphens in middle only
+    // - Each label: alphanumeric with hyphens in middle only (supports punycode)
     // - At least 2 labels (e.g., example.com)
     // - Each label 1-63 chars, TLD (final label) 2+ chars per DNS spec
     
-    // Simplified regex for ASCII-only Lightning Addresses (IDN not supported)
+    // Regex for ASCII-only Lightning Addresses (punycode supported for IDN)
     // Local part: letter/digit, then optional alphanumerics/dots/hyphens/underscores/plus
-    // Domain: standard DNS format (alphanumeric + hyphens per label)
-    // TLD MUST be 2+ characters: [a-zA-Z0-9]{2,} ensures this
-    const regex = /^[a-zA-Z0-9]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+    // Domain: standard DNS format (alphanumeric + hyphens per label, allowing punycode xn--)
+    // TLD: 2+ alphanumeric or hyphens (allows punycode like xn--p1ai)
+    const regex = /^[a-zA-Z0-9]([a-zA-Z0-9._+\-]{0,62}[a-zA-Z0-9_+\-])?@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$/;
 
     // Additional validation: reject consecutive dots in local part
     const [localPart] = address.split('@');

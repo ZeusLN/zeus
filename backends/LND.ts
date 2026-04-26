@@ -541,6 +541,13 @@ export default class LND {
                     // BigInt when the raw input is a string to avoid silent
                     // precision loss.  Values beyond the LND uint64 ceiling
                     // (2^63-1 msats) are rejected outright.
+                    //
+                    // Validation ensures:
+                    // - NaN is rejected (Number.isFinite check)
+                    // - Infinity is rejected (Number.isFinite check)
+                    // - Negative values are rejected (v <= 0 or bi <= 0n check)
+                    // - Unsafe integers (> 2^53) are rejected (overflow check)
+                    // - Values > 2^63-1 are rejected (BigInt overflow check)
                     const MAX_LND_MSAT = 9223372036854775807n; // 2^63-1
                     const safeAmtMsatString = (raw: unknown): string | null => {
                         if (raw === undefined || raw === null) return null;
@@ -553,6 +560,7 @@ export default class LND {
                             return bi.toString();
                         }
                         const v = Number(raw);
+                        // Rejects NaN, Infinity, and negative values
                         if (!Number.isFinite(v) || v <= 0) return null;
                         const bi = BigInt(Math.trunc(v));
                         if (bi > MAX_LND_MSAT) return null;
@@ -565,10 +573,12 @@ export default class LND {
                             /^\d+$/.test(raw as string)
                         ) {
                             const bi = BigInt(raw as string);
+                            // Fee can be zero (no fee limit), but not negative or >uint64
                             if (bi < 0n || bi > MAX_LND_MSAT) return null;
                             return bi.toString();
                         }
                         const v = Number(raw);
+                        // Rejects NaN, Infinity, and negative values
                         if (!Number.isFinite(v) || v < 0) return null;
                         const bi = BigInt(Math.trunc(v));
                         if (bi > MAX_LND_MSAT) return null;

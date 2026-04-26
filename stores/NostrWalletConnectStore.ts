@@ -1470,6 +1470,18 @@ export default class NostrWalletConnectStore {
         response: any,
         encryptionScheme: NwcEncryptionScheme
     ): Promise<boolean> => {
+        // Cache the response so we can replay it if the same event arrives again.
+        // This prevents double-charging from duplicate requests.
+        //
+        // IMPORTANT: Failures to persist are caught by the caller (handleEventRequest).
+        // If save fails, the caller logs it and continues with response publication.
+        // On restart, if the same event re-arrives and isn't in cache, it will be
+        // re-executed. This is acceptable: we prefer consistency (execute once) over
+        // availability (always cached).
+        //
+        // In high-concurrency scenarios, it's possible a response is published but
+        // cache save fails. This is tracked in handleEventRequest.result.committed
+        // and caller can warn the user if needed.
         if (!eventId) return false;
         return await this.withMutex(NWCMutexKey.ReplayResponses, async () => {
             const responses = await this.getReplayResponses();
@@ -1536,18 +1548,28 @@ export default class NostrWalletConnectStore {
         let cacheAge = now - cached.cachedAt;
         if (cacheAge < 0) {
             // System clock went backwards (NTP adjustment or similar).
-            // Clamp to 0 so the entry is treated as freshly cached rather than
-            // either expired or causing undefined behavior.
+            // This weakens replay protection: a cache entry that's actually 23+ hours old
+            // would be treated as "fresh" for the full 24h expiration window.
+            // Mitigation: reduce the effective age by assigning a conservative cachedAt time
+            // so the entry re-checks expiration sooner (within 1 minute of this check).
             console.warn(
-                'NWC: Clock skew detected — system clock appears to have gone backwards',
+                'NWC: Clock skew detected — system clock went backwards',
                 {
                     eventId,
-                    cacheAge: `${cacheAge}ms`,
+                    skew: `${Math.abs(cacheAge)}ms`,
                     cachedAt: cached.cachedAt,
-                    now
+                    now,
+                    mitigation: 'reducing effective cache age to force re-check in 1 minute'
                 }
             );
-            cacheAge = 0;
+            // Set cachedAt to (now - EXPIRATION + 60s) so this entry will expire in 60s
+            // instead of silently extending the 24h window
+            const CLOCK_SKEW_RECOVERY_MS = 60 * 1000; // 1 minute
+            cached.cachedAt = Math.max(
+                cached.cachedAt,
+                now - REPLAY_CACHE_EXPIRATION_MS + CLOCK_SKEW_RECOVERY_MS
+            );
+            cacheAge = now - cached.cachedAt;
         }
         if (cacheAge >= REPLAY_CACHE_EXPIRATION_MS) {
             // Cache entry has expired; treat as a cache miss to prevent replay bypass

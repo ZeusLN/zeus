@@ -41,6 +41,16 @@ export interface BudgetRenewalOption {
     title: string;
 }
 
+/**
+ * Enum of notification types that Zeus actually publishes.
+ * This must stay in sync with all calls to publishNip47Notification().
+ * If adding a new notification type, update this enum AND add the publishing logic.
+ */
+export enum PublishedNotificationType {
+    PaymentSent = 'payment_sent'
+    // PaymentReceived = 'payment_received' -- requires settlement watcher, not yet implemented
+}
+
 const PRESET_INDEX = {
     FIRST: 0,
     SECOND: 1,
@@ -51,10 +61,15 @@ const PRESET_INDEX = {
 
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
-        // Only advertise notification types Zeus actively publishes. Incoming
-        // payments still require a settlement watcher before payment_received can
-        // be advertised without causing clients to stop polling.
-        return ['payment_sent'];
+        // Only advertise notification types Zeus actively publishes. This list must
+        // stay in sync with PublishedNotificationType enum and all publishXxxNotification() calls.
+        // If a new notification type is added to PublishedNotificationType, you must also:
+        // 1. Add a publishXxxNotification() method to NostrWalletConnectStore
+        // 2. Call it from the appropriate request handler
+        // 3. Test that the notification is actually sent
+        // Incoming payments still require a settlement watcher before payment_received
+        // can be advertised without causing clients to stop polling.
+        return Object.values(PublishedNotificationType);
     }
 
     static get TIME_UNITS(): TimeUnit[] {

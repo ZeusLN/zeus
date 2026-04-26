@@ -300,8 +300,8 @@ describe('NWCConnection', () => {
                     totalSpendSatsBefore: 900,
                     attemptedAmount: 200,
                     maxAmountSats: 1000,
-                    totalSpendSatsAfterClamp: 1000,
-                    overageAmount: 100
+                    remainingBefore: 100,
+                    overage: 100
                 })
             );
 
