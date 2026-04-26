@@ -728,7 +728,18 @@ export default class NostrWalletConnectStore {
         try {
             const parsed = new URL(url);
             const scheme = parsed.protocol.toLowerCase();
-            return scheme === 'wss:';
+            if (scheme === 'wss:') return true;
+            // Allow ws:// for localhost/127.0.0.1/[::1] for local testing only.
+            if (scheme === 'ws:') {
+                const host = parsed.hostname.toLowerCase();
+                return (
+                    host === 'localhost' ||
+                    host === '127.0.0.1' ||
+                    host === '[::1]' ||
+                    host === '::1'
+                );
+            }
+            return false;
         } catch {
             return false;
         }
