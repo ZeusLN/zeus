@@ -249,6 +249,7 @@ export interface CreateConnectionParams {
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
     includeLightningAddress?: boolean;
+    lud16?: string | null;
     totalSpendSats?: number;
     lastBudgetReset?: Date;
     activity?: ConnectionActivity[];
@@ -385,7 +386,46 @@ export default class NostrWalletConnectStore {
         this.lightningAddressStore = lightningAddressStore;
         this.modalStore = modalStore;
         this.paymentsStore = paymentsStore;
+        if (
+            typeof this.lightningAddressStore
+                .setLightningAddressChangeListener === 'function'
+        ) {
+            this.lightningAddressStore.setLightningAddressChangeListener(
+                this.refreshLightningAddressConnections
+            );
+        }
     }
+
+    public refreshLightningAddressConnections = async (
+        nextLightningAddress: string | null,
+        _previousLightningAddress?: string | null
+    ): Promise<void> => {
+        const normalizedNextLightningAddress = nextLightningAddress?.trim() || '';
+        if (
+            normalizedNextLightningAddress &&
+            !isValidLightningAddress(normalizedNextLightningAddress)
+        ) {
+            throw new InvalidLightningAddressError();
+        }
+
+        const targetLightningAddress = normalizedNextLightningAddress || undefined;
+        let changed = false;
+        runInAction(() => {
+            this.connections.forEach((connection) => {
+                if (!connection.includeLightningAddress) {
+                    return;
+                }
+                if (connection.lud16 !== targetLightningAddress) {
+                    connection.lud16 = targetLightningAddress;
+                    changed = true;
+                }
+            });
+        });
+
+        if (changed) {
+            await this.saveConnections();
+        }
+    };
 
     @action
     public initializeService = async () => {
@@ -731,7 +771,10 @@ export default class NostrWalletConnectStore {
             }
             const includeLightningAddress =
                 params.includeLightningAddress ?? false;
-            const lud16 = this.getConnectionLud16(includeLightningAddress);
+            const lud16 =
+                params.lud16 !== undefined
+                    ? params.lud16?.trim() || undefined
+                    : this.getConnectionLud16(includeLightningAddress);
             if (includeLightningAddress && !lud16) {
                 throw new InvalidLightningAddressError();
             }
@@ -805,7 +848,8 @@ export default class NostrWalletConnectStore {
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
                 this.generateConnectionSecret(
                     params.relayUrl,
-                    includeLightningAddress
+                    includeLightningAddress,
+                    includeLightningAddress ? lud16 : undefined
                 );
             const connectionData = {
                 id: params.id || uuidv4(),
@@ -834,6 +878,7 @@ export default class NostrWalletConnectStore {
                 nodePubkey,
                 implementation,
                 includeLightningAddress,
+                lud16: includeLightningAddress ? lud16 : undefined,
                 activity: params.activity || []
             };
 
@@ -966,24 +1011,29 @@ export default class NostrWalletConnectStore {
                 updates.includeLightningAddress !== undefined &&
                 updates.includeLightningAddress !==
                     connection.includeLightningAddress;
+            const nextIncludeLightningAddress =
+                updates.includeLightningAddress ??
+                connection.includeLightningAddress;
+            const nextLud16 =
+                updates.lud16 !== undefined
+                    ? updates.lud16?.trim() || undefined
+                    : nextIncludeLightningAddress &&
+                      (relayUrlChanged || includeLightningAddressChanged)
+                    ? this.getConnectionLud16(nextIncludeLightningAddress)
+                    : connection.lud16;
+            const lud16Changed =
+                updates.lud16 !== undefined &&
+                nextLud16 !== connection.lud16;
             const permissionsChanged =
                 updates.permissions !== undefined &&
                 JSON.stringify([...updates.permissions].slice().sort()) !==
                     JSON.stringify([...connection.permissions].slice().sort());
 
             const shouldReturnUrl =
-                relayUrlChanged || includeLightningAddressChanged;
-            const nextIncludeLightningAddress =
-                updates.includeLightningAddress ??
-                connection.includeLightningAddress;
-            const requiresLightningAddressForUrl =
-                shouldReturnUrl &&
-                nextIncludeLightningAddress &&
-                (relayUrlChanged || includeLightningAddressChanged);
-            const nextLud16 = requiresLightningAddressForUrl
-                ? this.getConnectionLud16(nextIncludeLightningAddress)
-                : undefined;
-            if (requiresLightningAddressForUrl) {
+                relayUrlChanged ||
+                includeLightningAddressChanged ||
+                (lud16Changed && nextIncludeLightningAddress);
+            if (shouldReturnUrl && nextIncludeLightningAddress) {
                 if (!nextLud16 || !isValidLightningAddress(nextLud16)) {
                     throw new InvalidLightningAddressError();
                 }
@@ -1020,12 +1070,13 @@ export default class NostrWalletConnectStore {
                 ? this.activeSubscriptions.get(connectionId)
                 : undefined;
             const subscriptionConnection = shouldResubscribe
-                ? new NWCConnection({
-                      ...connection,
-                      ...updates,
-                      relayUrl: newRelayUrl || oldRelayUrl,
-                      includeLightningAddress: nextIncludeLightningAddress
-                  })
+                    ? new NWCConnection({
+                          ...connection,
+                          ...updates,
+                          relayUrl: newRelayUrl || oldRelayUrl,
+                          includeLightningAddress: nextIncludeLightningAddress,
+                          lud16: nextLud16
+                      })
                 : undefined;
 
             if (shouldResubscribe && subscriptionConnection) {
@@ -1092,6 +1143,9 @@ export default class NostrWalletConnectStore {
                     connection.totalSpendSats = 0;
                 } else if (hasBudget && budgetRenewalChanged) {
                     connection.resetBudget();
+                }
+                if (updates.lud16 !== undefined) {
+                    connection.lud16 = nextLud16;
                 }
 
                 this.connections[connectionIndex] = connection;
@@ -1992,7 +2046,8 @@ export default class NostrWalletConnectStore {
     }
     private generateConnectionSecret(
         relayUrl: string,
-        includeLightningAddress = false
+        includeLightningAddress = false,
+        lud16?: string | null
     ) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
@@ -2003,12 +2058,13 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const lud16 = this.getConnectionLud16(includeLightningAddress);
+        const resolvedLud16 =
+            lud16 !== undefined ? lud16?.trim() || undefined : this.getConnectionLud16(includeLightningAddress);
         const connectionUrl = buildNostrWalletConnectUrl({
             walletServicePubkey: this.walletServiceKeys.publicKey,
             relayUrl,
             secret: connectionPrivateKey,
-            lud16
+            lud16: resolvedLud16
         });
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
@@ -3065,10 +3121,18 @@ export default class NostrWalletConnectStore {
                 request.message,
                 'lightning'
             );
+            if (!signature) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToSignMessage'
+                    ),
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
             return {
                 result: {
                     message: request.message,
-                    signature: signature || ''
+                    signature
                 },
                 error: undefined
             };
@@ -5658,7 +5722,7 @@ export default class NostrWalletConnectStore {
         eventId: string,
         skipNotification: boolean = false,
         requestEncryptionScheme: NwcEncryptionScheme = 'nip04',
-        retainReplayResponse: boolean = false
+        _retainReplayResponse: boolean = false
     ): Promise<NWCEventRequestResult> {
         let response: any;
         try {
@@ -5773,9 +5837,6 @@ export default class NostrWalletConnectStore {
                     requestEncryptionScheme
                 );
                 published = true;
-                if (eventId && cachePersisted && !retainReplayResponse) {
-                    await this.removeReplayResponse(eventId);
-                }
             } catch (error) {
                 console.warn('NWC: Failed to publish event response', {
                     error,

@@ -448,6 +448,37 @@ describe('NostrWalletConnectStore msat plumbing', () => {
         });
     });
 
+    it('returns a NIP-47 error when sign_message fails', async () => {
+        const context: any = {
+            isCashuConfigured: false,
+            messageSignStore: {
+                signMessage: jest.fn().mockResolvedValue(null)
+            },
+            handleError: jest.fn((message: string, code: string) => ({
+                result: undefined,
+                error: { code, message }
+            }))
+        };
+
+        const response = await callStoreMethod<any>('handleSignMessage', context, {
+            message: 'sign this message'
+        });
+
+        expect(context.messageSignStore.signMessage).toHaveBeenCalledWith(
+            'sign this message',
+            'lightning'
+        );
+        expect(context.handleError).toHaveBeenCalledWith(
+            'stores.NostrWalletConnectStore.error.failedToSignMessage',
+            expect.any(String)
+        );
+        expect(response.error).toEqual({
+            code: expect.any(String),
+            message: 'stores.NostrWalletConnectStore.error.failedToSignMessage'
+        });
+        expect(response.result).toBeUndefined();
+    });
+
     it('returns the actual expiry timestamp for lookup_invoice responses', async () => {
         const now = Math.floor(Date.now() / 1000);
         const expiresAt = now + 3600;

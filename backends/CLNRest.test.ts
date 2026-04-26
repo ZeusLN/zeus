@@ -130,6 +130,23 @@ describe('CLNRest msat handling', () => {
         expect(postRequestSpy.mock.calls[0][2]).toBe(60000);
     });
 
+    it('preserves very large msat inputs as strings', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1large',
+            amount_msat: '9007199254740993',
+            fee_limit_msat: '9007199254741993'
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any, number];
+        expect(body.amount_msat).toBe('9007199254740993');
+        expect(body.maxfee).toBe('9007199254741993');
+    });
+
     it('defaults invalid payment timeouts before calling CLN', async () => {
         const cln = new CLNRest();
         const postRequestSpy = jest
@@ -148,6 +165,24 @@ describe('CLNRest msat handling', () => {
         ];
         expect(body.retry_for).toBe(60);
         expect(timeout).toBe(60000);
+    });
+});
+
+describe('CLNRest keysend amount handling', () => {
+    it('preserves very large keysend msat inputs as strings', async () => {
+        const cln = new CLNRest();
+        const postRequestSpy = jest
+            .spyOn(cln as any, 'postRequest')
+            .mockResolvedValue({});
+
+        await cln.sendKeysend({
+            pubkey: 'pubkey',
+            amount_msat: '9007199254740993',
+            timeout_seconds: 120
+        });
+
+        const [, body] = postRequestSpy.mock.calls[0] as [string, any, number];
+        expect(body.amount_msat).toBe('9007199254740993');
     });
 });
 

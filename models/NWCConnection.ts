@@ -72,6 +72,7 @@ export interface NWCConnectionData {
     nodePubkey: string;
     implementation: string;
     includeLightningAddress: boolean;
+    lud16?: string;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
@@ -85,10 +86,15 @@ export type StoredNWCConnectionData = Omit<
 export const normalizeNWCConnectionData = (
     connection: StoredNWCConnectionData
 ): NWCConnectionData => {
+    const metadataLud16 =
+        typeof connection.metadata?.lud16 === 'string'
+            ? connection.metadata.lud16.trim()
+            : undefined;
+    const lud16 = connection.lud16?.trim() || metadataLud16;
     // Auto-migrate includeLightningAddress: if lud16 is set in metadata,
     // enable it for existing connections (but only if not explicitly set)
     let includeLightningAddress = connection.includeLightningAddress;
-    if (includeLightningAddress === undefined && connection.metadata?.lud16) {
+    if (includeLightningAddress === undefined && lud16) {
         console.log(
             'Migrating NWC connection to v2 (enabling Lightning Address support)',
             { connectionId: connection.id, connectionName: connection.name }
@@ -98,7 +104,8 @@ export const normalizeNWCConnectionData = (
 
     const normalizedData = {
         ...connection,
-        includeLightningAddress: includeLightningAddress ?? false
+        includeLightningAddress: includeLightningAddress ?? false,
+        lud16
     };
 
     return normalizedData;
@@ -171,6 +178,7 @@ export default class NWCConnection extends BaseModel {
     @observable nodePubkey: string;
     @observable implementation: Implementations;
     @observable includeLightningAddress: boolean = false;
+    @observable lud16?: string;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];

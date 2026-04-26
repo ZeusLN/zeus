@@ -45,6 +45,7 @@ describe('NWCConnection', () => {
 
             const normalized = normalizeNWCConnectionData(connectionData);
             expect(normalized.includeLightningAddress).toBe(true);
+            expect(normalized.lud16).toBe('test@example.com');
         });
 
         it('should keep includeLightningAddress false for new connections with no lud16', () => {

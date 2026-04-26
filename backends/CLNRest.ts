@@ -22,6 +22,21 @@ const calls = new Map<string, Promise<any>>();
 
 export default class CLNRest {
     private defaultTimeout: number = 30000;
+
+    private parsePositiveInteger = (value: unknown): BigNumber | undefined => {
+        if (value === undefined || value === null) {
+            return undefined;
+        }
+        const parsed = new BigNumber(value as any);
+        if (!parsed.isFinite() || parsed.isNegative()) {
+            return undefined;
+        }
+        return parsed.integerValue(BigNumber.ROUND_FLOOR);
+    };
+
+    private formatIntegerForCln = (value: BigNumber): number | string =>
+        value.lte(Number.MAX_SAFE_INTEGER) ? value.toNumber() : value.toFixed(0);
+
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -441,21 +456,17 @@ export default class CLNRest {
         // `additionalProperties: false`. Convert sat -> msat here, using
         // Math.floor to ensure the result is an integer (CLN schema requires it).
         if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
-            const v = Number(data.fee_limit_msat);
-            if (Number.isFinite(v) && v >= 0) {
-                request.maxfee = Math.floor(v);
-            } else {
-                delete request.maxfee;
+            const v = this.parsePositiveInteger(data.fee_limit_msat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(v);
             }
         } else if (
             data.fee_limit_sat !== undefined &&
             data.fee_limit_sat !== null
         ) {
-            const v = Number(data.fee_limit_sat);
-            if (Number.isFinite(v) && v >= 0) {
-                request.maxfee = Math.floor(v * 1000);
-            } else {
-                delete request.maxfee;
+            const v = this.parsePositiveInteger(data.fee_limit_sat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(v.times(1000));
             }
         } else if (
             data.max_fee_percent !== undefined &&
@@ -476,40 +487,38 @@ export default class CLNRest {
         //   `msat` schema type requires an integer value.
         // - "Any amount" invoices work when amount/amt is 0/undefined/NaN
         //   (amount_msat omitted).
-        let amountMsat: number | undefined;
+        let amountMsat: BigNumber | undefined;
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
-            const direct = Number(data.amount_msat);
-            if (Number.isFinite(direct)) amountMsat = Math.floor(direct);
+            amountMsat = this.parsePositiveInteger(data.amount_msat);
         } else if (data.amt !== undefined && data.amt !== null) {
-            const sats = Number(data.amt);
-            if (Number.isFinite(sats)) amountMsat = Math.floor(sats * 1000);
+            const sats = this.parsePositiveInteger(data.amt);
+            if (sats !== undefined) {
+                amountMsat = sats.times(1000);
+            }
         }
-        if (amountMsat !== undefined && amountMsat > 0) {
-            request.amount_msat = amountMsat;
+        if (amountMsat !== undefined && amountMsat.gt(0)) {
+            request.amount_msat = this.formatIntegerForCln(amountMsat);
         }
 
         return this.postRequest('/v1/pay', request, timeoutSeconds * 1000);
     };
     sendKeysend = (data: any) => {
-        const rawAmountMsat =
-            data.amount_msat !== undefined && data.amount_msat !== null
-                ? Number(data.amount_msat)
-                : undefined;
-        const rawAmountSat =
-            data.amt !== undefined && data.amt !== null
-                ? Number(data.amt)
-                : undefined;
+        const rawAmountMsat = this.parsePositiveInteger(data.amount_msat);
+        const rawAmountSat = this.parsePositiveInteger(data.amt);
         const amountMsat =
-            rawAmountMsat !== undefined && Number.isFinite(rawAmountMsat)
-                ? Math.floor(rawAmountMsat)
-                : rawAmountSat !== undefined && Number.isFinite(rawAmountSat)
-                ? Math.floor(rawAmountSat * 1000)
-                : 0;
+            rawAmountMsat !== undefined
+                ? rawAmountMsat
+                : rawAmountSat !== undefined
+                ? rawAmountSat.times(1000)
+                : undefined;
         return this.postRequest(
             '/v1/keysend',
             {
                 destination: data.pubkey,
-                amount_msat: amountMsat,
+                amount_msat:
+                    amountMsat !== undefined
+                        ? this.formatIntegerForCln(amountMsat)
+                        : 0,
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },

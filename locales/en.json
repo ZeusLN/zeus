@@ -1728,6 +1728,7 @@
   "stores.NostrWalletConnectStore.error.failedToSavePersistentServiceSetting": "Failed to save persistent service setting",
   "stores.NostrWalletConnectStore.error.failedToGetInfo": "Failed to get info",
   "stores.NostrWalletConnectStore.error.failedToPayInvoice": "Failed to pay invoice",
+  "stores.NostrWalletConnectStore.error.failedToSignMessage": "Failed to sign message",
   "stores.NostrWalletConnectStore.error.failedToCreateCashuInvoice": "Failed to create Cashu invoice - no payment request returned",
   "stores.NostrWalletConnectStore.error.invoiceNotFound": "Invoice not found",
   "stores.NostrWalletConnectStore.error.cashuWalletNotInitialized": "Cashu wallet not initialized",

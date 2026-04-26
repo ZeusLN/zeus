@@ -65,6 +65,11 @@ interface PerkLink {
     url: string;
 }
 
+type LightningAddressChangeHandler = (
+    lightningAddress: string | null,
+    previousLightningAddress?: string | null
+) => Promise<void> | void;
+
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
@@ -103,6 +108,7 @@ export default class LightningAddressStore {
     cashuStore: CashuStore;
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
+    private lightningAddressChangeHandler?: LightningAddressChangeHandler;
 
     constructor(
         cashuStore: CashuStore,
@@ -113,6 +119,12 @@ export default class LightningAddressStore {
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
     }
+
+    public setLightningAddressChangeListener = (
+        handler?: LightningAddressChangeHandler
+    ) => {
+        this.lightningAddressChangeHandler = handler;
+    };
 
     private getAuthData = async () => {
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -175,6 +187,7 @@ export default class LightningAddressStore {
     };
 
     private setLightningAddress = async (handle: string, domain: string) => {
+        const previousLightningAddress = this.lightningAddress || null;
         await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
         runInAction(() => {
             this.lightningAddressActivated = true;
@@ -182,6 +195,12 @@ export default class LightningAddressStore {
             this.lightningAddressDomain = domain;
             this.lightningAddress = `${handle}@${domain}`;
         });
+        if (this.lightningAddressChangeHandler) {
+            await this.lightningAddressChangeHandler(
+                this.lightningAddress,
+                previousLightningAddress
+            );
+        }
     };
 
     private deleteHash = async (hash: string) => {
@@ -1426,9 +1445,16 @@ export default class LightningAddressStore {
             if (deleteResponse.info().status !== 200) throw deleteData.error;
 
             // Clear local storage and reset store state
+            const previousLightningAddress = this.lightningAddress || null;
             await Storage.setItem(ADDRESS_ACTIVATED_STRING, false);
             await Storage.setItem(HASHES_STORAGE_STRING, '');
             this.reset();
+            if (this.lightningAddressChangeHandler) {
+                await this.lightningAddressChangeHandler(
+                    null,
+                    previousLightningAddress
+                );
+            }
 
             runInAction(() => {
                 this.loading = false;

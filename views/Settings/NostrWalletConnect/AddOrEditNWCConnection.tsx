@@ -551,6 +551,12 @@ export default class AddOrEditNWCConnection extends React.Component<
             budgetRenewal,
             includeLightningAddress
         };
+        const resolvedLightningAddress =
+            this.state.originalConnection?.lud16 ||
+            NostrWalletConnectStore.lightningAddressStore.lightningAddress;
+        if (includeLightningAddress && resolvedLightningAddress) {
+            params.lud16 = resolvedLightningAddress;
+        }
 
         // Budget is required when pay_invoice is among the permissions
         if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {

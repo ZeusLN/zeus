@@ -516,6 +516,48 @@ describe('NostrWalletConnectStore replay guards', () => {
         expect(context.removeReplayResponse).not.toHaveBeenCalled();
     });
 
+    it('does not remove replay responses before the processed marker is durable', async () => {
+        const context = createStore();
+        const connection = {
+            id: 'conn-1',
+            name: 'wallet',
+            relayUrl: 'wss://relay.example',
+            pubkey: 'client-pubkey',
+            hasPermission: jest.fn(() => true)
+        };
+        const response = { result: { alias: 'wallet' }, error: undefined };
+        context.handleGetInfo = jest.fn(async () => response);
+        context.cacheReplayResponse = jest.fn(async () => true);
+        context.publishEventToClient = jest.fn().mockResolvedValue(undefined);
+        context.removeReplayResponse = jest.fn().mockResolvedValue(undefined);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        const result = await callStoreMethod<any>(
+            'handleEventRequest',
+            context,
+            connection,
+            { method: 'get_info', params: {} },
+            'event-2',
+            true,
+            'nip04'
+        );
+
+        expect(result).toEqual({
+            success: true,
+            errorMessage: undefined,
+            committed: true,
+            published: true
+        });
+        expect(context.publishEventToClient).toHaveBeenCalledWith(
+            connection,
+            'get_info',
+            response,
+            'event-2',
+            'nip04'
+        );
+        expect(context.removeReplayResponse).not.toHaveBeenCalled();
+    });
+
     it('keeps responses uncommitted when cache and publish both fail', async () => {
         const context = createStore();
         const connection = {

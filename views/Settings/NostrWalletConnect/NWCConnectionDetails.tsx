@@ -178,10 +178,14 @@ export default class NWCConnectionDetails extends React.Component<
         const { NostrWalletConnectStore } = this.props;
         const lightningAddressStore =
             NostrWalletConnectStore.lightningAddressStore;
+        const resolvedLightningAddress =
+            connection.lud16 ||
+            (lightningAddressStore?.lightningAddressActivated &&
+            lightningAddressStore?.lightningAddress
+                ? lightningAddressStore.lightningAddress
+                : undefined);
         const canIncludeLightningAddress =
-            connection.includeLightningAddress &&
-            lightningAddressStore?.lightningAddressActivated &&
-            !!lightningAddressStore?.lightningAddress;
+            connection.includeLightningAddress && !!resolvedLightningAddress;
         const params: any = {
             id: connection.id,
             name: connection.name,
@@ -194,6 +198,7 @@ export default class NWCConnectionDetails extends React.Component<
         };
         if (canIncludeLightningAddress) {
             params.includeLightningAddress = true;
+            params.lud16 = resolvedLightningAddress;
         }
         if (connection.maxAmountSats && connection.maxAmountSats > 0) {
             params.budgetAmount = connection.maxAmountSats;

@@ -497,6 +497,110 @@ describe('NostrWalletConnectStore updateConnection validation order', () => {
         expect((store as any).errorMessage).toBe('INVALID_LIGHTNING_ADDRESS');
         expect(connection.relayUrl).toBe('wss://old.relay');
     });
+
+    it('regenerates the URL when the stored Lightning Address changes', async () => {
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-1',
+            pubkey: 'connection-pubkey',
+            relayUrl: 'wss://old.relay',
+            includeLightningAddress: true,
+            lud16: 'old@example.com',
+            permissions: [],
+            totalSpendSats: 0,
+            maxAmountSats: 0,
+            budgetRenewal: 'never',
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            publicKey: 'wallet-service-pubkey'
+        };
+        (store as any).validateRelayUrl = jest.fn(() => true);
+        const loadClientPrivateKeySpy = jest
+            .spyOn(store as any, 'loadClientPrivateKey')
+            .mockResolvedValue('client-secret');
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
+
+        const result = await store.updateConnection('conn-1', {
+            lud16: 'new@example.com'
+        } as any);
+
+        expect(result.success).toBe(true);
+        expect(result.nostrUrl).toContain('lud16=new%40example.com');
+        expect(store.connections[0].lud16).toBe('new@example.com');
+        expect(loadClientPrivateKeySpy).toHaveBeenCalledWith('connection-pubkey');
+        expect(saveSpy).toHaveBeenCalled();
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+    });
+
+    it('refreshes stored Lightning Address values across includeLightningAddress connections', async () => {
+        const store = new NostrWalletConnectStore(
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const includedConnection = {
+            id: 'conn-1',
+            pubkey: 'connection-pubkey-1',
+            relayUrl: 'wss://relay.example',
+            includeLightningAddress: true,
+            lud16: 'old@example.com',
+            permissions: [],
+            totalSpendSats: 0,
+            maxAmountSats: 0,
+            budgetRenewal: 'never',
+            activity: []
+        };
+        const excludedConnection = {
+            id: 'conn-2',
+            pubkey: 'connection-pubkey-2',
+            relayUrl: 'wss://relay.example',
+            includeLightningAddress: false,
+            lud16: 'stay@example.com',
+            permissions: [],
+            totalSpendSats: 0,
+            maxAmountSats: 0,
+            budgetRenewal: 'never',
+            activity: []
+        };
+        store.connections = [includedConnection as any, excludedConnection as any];
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+
+        await store.refreshLightningAddressConnections(
+            'new@example.com',
+            'old@example.com'
+        );
+
+        expect(store.connections[0].lud16).toBe('new@example.com');
+        expect(store.connections[1].lud16).toBe('stay@example.com');
+        expect(saveSpy).toHaveBeenCalled();
+    });
 });
 
 describe('NostrWalletConnectStore pay_invoice mutex', () => {
