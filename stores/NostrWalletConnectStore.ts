@@ -1033,10 +1033,12 @@ export default class NostrWalletConnectStore {
                 relayUrlChanged ||
                 includeLightningAddressChanged ||
                 (lud16Changed && nextIncludeLightningAddress);
-            if (shouldReturnUrl && nextIncludeLightningAddress) {
-                if (!nextLud16 || !isValidLightningAddress(nextLud16)) {
-                    throw new InvalidLightningAddressError();
-                }
+            // Enforce invariant: if includeLightningAddress is true, lud16 must be valid.
+            // This prevents invalid states where LA is enabled but has no address (either
+            // because getConnectionLud16 returned undefined when wallet lacks LA, or an edit
+            // cleared it). This catches edge cases that URL-only validation guard misses.
+            if (nextIncludeLightningAddress && (!nextLud16 || !isValidLightningAddress(nextLud16))) {
+                throw new InvalidLightningAddressError();
             }
 
             const existingClientPrivateKey = shouldReturnUrl
@@ -1061,7 +1063,7 @@ export default class NostrWalletConnectStore {
                       walletServicePubkey: walletServicePubkey!,
                       relayUrl: newRelayUrl || oldRelayUrl,
                       secret: existingClientPrivateKey!,
-                      lud16: nextLud16
+                      lud16: nextIncludeLightningAddress ? nextLud16 : undefined
                   })
                 : undefined;
 

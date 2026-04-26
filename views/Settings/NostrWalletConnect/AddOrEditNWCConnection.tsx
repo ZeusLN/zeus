@@ -280,9 +280,12 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     isValidRelayUrl = (url: string) => {
-        // Per NIP-01, relay URLs should use encrypted connections only (wss://)
-        // Allow ws:// only for localhost/testing, otherwise enforce wss://
-        const pattern = /^(wss:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:\d+)?(\/.*)?$/;
+        // Per NIP-01, relay URLs should use encrypted connections (wss://) in production.
+        // Allow ws:// for localhost/127.0.0.1/[::1] for local testing only.
+        // Production: wss://<domain>:<port> with subdomains allowed
+        // Testing:   ws://localhost:<port> or ws://127.0.0.1:<port> (no subdomains)
+        // Prevents: double dots, leading dots, invalid domain parts
+        const pattern = /^(wss:\/\/([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+(:\d+)?(\/.*)?|ws:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/.*)?)?$/;
         return pattern.test(url);
     };
 
