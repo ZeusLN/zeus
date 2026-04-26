@@ -22,6 +22,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
 
 import SettingsStore, { Implementations } from '../../stores/SettingsStore';
+import Accordion from '../../components/Accordion';
 
 interface DeveloperToolsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -29,11 +30,12 @@ interface DeveloperToolsProps {
 }
 
 interface DeveloperToolsState {
-    expandedCategory: string | null;
     selectedCommand: string | null;
     loading: boolean;
     response: string | null;
     error: string | null;
+    /** Which Developer Tools category accordions are expanded (key = category title) */
+    categoryAccordionOpen: Record<string, boolean>;
     showScrollTop: boolean;
     showScrollBottom: boolean;
     contentHeight: number;
@@ -48,9 +50,9 @@ interface CategoryProps {
         command: string,
         param?: string | Array<string | boolean | undefined>
     ) => Promise<void>;
-    expanded: boolean;
-    onToggle: () => void;
     implementation: Implementations;
+    open: boolean;
+    onAccordionToggle: (next: boolean) => void;
 }
 
 interface CommandProps {
@@ -60,8 +62,6 @@ interface CommandProps {
         param?: string | Array<string | boolean | undefined>
     ) => Promise<void>;
     selected: boolean;
-    onToggle?: () => void;
-    visible?: boolean;
 }
 
 interface CommandState {
@@ -418,13 +418,13 @@ class Command extends React.Component<CommandProps, CommandState> {
     }
 
     render() {
-        const { command, selected: isSelected, visible } = this.props;
+        const { command, selected: isSelected } = this.props;
         const { subItems, loading, selectedSubItemIndex, expanded } =
             this.state;
         const needsSubItems = this.commandsWithSubItems.includes(command);
 
         return (
-            <View style={{ display: visible ? undefined : 'none' }}>
+            <View>
                 <TouchableOpacity
                     onPress={() => this.onCommandTap(command)}
                     style={styles.commandContainer}
@@ -561,47 +561,39 @@ class Category extends React.Component<CategoryProps> {
             title,
             commands,
             onCommand,
-            expanded,
-            onToggle,
-            implementation
+            implementation,
+            open,
+            onAccordionToggle
         } = this.props;
 
+        const filteredCommands = commands.filter((c) =>
+            c.compatibleImplementations.includes(implementation)
+        );
+
         return (
-            <View
-                style={[
-                    styles.categoryContainer,
-                    {
-                        backgroundColor: themeColor('secondary'),
-                        paddingBottom: expanded ? 16 : undefined
-                    }
-                ]}
+            <Accordion
+                title={title}
+                open={open}
+                spacing="none"
+                containerStyle={{
+                    backgroundColor: themeColor('secondary')
+                }}
+                headerStyle={{ backgroundColor: themeColor('secondary') }}
+                titleStyle={{
+                    ...styles.categoryTitle,
+                    color: themeColor('text')
+                }}
+                onToggle={onAccordionToggle}
             >
-                <TouchableOpacity onPress={onToggle}>
-                    <Text
-                        style={[
-                            styles.categoryTitle,
-                            { color: themeColor('text') }
-                        ]}
-                    >
-                        {title}
-                    </Text>
-                </TouchableOpacity>
-                {commands
-                    .filter((c) =>
-                        c.compatibleImplementations.includes(implementation)
-                    )
-                    .map((command) => (
-                        <Command
-                            key={command.name}
-                            command={command.name}
-                            onTap={onCommand}
-                            selected={
-                                this.props.selectedCommand === command.name
-                            }
-                            visible={expanded}
-                        />
-                    ))}
-            </View>
+                {filteredCommands.map((command) => (
+                    <Command
+                        key={command.name}
+                        command={command.name}
+                        onTap={onCommand}
+                        selected={this.props.selectedCommand === command.name}
+                    />
+                ))}
+            </Accordion>
         );
     }
 }
@@ -616,14 +608,28 @@ export default class DeveloperTools extends React.Component<
 
     state = {
         selectedCommand: null,
-        expandedCategory: null,
         loading: false,
         response: null,
         error: null,
+        categoryAccordionOpen: {} as Record<string, boolean>,
         showScrollTop: false,
         showScrollBottom: false,
         contentHeight: 0,
         scrollViewHeight: 0
+    };
+
+    handleCategoryAccordionToggle = (categoryTitle: string, next: boolean) => {
+        this.setState((prev) => {
+            const categoryAccordionOpen = {
+                ...prev.categoryAccordionOpen,
+                [categoryTitle]: next
+            };
+            const anyOpen = Object.values(categoryAccordionOpen).some(Boolean);
+            return {
+                categoryAccordionOpen,
+                response: anyOpen ? prev.response : null
+            };
+        });
     };
 
     handleScroll = (event: any) => {
@@ -690,23 +696,10 @@ export default class DeveloperTools extends React.Component<
         }
     };
 
-    toggleCategory = (title: string) => {
-        this.setState((prevState) => ({
-            expandedCategory:
-                prevState.expandedCategory === title ? null : title
-        }));
-    };
-
     render() {
         const { navigation, SettingsStore } = this.props;
-        const {
-            expandedCategory,
-            loading,
-            response,
-            error,
-            showScrollTop,
-            showScrollBottom
-        } = this.state;
+        const { loading, response, error, showScrollTop, showScrollBottom } =
+            this.state;
 
         return (
             <Screen>
@@ -749,12 +742,19 @@ export default class DeveloperTools extends React.Component<
                                 title={category.title}
                                 commands={category.commands}
                                 onCommand={this.handleCommand}
-                                expanded={expandedCategory === category.title}
-                                onToggle={() =>
-                                    this.toggleCategory(category.title)
-                                }
                                 selectedCommand={this.state.selectedCommand}
                                 implementation={SettingsStore.implementation}
+                                open={
+                                    this.state.categoryAccordionOpen[
+                                        category.title
+                                    ] ?? false
+                                }
+                                onAccordionToggle={(next) =>
+                                    this.handleCategoryAccordionToggle(
+                                        category.title,
+                                        next
+                                    )
+                                }
                             />
                         ))}
 

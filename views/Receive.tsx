@@ -58,6 +58,7 @@ import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 import { Spacer } from '../components/layout/Spacer';
+import Accordion from '../components/Accordion';
 
 import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
@@ -162,8 +163,6 @@ interface ReceiveState {
     account: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
-    advancedSettingsToggle: boolean;
-    durationSettingsToggle: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -226,8 +225,6 @@ export default class Receive extends React.Component<
             account: 'default',
             blindedPaths: false,
             nfcSupported: false,
-            advancedSettingsToggle: false,
-            durationSettingsToggle: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -1320,8 +1317,6 @@ export default class Receive extends React.Component<
             blindedPaths,
             hideRightHeaderComponent,
             nfcSupported,
-            advancedSettingsToggle,
-            durationSettingsToggle,
             showAdvanced
         } = this.state;
 
@@ -2428,12 +2423,7 @@ export default class Receive extends React.Component<
                                                                             lspIsActive:
                                                                                 !enableLSP &&
                                                                                 BackendUtils.supportsFlowLSP() &&
-                                                                                !flowLspNotConfigured,
-                                                                            // lock toggle if LSP enabled
-                                                                            durationSettingsToggle:
-                                                                                durationSettingsToggle &&
-                                                                                enableLSP ===
-                                                                                    true
+                                                                                !flowLspNotConfigured
                                                                         }
                                                                     );
                                                                     await updateSettings(
@@ -2598,249 +2588,73 @@ export default class Receive extends React.Component<
                                             )}
 
                                             {BackendUtils.supportsSettingInvoiceExpiration() && (
-                                                <>
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            if (lspIsActive)
-                                                                return;
-                                                            this.setState({
-                                                                durationSettingsToggle:
-                                                                    !durationSettingsToggle
-                                                            });
-                                                        }}
-                                                    >
-                                                        <View
+                                                <Accordion
+                                                    headerLayout="form"
+                                                    key={`receive-expiration-${lspIsActive}`}
+                                                    id="receive-expiration"
+                                                    title={localeString(
+                                                        'views.Receive.expiration'
+                                                    )}
+                                                    disabled={lspIsActive}
+                                                    renderHeader={(isOpen) => (
+                                                        <Row
+                                                            justify="space-between"
                                                             style={{
-                                                                marginBottom: 10
+                                                                alignItems:
+                                                                    'center'
                                                             }}
                                                         >
-                                                            <Row
-                                                                justify="space-between"
-                                                                style={{
-                                                                    alignItems:
-                                                                        'center'
-                                                                }}
-                                                            >
-                                                                <View
-                                                                    style={{
-                                                                        flex: 1
-                                                                    }}
-                                                                >
-                                                                    <Row
-                                                                        justify="space-between"
-                                                                        style={{
-                                                                            alignItems:
-                                                                                'center'
-                                                                        }}
-                                                                    >
-                                                                        <View
-                                                                            style={{
-                                                                                flex: 1
-                                                                            }}
-                                                                        >
-                                                                            <KeyValue
-                                                                                keyValue={localeString(
-                                                                                    'views.Receive.expiration'
-                                                                                )}
-                                                                            />
-                                                                        </View>
-
-                                                                        {!durationSettingsToggle && (
-                                                                            <Text
-                                                                                style={{
-                                                                                    ...styles.secondaryText,
-                                                                                    color: themeColor(
-                                                                                        'secondaryText'
-                                                                                    ),
-                                                                                    textAlign:
-                                                                                        'center',
-                                                                                    fontSize: 14
-                                                                                }}
-                                                                            >
-                                                                                {this.getFormattedDuration()}
-                                                                            </Text>
-                                                                        )}
-                                                                    </Row>
-                                                                </View>
-
-                                                                {lspIsActive ? (
-                                                                    <LockIcon
-                                                                        fill={themeColor(
-                                                                            'secondaryText'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                ) : durationSettingsToggle ? (
-                                                                    <CaretDown
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                ) : (
-                                                                    <CaretRight
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                )}
-                                                            </Row>
-                                                        </View>
-                                                    </TouchableOpacity>
-
-                                                    {durationSettingsToggle && (
-                                                        <>
-                                                            <Row
-                                                                style={{
-                                                                    width: '100%'
-                                                                }}
-                                                            >
-                                                                <TextInput
-                                                                    keyboardType="numeric"
-                                                                    value={
-                                                                        expiry
-                                                                    }
-                                                                    style={{
-                                                                        width: '58%'
-                                                                    }}
-                                                                    onChangeText={(
-                                                                        text: string
-                                                                    ) => {
-                                                                        const digits =
-                                                                            text.replace(
-                                                                                /[^0-9]/g,
-                                                                                ''
-                                                                            );
-                                                                        const expirySeconds =
-                                                                            expirySecondsFromInput(
-                                                                                digits,
-                                                                                timePeriod as TimePeriod
-                                                                            );
-                                                                        this.setState(
-                                                                            {
-                                                                                expiry: digits,
-                                                                                expirySeconds,
-                                                                                expirationIndex:
-                                                                                    expirationIndexFromSeconds(
-                                                                                        expirySeconds
-                                                                                    )
-                                                                            }
-                                                                        );
-                                                                    }}
-                                                                />
-                                                                <Spacer
-                                                                    width={4}
-                                                                />
-                                                                <View
-                                                                    style={{
-                                                                        flex: 1
-                                                                    }}
-                                                                >
-                                                                    <DropdownSetting
-                                                                        selectedValue={
-                                                                            timePeriod
-                                                                        }
-                                                                        values={
-                                                                            TIME_PERIOD_KEYS
-                                                                        }
-                                                                        onValueChange={async (
-                                                                            value: string
-                                                                        ) => {
-                                                                            const expirySeconds =
-                                                                                expirySecondsFromInput(
-                                                                                    expiry,
-                                                                                    value as TimePeriod
-                                                                                );
-                                                                            this.setState(
-                                                                                {
-                                                                                    timePeriod:
-                                                                                        value,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex:
-                                                                                        expirationIndexFromSeconds(
-                                                                                            expirySeconds
-                                                                                        )
-                                                                                }
-                                                                            );
-                                                                        }}
-                                                                    />
-                                                                </View>
-                                                            </Row>
-
-                                                            <ButtonGroup
-                                                                onPress={
-                                                                    this
-                                                                        .updateExpirationIndex
-                                                                }
-                                                                selectedIndex={
-                                                                    expirationIndex
-                                                                }
-                                                                buttons={
-                                                                    expirationButtons
-                                                                }
-                                                                selectedButtonStyle={{
-                                                                    backgroundColor:
-                                                                        themeColor(
-                                                                            'highlight'
-                                                                        ),
-                                                                    borderRadius: 12
-                                                                }}
-                                                                containerStyle={{
-                                                                    backgroundColor:
-                                                                        themeColor(
-                                                                            'secondary'
-                                                                        ),
-                                                                    borderRadius: 12,
-                                                                    borderWidth: 0,
-                                                                    height: 30,
-                                                                    marginBottom:
-                                                                        Platform.OS ===
-                                                                        'ios'
-                                                                            ? 16
-                                                                            : 0
-                                                                }}
-                                                                innerBorderStyle={{
-                                                                    color: themeColor(
-                                                                        'secondary'
-                                                                    )
-                                                                }}
-                                                            />
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-
-                                            {showAdvancedSettingsToggle && (
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        this.setState({
-                                                            advancedSettingsToggle:
-                                                                !advancedSettingsToggle
-                                                        });
-                                                    }}
-                                                >
-                                                    <View
-                                                        style={{
-                                                            marginBottom: 10
-                                                        }}
-                                                    >
-                                                        <Row justify="space-between">
                                                             <View
                                                                 style={{
                                                                     flex: 1
                                                                 }}
                                                             >
-                                                                <KeyValue
-                                                                    keyValue={localeString(
-                                                                        'general.advancedSettings'
+                                                                <Row
+                                                                    justify="space-between"
+                                                                    style={{
+                                                                        alignItems:
+                                                                            'center'
+                                                                    }}
+                                                                >
+                                                                    <View
+                                                                        style={{
+                                                                            flex: 1
+                                                                        }}
+                                                                    >
+                                                                        <KeyValue
+                                                                            keyValue={localeString(
+                                                                                'views.Receive.expiration'
+                                                                            )}
+                                                                        />
+                                                                    </View>
+
+                                                                    {!isOpen && (
+                                                                        <Text
+                                                                            style={{
+                                                                                ...styles.secondaryText,
+                                                                                color: themeColor(
+                                                                                    'secondaryText'
+                                                                                ),
+                                                                                textAlign:
+                                                                                    'center',
+                                                                                fontSize: 14
+                                                                            }}
+                                                                        >
+                                                                            {this.getFormattedDuration()}
+                                                                        </Text>
                                                                     )}
-                                                                />
+                                                                </Row>
                                                             </View>
-                                                            {advancedSettingsToggle ? (
+
+                                                            {lspIsActive ? (
+                                                                <LockIcon
+                                                                    fill={themeColor(
+                                                                        'secondaryText'
+                                                                    )}
+                                                                    width="20"
+                                                                    height="20"
+                                                                />
+                                                            ) : isOpen ? (
                                                                 <CaretDown
                                                                     fill={themeColor(
                                                                         'text'
@@ -2858,241 +2672,136 @@ export default class Receive extends React.Component<
                                                                 />
                                                             )}
                                                         </Row>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )}
-
-                                            {advancedSettingsToggle && (
-                                                <>
-                                                    {BackendUtils.supportsCustomPreimages() &&
-                                                        showCustomPreimageField && (
-                                                            <>
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.secondaryText,
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'views.Receive.customPreimage'
-                                                                    )}
-                                                                </Text>
-                                                                <TextInput
-                                                                    value={
-                                                                        customPreimage
-                                                                    }
-                                                                    onChangeText={(
-                                                                        text: string
-                                                                    ) =>
-                                                                        this.setState(
-                                                                            {
-                                                                                customPreimage:
-                                                                                    text
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                />
-                                                            </>
-                                                        )}
-
-                                                    {BackendUtils.isLNDBased() &&
-                                                        !lspIsActive && (
-                                                            <View
+                                                    )}
+                                                >
+                                                    <>
+                                                        <Row
+                                                            style={{
+                                                                width: '100%'
+                                                            }}
+                                                        >
+                                                            <TextInput
+                                                                keyboardType="numeric"
+                                                                value={expiry}
                                                                 style={{
-                                                                    flexDirection:
-                                                                        'row',
-                                                                    marginBottom:
-                                                                        !routeHints
-                                                                            ? 0
-                                                                            : Platform.OS ===
-                                                                              'ios'
-                                                                            ? 10
-                                                                            : 6
+                                                                    width: '58%'
                                                                 }}
-                                                            >
-                                                                <View
-                                                                    style={{
-                                                                        flex: 1,
-                                                                        justifyContent:
-                                                                            'center'
-                                                                    }}
-                                                                >
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.secondaryText,
-                                                                            color: themeColor(
-                                                                                'secondaryText'
-                                                                            )
-                                                                        }}
-                                                                        infoModalText={[
-                                                                            localeString(
-                                                                                'views.Receive.routeHintSwitchExplainer1'
-                                                                            ),
-                                                                            localeString(
-                                                                                'views.Receive.routeHintSwitchExplainer2'
-                                                                            ),
-                                                                            localeString(
-                                                                                'views.Receive.routeHintSwitchExplainer3'
-                                                                            )
-                                                                        ]}
-                                                                    >
-                                                                        {localeString(
-                                                                            'views.Receive.routeHints'
-                                                                        )}
-                                                                    </Text>
-                                                                </View>
-                                                                <View
-                                                                    style={{
-                                                                        alignSelf:
-                                                                            'center',
-                                                                        marginLeft: 5
-                                                                    }}
-                                                                >
-                                                                    <Switch
-                                                                        value={
-                                                                            routeHints
-                                                                        }
-                                                                        onValueChange={() =>
-                                                                            this.setState(
-                                                                                {
-                                                                                    routeHints:
-                                                                                        !routeHints
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                        disabled={
-                                                                            blindedPaths
-                                                                        }
-                                                                    />
-                                                                </View>
-                                                            </View>
-                                                        )}
-
-                                                    {BackendUtils.isLNDBased() &&
-                                                        !lspIsActive &&
-                                                        routeHints && (
-                                                            <Row>
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.secondaryText,
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'general.mode'
-                                                                    )}
-                                                                </Text>
-                                                                <ButtonGroup
-                                                                    onPress={
-                                                                        setRouteHintMode
-                                                                    }
-                                                                    selectedIndex={
-                                                                        routeHintMode
-                                                                    }
-                                                                    buttons={
-                                                                        routeHintModeButtons
-                                                                    }
-                                                                    selectedButtonStyle={{
-                                                                        backgroundColor:
-                                                                            themeColor(
-                                                                                'highlight'
-                                                                            ),
-                                                                        borderRadius: 12
-                                                                    }}
-                                                                    containerStyle={{
-                                                                        backgroundColor:
-                                                                            themeColor(
-                                                                                'secondary'
-                                                                            ),
-                                                                        borderRadius: 12,
-                                                                        borderWidth: 0,
-                                                                        height: 30,
-                                                                        flex: 1
-                                                                    }}
-                                                                    innerBorderStyle={{
-                                                                        color: themeColor(
-                                                                            'secondary'
-                                                                        )
-                                                                    }}
-                                                                />
-                                                            </Row>
-                                                        )}
-
-                                                    {BackendUtils.isLNDBased() &&
-                                                        routeHints && (
-                                                            <HopPicker
-                                                                ref={(ref) => {
-                                                                    this.hopPickerRef =
-                                                                        ref;
-                                                                }}
-                                                                onValueChange={(
-                                                                    channels
+                                                                onChangeText={(
+                                                                    text: string
                                                                 ) => {
+                                                                    const digits =
+                                                                        text.replace(
+                                                                            /[^0-9]/g,
+                                                                            ''
+                                                                        );
+                                                                    const expirySeconds =
+                                                                        expirySecondsFromInput(
+                                                                            digits,
+                                                                            timePeriod as TimePeriod
+                                                                        );
                                                                     this.setState(
                                                                         {
-                                                                            selectedRouteHintChannels:
-                                                                                channels
+                                                                            expiry: digits,
+                                                                            expirySeconds,
+                                                                            expirationIndex:
+                                                                                expirationIndexFromSeconds(
+                                                                                    expirySeconds
+                                                                                )
                                                                         }
                                                                     );
                                                                 }}
-                                                                onCancel={() => {
-                                                                    if (
-                                                                        !selectedRouteHintChannels?.length
-                                                                    ) {
-                                                                        setRouteHintMode(
-                                                                            RouteHintMode.Automatic
-                                                                        );
-                                                                    }
-                                                                }}
-                                                                title={localeString(
-                                                                    'views.Receive.customRouteHints'
-                                                                )}
-                                                                ChannelsStore={
-                                                                    this.props
-                                                                        .ChannelsStore
-                                                                }
-                                                                UnitsStore={
-                                                                    UnitsStore
-                                                                }
-                                                                containerStyle={{
-                                                                    display:
-                                                                        routeHintMode ===
-                                                                        RouteHintMode.Automatic
-                                                                            ? 'none'
-                                                                            : 'flex'
-                                                                }}
-                                                                clearOnTap={
-                                                                    false
-                                                                }
-                                                                selectionMode={
-                                                                    'multiple'
-                                                                }
-                                                                selectedChannels={
-                                                                    selectedRouteHintChannels
-                                                                }
                                                             />
-                                                        )}
-
-                                                    {BackendUtils.supportsAMP() &&
-                                                        !lspIsActive && (
+                                                            <Spacer width={4} />
                                                             <View
                                                                 style={{
-                                                                    flexDirection:
-                                                                        'row',
-                                                                    marginTop: 20
+                                                                    flex: 1
                                                                 }}
                                                             >
-                                                                <View
-                                                                    style={{
-                                                                        flex: 1,
-                                                                        justifyContent:
-                                                                            'center'
+                                                                <DropdownSetting
+                                                                    selectedValue={
+                                                                        timePeriod
+                                                                    }
+                                                                    values={
+                                                                        TIME_PERIOD_KEYS
+                                                                    }
+                                                                    onValueChange={async (
+                                                                        value: string
+                                                                    ) => {
+                                                                        const expirySeconds =
+                                                                            expirySecondsFromInput(
+                                                                                expiry,
+                                                                                value as TimePeriod
+                                                                            );
+                                                                        this.setState(
+                                                                            {
+                                                                                timePeriod:
+                                                                                    value,
+                                                                                expirySeconds,
+                                                                                expirationIndex:
+                                                                                    expirationIndexFromSeconds(
+                                                                                        expirySeconds
+                                                                                    )
+                                                                            }
+                                                                        );
                                                                     }}
-                                                                >
+                                                                />
+                                                            </View>
+                                                        </Row>
+
+                                                        <ButtonGroup
+                                                            onPress={
+                                                                this
+                                                                    .updateExpirationIndex
+                                                            }
+                                                            selectedIndex={
+                                                                expirationIndex
+                                                            }
+                                                            buttons={
+                                                                expirationButtons
+                                                            }
+                                                            selectedButtonStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'highlight'
+                                                                    ),
+                                                                borderRadius: 12
+                                                            }}
+                                                            containerStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderRadius: 12,
+                                                                borderWidth: 0,
+                                                                height: 30,
+                                                                marginBottom:
+                                                                    Platform.OS ===
+                                                                    'ios'
+                                                                        ? 16
+                                                                        : 0
+                                                            }}
+                                                            innerBorderStyle={{
+                                                                color: themeColor(
+                                                                    'secondary'
+                                                                )
+                                                            }}
+                                                        />
+                                                    </>
+                                                </Accordion>
+                                            )}
+
+                                            {showAdvancedSettingsToggle && (
+                                                <Accordion
+                                                    headerLayout="form"
+                                                    id="receive-advanced-settings"
+                                                    title={localeString(
+                                                        'general.advancedSettings'
+                                                    )}
+                                                >
+                                                    <>
+                                                        {BackendUtils.supportsCustomPreimages() &&
+                                                            showCustomPreimageField && (
+                                                                <>
                                                                     <Text
                                                                         style={{
                                                                             ...styles.secondaryText,
@@ -3100,64 +2809,106 @@ export default class Receive extends React.Component<
                                                                                 'secondaryText'
                                                                             )
                                                                         }}
-                                                                        infoModalText={[
-                                                                            localeString(
-                                                                                'views.Receive.ampSwitchExplainer1'
-                                                                            ),
-                                                                            localeString(
-                                                                                'views.Receive.ampSwitchExplainer2'
-                                                                            )
-                                                                        ]}
-                                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                                     >
                                                                         {localeString(
-                                                                            'views.Receive.ampInvoice'
+                                                                            'views.Receive.customPreimage'
                                                                         )}
                                                                     </Text>
-                                                                </View>
-                                                                <View
-                                                                    style={{
-                                                                        alignSelf:
-                                                                            'center',
-                                                                        marginLeft: 5
-                                                                    }}
-                                                                >
-                                                                    <Switch
+                                                                    <TextInput
                                                                         value={
-                                                                            ampInvoice
+                                                                            customPreimage
                                                                         }
-                                                                        onValueChange={() =>
+                                                                        onChangeText={(
+                                                                            text: string
+                                                                        ) =>
                                                                             this.setState(
                                                                                 {
-                                                                                    ampInvoice:
-                                                                                        !ampInvoice
+                                                                                    customPreimage:
+                                                                                        text
                                                                                 }
                                                                             )
                                                                         }
-                                                                        disabled={
-                                                                            blindedPaths
-                                                                        }
                                                                     />
-                                                                </View>
-                                                            </View>
-                                                        )}
+                                                                </>
+                                                            )}
 
-                                                    {BackendUtils.supportsBolt11BlindedRoutes() &&
-                                                        !lspIsActive && (
-                                                            <View
-                                                                style={{
-                                                                    flexDirection:
-                                                                        'row',
-                                                                    marginTop: 20
-                                                                }}
-                                                            >
+                                                        {BackendUtils.isLNDBased() &&
+                                                            !lspIsActive && (
                                                                 <View
                                                                     style={{
-                                                                        flex: 1,
-                                                                        justifyContent:
-                                                                            'center'
+                                                                        flexDirection:
+                                                                            'row',
+                                                                        marginBottom:
+                                                                            !routeHints
+                                                                                ? 0
+                                                                                : Platform.OS ===
+                                                                                  'ios'
+                                                                                ? 10
+                                                                                : 6
                                                                     }}
                                                                 >
+                                                                    <View
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            justifyContent:
+                                                                                'center'
+                                                                        }}
+                                                                    >
+                                                                        <Text
+                                                                            style={{
+                                                                                ...styles.secondaryText,
+                                                                                color: themeColor(
+                                                                                    'secondaryText'
+                                                                                )
+                                                                            }}
+                                                                            infoModalText={[
+                                                                                localeString(
+                                                                                    'views.Receive.routeHintSwitchExplainer1'
+                                                                                ),
+                                                                                localeString(
+                                                                                    'views.Receive.routeHintSwitchExplainer2'
+                                                                                ),
+                                                                                localeString(
+                                                                                    'views.Receive.routeHintSwitchExplainer3'
+                                                                                )
+                                                                            ]}
+                                                                        >
+                                                                            {localeString(
+                                                                                'views.Receive.routeHints'
+                                                                            )}
+                                                                        </Text>
+                                                                    </View>
+                                                                    <View
+                                                                        style={{
+                                                                            alignSelf:
+                                                                                'center',
+                                                                            marginLeft: 5
+                                                                        }}
+                                                                    >
+                                                                        <Switch
+                                                                            value={
+                                                                                routeHints
+                                                                            }
+                                                                            onValueChange={() =>
+                                                                                this.setState(
+                                                                                    {
+                                                                                        routeHints:
+                                                                                            !routeHints
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                blindedPaths
+                                                                            }
+                                                                        />
+                                                                    </View>
+                                                                </View>
+                                                            )}
+
+                                                        {BackendUtils.isLNDBased() &&
+                                                            !lspIsActive &&
+                                                            routeHints && (
+                                                                <Row>
                                                                     <Text
                                                                         style={{
                                                                             ...styles.secondaryText,
@@ -3165,49 +2916,237 @@ export default class Receive extends React.Component<
                                                                                 'secondaryText'
                                                                             )
                                                                         }}
-                                                                        infoModalText={[
-                                                                            localeString(
-                                                                                'views.Receive.blindedPathsExplainer1'
-                                                                            ),
-                                                                            localeString(
-                                                                                'views.Receive.blindedPathsExplainer2'
-                                                                            )
-                                                                        ]}
-                                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
                                                                     >
                                                                         {localeString(
-                                                                            'views.Receive.blindedPaths'
+                                                                            'general.mode'
                                                                         )}
                                                                     </Text>
-                                                                </View>
+                                                                    <ButtonGroup
+                                                                        onPress={
+                                                                            setRouteHintMode
+                                                                        }
+                                                                        selectedIndex={
+                                                                            routeHintMode
+                                                                        }
+                                                                        buttons={
+                                                                            routeHintModeButtons
+                                                                        }
+                                                                        selectedButtonStyle={{
+                                                                            backgroundColor:
+                                                                                themeColor(
+                                                                                    'highlight'
+                                                                                ),
+                                                                            borderRadius: 12
+                                                                        }}
+                                                                        containerStyle={{
+                                                                            backgroundColor:
+                                                                                themeColor(
+                                                                                    'secondary'
+                                                                                ),
+                                                                            borderRadius: 12,
+                                                                            borderWidth: 0,
+                                                                            height: 30,
+                                                                            flex: 1
+                                                                        }}
+                                                                        innerBorderStyle={{
+                                                                            color: themeColor(
+                                                                                'secondary'
+                                                                            )
+                                                                        }}
+                                                                    />
+                                                                </Row>
+                                                            )}
+
+                                                        {BackendUtils.isLNDBased() &&
+                                                            routeHints && (
+                                                                <HopPicker
+                                                                    ref={(
+                                                                        ref
+                                                                    ) => {
+                                                                        this.hopPickerRef =
+                                                                            ref;
+                                                                    }}
+                                                                    onValueChange={(
+                                                                        channels
+                                                                    ) => {
+                                                                        this.setState(
+                                                                            {
+                                                                                selectedRouteHintChannels:
+                                                                                    channels
+                                                                            }
+                                                                        );
+                                                                    }}
+                                                                    onCancel={() => {
+                                                                        if (
+                                                                            !selectedRouteHintChannels?.length
+                                                                        ) {
+                                                                            setRouteHintMode(
+                                                                                RouteHintMode.Automatic
+                                                                            );
+                                                                        }
+                                                                    }}
+                                                                    title={localeString(
+                                                                        'views.Receive.customRouteHints'
+                                                                    )}
+                                                                    ChannelsStore={
+                                                                        this
+                                                                            .props
+                                                                            .ChannelsStore
+                                                                    }
+                                                                    UnitsStore={
+                                                                        UnitsStore
+                                                                    }
+                                                                    containerStyle={{
+                                                                        display:
+                                                                            routeHintMode ===
+                                                                            RouteHintMode.Automatic
+                                                                                ? 'none'
+                                                                                : 'flex'
+                                                                    }}
+                                                                    clearOnTap={
+                                                                        false
+                                                                    }
+                                                                    selectionMode={
+                                                                        'multiple'
+                                                                    }
+                                                                    selectedChannels={
+                                                                        selectedRouteHintChannels
+                                                                    }
+                                                                />
+                                                            )}
+
+                                                        {BackendUtils.supportsAMP() &&
+                                                            !lspIsActive && (
                                                                 <View
                                                                     style={{
-                                                                        alignSelf:
-                                                                            'center',
-                                                                        marginLeft: 5
+                                                                        flexDirection:
+                                                                            'row',
+                                                                        marginTop: 20
                                                                     }}
                                                                 >
-                                                                    <Switch
-                                                                        value={
-                                                                            blindedPaths
-                                                                        }
-                                                                        onValueChange={() =>
-                                                                            this.setState(
-                                                                                {
-                                                                                    blindedPaths:
-                                                                                        !blindedPaths,
-                                                                                    ampInvoice:
-                                                                                        false,
-                                                                                    routeHints:
-                                                                                        false
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
+                                                                    <View
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            justifyContent:
+                                                                                'center'
+                                                                        }}
+                                                                    >
+                                                                        <Text
+                                                                            style={{
+                                                                                ...styles.secondaryText,
+                                                                                color: themeColor(
+                                                                                    'secondaryText'
+                                                                                )
+                                                                            }}
+                                                                            infoModalText={[
+                                                                                localeString(
+                                                                                    'views.Receive.ampSwitchExplainer1'
+                                                                                ),
+                                                                                localeString(
+                                                                                    'views.Receive.ampSwitchExplainer2'
+                                                                                )
+                                                                            ]}
+                                                                            infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                                        >
+                                                                            {localeString(
+                                                                                'views.Receive.ampInvoice'
+                                                                            )}
+                                                                        </Text>
+                                                                    </View>
+                                                                    <View
+                                                                        style={{
+                                                                            alignSelf:
+                                                                                'center',
+                                                                            marginLeft: 5
+                                                                        }}
+                                                                    >
+                                                                        <Switch
+                                                                            value={
+                                                                                ampInvoice
+                                                                            }
+                                                                            onValueChange={() =>
+                                                                                this.setState(
+                                                                                    {
+                                                                                        ampInvoice:
+                                                                                            !ampInvoice
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                blindedPaths
+                                                                            }
+                                                                        />
+                                                                    </View>
                                                                 </View>
-                                                            </View>
-                                                        )}
-                                                </>
+                                                            )}
+
+                                                        {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                                            !lspIsActive && (
+                                                                <View
+                                                                    style={{
+                                                                        flexDirection:
+                                                                            'row',
+                                                                        marginTop: 20
+                                                                    }}
+                                                                >
+                                                                    <View
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            justifyContent:
+                                                                                'center'
+                                                                        }}
+                                                                    >
+                                                                        <Text
+                                                                            style={{
+                                                                                ...styles.secondaryText,
+                                                                                color: themeColor(
+                                                                                    'secondaryText'
+                                                                                )
+                                                                            }}
+                                                                            infoModalText={[
+                                                                                localeString(
+                                                                                    'views.Receive.blindedPathsExplainer1'
+                                                                                ),
+                                                                                localeString(
+                                                                                    'views.Receive.blindedPathsExplainer2'
+                                                                                )
+                                                                            ]}
+                                                                            infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                                        >
+                                                                            {localeString(
+                                                                                'views.Receive.blindedPaths'
+                                                                            )}
+                                                                        </Text>
+                                                                    </View>
+                                                                    <View
+                                                                        style={{
+                                                                            alignSelf:
+                                                                                'center',
+                                                                            marginLeft: 5
+                                                                        }}
+                                                                    >
+                                                                        <Switch
+                                                                            value={
+                                                                                blindedPaths
+                                                                            }
+                                                                            onValueChange={() =>
+                                                                                this.setState(
+                                                                                    {
+                                                                                        blindedPaths:
+                                                                                            !blindedPaths,
+                                                                                        ampInvoice:
+                                                                                            false,
+                                                                                        routeHints:
+                                                                                            false
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </View>
+                                                                </View>
+                                                            )}
+                                                    </>
+                                                </Accordion>
                                             )}
 
                                             <View style={styles.button}>
