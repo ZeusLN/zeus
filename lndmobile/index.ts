@@ -301,7 +301,6 @@ export const sendPaymentV2Sync = async (
         payment_request,
         amt,
         amt_msat,
-        fee_limit_sat,
         fee_limit_msat,
         last_hop_pubkey,
         route_hints,
@@ -321,10 +320,7 @@ export const sendPaymentV2Sync = async (
         no_inflight_updates: true,
         timeout_seconds,
         max_parts,
-        // Router requests treat sat/msat variants as alternatives, so only forward one of each pair.
-        ...(fee_limit_msat !== undefined && fee_limit_msat !== null
-            ? { fee_limit_msat }
-            : { fee_limit_sat }),
+        ...(fee_limit_msat != null ? { fee_limit_msat } : {}),
         route_hints,
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,
@@ -418,7 +414,6 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         dest_custom_records,
         payment_hash,
         fee_limit_msat,
-        fee_limit_sat,
         max_shard_size_msat,
         max_parts,
         cltv_limit,
@@ -433,9 +428,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts: max_parts || 1,
-        ...(fee_limit_msat !== undefined && fee_limit_msat !== null
-            ? { fee_limit_msat }
-            : { fee_limit_sat }),
+        ...(fee_limit_msat != null ? { fee_limit_msat } : {}),
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
         amp,

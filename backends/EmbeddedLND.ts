@@ -272,11 +272,11 @@ export default class EmbeddedLND extends LND {
                               : undefined;
                       })()
                     : undefined,
-            fee_limit_sat: data?.fee_limit_sat,
             fee_limit_msat:
-                data.fee_limit_msat !== undefined &&
-                data.fee_limit_msat !== null
+                data.fee_limit_msat != null
                     ? data.fee_limit_msat
+                    : data?.fee_limit_sat != null
+                    ? data.fee_limit_sat * 1000
                     : undefined,
             outgoing_chan_ids: data?.outgoing_chan_ids,
             last_hop_pubkey: data?.last_hop_pubkey,
@@ -301,18 +301,16 @@ export default class EmbeddedLND extends LND {
                     : data.amt,
             amt_msat:
                 data.amount_msat !== undefined && data.amount_msat !== null
-                    ? Math.floor(Number(data.amount_msat))
+                    ? data.amount_msat
                     : undefined,
             dest_custom_records: data.dest_custom_records,
             payment_hash: data.payment_hash,
             fee_limit_msat:
-                data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                data.fee_limit_msat != null
                     ? data.fee_limit_msat
+                    : data?.fee_limit_sat != null
+                    ? data.fee_limit_sat * 1000
                     : undefined,
-            fee_limit_sat:
-                data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
-                    ? undefined
-                    : data.fee_limit_sat,
             max_shard_size_msat: data.max_shard_size_msat,
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,

@@ -489,7 +489,7 @@ export default class NWCConnection extends BaseModel {
 
             // Clamp totalSpendSats to preserve invariant for future validation,
             // then return error. This prevents subtle budget-tracking corruption.
-            this.totalSpendSats = this.maxAmountSats!;
+            this.totalSpendSats = this.maxAmountSats ?? this.totalSpendSats;
 
             return {
                 success: false,

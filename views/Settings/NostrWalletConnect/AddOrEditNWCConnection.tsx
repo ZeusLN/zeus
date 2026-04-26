@@ -551,7 +551,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         };
         const resolvedLightningAddress =
             this.state.originalConnection?.lud16 ||
-            NostrWalletConnectStore.lightningAddressStore.lightningAddress;
+            (NostrWalletConnectStore.lightningAddressStore
+                .lightningAddressActivated
+                ? NostrWalletConnectStore.lightningAddressStore.lightningAddress
+                : undefined);
         if (includeLightningAddress && resolvedLightningAddress) {
             params.lud16 = resolvedLightningAddress;
         }
