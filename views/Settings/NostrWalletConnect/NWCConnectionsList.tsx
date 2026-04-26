@@ -24,6 +24,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -33,7 +34,6 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
-import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionsListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -52,7 +52,6 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
-    hasPendingPayments: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -67,8 +66,7 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All,
-            hasPendingPayments: false
+            filter: ConnectionFilter.All
         };
     }
 
@@ -76,29 +74,11 @@ export default class NWCConnectionsList extends React.Component<
         const { navigation } = this.props;
         navigation.addListener('focus', this.handleFocus);
         this.getConnections();
-        this.getPendingPayments();
     }
     componentWillUnmount() {
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
-    getPendingPayments = async () => {
-        try {
-            this.setState({ connectionsLoading: true });
-            const { NostrWalletConnectStore } = this.props;
-            const pendingPayments =
-                await NostrWalletConnectStore.getPendingPayments();
-            this.setState({
-                hasPendingPayments: pendingPayments.length > 0,
-                connectionsLoading: false
-            });
-        } catch (e) {
-            this.setState({
-                error: (e as Error).message,
-                connectionsLoading: false
-            });
-        }
-    };
     getConnections = async () => {
         try {
             this.setState({
@@ -124,7 +104,6 @@ export default class NWCConnectionsList extends React.Component<
     };
     handleFocus = async () => {
         await this.getConnections();
-        await this.getPendingPayments();
     };
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;
@@ -405,15 +384,7 @@ export default class NWCConnectionsList extends React.Component<
         const { NostrWalletConnectStore, navigation, SettingsStore } =
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { connectionsLoading, error, hasPendingPayments } = this.state;
-        const shouldReduceIconSize =
-            hasPendingPayments &&
-            !(
-                Platform.OS === 'ios' &&
-                (SettingsStore.implementation !== 'embedded-lnd' ||
-                    !SettingsStore.settings?.ecash?.enableCashu)
-            );
-        const HeaderIconSize = shouldReduceIconSize ? 24 : 30;
+        const { connectionsLoading, error } = this.state;
         return (
             <Screen>
                 <Header
@@ -452,33 +423,16 @@ export default class NWCConnectionsList extends React.Component<
                                 >
                                     <Add
                                         fill={themeColor('text')}
-                                        width={HeaderIconSize}
-                                        height={HeaderIconSize}
+                                        width={30}
+                                        height={30}
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                {hasPendingPayments && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'NWCPendingPayments'
-                                            )
-                                        }
-                                    >
-                                        <ClockIcon
-                                            color={themeColor('bitcoin')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
-                                        />
-                                    </TouchableOpacity>
-                                )}
 
                                 {!(
                                     Platform.OS === 'ios' &&
-                                    (SettingsStore.implementation !==
-                                        'embedded-lnd' ||
-                                        !SettingsStore.settings?.ecash
-                                            ?.enableCashu)
+                                    BackendUtils.supportsCashuWallet() &&
+                                    !SettingsStore.settings?.ecash?.enableCashu
                                 ) && (
                                     <TouchableOpacity
                                         onPress={() =>
@@ -490,8 +444,8 @@ export default class NWCConnectionsList extends React.Component<
                                     >
                                         <Gear
                                             fill={themeColor('text')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
+                                            width={30}
+                                            height={30}
                                             style={{ alignSelf: 'center' }}
                                         />
                                     </TouchableOpacity>
