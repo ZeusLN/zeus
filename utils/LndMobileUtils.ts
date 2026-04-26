@@ -42,6 +42,7 @@ import {
     getErrorMessage,
     isLndError,
     isStopLndExpectedError,
+    matchRawErrorToCode,
     matchesLndErrorCode
 } from './LndMobileErrors';
 
@@ -686,15 +687,22 @@ export async function startLnd({
         walletPassword,
         unlockWallet
     });
-    await startLndWithRetry({
-        startLnd,
-        lndDir,
-        isTorEnabled,
-        isTestnet,
-        walletPassword,
-        unlockWallet
-    });
-    await readyPromise;
+    try {
+        await startLndWithRetry({
+            startLnd,
+            lndDir,
+            isTorEnabled,
+            isTestnet,
+            walletPassword,
+            unlockWallet
+        });
+        await readyPromise;
+    } catch (error) {
+        if (walletPassword) {
+            settingsStore.embeddedLndStarted = false;
+        }
+        throw error;
+    }
 }
 
 /**
@@ -994,56 +1002,44 @@ async function restartLndForWalletCreation(
 ): Promise<void> {
     const { startLnd, decodeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
-
     await stopLnd();
-    await sleep(GEN_SEED_STOP_DELAY_MS);
-
-    try {
-        await retry({
-            fn: async () => {
-                const readyPromise = waitForLndReady({
-                    decodeState,
-                    walletPassword: '',
-                    unlockWallet
-                });
-                await startLnd({
-                    args: '',
-                    lndDir,
-                    isTorEnabled: false,
-                    isTestnet
-                });
-                await readyPromise;
-            },
-            maxRetries: MAX_LND_START_RETRIES,
-            delayMs: 0,
-            shouldRetry: (e) =>
-                matchesLndErrorCode(
+    for (let attempt = 1; attempt <= MAX_LND_START_RETRIES; attempt++) {
+        try {
+            const readyPromise = waitForLndReady({
+                decodeState,
+                walletPassword: '',
+                unlockWallet
+            });
+            await startLnd({
+                args: '',
+                lndDir,
+                isTorEnabled: false,
+                isTestnet
+            });
+            await readyPromise;
+            return;
+        } catch (e) {
+            if (
+                !matchesLndErrorCode(
                     getErrorMessage(e),
                     LndErrorCode.LND_ALREADY_RUNNING
-                ),
-            onRetry: async (attempt) => {
-                log.d(
-                    `Restarting LND for wallet creation (attempt ${
-                        attempt + 1
-                    }/${MAX_LND_START_RETRIES})`
-                );
-                await stopLnd();
-                await sleep(GEN_SEED_STOP_DELAY_MS + attempt * 1000);
+                )
+            ) {
+                throw e;
             }
-        });
-    } catch (e) {
-        if (
-            matchesLndErrorCode(
-                getErrorMessage(e),
-                LndErrorCode.LND_ALREADY_RUNNING
-            )
-        ) {
-            throw createLndError(
-                LndErrorCode.WALLET_CREATION_UNLOCKED_TOO_QUICKLY
+            if (attempt === MAX_LND_START_RETRIES) {
+                break;
+            }
+            log.d(
+                `Restarting LND for wallet creation (attempt ${
+                    attempt + 1
+                }/${MAX_LND_START_RETRIES})`
             );
+            await stopLnd();
+            await sleep(GEN_SEED_STOP_DELAY_MS + attempt * 1000);
         }
-        throw e;
     }
+    throw createLndError(LndErrorCode.WALLET_CREATION_UNLOCKED_TOO_QUICKLY);
 }
 
 /**
@@ -1075,10 +1071,21 @@ async function genSeedWithRetry(
         }
     }).catch((e) => {
         const msg = getErrorMessage(e);
-        if (matchesLndErrorCode(msg, LndErrorCode.GEN_SEED_UNLOCKED)) {
+        const errCode = (e as { code?: LndErrorCode }).code;
+        if (
+            errCode === LndErrorCode.GEN_SEED_UNLOCKED ||
+            matchesLndErrorCode(msg, LndErrorCode.GEN_SEED_UNLOCKED)
+        ) {
             throw createLndError(
                 LndErrorCode.WALLET_CREATION_UNLOCKED_TOO_QUICKLY
             );
+        }
+        if (errCode) {
+            throw e;
+        }
+        const inferred = matchRawErrorToCode(msg);
+        if (inferred) {
+            throw createLndError(inferred);
         }
         throw createLndError(LndErrorCode.GEN_SEED_FAILED, msg);
     });
@@ -1207,7 +1214,7 @@ export async function createLndWallet({
  * @returns The getInfo response once RPC is ready
  * @throws Error if RPC doesn't become ready within timeout or encounters a fatal error
  */
-export async function waitForRpcReady(timeoutMs = 30000) {
+export async function waitForRpcReady(timeoutMs = LND_READY_TIMEOUT_MS) {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
