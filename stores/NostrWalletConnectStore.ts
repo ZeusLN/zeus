@@ -5220,6 +5220,7 @@ export default class NostrWalletConnectStore {
                 eventStr
             });
             throw error;
+        }
 
         return {
             request,
