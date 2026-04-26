@@ -960,6 +960,37 @@ class MigrationsUtils {
         }
     }
 
+    public async migrateLegacyCashuKeysToNodeDir(cashuStore: any) {
+        const nodeDir = cashuStore.getNodeDir();
+        const legacyLndDir = cashuStore.getLndDir();
+
+        if (!nodeDir || !legacyLndDir || nodeDir === legacyLndDir) {
+            return;
+        }
+
+        const keySuffixes = [
+            'cashu-selectedMintUrl',
+            'cashu-selectedMintUrls',
+            'cashu-multiMintSelectedUrls',
+            'cashu-payments'
+        ];
+
+        for (const suffix of keySuffixes) {
+            const nodeKey = `${nodeDir}-${suffix}`;
+            const legacyKey = `${legacyLndDir}-${suffix}`;
+
+            const nodeValue = await Storage.getItem(nodeKey);
+            if (nodeValue !== null && nodeValue !== undefined) {
+                continue;
+            }
+
+            const legacyValue = await Storage.getItem(legacyKey);
+            if (legacyValue !== null && legacyValue !== undefined) {
+                await Storage.setItem(nodeKey, legacyValue);
+            }
+        }
+    }
+
     public async keychainCloudSyncMigration() {
         try {
             const hasMigrated = await EncryptedStorage.getItem(
