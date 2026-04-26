@@ -287,8 +287,7 @@ function validateNip47Amount(
         };
     }
 
-    // Must be an exact integer (no float quirks like 1000.0)
-    // Use modulo instead of isInteger() to catch JavaScript quirks
+    // Must be an exact integer (reject fractional values like 1000.5)
     if (amount % 1 !== 0) {
         return {
             valid: false,
@@ -304,11 +303,14 @@ function validateNip47Amount(
         };
     }
 
-    // For very large amounts, check against uint64 max (2^63-1 = 9223372036854775807)
-    if (amount > 9223372036854775807) {
+    // JS numbers can only exactly represent integers up to Number.MAX_SAFE_INTEGER
+    // (2^53 - 1 = 9007199254740991). Any amount above this threshold can suffer
+    // silent precision loss when deserialized from JSON, so we reject it here.
+    // Callers that need to work with larger values should use string representation.
+    if (amount > Number.MAX_SAFE_INTEGER) {
         return {
             valid: false,
-            error: `${name} exceeds uint64 max value`
+            error: `${name} exceeds safe integer limit (${Number.MAX_SAFE_INTEGER})`
         };
     }
 

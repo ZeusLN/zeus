@@ -503,12 +503,6 @@ export default class NWCConnection extends BaseModel {
             };
         }
 
-        // Do not apply the blocked attempt to spending. Only clamp if state
-        // is already inconsistent due to an earlier race or external mutation.
-        if (this.hasBudgetLimit && this.totalSpendSats > (this.maxAmountSats ?? 0)) {
-            this.totalSpendSats = this.maxAmountSats ?? this.totalSpendSats;
-        }
-
         this.totalSpendSats += amountSats;
         return { success: true };
     }

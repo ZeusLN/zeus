@@ -525,14 +525,39 @@ export default class CLNRest {
                 'sendKeysend requires a positive amount (amount_msat or amt)'
             );
         }
+        const request: any = {
+            destination: data.pubkey,
+            amount_msat: this.formatIntegerForCln(amountMsat),
+            retry_for: data.timeout_seconds
+        };
+        // Mirror the fee-limit logic from payLightningInvoice: prefer absolute
+        // maxfee (msat) over a percentage cap, which is undefined for NWC calls.
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
+            const v = this.parsePositiveNumber(data.fee_limit_msat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
+            const v = this.parsePositiveNumber(data.fee_limit_sat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.times(1000).integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.max_fee_percent !== undefined &&
+            data.max_fee_percent !== null
+        ) {
+            request.maxfeepercent = data.max_fee_percent;
+        }
         return this.postRequest(
             '/v1/keysend',
-            {
-                destination: data.pubkey,
-                amount_msat: this.formatIntegerForCln(amountMsat),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
+            request,
             data.timeout_seconds * 1000
         );
     };
