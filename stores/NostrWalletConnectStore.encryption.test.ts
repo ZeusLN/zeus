@@ -227,7 +227,7 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         });
     });
 
-    it('falls back to nip04 responses when nip44 encryption fails', async () => {
+    it('rejects NIP-44 responses when nip44 encryption fails (prevents downgrade attack)', async () => {
         mockNip04Encrypt.mockReset();
         mockNip44Encrypt.mockReset();
         mockNip44GetConversationKey.mockReset();
@@ -263,10 +263,10 @@ describe('NostrWalletConnectStore encryption helpers', () => {
         nip04Module.encrypt = mockNip04Encrypt;
         nip04Module.decrypt = mockNip04Decrypt;
         nip44Module.encrypt = mockNip44Encrypt;
-        nip44Module.decrypt = mockNip44Decrypt;
+        nip44Module.decrypt = mockNip04Decrypt;
         nip44Module.getConversationKey = mockNip44GetConversationKey;
         mockNip44GetConversationKey.mockReturnValue('conversation-key');
-        // NIP-44 encryption fails
+        // NIP-44 encryption fails — should NOT fall back to NIP-04
         mockNip44Encrypt.mockImplementation(() => {
             throw new Error('nip44 failed');
         });
@@ -279,34 +279,22 @@ describe('NostrWalletConnectStore encryption helpers', () => {
             .fn(async (fn: () => Promise<void>) => fn())
             .mockName('retryWithBackoff');
 
-        await (store as any).publishEventToClient(
-            { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
-            'pay_invoice',
-            { result: { preimage: 'preimage' } },
-            'event-1',
-            'nip44_v2'
-        );
+        // Expect error to be thrown; no fallback to NIP-04
+        await expect(
+            (store as any).publishEventToClient(
+                { relayUrl: 'wss://relay.example', pubkey: 'client-pubkey' },
+                'pay_invoice',
+                { result: { preimage: 'preimage' } },
+                'event-1',
+                'nip44_v2'
+            )
+        ).rejects.toThrow('NIP-44 encryption failed');
 
-        expect(mockNip04Encrypt).toHaveBeenCalledWith(
-            'service-secret',
-            'client-pubkey',
-            JSON.stringify({
-                result_type: 'pay_invoice',
-                result: { preimage: 'preimage' }
-            })
-        );
+        // NIP-04 should NOT be called (no fallback)
+        expect(mockNip04Encrypt).not.toHaveBeenCalled();
 
-        expect(relay.publish).toHaveBeenCalledWith(
-            expect.objectContaining({
-                kind: 23195,
-                content: 'fallback-content',
-                tags: expect.arrayContaining([
-                    ['e', 'event-1'],
-                    ['encryption', 'nip04'],
-                    ['p', 'client-pubkey']
-                ])
-            })
-        );
+        // Response should NOT be published
+        expect(relay.publish).not.toHaveBeenCalled();
     });
 
     it('publishes payment_sent notifications for both NIP-44 and NIP-04 clients', async () => {

@@ -237,10 +237,10 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
             });
         });
 
-        it('falls back to fee_limit_sat when fee_limit_msat is not finite', async () => {
+        it('rejects non-finite fee_limit_msat values', async () => {
             const context = createLightningPayStoreContext();
 
-            await callStoreMethod(
+            const result = await callStoreMethod(
                 'handleLightningPayInvoice',
                 context,
                 {} as never,
@@ -252,12 +252,12 @@ describe('NostrWalletConnectStore sub-satoshi rounding', () => {
                 }
             );
 
-            expect(context.transactionsStore.sendPayment).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    fee_limit_sat: '7',
-                    amount: '2'
-                })
-            );
+            // Non-finite msat should fail validation
+            expect(result.error).toBeDefined();
+            expect(result.error?.code).toBe('INVALID_PARAMS');
+
+            // sendPayment should NOT be called
+            expect(context.transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
         it('charges a minimum of 1 sat for positive sub-satoshi request amounts', async () => {
