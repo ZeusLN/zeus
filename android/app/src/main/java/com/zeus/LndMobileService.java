@@ -405,7 +405,6 @@ public class LndMobileService extends Service {
           getApplicationContext().getCacheDir().getAbsolutePath(),
           dataDir,
           "",
-          isSqlite,
           new lndmobile.Callback() {
 
           @Override

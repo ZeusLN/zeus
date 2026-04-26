@@ -1068,6 +1068,164 @@ export default class LdkNode {
     };
 
     // ========================================================================
+    // Splice Methods
+    // ========================================================================
+
+    supportsSplicing = () => true;
+    supportsSpliceDryrun = () => false;
+    supportsSpliceFeeControl = () => false;
+
+    spliceIn = async (params: {
+        channelId: string;
+        amount: string;
+    }): Promise<any> => {
+        console.log('[LdkNode] spliceIn called with:', params);
+        const channels = await LdkNodeInjection.channel.listChannels();
+        console.log(
+            '[LdkNode] Available channels:',
+            channels.map((c: any) => ({
+                channelId: c.channelId,
+                userChannelId: c.userChannelId,
+                shortChannelId: c.shortChannelId
+            }))
+        );
+        const channel = channels.find(
+            (c: any) =>
+                c.channelId === params.channelId ||
+                c.userChannelId === params.channelId ||
+                c.shortChannelId === params.channelId
+        );
+
+        if (!channel) {
+            console.log(
+                '[LdkNode] Channel not found for id:',
+                params.channelId
+            );
+            throw new Error('Channel not found');
+        }
+
+        console.log('[LdkNode] Found channel, calling spliceIn:', {
+            userChannelId: channel.userChannelId,
+            counterpartyNodeId: channel.counterpartyNodeId,
+            spliceAmountSats: Number(params.amount)
+        });
+
+        try {
+            await LdkNodeInjection.channel.spliceIn({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                spliceAmountSats: Number(params.amount)
+            });
+        } catch (e: any) {
+            console.log('[LdkNode] spliceIn native error:', e?.message || e);
+            throw e;
+        }
+
+        return this.awaitSpliceResult(channel.userChannelId);
+    };
+
+    spliceOut = async (params: {
+        channelId: string;
+        amount: string;
+        destination: string;
+    }): Promise<any> => {
+        console.log('[LdkNode] spliceOut called with:', params);
+        const channels = await LdkNodeInjection.channel.listChannels();
+        console.log(
+            '[LdkNode] Available channels:',
+            channels.map((c: any) => ({
+                channelId: c.channelId,
+                userChannelId: c.userChannelId,
+                shortChannelId: c.shortChannelId
+            }))
+        );
+        const channel = channels.find(
+            (c: any) =>
+                c.channelId === params.channelId ||
+                c.userChannelId === params.channelId ||
+                c.shortChannelId === params.channelId
+        );
+
+        if (!channel) {
+            console.log(
+                '[LdkNode] Channel not found for id:',
+                params.channelId
+            );
+            throw new Error('Channel not found');
+        }
+
+        const address =
+            params.destination === 'wallet'
+                ? await LdkNodeInjection.onchain.newOnchainAddress()
+                : params.destination;
+
+        console.log('[LdkNode] Found channel, calling spliceOut:', {
+            userChannelId: channel.userChannelId,
+            counterpartyNodeId: channel.counterpartyNodeId,
+            address,
+            spliceAmountSats: Number(params.amount)
+        });
+
+        try {
+            await LdkNodeInjection.channel.spliceOut({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                address,
+                spliceAmountSats: Number(params.amount)
+            });
+        } catch (e: any) {
+            console.log('[LdkNode] spliceOut native error:', e?.message || e);
+            throw e;
+        }
+
+        return this.awaitSpliceResult(channel.userChannelId);
+    };
+
+    private awaitSpliceResult = (userChannelId: string): Promise<any> => {
+        console.log(
+            '[LdkNode] Waiting for splice event, userChannelId:',
+            userChannelId
+        );
+        const SPLICE_TIMEOUT_MS = 60000;
+        return new Promise<any>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                unsubscribe();
+                reject(new Error('Splice operation timed out'));
+            }, SPLICE_TIMEOUT_MS);
+
+            const unsubscribe = this.subscribeToEvents(
+                (event: LdkNodeEvent) => {
+                    if (
+                        event.type === 'splicePending' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        console.log(
+                            '[LdkNode] SplicePending event:',
+                            JSON.stringify(event)
+                        );
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        resolve({
+                            txid: event.newFundingTxo_txid
+                        });
+                    } else if (
+                        event.type === 'spliceFailed' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        console.log(
+                            '[LdkNode] SpliceFailed event:',
+                            JSON.stringify(event)
+                        );
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        reject(new Error('Splice operation failed'));
+                    }
+                }
+            );
+        });
+    };
+
+    // ========================================================================
     // On-chain Methods
     // ========================================================================
 

@@ -51,6 +51,8 @@ RCT_EXTERN_METHOD(openChannelFundMax:(NSString *)nodeId address:(NSString *)addr
 RCT_EXTERN_METHOD(openChannelWithUtxos:(NSString *)nodeId address:(NSString *)address channelAmountSats:(nonnull NSNumber *)channelAmountSats pushToCounterpartyMsat:(nonnull NSNumber *)pushToCounterpartyMsat announceChannel:(BOOL)announceChannel utxos:(NSArray *)utxos resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(closeChannel:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(forceCloseChannel:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId reason:(NSString *)reason resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(spliceIn:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId spliceAmountSats:(nonnull NSNumber *)spliceAmountSats resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(spliceOut:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId address:(NSString *)address spliceAmountSats:(nonnull NSNumber *)spliceAmountSats resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // On-chain Methods
 RCT_EXTERN_METHOD(newOnchainAddress:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

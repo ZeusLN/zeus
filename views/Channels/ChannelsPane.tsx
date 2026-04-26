@@ -35,6 +35,7 @@ import ChannelsStore, {
 } from '../../stores/ChannelsStore';
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SpliceStore from '../../stores/SpliceStore';
 import SettingsStore, {
     getLspConfigForNetwork
 } from '../../stores/SettingsStore';
@@ -65,6 +66,7 @@ interface ChannelsProps {
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
+    SpliceStore?: SpliceStore;
 }
 
 interface ChannelsState {
@@ -81,7 +83,8 @@ interface ChannelsState {
     'LSPStore',
     'NodeInfoStore',
     'SettingsStore',
-    'ModalStore'
+    'ModalStore',
+    'SpliceStore'
 )
 @observer
 export default class ChannelsPane extends React.PureComponent<
@@ -188,11 +191,13 @@ export default class ChannelsPane extends React.PureComponent<
     }
 
     renderItem = ({ item }: { item: Channel }) => {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, SpliceStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore!;
 
         const getStatus = () => {
-            if (item.isActive) {
+            if (SpliceStore!.isChannelSplicing(item.channelId || '')) {
+                return Status.Splicing;
+            } else if (item.isActive) {
                 return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
