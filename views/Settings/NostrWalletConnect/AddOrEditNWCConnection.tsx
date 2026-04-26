@@ -31,6 +31,7 @@ import NostrConnectUtils, {
     PermissionOption,
     IndividualPermissionOption
 } from '../../../utils/NostrConnectUtils';
+import { isValidNostrRelayUrl } from '../../../utils/NostrWalletConnectUrlUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NostrWalletConnectStore, {
@@ -280,13 +281,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     isValidRelayUrl = (url: string) => {
-        // Per NIP-01, relay URLs should use encrypted connections (wss://) in production.
-        // Allow ws:// for localhost/127.0.0.1/[::1] for local testing only.
-        // Production: wss://<domain>:<port> with subdomains allowed
-        // Testing:   ws://localhost:<port> or ws://127.0.0.1:<port> (no subdomains)
-        // Prevents: double dots, leading dots, invalid domain parts
-        const pattern = /^(wss:\/\/([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(:\d+)?(\/.*)?|ws:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/.*)?)$/;
-        return pattern.test(url);
+        return isValidNostrRelayUrl(url);
     };
 
     updateStateWithChangeTracking = (newState: any) => {

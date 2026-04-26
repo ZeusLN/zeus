@@ -1,9 +1,32 @@
 import {
     buildNostrWalletConnectUrl,
-    InvalidLightningAddressError
+    InvalidLightningAddressError,
+    isValidNostrRelayUrl
 } from './NostrWalletConnectUrlUtils';
 
 describe('NostrWalletConnectUrlUtils', () => {
+    describe('Nostr relay URL validation', () => {
+        it('accepts secure relay URLs', () => {
+            expect(isValidNostrRelayUrl('wss://relay.example.com')).toBe(true);
+            expect(isValidNostrRelayUrl('wss://relay.example.com:8080/path')).toBe(true);
+        });
+
+        it('accepts local ws relay URLs for testing', () => {
+            expect(isValidNostrRelayUrl('ws://localhost:7000')).toBe(true);
+            expect(isValidNostrRelayUrl('ws://127.0.0.1:7000')).toBe(true);
+            expect(isValidNostrRelayUrl('ws://[::1]:7000')).toBe(true);
+        });
+
+        it('rejects insecure non-local ws relay URLs', () => {
+            expect(isValidNostrRelayUrl('ws://relay.example.com')).toBe(false);
+        });
+
+        it('rejects non-websocket schemes', () => {
+            expect(isValidNostrRelayUrl('http://relay.example.com')).toBe(false);
+            expect(isValidNostrRelayUrl('https://relay.example.com')).toBe(false);
+        });
+    });
+
     it('builds a connection URL without lud16 by default', () => {
         expect(
             buildNostrWalletConnectUrl({

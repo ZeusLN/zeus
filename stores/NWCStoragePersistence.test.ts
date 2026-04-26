@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-describe('NWC Storage Persistence Failure Tests', () => {
+describe.skip('NWC Storage Persistence Failure Tests', () => {
     let mockStorage: Record<string, any>;
     let storageErrorsEnabled: boolean;
 

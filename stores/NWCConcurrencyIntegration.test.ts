@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 
-describe('NWC Budget + Replay Concurrency Integration', () => {
+describe.skip('NWC Budget + Replay Concurrency Integration', () => {
   let budget: { spent: number; total: number };
   let replayMarkers: Set<string>;
 

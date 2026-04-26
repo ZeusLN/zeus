@@ -272,7 +272,7 @@ export default class EmbeddedLND extends LND {
                               : undefined;
                       })()
                     : undefined,
-            fee_limit_sat: data?.fee_limit_sat || 0,
+            fee_limit_sat: data?.fee_limit_sat,
             fee_limit_msat:
                 data.fee_limit_msat !== undefined &&
                 data.fee_limit_msat !== null

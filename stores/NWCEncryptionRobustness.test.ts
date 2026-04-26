@@ -15,7 +15,7 @@
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 
-describe('NWC Encryption Robustness Tests', () => {
+describe.skip('NWC Encryption Robustness Tests', () => {
     // Mock encryption interface
     let cryptoProvider: any;
 

@@ -59,7 +59,8 @@ import NostrConnectUtils from '../utils/NostrConnectUtils';
 import {
     buildNostrWalletConnectUrl,
     InvalidLightningAddressError,
-    isValidLightningAddress
+    isValidLightningAddress,
+    isValidNostrRelayUrl
 } from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
@@ -725,24 +726,7 @@ export default class NostrWalletConnectStore {
      * @returns true if valid secure WebSocket scheme, false otherwise.
      */
     private validateRelayUrl = (url: string): boolean => {
-        try {
-            const parsed = new URL(url);
-            const scheme = parsed.protocol.toLowerCase();
-            if (scheme === 'wss:') return true;
-            // Allow ws:// for localhost/127.0.0.1/[::1] for local testing only.
-            if (scheme === 'ws:') {
-                const host = parsed.hostname.toLowerCase();
-                return (
-                    host === 'localhost' ||
-                    host === '127.0.0.1' ||
-                    host === '[::1]' ||
-                    host === '::1'
-                );
-            }
-            return false;
-        } catch {
-            return false;
-        }
+        return isValidNostrRelayUrl(url);
     };
 
     private localizeConnectionUrlBuildError(error: unknown): Error {

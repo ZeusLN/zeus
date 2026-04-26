@@ -12,6 +12,26 @@ export class InvalidLightningAddressError extends Error {
     }
 }
 
+export const isValidNostrRelayUrl = (url: string): boolean => {
+    try {
+        const parsed = new URL(url);
+        const scheme = parsed.protocol.toLowerCase();
+        if (scheme === 'wss:') return true;
+        if (scheme === 'ws:') {
+            const host = parsed.hostname.toLowerCase();
+            return (
+                host === 'localhost' ||
+                host === '127.0.0.1' ||
+                host === '[::1]' ||
+                host === '::1'
+            );
+        }
+        return false;
+    } catch {
+        return false;
+    }
+};
+
 export const isValidLightningAddress = (address?: string | null): boolean => {
     if (!address) return true; // empty is ok (optional feature)
     if (address.length > 256) return false; // max length per LUD-16
