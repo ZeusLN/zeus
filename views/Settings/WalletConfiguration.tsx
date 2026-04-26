@@ -134,6 +134,8 @@ interface WalletConfigurationState {
     customMailboxServer?: string;
     localKey?: string;
     remoteKey?: string;
+    // LNSocket
+    pubkey: string;
     // embeded lnd
     seedPhrase?: string[];
     walletPassword?: string;
@@ -213,6 +215,8 @@ export default class WalletConfiguration extends React.Component<
         customMailboxServer: '',
         localKey: '',
         remoteKey: '',
+        // LNSocket
+        pubkey: '',
         // embedded lnd
         seedPhrase: [],
         walletPassword: '',
@@ -435,6 +439,8 @@ export default class WalletConfiguration extends React.Component<
                 pairingPhrase,
                 mailboxServer,
                 customMailboxServer,
+                // LNSocket
+                pubkey,
                 // embedded LND
                 seedPhrase,
                 walletPassword,
@@ -480,6 +486,8 @@ export default class WalletConfiguration extends React.Component<
                 pairingPhrase,
                 mailboxServer,
                 customMailboxServer,
+                // LNSocket
+                pubkey,
                 // embedded LND
                 seedPhrase,
                 walletPassword,
@@ -533,6 +541,7 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
+            pubkey,
             seedPhrase,
             walletPassword,
             adminMacaroon,
@@ -577,6 +586,7 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
+            pubkey,
             seedPhrase,
             walletPassword,
             adminMacaroon,
@@ -655,7 +665,10 @@ export default class WalletConfiguration extends React.Component<
                         return;
                     }
                 }
-                if (implementation === 'lightning-node-connect') {
+                if (
+                    implementation === 'lightning-node-connect' ||
+                    implementation === 'lnsocket'
+                ) {
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
@@ -694,6 +707,7 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
+            pubkey,
             photo,
             nostrWalletConnectUrl
         } = this.state;
@@ -715,6 +729,7 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
+            pubkey,
             photo,
             nostrWalletConnectUrl
         };
@@ -1210,6 +1225,7 @@ export default class WalletConfiguration extends React.Component<
             customMailboxServer,
             localKey,
             remoteKey,
+            pubkey,
             adminMacaroon,
             embeddedLndNetwork,
             isSqlite,
@@ -1246,10 +1262,12 @@ export default class WalletConfiguration extends React.Component<
             implementation === 'embedded-lnd' || implementation === 'ldk-node';
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
+            implementation !== 'lnsocket' &&
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
+            implementation !== 'lnsocket' &&
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
 
@@ -1282,7 +1300,8 @@ export default class WalletConfiguration extends React.Component<
                         saved: false,
                         certVerification: value === 'lndhub' ? true : false,
                         host: '',
-                        lndhubUrl: ''
+                        lndhubUrl: '',
+                        pubkey: ''
                     });
                 }}
                 values={interfaceKeys}
@@ -2419,6 +2438,201 @@ export default class WalletConfiguration extends React.Component<
                                 </>
                             )}
 
+                            {implementation === 'lnsocket' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.serverAddress'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.OpenChannel.hostPort'
+                                        )}
+                                        textColor={
+                                            hostError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        value={host}
+                                        onChangeText={(text: string) => {
+                                            this.setState({ hostError: false });
+
+                                            if (
+                                                text.length <
+                                                (host?.length || 0)
+                                            ) {
+                                                this.setState({
+                                                    host: text,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            if (
+                                                text.length ===
+                                                (host?.length || 0) + 1
+                                            ) {
+                                                const cleanedText =
+                                                    text.replace(
+                                                        new RegExp(
+                                                            `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                            'g'
+                                                        ),
+                                                        ''
+                                                    );
+                                                this.setState({
+                                                    host: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            const trimmedText = text.trim();
+                                            this.setState({
+                                                host: trimmedText,
+                                                hostError:
+                                                    !ValidationUtils.validateNodeHost(
+                                                        trimmedText
+                                                    ),
+                                                saved: false
+                                            });
+                                        }}
+                                        onBlur={() => {
+                                            if (host) {
+                                                this.setState({
+                                                    hostError:
+                                                        !ValidationUtils.validateNodeHost(
+                                                            host
+                                                        )
+                                                });
+                                            }
+                                        }}
+                                        locked={loading}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.nodePubkey'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'0A...'}
+                                        textColor={
+                                            pubkey &&
+                                            !ValidationUtils.validateNodePubkey(
+                                                pubkey
+                                            )
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        value={pubkey}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                pubkey: text.trim(),
+                                                saved: false
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.rune'
+                                        )}
+                                    </Text>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <TextInput
+                                            placeholder={'Lt1c...'}
+                                            textColor={
+                                                runeError
+                                                    ? themeColor('error')
+                                                    : themeColor('text')
+                                            }
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
+                                            value={rune}
+                                            secureTextEntry={this.state.hidden}
+                                            style={{
+                                                flex: 1,
+                                                marginRight: 15
+                                            }}
+                                            onChangeText={(text: string) => {
+                                                this.setState({
+                                                    runeError: false
+                                                });
+
+                                                if (
+                                                    text.length <
+                                                    (rune?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        rune: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                if (
+                                                    text.length ===
+                                                    (rune?.length || 0) + 1
+                                                ) {
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^A-Za-z0-9\-_=]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        rune: cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                const trimmedText = text.trim();
+                                                this.setState({
+                                                    rune: trimmedText,
+                                                    runeError:
+                                                        !ValidationUtils.hasValidRuneChars(
+                                                            trimmedText
+                                                        ),
+                                                    saved: false
+                                                });
+                                            }}
+                                            locked={loading}
+                                        />
+                                        <ShowHideToggle
+                                            onPress={() =>
+                                                this.setState({
+                                                    hidden: !this.state.hidden
+                                                })
+                                            }
+                                        />
+                                    </View>
+                                </>
+                            )}
+
                             {implementation === 'lightning-node-connect' && (
                                 <>
                                     <Mailbox />
@@ -3012,6 +3226,7 @@ export default class WalletConfiguration extends React.Component<
                                                 !isLocalImpl &&
                                                 implementation !==
                                                     'lightning-node-connect' &&
+                                                implementation !== 'lnsocket' &&
                                                 implementation !==
                                                     'nostr-wallet-connect'
                                             ) {
@@ -3027,9 +3242,13 @@ export default class WalletConfiguration extends React.Component<
                                             loading ||
                                             hostError ||
                                             (host &&
-                                                !ValidationUtils.isValidServerAddress(
-                                                    host
-                                                )) ||
+                                                (implementation === 'lnsocket'
+                                                    ? !ValidationUtils.validateNodeHost(
+                                                          host
+                                                      )
+                                                    : !ValidationUtils.isValidServerAddress(
+                                                          host
+                                                      ))) ||
                                             portError ||
                                             (port &&
                                                 !ValidationUtils.isValidPort(
@@ -3078,6 +3297,15 @@ export default class WalletConfiguration extends React.Component<
                                                 !(host && macaroonHex)) ||
                                             (implementation === 'cln-rest' &&
                                                 !(host && rune)) ||
+                                            (implementation === 'lnsocket' &&
+                                                !(
+                                                    host &&
+                                                    pubkey &&
+                                                    ValidationUtils.validateNodePubkey(
+                                                        pubkey
+                                                    ) &&
+                                                    rune
+                                                )) ||
                                             (implementation ===
                                                 'lightning-node-connect' &&
                                                 (!pairingPhrase ||
