@@ -1,15 +1,9 @@
 import * as React from 'react';
-import {
-    Platform,
-    ScrollView,
-    StyleSheet,
-    View,
-    TouchableOpacity
-} from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
+import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -30,7 +24,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import handleAnything from '../utils/handleAnything';
-import NFCUtils, { checkNfcEnabled } from '../utils/NFCUtils';
+import { scanNfcTag } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
 import ValidationUtils from '../utils/ValidationUtils';
@@ -180,56 +174,9 @@ export default class OpenChannel extends React.Component<
         this.setState({ nfcSupported });
     }
 
-    disableNfc = () => {
-        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-    };
-
-    enableNfc = async () => {
-        const { ModalStore } = this.props;
-
-        if (!(await checkNfcEnabled(ModalStore))) return;
-
-        this.disableNfc();
-        await NfcManager.start();
-
-        return new Promise((resolve: any) => {
-            let tagFound: TagEvent | null = null;
-
-            // enable NFC
-            if (Platform.OS === 'android')
-                ModalStore.toggleAndroidNfcModal(true);
-
-            NfcManager.setEventListener(
-                NfcEvents.DiscoverTag,
-                (tag: TagEvent) => {
-                    tagFound = tag;
-                    const bytes = new Uint8Array(
-                        tagFound.ndefMessage[0].payload
-                    );
-                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
-
-                    // close NFC
-                    if (Platform.OS === 'android')
-                        ModalStore.toggleAndroidNfcModal(false);
-
-                    resolve(this.validateNodeUri(str));
-                    NfcManager.unregisterTagEvent().catch(() => 0);
-                }
-            );
-
-            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
-                // close NFC
-                if (Platform.OS === 'android')
-                    ModalStore.toggleAndroidNfcModal(false);
-
-                if (!tagFound) {
-                    resolve();
-                }
-            });
-
-            NfcManager.registerTagEvent();
-        });
+    scanNfc = async () => {
+        const str = await scanNfcTag(this.props.ModalStore);
+        if (str) this.validateNodeUri(str);
     };
 
     componentDidUpdate(prevProps: OpenChannelProps) {
@@ -1384,7 +1331,7 @@ export default class OpenChannel extends React.Component<
                                                 style={{ marginRight: 10 }}
                                             />
                                         }
-                                        onPress={() => this.enableNfc()}
+                                        onPress={() => this.scanNfc()}
                                         secondary
                                     />
                                 </View>
