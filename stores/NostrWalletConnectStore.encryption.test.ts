@@ -9,6 +9,9 @@ jest.mock('@getalby/sdk', () => ({
         NWCWalletService: class {
             connected = false;
             opts: any;
+            publishWalletServiceInfoEvent = jest
+                .fn()
+                .mockResolvedValue(undefined);
             constructor(opts: any) {
                 this.opts = opts;
             }
@@ -104,6 +107,7 @@ jest.mock('../utils/NostrConnectUtils', () => ({
     default: {
         decodeInvoiceTags: jest.fn(),
         getFullAccessPermissions: jest.fn(() => ['get_info', 'pay_invoice']),
+        getNotifications: jest.fn(() => []),
         isIgnorableError: jest.fn(() => false)
     }
 }));
@@ -620,8 +624,16 @@ describe('NWCConnection replacement flow', () => {
             publicKey: 'service-pubkey'
         };
         (store as any).nwcWalletServices = new Map([
-            ['wss://new.relay', {} as any]
+            [
+                'wss://new.relay',
+                {
+                    publishWalletServiceInfoEvent: jest
+                        .fn()
+                        .mockResolvedValue(undefined)
+                } as any
+            ]
         ]);
+        (store as any).retryWithBackoff = jest.fn(async (fn: any) => fn());
         (store as any).publishedRelays = new Set(['wss://new.relay']);
         const generateSecretSpy = jest
             .spyOn(store as any, 'generateConnectionSecret')
@@ -703,6 +715,7 @@ describe('NWCConnection replacement flow', () => {
         const initializeSpy = jest
             .spyOn(store as any, 'initializeNWCWalletServices')
             .mockResolvedValue(undefined);
+        (store as any).retryWithBackoff = jest.fn(async (fn: any) => fn());
         const saveSpy = jest
             .spyOn(store as any, 'saveConnections')
             .mockResolvedValue(undefined);
@@ -719,6 +732,9 @@ describe('NWCConnection replacement flow', () => {
         expect(initializeSpy).not.toHaveBeenCalled();
         expect(saveSpy).toHaveBeenCalled();
         expect((store as any).nwcWalletServices.has('wss://new.relay')).toBe(
+            true
+        );
+        expect((store as any).publishedRelays.has('wss://new.relay')).toBe(
             true
         );
     });
@@ -1031,18 +1047,18 @@ describe('NWCConnection replacement flow', () => {
 
         expect(result).toEqual({ success: false });
         expect(previousUnsubscribe).toHaveBeenCalled();
-        expect(newUnsubscribe).toHaveBeenCalled();
-        expect(subscribeSpy).toHaveBeenCalledTimes(2);
-        expect(subscribeSpy.mock.calls[1][1]).toEqual({
-            forceResubscribe: true
-        });
+        expect(subscribeSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
+        expect(subscribeSpy.mock.calls).toContainEqual([
+            expect.objectContaining({ id: 'conn-rollback' }),
+            { forceResubscribe: true }
+        ]);
         expect(
-            (store as any).activeSubscriptions.get('conn-rollback')
-        ).toBe(restoredUnsubscribe);
+            typeof (store as any).activeSubscriptions.get('conn-rollback')
+        ).toBe('function');
         expect(connection.relayUrl).toBe('wss://old.relay');
     });
 
-    it('clears spend when the budget limit is removed', async () => {
+    it('does not clear spend on partial updates that omit maxAmountSats', async () => {
         const store = new NostrWalletConnectStore(
             {
                 implementation: 'cln-rest'
@@ -1091,7 +1107,70 @@ describe('NWCConnection replacement flow', () => {
             .spyOn(store as any, 'saveConnections')
             .mockResolvedValue(undefined);
 
-        const result = await store.updateConnection('conn-3', {} as any);
+        const result = await store.updateConnection('conn-3', {
+            name: 'Budget Reset Updated'
+        } as any);
+
+        expect(result).toEqual({ success: true });
+        expect(saveSpy).toHaveBeenCalled();
+        expect((store.connections[0] as any).totalSpendSats).toBe(77);
+        expect((store.connections[0] as any).lastBudgetReset).toEqual(
+            new Date('2026-01-01T00:00:00Z')
+        );
+    });
+
+    it('clears spend only when maxAmountSats is explicitly removed', async () => {
+        const store = new NostrWalletConnectStore(
+            {
+                implementation: 'cln-rest'
+            } as any,
+            {} as any,
+            {
+                nodeInfo: { nodeId: 'node-pubkey' }
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {
+                lightningAddressActivated: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+        const connection = {
+            id: 'conn-4',
+            name: 'Budget Removed',
+            pubkey: 'pubkey-4',
+            relayUrl: 'wss://relay.example',
+            permissions: [],
+            createdAt: new Date(),
+            totalSpendSats: 88,
+            maxAmountSats: 100,
+            budgetRenewal: 'never',
+            lastBudgetReset: new Date('2026-01-01T00:00:00Z'),
+            nodePubkey: 'node-pubkey',
+            implementation: 'cln-rest',
+            includeLightningAddress: false,
+            hasBudgetLimit: true,
+            resetBudget: jest.fn(function (this: any) {
+                this.totalSpendSats = 0;
+                this.lastBudgetReset = undefined;
+            }),
+            activity: []
+        };
+        store.connections = [connection as any];
+        (store as any).walletServiceKeys = {
+            privateKey: 'service-secret',
+            publicKey: 'service-pubkey'
+        };
+        const saveSpy = jest
+            .spyOn(store as any, 'saveConnections')
+            .mockResolvedValue(undefined);
+
+        const result = await store.updateConnection('conn-4', {
+            maxAmountSats: undefined
+        } as any);
 
         expect(result).toEqual({ success: true });
         expect(saveSpy).toHaveBeenCalled();

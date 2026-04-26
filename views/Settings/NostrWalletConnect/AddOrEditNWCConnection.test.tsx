@@ -104,4 +104,60 @@ describe('AddOrEditNWCConnection lightning address defaults', () => {
             (component as any).state.includeLightningAddressInitialized
         ).toBe(true);
     });
+
+    it('preserves connection activity during regeneration fallback', async () => {
+        const connection = {
+            id: 'conn-1',
+            totalSpendSats: 5,
+            lastBudgetReset: new Date('2026-01-01T00:00:00Z'),
+            activity: [{ id: 'act-1' }]
+        };
+        const store = {
+            maxBudgetLimit: 25,
+            loadConnections: jest.fn().mockResolvedValue(undefined),
+            getConnection: jest.fn().mockReturnValue(connection),
+            createConnection: jest
+                .fn()
+                .mockResolvedValue('nostr+walletconnect://example'),
+            deleteConnection: jest.fn().mockResolvedValue(undefined),
+            connections: [{ id: 'new-conn' }]
+        };
+        const navigation = {
+            addListener: jest.fn().mockReturnValue(jest.fn()),
+            navigate: jest.fn()
+        };
+        const component = new AddOrEditNWCConnection({
+            navigation: navigation as any,
+            route: { params: { connectionId: 'conn-1', isEdit: true } } as any,
+            NostrWalletConnectStore: store as any,
+            ModalStore: {} as any
+        });
+
+        (component as any).setState = (update: any) => {
+            const nextState =
+                typeof update === 'function'
+                    ? update((component as any).state, (component as any).props)
+                    : update;
+            (component as any).state = {
+                ...(component as any).state,
+                ...nextState
+            };
+        };
+
+        jest.spyOn(component as any, 'buildConnectionParams').mockResolvedValue({
+            name: 'Updated',
+            relayUrl: 'wss://relay.example'
+        });
+
+        await (component as any).regenerateConnection();
+
+        expect(store.createConnection).toHaveBeenCalledWith(
+            expect.objectContaining({
+                activity: connection.activity,
+                totalSpendSats: 5,
+                lastBudgetReset: connection.lastBudgetReset,
+                replaceConnectionId: 'conn-1'
+            })
+        );
+    });
 });

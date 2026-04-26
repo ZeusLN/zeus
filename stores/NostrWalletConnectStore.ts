@@ -490,6 +490,30 @@ export default class NostrWalletConnectStore {
             );
         }
     };
+
+    private ensureRelayPublished = async (relayUrl: string) => {
+        if (this.publishedRelays.has(relayUrl) || !this.walletServiceKeys) {
+            return;
+        }
+
+        const nwcWalletService = this.nwcWalletServices.get(relayUrl);
+        if (!nwcWalletService) {
+            return;
+        }
+
+        await this.retryWithBackoff(async () => {
+            await nwcWalletService.publishWalletServiceInfoEvent(
+                this.walletServiceKeys!.privateKey,
+                NostrConnectUtils.getFullAccessPermissions(),
+                NostrConnectUtils.getNotifications()
+            );
+            runInAction(() => {
+                this.publishedRelays.add(relayUrl);
+            });
+        }, 3);
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    };
     @action
     public startService = async (hasActiveConnections = false) => {
         try {
@@ -755,30 +779,13 @@ export default class NostrWalletConnectStore {
                 );
             }
             if (!this.publishedRelays.has(params.relayUrl)) {
-                const nwcWalletService = this.nwcWalletServices.get(
-                    params.relayUrl
-                );
-                if (nwcWalletService && this.walletServiceKeys?.privateKey) {
-                    try {
-                        await this.retryWithBackoff(async () => {
-                            await nwcWalletService.publishWalletServiceInfoEvent(
-                                this.walletServiceKeys!.privateKey,
-                                NostrConnectUtils.getFullAccessPermissions(),
-                                NostrConnectUtils.getNotifications()
-                            );
-                            runInAction(() => {
-                                this.publishedRelays.add(params.relayUrl);
-                            });
-                        }, 3);
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, 500)
-                        );
-                    } catch (error) {
-                        console.warn(
-                            `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
-                            error
-                        );
-                    }
+                try {
+                    await this.ensureRelayPublished(params.relayUrl);
+                } catch (error) {
+                    console.warn(
+                        `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
+                        error
+                    );
                 }
             }
 
@@ -1043,6 +1050,7 @@ export default class NostrWalletConnectStore {
                 ) {
                     await this.initializeNWCWalletServices();
                 }
+                await this.ensureRelayPublished(subscriptionConnection.relayUrl);
                 const subscribed = await this.subscribeToConnection(
                     subscriptionConnection,
                     { replaceExisting: true }
@@ -1061,19 +1069,25 @@ export default class NostrWalletConnectStore {
                 const oldBudgetRenewal = connection.budgetRenewal;
                 const hadBudget = connection.hasBudgetLimit;
                 const newBudgetRenewal = updates.budgetRenewal;
-                const newMaxAmountSats = updates.maxAmountSats;
+                const budgetProvided = Object.prototype.hasOwnProperty.call(
+                    updates,
+                    'maxAmountSats'
+                );
+                const nextMaxAmountSats = budgetProvided
+                    ? updates.maxAmountSats
+                    : connection.maxAmountSats;
 
                 Object.assign(connection, updates);
 
                 const hasBudget =
-                    newMaxAmountSats !== undefined && newMaxAmountSats > 0;
+                    nextMaxAmountSats !== undefined && nextMaxAmountSats > 0;
                 const budgetRenewalChanged =
                     newBudgetRenewal !== undefined &&
                     newBudgetRenewal !== oldBudgetRenewal;
 
                 if (!hadBudget && hasBudget) {
                     connection.resetBudget();
-                } else if (hadBudget && !hasBudget) {
+                } else if (hadBudget && budgetProvided && !hasBudget) {
                     connection.lastBudgetReset = undefined;
                     connection.totalSpendSats = 0;
                 } else if (hasBudget && budgetRenewalChanged) {
@@ -3048,7 +3062,8 @@ export default class NostrWalletConnectStore {
                 }
             }
             const signature = await this.messageSignStore.signMessage(
-                request.message
+                request.message,
+                'lightning'
             );
             return {
                 result: {

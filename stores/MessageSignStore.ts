@@ -165,12 +165,16 @@ export default class MessageSignStore {
     };
 
     @action
-    public signMessage = async (text: string): Promise<string | null> => {
+    public signMessage = async (
+        text: string,
+        signingMode?: 'lightning' | 'onchain'
+    ): Promise<string | null> => {
         this.loading = true;
 
         try {
+            const activeSigningMode = signingMode || this.signingMode;
             const signOperation =
-                this.signingMode === 'lightning'
+                activeSigningMode === 'lightning'
                     ? BackendUtils.signMessage(text)
                     : BackendUtils.signMessageWithAddr(
                           text,

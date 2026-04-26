@@ -439,7 +439,8 @@ describe('NostrWalletConnectStore msat plumbing', () => {
         });
 
         expect(context.messageSignStore.signMessage).toHaveBeenCalledWith(
-            'sign this message'
+            'sign this message',
+            'lightning'
         );
         expect(response.result).toEqual({
             message: 'sign this message',

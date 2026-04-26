@@ -611,6 +611,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
+            const activity = connection.activity;
             const params = await this.buildConnectionParams(
                 false,
                 connectionId
@@ -618,6 +619,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
+            params.activity = activity;
             const nostrUrl = await NostrWalletConnectStore.createConnection({
                 ...params,
                 id: undefined,
@@ -1704,11 +1706,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     >
                         <Button
                             title={this.getButtonTitle()}
-                            onPress={
-                                route.params?.isEdit && this.isRelayChanged()
-                                    ? this.regenerateConnection
-                                    : this.createOrUpdateConnection
-                            }
+                            onPress={this.createOrUpdateConnection}
                             secondary={this.isButtonDisabled()}
                             disabled={this.isButtonDisabled()}
                             noUppercase
