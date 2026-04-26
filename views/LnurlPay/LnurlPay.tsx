@@ -589,7 +589,11 @@ export default class LnurlPay extends React.Component<
                                 buttonStyle={{
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                disabled={loading}
+                                disabled={
+                                    loading ||
+                                    !satAmount ||
+                                    Number(satAmount) <= 0
+                                }
                             />
                         </View>
                     </View>
