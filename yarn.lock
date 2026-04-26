@@ -8713,13 +8713,6 @@ react-native-url-polyfill@2.0.0:
   dependencies:
     whatwg-url-without-unicode "8.0.0-3"
 
-react-native-v8@0.61.5-patch.4:
-  version "0.61.5-patch.4"
-  resolved "https://registry.yarnpkg.com/react-native-v8/-/react-native-v8-0.61.5-patch.4.tgz#b4ea4cded0b735e76ff5871dbff5b3540f3020ee"
-  integrity sha512-xX0EOQFVYeI9exx4d4nKhPkZVDBl/ZIaWiPbhfyjkiOwAqgTiZ6ExndnQ5SHnQKuHg4f2rCBvv9mypZ1hjmA9A==
-  dependencies:
-    v8-android "~8.84.0"
-
 react-native-view-shot@4.0.3:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/react-native-view-shot/-/react-native-view-shot-4.0.3.tgz#9b98388fcc5228073cb66ac98ca339eda35767ac"
@@ -10142,11 +10135,6 @@ uuid@14.0.0:
   version "14.0.0"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-14.0.0.tgz#0af883220163d264ffe0c084f6b8a89b9666966d"
   integrity sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==
-
-v8-android@~8.84.0:
-  version "8.84.0"
-  resolved "https://registry.yarnpkg.com/v8-android/-/v8-android-8.84.0.tgz#b9a5b2284d31f530598d7dd5c0124e300999bc6a"
-  integrity sha512-A03L2HfwdobdMSXpGe9fBFqM3tOXh6NWmhkB2cWyav5eQnmF+ajl6Ryyw+Dhwh/GbQXbqgkvZJmBb6dRk+1wYA==
 
 v8-to-istanbul@^9.0.1:
   version "9.3.0"
