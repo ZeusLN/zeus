@@ -346,4 +346,29 @@ open class Lnd {
     LndmobileCancelGossipSync()
     callback(nil, nil)
   }
+
+  /// Starts the SubscribeState gRPC stream and routes every event to `callback`.
+  /// Adds "SubscribeState" to `activeStreams` so a subsequent JS call to
+  /// `subscribeState()` (streamOnlyOnce: true) is silently ignored, preventing
+  /// a duplicate subscription.  Removes the entry from `activeStreams` when the
+  /// stream closes (EOF or error) so a future restart can subscribe again.
+  /// If the stream is already active this call is a no-op.
+  func subscribeToStateChanges(callback: @escaping StreamCallback) {
+    guard !activeStreams.contains("SubscribeState") else {
+      NSLog("Lnd: SubscribeState already active, skipping native start")
+      return
+    }
+    activeStreams.append("SubscribeState")
+
+    LndmobileSubscribeState(
+      nil,
+      LndmobileReceiveStream(method: "SubscribeState") { [weak self] (data, error) in
+        // Clean up activeStreams entry when the stream closes (error or EOF).
+        if error != nil {
+          self?.activeStreams.removeAll { $0 == "SubscribeState" }
+        }
+        callback(data, error)
+      }
+    )
+  }
 }
