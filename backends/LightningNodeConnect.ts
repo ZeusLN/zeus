@@ -380,14 +380,28 @@ export default class LightningNodeConnect {
         // LNC mirrors LND router field names and expects the numeric inputs
         // as strings (LND uint64 fields). Stringify symmetrically so values
         // can never reach the wire as raw numbers (which lose precision past
-        // 2^53 and may be rejected by stricter protobuf wrappers). Validate
-        // for finiteness/positivity so a NaN/Infinity/negative upstream
-        // value can't be silently encoded as "NaN".
+        // 2^53 and may be rejected by stricter protobuf wrappers). When the
+        // input is already a pure-integer string (as NWC passes), parse via
+        // BigInt to preserve uint64 precision without Number() rounding.
+        const MAX_LNC_MSAT = 9223372036854775807n; // 2^63-1
+        const safeMsatString = (raw: unknown, allowZero = false): string | null => {
+            if (raw === undefined || raw === null) return null;
+            if (typeof raw === 'string' && /^\d+$/.test(raw)) {
+                const bi = BigInt(raw);
+                if ((!allowZero && bi <= 0n) || bi > MAX_LNC_MSAT) return null;
+                return bi.toString();
+            }
+            const v = Number(raw);
+            if (!Number.isFinite(v) || (!allowZero && v <= 0) || (allowZero && v < 0)) return null;
+            const bi = BigInt(Math.trunc(v));
+            if (bi > MAX_LNC_MSAT) return null;
+            return bi.toString();
+        };
         let amountSet = false;
         if (data.amount_msat !== undefined && data.amount_msat !== null) {
-            const v = Number(data.amount_msat);
-            if (Number.isFinite(v) && v > 0) {
-                request.amt_msat = String(Math.trunc(v));
+            const s = safeMsatString(data.amount_msat);
+            if (s !== null) {
+                request.amt_msat = s;
                 delete request.amt;
                 delete request.amount;
                 amountSet = true;
@@ -404,9 +418,9 @@ export default class LightningNodeConnect {
         delete request.amount;
 
         if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
-            const v = Number(data.fee_limit_msat);
-            if (Number.isFinite(v) && v >= 0) {
-                request.fee_limit_msat = String(Math.trunc(v));
+            const s = safeMsatString(data.fee_limit_msat, true);
+            if (s !== null) {
+                request.fee_limit_msat = s;
             } else {
                 delete request.fee_limit_msat;
             }

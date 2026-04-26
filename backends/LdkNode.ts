@@ -1284,15 +1284,15 @@ export default class LdkNode {
             data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_msat);
-                                            return Number.isFinite(v) && v >= 0
-                                                    ? Math.trunc(v)
-                                                    : undefined;
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v)
+                          : undefined;
                   })()
                 : data.fee_limit_sat !== undefined &&
                   data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
-                                            return Number.isFinite(v) && v >= 0
+                      return Number.isFinite(v) && v >= 0
                           ? Math.trunc(v * 1000)
                           : undefined;
                   })()

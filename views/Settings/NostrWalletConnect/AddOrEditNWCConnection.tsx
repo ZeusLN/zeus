@@ -555,6 +555,12 @@ export default class AddOrEditNWCConnection extends React.Component<
                 .lightningAddressActivated
                 ? NostrWalletConnectStore.lightningAddressStore.lightningAddress
                 : undefined);
+        // If the user toggled includeLightningAddress on but no address is
+        // available (deactivated or cleared), silently clear the flag so
+        // updateConnection/createConnection never receive an empty lud16.
+        if (includeLightningAddress && !resolvedLightningAddress) {
+            params.includeLightningAddress = false;
+        }
         if (includeLightningAddress && resolvedLightningAddress) {
             params.lud16 = resolvedLightningAddress;
         }
@@ -627,21 +633,13 @@ export default class AddOrEditNWCConnection extends React.Component<
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
             params.activity = activity;
-            const nostrUrl = await NostrWalletConnectStore.createConnection({
-                ...params,
-                id: undefined,
-                replaceConnectionId: connectionId
-            });
+            const { nostrUrl, connectionId: createdConnectionId } =
+                await NostrWalletConnectStore.createConnection({
+                    ...params,
+                    id: undefined,
+                    replaceConnectionId: connectionId
+                });
             if (nostrUrl) {
-                const createdConnection =
-                    NostrWalletConnectStore.connections[0];
-                if (!createdConnection) {
-                    throw new Error(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.connectionNotFound'
-                        )
-                    );
-                }
                 try {
                     await NostrWalletConnectStore.deleteConnection(
                         connectionId
@@ -649,7 +647,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 } catch (deleteError) {
                     try {
                         await NostrWalletConnectStore.deleteConnection(
-                            createdConnection.id
+                            createdConnectionId
                         );
                     } catch (rollbackError) {
                         console.warn(
@@ -660,7 +658,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     throw deleteError;
                 }
                 navigation.navigate('NWCConnectionQR', {
-                    connectionId: createdConnection.id,
+                    connectionId: createdConnectionId,
                     nostrUrl
                 });
             }
@@ -707,14 +705,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                     );
                 }
             } else {
-                const nostrUrl = await NostrWalletConnectStore.createConnection(
-                    params
-                );
+                const { nostrUrl, connectionId: createdConnectionId } =
+                    await NostrWalletConnectStore.createConnection(params);
                 if (nostrUrl) {
-                    const createdConnection =
-                        NostrWalletConnectStore.connections[0];
                     navigation.navigate('NWCConnectionQR', {
-                        connectionId: createdConnection.id,
+                        connectionId: createdConnectionId,
                         nostrUrl
                     });
                 }

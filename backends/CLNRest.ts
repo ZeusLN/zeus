@@ -512,6 +512,14 @@ export default class CLNRest {
         return this.postRequest('/v1/pay', request, timeoutSeconds * 1000);
     };
     sendKeysend = (data: any) => {
+        const timeoutSeconds = (() => {
+            const value =
+                data.timeout_seconds !== undefined &&
+                data.timeout_seconds !== null
+                    ? Number(data.timeout_seconds)
+                    : 60;
+            return Number.isFinite(value) && value >= 0 ? value : 60;
+        })();
         const rawAmountMsat = this.parsePositiveNumber(data.amount_msat);
         const rawAmountSat = this.parsePositiveNumber(data.amt);
         const amountMsat =
@@ -528,7 +536,7 @@ export default class CLNRest {
         const request: any = {
             destination: data.pubkey,
             amount_msat: this.formatIntegerForCln(amountMsat),
-            retry_for: data.timeout_seconds
+            retry_for: timeoutSeconds
         };
         // Mirror the fee-limit logic from payLightningInvoice: prefer absolute
         // maxfee (msat) over a percentage cap, which is undefined for NWC calls.
@@ -558,7 +566,7 @@ export default class CLNRest {
         return this.postRequest(
             '/v1/keysend',
             request,
-            data.timeout_seconds * 1000
+            timeoutSeconds * 1000
         );
     };
     closeChannel = (urlParams?: Array<string>) => {

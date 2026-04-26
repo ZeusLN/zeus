@@ -760,13 +760,13 @@ describe('NWCConnection replacement flow', () => {
             .spyOn(store as any, 'sendHandoffRequest')
             .mockResolvedValue(undefined);
 
-        const url = await store.createConnection({
+        const result = await store.createConnection({
             name: 'Shared Name',
             relayUrl: 'wss://new.relay',
             replaceConnectionId: 'conn-1'
         });
 
-        expect(url).toContain('nostr+walletconnect://service-pubkey');
+        expect(result.nostrUrl).toContain('nostr+walletconnect://service-pubkey');
         expect(generateSecretSpy).toHaveBeenCalled();
         expect(storeClientKeysSpy).toHaveBeenCalled();
         expect(saveSpy).toHaveBeenCalled();

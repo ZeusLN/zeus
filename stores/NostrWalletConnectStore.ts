@@ -754,7 +754,7 @@ export default class NostrWalletConnectStore {
     @action
     public createConnection = async (
         params: CreateConnectionParams
-    ): Promise<string> => {
+    ): Promise<{ nostrUrl: string; connectionId: string }> => {
         let createdConnectionId: string | undefined;
         let createdConnectionPersisted = false;
         let createdConnectionPublicKey: string | undefined;
@@ -900,7 +900,7 @@ export default class NostrWalletConnectStore {
                 );
             }
             await this.sendHandoffRequest();
-            return connectionUrl;
+            return { nostrUrl: connectionUrl, connectionId: createdConnectionId! };
         } catch (error: any) {
             if (createdConnectionPersisted && createdConnectionId) {
                 try {

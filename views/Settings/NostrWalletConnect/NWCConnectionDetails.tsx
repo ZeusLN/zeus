@@ -230,21 +230,13 @@ export default class NWCConnectionDetails extends React.Component<
         this.setState({ regenerating: true, error: null });
         try {
             const params = this.buildConnectionParams(connection);
-            const nostrUrl = await NostrWalletConnectStore.createConnection({
-                ...params,
-                id: undefined,
-                replaceConnectionId: connection.id
-            });
+            const { nostrUrl, connectionId: createdConnectionId } =
+                await NostrWalletConnectStore.createConnection({
+                    ...params,
+                    id: undefined,
+                    replaceConnectionId: connection.id
+                });
             if (nostrUrl) {
-                const createdConnection =
-                    NostrWalletConnectStore.connections[0];
-                if (!createdConnection) {
-                    throw new Error(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.connectionNotFound'
-                        )
-                    );
-                }
                 try {
                     await NostrWalletConnectStore.deleteConnection(
                         connection.id
@@ -252,7 +244,7 @@ export default class NWCConnectionDetails extends React.Component<
                 } catch (deleteError) {
                     try {
                         await NostrWalletConnectStore.deleteConnection(
-                            createdConnection.id
+                            createdConnectionId
                         );
                     } catch (rollbackError) {
                         console.warn(
@@ -263,7 +255,7 @@ export default class NWCConnectionDetails extends React.Component<
                     throw deleteError;
                 }
                 navigation.navigate('NWCConnectionQR', {
-                    connectionId: createdConnection.id,
+                    connectionId: createdConnectionId,
                     nostrUrl
                 });
             }
