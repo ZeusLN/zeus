@@ -921,13 +921,9 @@ export default class AddOrEditNWCConnection extends React.Component<
             );
         }
 
-        return this.isRelayChanged()
-            ? localeString(
-                  'views.Settings.NostrWalletConnect.regenerateConnection'
-              )
-            : localeString(
-                  'views.Settings.NostrWalletConnect.updateConnection'
-              );
+        return localeString(
+            'views.Settings.NostrWalletConnect.updateConnection'
+        );
     };
 
     isButtonDisabled = (): boolean => {

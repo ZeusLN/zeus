@@ -95,10 +95,6 @@ export const normalizeNWCConnectionData = (
     // enable it for existing connections (but only if not explicitly set)
     let includeLightningAddress = connection.includeLightningAddress;
     if (includeLightningAddress === undefined && lud16) {
-        console.log(
-            'Migrating NWC connection to v2 (enabling Lightning Address support)',
-            { connectionId: connection.id, connectionName: connection.name }
-        );
         includeLightningAddress = true;
     }
 

@@ -196,10 +196,17 @@ export default class LightningAddressStore {
             this.lightningAddress = `${handle}@${domain}`;
         });
         if (this.lightningAddressChangeHandler) {
-            await this.lightningAddressChangeHandler(
-                this.lightningAddress,
-                previousLightningAddress
-            );
+            try {
+                await this.lightningAddressChangeHandler(
+                    this.lightningAddress,
+                    previousLightningAddress
+                );
+            } catch (err) {
+                console.warn(
+                    'lightningAddressChangeHandler failed after Lightning Address activation',
+                    err
+                );
+            }
         }
     };
 

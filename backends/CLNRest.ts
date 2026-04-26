@@ -353,7 +353,7 @@ export default class CLNRest {
             // Downstream code should NOT parse label format; treat as opaque identifier.
             label: 'zeus.' + uuidv4(),
             amount_msat: amountMsat,
-            expiry: Number(data.expiry_seconds),
+            expiry: Number(data.expiry_seconds) || 3600,
             exposeprivatechannels: true
         });
     };
@@ -520,14 +520,16 @@ export default class CLNRest {
                 : rawAmountSat !== undefined
                 ? rawAmountSat.times(1000).integerValue(BigNumber.ROUND_FLOOR)
                 : undefined;
+        if (amountMsat === undefined || amountMsat.isZero()) {
+            throw new Error(
+                'sendKeysend requires a positive amount (amount_msat or amt)'
+            );
+        }
         return this.postRequest(
             '/v1/keysend',
             {
                 destination: data.pubkey,
-                amount_msat:
-                    amountMsat !== undefined
-                        ? this.formatIntegerForCln(amountMsat)
-                        : 0,
+                amount_msat: this.formatIntegerForCln(amountMsat),
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },

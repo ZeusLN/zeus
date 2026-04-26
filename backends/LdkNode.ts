@@ -1378,9 +1378,20 @@ export default class LdkNode {
                       }
                       return v * 1000;
                   })()
-                : 0;
+                : (() => {
+                      throw new Error(
+                          'sendKeysend requires a positive amount (amount_msat or amt)'
+                      );
+                  })();
         const maxTotalRoutingFeeMsat =
-            data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+            data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                ? (() => {
+                      const v = Number(data.fee_limit_msat);
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v)
+                          : undefined;
+                  })()
+                : data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
                 ? (() => {
                       const v = Number(data.fee_limit_sat);
                       return Number.isFinite(v) && v >= 0
