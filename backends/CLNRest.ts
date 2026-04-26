@@ -331,6 +331,9 @@ export default class CLNRest {
             description: data.memo,
             // Use UUID v4 for invoice labels: collision-free even under many
             // concurrent NWC create_invoice calls (CLN rejects duplicate labels).
+            // Format: "zeus.{uuid}" where {uuid} is a v4 UUID string.
+            // BREAKING CHANGE: Previously used numeric format "zeus.{random_number}".
+            // Downstream code should NOT parse label format; treat as opaque identifier.
             label: 'zeus.' + uuidv4(),
             amount_msat: amountMsat,
             expiry: Number(data.expiry_seconds),

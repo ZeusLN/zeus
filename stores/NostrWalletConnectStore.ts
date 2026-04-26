@@ -253,6 +253,67 @@ export interface CreateConnectionParams {
     lastBudgetReset?: Date;
     activity?: ConnectionActivity[];
 }
+
+/**
+ * Centralized validation for NIP-47 amounts (msat and sat).
+ * Enforces: must be finite, must be an exact integer (no float quirks like 1000.0),
+ * must be non-negative.
+ * @param amount The amount to validate
+ * @param name Name for error messages (e.g., "fee_limit_msat")
+ * @returns { valid: true } or { valid: false, error: string }
+ */
+function validateNip47Amount(
+    amount: unknown,
+    name: string
+): { valid: true } | { valid: false; error: string } {
+    if (amount === undefined || amount === null) {
+        return { valid: true }; // undefined/null is explicitly allowed
+    }
+
+    // Must be a number type
+    if (typeof amount !== 'number') {
+        return {
+            valid: false,
+            error: `${name} must be a number, got ${typeof amount}`
+        };
+    }
+
+    // Must be finite (not Infinity, NaN, etc.)
+    if (!Number.isFinite(amount)) {
+        return {
+            valid: false,
+            error: `${name} must be finite, got ${amount}`
+        };
+    }
+
+    // Must be an exact integer (no float quirks like 1000.0)
+    // Use modulo instead of isInteger() to catch JavaScript quirks
+    if (amount % 1 !== 0) {
+        return {
+            valid: false,
+            error: `${name} must be an integer, got ${amount}`
+        };
+    }
+
+    // Must be non-negative
+    if (amount < 0) {
+        return {
+            valid: false,
+            error: `${name} must be non-negative, got ${amount}`
+        };
+    }
+
+    // For very large amounts, check against uint64 max (2^63-1 = 9223372036854775807)
+    if (amount > 9223372036854775807) {
+        return {
+            valid: false,
+            error: `${name} exceeds uint64 max value`
+        };
+    }
+
+    return { valid: true };
+}
+
 export default class NostrWalletConnectStore {
     @observable public loading = false;
     @observable public error = false;
@@ -2455,18 +2516,16 @@ export default class NostrWalletConnectStore {
             const requestAmountMsats = hasRequestAmount
                 ? Number(request.amount)
                 : 0;
-            if (
-                hasRequestAmount &&
-                (!Number.isFinite(requestAmountMsats) ||
-                    !Number.isInteger(requestAmountMsats) ||
-                    requestAmountMsats < 0)
-            ) {
-                return this.handleError(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
-                    ),
-                    ErrorCodes.INVALID_PARAMS
-                );
+            if (hasRequestAmount) {
+                const validation = validateNip47Amount(requestAmountMsats, 'amount');
+                if (!validation.valid) {
+                    return this.handleError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                        ),
+                        ErrorCodes.INVALID_PARAMS
+                    );
+                }
             }
             // All msat-to-sat conversions use ceil (round UP) to ensure
             // sub-sat amounts never bypass budget limits or appear cheaper to users.
@@ -3088,10 +3147,10 @@ export default class NostrWalletConnectStore {
         const reqFeeLimitSat = Number(req.fee_limit_sat);
         if (
             req.fee_limit_msat !== undefined &&
-            req.fee_limit_msat !== null &&
-            Number.isFinite(reqFeeLimitMsat)
+            req.fee_limit_msat !== null
         ) {
-            if (!Number.isInteger(reqFeeLimitMsat) || reqFeeLimitMsat < 0) {
+            const validation = validateNip47Amount(reqFeeLimitMsat, 'fee_limit_msat');
+            if (!validation.valid) {
                 return this.handleError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invalidAmountMsats'
@@ -3103,10 +3162,10 @@ export default class NostrWalletConnectStore {
             feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
         } else if (
             req.fee_limit_sat !== undefined &&
-            req.fee_limit_sat !== null &&
-            Number.isFinite(reqFeeLimitSat)
+            req.fee_limit_sat !== null
         ) {
-            if (!Number.isInteger(reqFeeLimitSat) || reqFeeLimitSat < 0) {
+            const validation = validateNip47Amount(reqFeeLimitSat, 'fee_limit_sat');
+            if (!validation.valid) {
                 return this.handleError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invalidAmountMsats'
@@ -3352,12 +3411,9 @@ export default class NostrWalletConnectStore {
             amountMsats = Math.floor(Number((invoice as any).millisatoshis));
         } else if (request.amount !== undefined && request.amount !== null) {
             const normalizedRequestAmount = Number(request.amount);
-            // Validate request amount same as lightning path: finite, integer, positive
-            if (
-                !Number.isFinite(normalizedRequestAmount) ||
-                !Number.isInteger(normalizedRequestAmount) ||
-                normalizedRequestAmount <= 0
-            ) {
+            // Validate request amount: must be finite, integer, positive
+            const validation = validateNip47Amount(normalizedRequestAmount, 'amount');
+            if (!validation.valid || normalizedRequestAmount <= 0) {
                 return this.handleError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invalidAmountMsats'
@@ -5118,7 +5174,24 @@ export default class NostrWalletConnectStore {
                           connection.pubkey,
                           event.content
                       );
-            request = JSON.parse(decryptedContent);
+            // Parse JSON separately from decryption to distinguish error types
+            try {
+                request = JSON.parse(decryptedContent);
+            } catch (parseError) {
+                console.error(
+                    'NWC: Failed to parse JSON after successful decryption',
+                    {
+                        parseError,
+                        encryptionScheme,
+                        decryptedContentLength: decryptedContent.length,
+                        diagnostic:
+                            'The encryption/decryption succeeded but the content is not valid JSON. ' +
+                            'This may indicate client sending malformed NIP-47 requests or a protocol mismatch.',
+                        eventStr
+                    }
+                );
+                throw parseError;
+            }
         } catch (error) {
             const encryptionTag =
                 event.tags.find(
@@ -5127,17 +5200,26 @@ export default class NostrWalletConnectStore {
                         tag.length >= 2 &&
                         tag[0] === 'encryption'
                 )?.[1] || 'none';
-            console.error('NWC: Failed to decrypt or parse event content', {
+
+            // Distinguish between decryption and JSON parsing failures for clearer logs
+            const isDecryptionError =
+                error instanceof Error &&
+                error.message.includes('Failed to parse JSON');
+            const errorType = isDecryptionError ? 'JSON_PARSE' : 'DECRYPTION';
+
+            console.error('NWC: Failed to process event content', {
                 error,
+                errorType,
                 encryptionScheme,
                 encryptionTag,
                 diagnostic:
-                    `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
-                    `If this persists, the client may be using a different encryption scheme than expected.`,
+                    errorType === 'DECRYPTION'
+                        ? `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
+                          `If this persists, the client may be using a different encryption scheme than expected.`
+                        : `JSON parsing failed after successful decryption. The decrypted content is not valid JSON.`,
                 eventStr
             });
             throw error;
-        }
 
         return {
             request,
@@ -5789,18 +5871,12 @@ export default class NostrWalletConnectStore {
                     encryptionScheme: 'nip44_v2'
                 };
             } catch (error) {
-                // NIP-44 decryption failed. Per NIP-44 security model, if a client
-                // explicitly negotiated NIP-44 encryption, silently falling back to
-                // NIP-04 violates the explicit scheme declaration. However, for
-                // transient encryption errors (e.g., key derivation issues), we must
-                // still respond to the client to avoid timeout.
-                //
-                // Strategy: Fall back to NIP-04 for response events so the client
-                // receives a response, but log this as a security event for monitoring.
-                // Clients that strictly validate encryption schemes will see the mismatch
-                // and handle it appropriately.
-                console.warn(
-                    'NWC: NIP-44 encryption failed, falling back to NIP-04 response',
+                // Per NIP-44 security model, if a client explicitly negotiated NIP-44 encryption,
+                // we MUST NOT silently fall back to NIP-04. That would be a security downgrade
+                // attack, allowing attackers to force plaintext transmission of sensitive payment data.
+                // Reject with explicit error instead.
+                console.error(
+                    'NWC: NIP-44 encryption failed; rejecting response to prevent downgrade attack',
                     {
                         ...context,
                         connectionId: connection.id,
@@ -5808,22 +5884,43 @@ export default class NostrWalletConnectStore {
                             error instanceof Error
                                 ? error.message
                                 : String(error),
-                        clientExpectedScheme: 'nip44_v2',
-                        actualScheme: 'nip04'
+                        clientExpectedScheme: 'nip44_v2'
                     }
                 );
-                // Fall through to NIP-04 as safety fallback
+                // Return error response with explicit UNSUPPORTED_ENCRYPTION to signal failure
+                throw new Error(
+                    `NIP-44 encryption failed: ${error instanceof Error ? error.message : String(error)}`
+                );
             }
         }
 
-        return {
-            content: nip04.encrypt(
-                servicePrivateKey,
-                connection.pubkey,
-                payloadString
-            ),
-            encryptionScheme: 'nip04'
-        };
+        // NIP-04 is the fallback for clients that didn't explicitly negotiate NIP-44
+        try {
+            return {
+                content: nip04.encrypt(
+                    servicePrivateKey,
+                    connection.pubkey,
+                    payloadString
+                ),
+                encryptionScheme: 'nip04'
+            };
+        } catch (error) {
+            // NIP-04 encryption failure is also fatal; we cannot respond to the client
+            console.error(
+                'NWC: NIP-04 encryption failed; response cannot be encrypted',
+                {
+                    ...context,
+                    connectionId: connection.id,
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : String(error)
+                }
+            );
+            throw new Error(
+                `NIP-04 encryption failed: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
     }
 
     private getNotificationEventKind(
