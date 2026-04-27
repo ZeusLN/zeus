@@ -300,7 +300,9 @@ export const sendPaymentV2Sync = async (
     const {
         payment_request,
         amt,
+        amt_msat,
         fee_limit_sat,
+        fee_limit_msat,
         last_hop_pubkey,
         route_hints,
         dest_custom_records,
@@ -319,7 +321,11 @@ export const sendPaymentV2Sync = async (
         no_inflight_updates: true,
         timeout_seconds,
         max_parts,
-        fee_limit_sat,
+        ...(fee_limit_msat != null
+            ? { fee_limit_msat }
+            : fee_limit_sat != null
+              ? { fee_limit_sat }
+              : {}),
         route_hints,
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,
@@ -327,7 +333,10 @@ export const sendPaymentV2Sync = async (
         outgoing_chan_ids,
         max_shard_size_msat,
         dest_custom_records,
-        amt,
+        // Preserve sub-sat precision when present; older callers still fall back to whole sats.
+        ...(amt_msat !== undefined && amt_msat !== null
+            ? { amt_msat }
+            : { amt }),
         payment_hash,
         amp,
         dest
@@ -406,9 +415,10 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
     const {
         dest,
         amt,
+        amt_msat,
         dest_custom_records,
         payment_hash,
-        fee_limit_sat,
+        fee_limit_msat,
         max_shard_size_msat,
         max_parts,
         cltv_limit,
@@ -417,17 +427,20 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
 
     const options: routerrpc.ISendPaymentRequest = {
         dest: Base64Utils.hexToBytes(dest),
-        amt,
         dest_custom_records,
         payment_hash,
         dest_features: [lnrpc.FeatureBit.TLV_ONION_REQ],
         no_inflight_updates: true,
         timeout_seconds: 60,
         max_parts: max_parts || 1,
-        fee_limit_sat,
+        ...(fee_limit_msat != null ? { fee_limit_msat } : {}),
         max_shard_size_msat,
         cltv_limit: cltv_limit || 0,
-        amp
+        amp,
+        // Preserve sub-sat precision when present; older callers still fall back to whole sats.
+        ...(amt_msat !== undefined && amt_msat !== null
+            ? { amt_msat }
+            : { amt })
     };
 
     return new Promise(async (resolve, reject) => {

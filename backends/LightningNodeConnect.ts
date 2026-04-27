@@ -187,7 +187,38 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .addInvoice({
                 memo: data.memo,
-                value_msat: data.value_msat || Number(data.value) * 1000,
+                ...(() => {
+                    const valueMsat =
+                        data.value_msat !== undefined &&
+                        data.value_msat !== null
+                            ? Number(data.value_msat)
+                            : undefined;
+                    const valueSat =
+                        data.value !== undefined && data.value !== null
+                            ? Number(data.value)
+                            : undefined;
+                    const normalizedValueMsat =
+                        typeof valueMsat === 'number' &&
+                        Number.isFinite(valueMsat)
+                            ? valueMsat
+                            : undefined;
+                    const normalizedValueSat =
+                        typeof valueSat === 'number' &&
+                        Number.isFinite(valueSat)
+                            ? valueSat
+                            : undefined;
+                    const amountMsat =
+                        normalizedValueMsat !== undefined &&
+                        normalizedValueMsat > 0
+                            ? Math.trunc(normalizedValueMsat)
+                            : normalizedValueSat !== undefined &&
+                              normalizedValueSat > 0
+                            ? Math.trunc(normalizedValueSat * 1000)
+                            : undefined;
+                    return amountMsat !== undefined
+                        ? { value_msat: amountMsat }
+                        : {};
+                })(),
                 expiry: data.expiry_seconds,
                 is_amp: data.is_amp,
                 is_blinded: data.is_blinded,
@@ -341,11 +372,73 @@ export default class LightningNodeConnect {
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
             .then((data: lnrpc.PayReq) => snakeize(data));
     payLightningInvoice = (data: any) => {
-        if (data.pubkey) delete data.pubkey;
-        return this.lnc.lnd.router.sendPaymentV2({
+        const request: any = {
             ...data,
             allow_self_payment: true
-        });
+        };
+
+        // LNC mirrors LND router field names and expects the numeric inputs
+        // as strings (LND uint64 fields). Stringify symmetrically so values
+        // can never reach the wire as raw numbers (which lose precision past
+        // 2^53 and may be rejected by stricter protobuf wrappers). When the
+        // input is already a pure-integer string (as NWC passes), parse via
+        // BigInt to preserve uint64 precision without Number() rounding.
+        const MAX_LNC_MSAT = 9223372036854775807n; // 2^63-1
+        const safeMsatString = (raw: unknown, allowZero = false): string | null => {
+            if (raw === undefined || raw === null) return null;
+            if (typeof raw === 'string' && /^\d+$/.test(raw)) {
+                const bi = BigInt(raw);
+                if ((!allowZero && bi <= 0n) || bi > MAX_LNC_MSAT) return null;
+                return bi.toString();
+            }
+            const v = Number(raw);
+            if (!Number.isFinite(v) || (!allowZero && v <= 0) || (allowZero && v < 0)) return null;
+            const bi = BigInt(Math.trunc(v));
+            if (bi > MAX_LNC_MSAT) return null;
+            return bi.toString();
+        };
+        let amountSet = false;
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
+            const s = safeMsatString(data.amount_msat);
+            if (s !== null) {
+                request.amt_msat = s;
+                delete request.amt;
+                delete request.amount;
+                amountSet = true;
+            }
+        }
+        if (!amountSet && data.amt !== undefined && data.amt !== null) {
+            const v = Number(data.amt);
+            if (Number.isFinite(v) && v > 0) {
+                request.amt = String(Math.trunc(v));
+            }
+            delete request.amount;
+        }
+        delete request.amount_msat;
+        delete request.amount;
+
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
+            const s = safeMsatString(data.fee_limit_msat, true);
+            if (s !== null) {
+                request.fee_limit_msat = s;
+            } else {
+                delete request.fee_limit_msat;
+            }
+            delete request.fee_limit_sat;
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
+            const v = Number(data.fee_limit_sat);
+            if (Number.isFinite(v) && v >= 0) {
+                request.fee_limit_sat = String(Math.trunc(v));
+            } else {
+                delete request.fee_limit_sat;
+            }
+        }
+
+        if (data.pubkey) delete request.pubkey;
+        return this.lnc.lnd.router.sendPaymentV2(request);
     };
     closeChannel = async (urlParams?: Array<string>) => {
         let params: any = {

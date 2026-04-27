@@ -31,6 +31,7 @@ import NostrConnectUtils, {
     PermissionOption,
     IndividualPermissionOption
 } from '../../../utils/NostrConnectUtils';
+import { isValidNostrRelayUrl } from '../../../utils/NostrWalletConnectUrlUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NostrWalletConnectStore, {
@@ -60,6 +61,8 @@ interface AddOrEditNWCConnectionState {
     selectedRelayUrl: string;
     customRelayUrl: string;
     selectedPermissions: Nip47SingleMethod[];
+    includeLightningAddress: boolean;
+    includeLightningAddressInitialized: boolean;
     selectedBudgetRenewalIndex: number;
     expiresAt: Date | undefined;
     error: string;
@@ -90,6 +93,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedRelayUrl: DEFAULT_NOSTR_RELAYS[0],
             customRelayUrl: '',
             selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
+            includeLightningAddress: false,
+            includeLightningAddressInitialized: false,
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
             error: '',
@@ -109,6 +114,15 @@ export default class AddOrEditNWCConnection extends React.Component<
     }
 
     private unsubscribeFocus?: () => void;
+
+    private hasActiveLightningAddress = (): boolean => {
+        const { NostrWalletConnectStore } = this.props;
+        return (
+            NostrWalletConnectStore.lightningAddressStore
+                .lightningAddressActivated &&
+            !!NostrWalletConnectStore.lightningAddressStore.lightningAddress
+        );
+    };
 
     loadData = async () => {
         const { route, NostrWalletConnectStore } = this.props;
@@ -132,11 +146,15 @@ export default class AddOrEditNWCConnection extends React.Component<
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
         const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
-        const existingBudgetValue = this.state.budgetValue || 0;
-        this.setState({
+        this.setState((prevState) => ({
             maxBudgetLimit: Math.max(0, maxLimit),
-            budgetValue: existingBudgetValue
-        });
+            budgetValue: prevState.budgetValue || 0,
+            includeLightningAddress:
+                prevState.includeLightningAddressInitialized
+                    ? prevState.includeLightningAddress
+                    : false,
+            includeLightningAddressInitialized: true
+        }));
     };
 
     componentWillUnmount() {
@@ -181,6 +199,9 @@ export default class AddOrEditNWCConnection extends React.Component<
                     : connection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
                 customRelayUrl: connection.relayUrl || '',
                 selectedPermissions: connection.permissions,
+                includeLightningAddress:
+                    connection.includeLightningAddress ?? false,
+                includeLightningAddressInitialized: true,
                 selectedBudgetRenewalIndex: budgetRenewalIndex,
                 expiresAt: connection.expiresAt!,
                 originalConnection: connection,
@@ -208,6 +229,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     ? this.state.customRelayUrl
                     : this.state.selectedRelayUrl,
             permissions: [...this.state.selectedPermissions].sort(),
+            includeLightningAddress: this.state.includeLightningAddress,
             maxAmountSats:
                 this.state.budgetValue > 0 ? this.state.budgetValue : undefined,
             budgetRenewal:
@@ -227,6 +249,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             name: originalConnection.name,
             relayUrl: originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
             permissions: [...originalConnection.permissions].sort(),
+            includeLightningAddress:
+                originalConnection.includeLightningAddress ?? false,
             maxAmountSats: originalConnection.maxAmountSats,
             budgetRenewal: originalConnection.budgetRenewal || 'never',
             expiresAt: originalConnection.expiresAt
@@ -257,9 +281,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     isValidRelayUrl = (url: string) => {
-        const pattern =
-            /^(wss?:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:\d+)?(\/.*)?$/;
-        return pattern.test(url);
+        return isValidNostrRelayUrl(url);
     };
 
     updateStateWithChangeTracking = (newState: any) => {
@@ -500,7 +522,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryUnit,
             showCustomExpiryInput,
             maxBudgetLimit,
-            customRelayUrl
+            customRelayUrl,
+            includeLightningAddress
         } = this.state;
         const { NostrWalletConnectStore } = this.props;
 
@@ -523,8 +546,24 @@ export default class AddOrEditNWCConnection extends React.Component<
             name: connectionName.trim(),
             relayUrl: isCustomRelay ? customRelayUrl : selectedRelayUrl,
             permissions: selectedPermissions,
-            budgetRenewal
+            budgetRenewal,
+            includeLightningAddress
         };
+        const resolvedLightningAddress =
+            this.state.originalConnection?.lud16 ||
+            (NostrWalletConnectStore.lightningAddressStore
+                .lightningAddressActivated
+                ? NostrWalletConnectStore.lightningAddressStore.lightningAddress
+                : undefined);
+        // If the user toggled includeLightningAddress on but no address is
+        // available (deactivated or cleared), silently clear the flag so
+        // updateConnection/createConnection never receive an empty lud16.
+        if (includeLightningAddress && !resolvedLightningAddress) {
+            params.includeLightningAddress = false;
+        }
+        if (includeLightningAddress && resolvedLightningAddress) {
+            params.lud16 = resolvedLightningAddress;
+        }
 
         // Budget is required when pay_invoice is among the permissions
         if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {
@@ -585,6 +624,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
+            const activity = connection.activity;
             const params = await this.buildConnectionParams(
                 false,
                 connectionId
@@ -592,15 +632,33 @@ export default class AddOrEditNWCConnection extends React.Component<
             if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
-            await NostrWalletConnectStore.deleteConnection(connectionId);
-            const nostrUrl = await NostrWalletConnectStore.createConnection(
-                params
-            );
+            params.activity = activity;
+            const { nostrUrl, connectionId: createdConnectionId } =
+                await NostrWalletConnectStore.createConnection({
+                    ...params,
+                    id: undefined,
+                    replaceConnectionId: connectionId
+                });
             if (nostrUrl) {
-                const createdConnection =
-                    NostrWalletConnectStore.connections[0];
+                try {
+                    await NostrWalletConnectStore.deleteConnection(
+                        connectionId
+                    );
+                } catch (deleteError) {
+                    try {
+                        await NostrWalletConnectStore.deleteConnection(
+                            createdConnectionId
+                        );
+                    } catch (rollbackError) {
+                        console.warn(
+                            'Failed to roll back regenerated connection after delete failure:',
+                            rollbackError
+                        );
+                    }
+                    throw deleteError;
+                }
                 navigation.navigate('NWCConnectionQR', {
-                    connectionId: createdConnection.id,
+                    connectionId: createdConnectionId,
                     nostrUrl
                 });
             }
@@ -629,18 +687,29 @@ export default class AddOrEditNWCConnection extends React.Component<
                     connectionId,
                     params
                 );
-                if (updated) {
-                    setTimeout(() => navigation.goBack(), 100);
+                if (updated.success) {
+                    if (updated.nostrUrl) {
+                        navigation.navigate('NWCConnectionQR', {
+                            connectionId,
+                            nostrUrl: updated.nostrUrl
+                        });
+                    } else {
+                        setTimeout(() => navigation.goBack(), 100);
+                    }
+                } else {
+                    throw new Error(
+                        NostrWalletConnectStore.errorMessage ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                            )
+                    );
                 }
             } else {
-                const nostrUrl = await NostrWalletConnectStore.createConnection(
-                    params
-                );
+                const { nostrUrl, connectionId: createdConnectionId } =
+                    await NostrWalletConnectStore.createConnection(params);
                 if (nostrUrl) {
-                    const createdConnection =
-                        NostrWalletConnectStore.connections[0];
                     navigation.navigate('NWCConnectionQR', {
-                        connectionId: createdConnection.id,
+                        connectionId: createdConnectionId,
                         nostrUrl
                     });
                 }
@@ -845,13 +914,9 @@ export default class AddOrEditNWCConnection extends React.Component<
             );
         }
 
-        return this.isRelayChanged()
-            ? localeString(
-                  'views.Settings.NostrWalletConnect.regenerateConnection'
-              )
-            : localeString(
-                  'views.Settings.NostrWalletConnect.updateConnection'
-              );
+        return localeString(
+            'views.Settings.NostrWalletConnect.updateConnection'
+        );
     };
 
     isButtonDisabled = (): boolean => {
@@ -879,9 +944,13 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryUnit,
             budgetValue,
             selectedPermissions,
-            customRelayUrl
+            customRelayUrl,
+            includeLightningAddress
         } = this.state;
         const { persistentNWCServiceEnabled } = NostrWalletConnectStore;
+        const hasActiveLightningAddress = this.hasActiveLightningAddress();
+        const activeLightningAddress =
+            NostrWalletConnectStore.lightningAddressStore.lightningAddress;
         const budgetRenewalButtons: any =
             NostrConnectUtils.getBudgetRenewalOptions().map(
                 (option, index) => ({
@@ -1129,6 +1198,86 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 </View>
                             )}
                         </View>
+
+                        {(hasActiveLightningAddress ||
+                            includeLightningAddress) && (
+                            <View style={styles.section}>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        marginHorizontal: 15,
+                                        marginTop: 10
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 17,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontWeight: '400'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.includeLightningAddress'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 14,
+                                                marginTop: 4,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {hasActiveLightningAddress
+                                                ? localeString(
+                                                      'views.Settings.NostrWalletConnect.includeLightningAddressDescription',
+                                                      {
+                                                          lightningAddress:
+                                                              activeLightningAddress
+                                                      }
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.NostrWalletConnect.includeLightningAddressMissing'
+                                                  )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={includeLightningAddress}
+                                            disabled={
+                                                !hasActiveLightningAddress &&
+                                                !includeLightningAddress
+                                            }
+                                            onValueChange={(value: boolean) =>
+                                                this.updateStateWithChangeTracking(
+                                                    {
+                                                        includeLightningAddress:
+                                                            value,
+                                                        includeLightningAddressInitialized:
+                                                            true
+                                                    }
+                                                )
+                                            }
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        )}
 
                         {/* Permission Types */}
                         <View style={styles.section}>
@@ -1555,11 +1704,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     >
                         <Button
                             title={this.getButtonTitle()}
-                            onPress={
-                                route.params?.isEdit && this.isRelayChanged()
-                                    ? this.regenerateConnection
-                                    : this.createOrUpdateConnection
-                            }
+                            onPress={this.createOrUpdateConnection}
                             secondary={this.isButtonDisabled()}
                             disabled={this.isButtonDisabled()}
                             noUppercase

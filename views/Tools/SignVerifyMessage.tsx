@@ -902,9 +902,9 @@ export default class SignVerifyMessage extends React.Component<
                                     icon={{
                                         name: 'create'
                                     }}
-                                    onPress={() => {
+                                    onPress={async () => {
                                         if (this.validateSigningInput()) {
-                                            signMessage(messageToSign.trim());
+                                            await signMessage(messageToSign.trim());
                                         }
                                     }}
                                 />

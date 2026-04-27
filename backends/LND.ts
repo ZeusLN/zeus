@@ -335,18 +335,42 @@ export default class LND {
             }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
         );
     createInvoice = (data: any) =>
-        this.postRequest('/v1/invoices', {
-            memo: data.memo,
-            value_msat: data.value_msat || Number(data.value) * 1000,
-            expiry: data.expiry_seconds,
-            is_amp: data.is_amp,
-            is_blinded: data.is_blinded,
-            private: data.private,
-            r_preimage: data.preimage
-                ? Base64Utils.hexToBase64(data.preimage)
-                : undefined,
-            route_hints: data.route_hints
-        });
+        (() => {
+            const valueMsat =
+                data.value_msat !== undefined && data.value_msat !== null
+                    ? Number(data.value_msat)
+                    : undefined;
+            const valueSat =
+                data.value !== undefined && data.value !== null
+                    ? Number(data.value)
+                    : undefined;
+            const normalizedValueMsat =
+                typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                    ? valueMsat
+                    : undefined;
+            const normalizedValueSat =
+                typeof valueSat === 'number' && Number.isFinite(valueSat)
+                    ? valueSat
+                    : undefined;
+            const amountMsat =
+                normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                    ? Math.trunc(normalizedValueMsat)
+                    : normalizedValueSat !== undefined && normalizedValueSat > 0
+                    ? Math.trunc(normalizedValueSat * 1000)
+                    : undefined;
+            return this.postRequest('/v1/invoices', {
+                memo: data.memo,
+                ...(amountMsat !== undefined ? { value_msat: amountMsat } : {}),
+                expiry: data.expiry_seconds,
+                is_amp: data.is_amp,
+                is_blinded: data.is_blinded,
+                private: data.private,
+                r_preimage: data.preimage
+                    ? Base64Utils.hexToBase64(data.preimage)
+                    : undefined,
+                route_hints: data.route_hints
+            });
+        })();
     getPayments = (
         params: { maxPayments?: number; reversed?: boolean } = {
             maxPayments: 500,
@@ -500,10 +524,130 @@ export default class LND {
         const call = () =>
             this.postRequest(
                 '/v2/router/send',
-                {
-                    ...data,
-                    allow_self_payment: true
-                },
+                (() => {
+                    const request: any = {
+                        ...data,
+                        allow_self_payment: true
+                    };
+
+                    // LND router RPC uses amt_msat/fee_limit_msat even when
+                    // older callers still send sat aliases. Validate inputs
+                    // are finite positive numbers before forwarding so a
+                    // bogus upstream value (NaN / Infinity / "") doesn't
+                    // reach LND. Stringify uint64 numerics so REST/gRPC keep
+                    // full precision for large msat values (>2^53).
+                    //
+                    // For values that exceed Number.MAX_SAFE_INTEGER we use
+                    // BigInt when the raw input is a string to avoid silent
+                    // precision loss.  Values beyond the LND uint64 ceiling
+                    // (2^63-1 msats) are rejected outright.
+                    //
+                    // Validation ensures:
+                    // - NaN is rejected (Number.isFinite check)
+                    // - Infinity is rejected (Number.isFinite check)
+                    // - Negative values are rejected (v <= 0 or bi <= 0n check)
+                    // - Unsafe integers (> 2^53) are rejected (overflow check)
+                    // - Values > 2^63-1 are rejected (BigInt overflow check)
+                    const MAX_LND_MSAT = 9223372036854775807n; // 2^63-1
+                    const safeAmtMsatString = (raw: unknown): string | null => {
+                        if (raw === undefined || raw === null) return null;
+                        if (
+                            typeof raw === 'string' &&
+                            /^\d+$/.test(raw as string)
+                        ) {
+                            const bi = BigInt(raw as string);
+                            if (bi <= 0n || bi > MAX_LND_MSAT) return null;
+                            return bi.toString();
+                        }
+                        const v = Number(raw);
+                        // Rejects NaN, Infinity, and negative values
+                        if (!Number.isFinite(v) || v <= 0) return null;
+                        const bi = BigInt(Math.trunc(v));
+                        if (bi > MAX_LND_MSAT) return null;
+                        return bi.toString();
+                    };
+                    const safeFeeMsatString = (raw: unknown): string | null => {
+                        if (raw === undefined || raw === null) return null;
+                        if (
+                            typeof raw === 'string' &&
+                            /^\d+$/.test(raw as string)
+                        ) {
+                            const bi = BigInt(raw as string);
+                            // Fee can be zero (no fee limit), but not negative or >uint64
+                            if (bi < 0n || bi > MAX_LND_MSAT) return null;
+                            return bi.toString();
+                        }
+                        const v = Number(raw);
+                        // Rejects NaN, Infinity, and negative values
+                        if (!Number.isFinite(v) || v < 0) return null;
+                        const bi = BigInt(Math.trunc(v));
+                        if (bi > MAX_LND_MSAT) return null;
+                        return bi.toString();
+                    };
+                    let amountSet = false;
+                    if (
+                        data.amount_msat !== undefined &&
+                        data.amount_msat !== null
+                    ) {
+                        const s = safeAmtMsatString(data.amount_msat);
+                        if (s !== null) {
+                            request.amt_msat = s;
+                            delete request.amt;
+                            delete request.amount;
+                            amountSet = true;
+                        }
+                    }
+                    if (
+                        !amountSet &&
+                        data.amt !== undefined &&
+                        data.amt !== null
+                    ) {
+                        const s = safeAmtMsatString(data.amt);
+                        if (s !== null) {
+                            request.amt = s;
+                            amountSet = true;
+                        }
+                        delete request.amount;
+                    }
+                    // Strip the alias key after we've extracted from it so
+                    // it doesn't leak through to LND alongside amt_msat.
+                    delete request.amount_msat;
+                    delete request.amount;
+
+                    if (
+                        data.fee_limit_msat !== undefined &&
+                        data.fee_limit_msat !== null
+                    ) {
+                        const s = safeFeeMsatString(data.fee_limit_msat);
+                        if (s !== null) {
+                            request.fee_limit_msat = s;
+                        } else {
+                            delete request.fee_limit_msat;
+                        }
+                        delete request.fee_limit_sat;
+                    } else if (
+                        data.fee_limit_sat !== undefined &&
+                        data.fee_limit_sat !== null
+                    ) {
+                        const s = safeFeeMsatString(data.fee_limit_sat);
+                        if (s !== null) {
+                            request.fee_limit_sat = s;
+                        } else {
+                            delete request.fee_limit_sat;
+                        }
+                    }
+                    if (request.max_shard_amt !== undefined) {
+                        // Zeus tracks shard caps in sats, but router.send expects millisats.
+                        const v = Number(request.max_shard_amt);
+                        if (Number.isFinite(v) && v >= 0) {
+                            request.max_shard_size_msat = Math.trunc(v * 1000);
+                        } else {
+                            delete request.max_shard_size_msat;
+                        }
+                        delete request.max_shard_amt;
+                    }
+                    return request;
+                })(),
                 data.timeout_seconds * 1000
             );
 

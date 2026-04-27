@@ -17,6 +17,7 @@ import type {
     Nip47ListTransactionsRequest,
     Nip47ListTransactionsResponse,
     Nip47Transaction,
+    Nip47NotificationType,
     Nip47SignMessageResponse,
     Nip47SignMessageRequest,
     Nip47SingleMethod
@@ -38,6 +39,8 @@ import {
     verifySignature
 } from 'nostr-tools';
 import * as nip04 from '@nostr/tools/nip04';
+import * as nip44 from '@nostr/tools/nip44';
+import { hexToBytes } from '@noble/hashes/utils';
 
 import {
     Platform,
@@ -53,9 +56,15 @@ import { v4 as uuidv4 } from 'uuid';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
+import {
+    buildNostrWalletConnectUrl,
+    InvalidLightningAddressError,
+    isValidLightningAddress,
+    isValidNostrRelayUrl
+} from '../utils/NostrWalletConnectUrlUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
-import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
+import { satsToMillisats } from '../utils/AmountUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NWCConnection, {
@@ -66,6 +75,7 @@ import NWCConnection, {
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
+import type { StoredNWCConnectionData } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
 import Payment from '../models/Payment';
@@ -86,12 +96,24 @@ import ModalStore from './ModalStore';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_PENDING_PAYMENTS = 'zeus-nwc-pending-payments';
+const NWC_PROCESSED_REPLAY_EVENTS = 'zeus-nwc-processed-replay-events';
+const NWC_REPLAY_RESPONSES = 'zeus-nwc-replay-responses';
+const NWC_COMMITTED_RESTORE_MARKER_FAILURES =
+    'zeus-nwc-committed-restore-marker-failures';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
     'https://nwc-ios-handoff.zeusln.com/api/v1';
+
+// Mutex keys for serializing critical operations
+enum NWCMutexKey {
+    ProcessedReplayEvents = 'processed-replay-events',
+    ReplayResponses = 'replay-responses',
+    CommittedRestoreMarkerFailures = 'committed-restore-marker-failures',
+    PayInvoice = 'pay_invoice'
+}
 
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
@@ -100,6 +122,15 @@ const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
+const PAY_INVOICE_MUTEX_TIMEOUT_MS = (PAYMENT_TIMEOUT_SECONDS + 30) * 1000;
+// Replay cache limits: keep up to 1000 responses and processed event IDs
+// to prevent unbounded memory growth in long-running sessions
+const MAX_REPLAY_RESPONSES = 1000;
+const MAX_PROCESSED_REPLAY_EVENTS = 1000;
+// Cache entries older than 24 hours are considered stale and rejected even if in cache
+// This prevents double-charging if a replay arrives after FIFO eviction but within event TTL
+const REPLAY_CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000;
+const REPLAY_MARKER_PERSISTENCE_ERROR = 'Failed to persist replay marker';
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -107,16 +138,27 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io'
 ];
 
+// Per NIP-47 spec: get_info requires NO permissions and should always be available
+// All methods except get_info require explicit connection permissions
+const NWC_METHODS_REQUIRING_CONNECTION_PERMISSION =
+    NostrConnectUtils.getFullAccessPermissions().filter(
+        (method) => method !== 'get_info'
+    );
+
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
+    INVALID_PARAMS = 'INVALID_PARAMS',
     INVALID_INVOICE = 'INVALID_INVOICE',
     FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
     NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
+    RESTRICTED = 'RESTRICTED',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
-    INVOICE_EXPIRED = 'INVOICE_EXPIRED'
+    INVOICE_EXPIRED = 'INVOICE_EXPIRED',
+    UNSUPPORTED_ENCRYPTION = 'UNSUPPORTED_ENCRYPTION',
+    QUOTA_EXCEEDED = 'QUOTA_EXCEEDED'
 }
 
 interface ClientKeys {
@@ -126,6 +168,13 @@ interface ClientKeys {
 interface WalletServiceKeys {
     privateKey: string;
     publicKey: string;
+}
+
+interface StoredReplayResponse {
+    method: Nip47SingleMethod;
+    response: any;
+    encryptionScheme: NwcEncryptionScheme;
+    cachedAt: number; // Timestamp when response was cached (ms since epoch)
 }
 
 interface NostrEvent {
@@ -147,12 +196,26 @@ interface NWCRequest {
     params: any;
 }
 
+type NwcEncryptionScheme = 'nip04' | 'nip44_v2';
+
+class UnsupportedEncryptionError extends Error {
+    constructor(
+        public readonly connection: NWCConnection,
+        public readonly eventId: string,
+        public readonly encryptionScheme: string
+    ) {
+        super('UNSUPPORTED_ENCRYPTION');
+        this.name = 'UnsupportedEncryptionError';
+    }
+}
+
 interface InvoiceEventType {
     eventStr: string;
     request: NWCRequest;
     connection: NWCConnection;
     eventId: string;
     amount: number;
+    encryptionScheme: NwcEncryptionScheme;
 }
 
 export interface PendingPayment {
@@ -162,13 +225,22 @@ export interface PendingPayment {
     eventId: string;
     connectionName: string;
     amount: number;
+    encryptionScheme?: NwcEncryptionScheme;
     isProcessed?: boolean;
     status?: boolean;
     errorMessage?: string;
 }
 
+interface NWCEventRequestResult {
+    success: boolean;
+    errorMessage?: string;
+    committed: boolean;
+    published?: boolean;
+}
+
 export interface CreateConnectionParams {
     id?: string; // For Regenerating connections with the same Id
+    replaceConnectionId?: string;
     name: string;
     relayUrl: string;
     permissions?: Nip47SingleMethod[];
@@ -177,10 +249,75 @@ export interface CreateConnectionParams {
     expiresAt?: Date;
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
+    includeLightningAddress?: boolean;
+    lud16?: string | null;
     totalSpendSats?: number;
     lastBudgetReset?: Date;
     activity?: ConnectionActivity[];
 }
+
+/**
+ * Centralized validation for NIP-47 amounts (msat and sat).
+ * Enforces: must be finite, must be an exact integer (no float quirks like 1000.0),
+ * must be non-negative.
+ * @param amount The amount to validate
+ * @param name Name for error messages (e.g., "fee_limit_msat")
+ * @returns { valid: true } or { valid: false, error: string }
+ */
+function validateNip47Amount(
+    amount: unknown,
+    name: string
+): { valid: true } | { valid: false; error: string } {
+    if (amount === undefined || amount === null) {
+        return { valid: true }; // undefined/null is explicitly allowed
+    }
+
+    // Must be a number type
+    if (typeof amount !== 'number') {
+        return {
+            valid: false,
+            error: `${name} must be a number, got ${typeof amount}`
+        };
+    }
+
+    // Must be finite (not Infinity, NaN, etc.)
+    if (!Number.isFinite(amount)) {
+        return {
+            valid: false,
+            error: `${name} must be finite, got ${amount}`
+        };
+    }
+
+    // Must be an exact integer (reject fractional values like 1000.5)
+    if (amount % 1 !== 0) {
+        return {
+            valid: false,
+            error: `${name} must be an integer, got ${amount}`
+        };
+    }
+
+    // Must be non-negative
+    if (amount < 0) {
+        return {
+            valid: false,
+            error: `${name} must be non-negative, got ${amount}`
+        };
+    }
+
+    // JS numbers can only exactly represent integers up to Number.MAX_SAFE_INTEGER
+    // (2^53 - 1 = 9007199254740991). Any amount above this threshold can suffer
+    // silent precision loss when deserialized from JSON, so we reject it here.
+    // Callers that need to work with larger values should use string representation.
+    if (amount > Number.MAX_SAFE_INTEGER) {
+        return {
+            valid: false,
+            error: `${name} exceeds safe integer limit (${Number.MAX_SAFE_INTEGER})`
+        };
+    }
+
+    return { valid: true };
+}
+
 export default class NostrWalletConnectStore {
     @observable public loading = false;
     @observable public error = false;
@@ -209,11 +346,15 @@ export default class NostrWalletConnectStore {
     @observable public processedPendingPayInvoiceEventIds: string[] = [];
     @observable public failedPendingPayInvoiceEventIds: string[] = [];
     @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
+    private replayResponsesCache: Map<string, StoredReplayResponse> | null =
+        null;
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
     private iosBackgroundTimerInterval: any = null;
     private androidReconnectionListener: any = null;
     private appStateListener: any = null;
     private androidLogListener: any = null;
+    private processedReplayEventsCache: Set<string> | null = null;
+    private committedRestoreMarkerFailuresCache: Set<string> | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -248,7 +389,46 @@ export default class NostrWalletConnectStore {
         this.lightningAddressStore = lightningAddressStore;
         this.modalStore = modalStore;
         this.paymentsStore = paymentsStore;
+        if (
+            typeof this.lightningAddressStore
+                .setLightningAddressChangeListener === 'function'
+        ) {
+            this.lightningAddressStore.setLightningAddressChangeListener(
+                this.refreshLightningAddressConnections
+            );
+        }
     }
+
+    public refreshLightningAddressConnections = async (
+        nextLightningAddress: string | null,
+        _previousLightningAddress?: string | null
+    ): Promise<void> => {
+        const normalizedNextLightningAddress = nextLightningAddress?.trim() || '';
+        if (
+            normalizedNextLightningAddress &&
+            !isValidLightningAddress(normalizedNextLightningAddress)
+        ) {
+            throw new InvalidLightningAddressError();
+        }
+
+        const targetLightningAddress = normalizedNextLightningAddress || undefined;
+        let changed = false;
+        runInAction(() => {
+            this.connections.forEach((connection) => {
+                if (!connection.includeLightningAddress) {
+                    return;
+                }
+                if (connection.lud16 !== targetLightningAddress) {
+                    connection.lud16 = targetLightningAddress;
+                    changed = true;
+                }
+            });
+        });
+
+        if (changed) {
+            await this.saveConnections();
+        }
+    };
 
     @action
     public initializeService = async () => {
@@ -352,6 +532,30 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
+    };
+
+    private ensureRelayPublished = async (relayUrl: string) => {
+        if (this.publishedRelays.has(relayUrl) || !this.walletServiceKeys) {
+            return;
+        }
+
+        const nwcWalletService = this.nwcWalletServices.get(relayUrl);
+        if (!nwcWalletService) {
+            return;
+        }
+
+        await this.retryWithBackoff(async () => {
+            await nwcWalletService.publishWalletServiceInfoEvent(
+                this.walletServiceKeys!.privateKey,
+                NostrConnectUtils.getFullAccessPermissions(),
+                NostrConnectUtils.getNotifications()
+            );
+            runInAction(() => {
+                this.publishedRelays.add(relayUrl);
+            });
+        }, 3);
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
     };
     @action
     public startService = async (hasActiveConnections = false) => {
@@ -517,6 +721,31 @@ export default class NostrWalletConnectStore {
     }
 
     /**
+     * Validates that a relay URL uses the secure WebSocket scheme.
+     * @param url The relay URL to validate.
+     * @returns true if valid secure WebSocket scheme, false otherwise.
+     */
+    private validateRelayUrl = (url: string): boolean => {
+        return isValidNostrRelayUrl(url);
+    };
+
+    private localizeConnectionUrlBuildError(error: unknown): Error {
+        if (error instanceof InvalidLightningAddressError) {
+            return new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidLightningAddress'
+                )
+            );
+        }
+        // Safely normalize any error type to Error instance
+        if (error instanceof Error) {
+            return error;
+        }
+        // Fallback for non-Error throws (e.g., strings, objects)
+        return new Error(String(error));
+    }
+
+    /**
      * Creates a new NWC connection with the specified parameters.
      * @param params Configuration for the new connection.
      * @returns The connection URL or null if creation fails.
@@ -525,7 +754,10 @@ export default class NostrWalletConnectStore {
     @action
     public createConnection = async (
         params: CreateConnectionParams
-    ): Promise<string> => {
+    ): Promise<{ nostrUrl: string; connectionId: string }> => {
+        let createdConnectionId: string | undefined;
+        let createdConnectionPersisted = false;
+        let createdConnectionPublicKey: string | undefined;
         try {
             if (!params.name.trim()) {
                 throw new Error(
@@ -534,15 +766,39 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+            const includeLightningAddress =
+                params.includeLightningAddress ?? false;
+            const lud16 =
+                params.lud16 !== undefined
+                    ? params.lud16?.trim() || undefined
+                    : this.getConnectionLud16(includeLightningAddress);
+            if (includeLightningAddress && !lud16) {
+                throw new InvalidLightningAddressError();
+            }
+            if (!isValidLightningAddress(lud16)) {
+                throw new InvalidLightningAddressError();
+            }
+
             const existingConnection = this.connections.find(
                 (c) =>
                     c.name.trim().toLowerCase() ===
                     params.name.trim().toLowerCase()
             );
-            if (existingConnection) {
+            if (
+                existingConnection &&
+                existingConnection.id !== params.replaceConnectionId
+            ) {
                 throw new Error(
                     localeString(
                         'stores.NostrWalletConnectStore.error.connectionNameExists'
+                    )
+                );
+            }
+
+            if (!this.validateRelayUrl(params.relayUrl)) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
                     )
                 );
             }
@@ -563,30 +819,13 @@ export default class NostrWalletConnectStore {
                 );
             }
             if (!this.publishedRelays.has(params.relayUrl)) {
-                const nwcWalletService = this.nwcWalletServices.get(
-                    params.relayUrl
-                );
-                if (nwcWalletService && this.walletServiceKeys?.privateKey) {
-                    try {
-                        await this.retryWithBackoff(async () => {
-                            await nwcWalletService.publishWalletServiceInfoEvent(
-                                this.walletServiceKeys!.privateKey,
-                                NostrConnectUtils.getFullAccessPermissions(),
-                                NostrConnectUtils.getNotifications()
-                            );
-                            runInAction(() => {
-                                this.publishedRelays.add(params.relayUrl);
-                            });
-                        }, 3);
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, 500)
-                        );
-                    } catch (error) {
-                        console.warn(
-                            `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
-                            error
-                        );
-                    }
+                try {
+                    await this.ensureRelayPublished(params.relayUrl);
+                } catch (error) {
+                    console.warn(
+                        `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
+                        error
+                    );
                 }
             }
 
@@ -602,8 +841,13 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
+
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
-                this.generateConnectionSecret(params.relayUrl);
+                this.generateConnectionSecret(
+                    params.relayUrl,
+                    includeLightningAddress,
+                    includeLightningAddress ? lud16 : undefined
+                );
             const connectionData = {
                 id: params.id || uuidv4(),
                 name: params.name.trim(),
@@ -630,9 +874,13 @@ export default class NostrWalletConnectStore {
                 customExpiryUnit: params.customExpiryUnit,
                 nodePubkey,
                 implementation,
+                includeLightningAddress,
+                lud16: includeLightningAddress ? lud16 : undefined,
                 activity: params.activity || []
             };
 
+            createdConnectionId = connectionData.id;
+            createdConnectionPublicKey = connectionPublicKey;
             const connection = new NWCConnection(connectionData);
             await this.storeClientKeys(
                 connectionPublicKey,
@@ -641,12 +889,32 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.connections.unshift(connection);
             });
+            createdConnectionPersisted = true;
             await this.saveConnections();
-            await this.subscribeToConnection(connection);
+            const subscribed = await this.subscribeToConnection(connection);
+            if (!subscribed) {
+                throw new Error(
+                    localeString(
+                        'views.Settings.NostrWalletConnect.validation.failedToCreateConnection'
+                    )
+                );
+            }
             await this.sendHandoffRequest();
-            return connectionUrl;
+            return { nostrUrl: connectionUrl, connectionId: createdConnectionId! };
         } catch (error: any) {
-            throw error;
+            if (createdConnectionPersisted && createdConnectionId) {
+                try {
+                    await this.deleteConnection(createdConnectionId);
+                } catch (cleanupError) {
+                    console.warn(
+                        'NWC: Failed to roll back partially created connection:',
+                        cleanupError
+                    );
+                }
+            } else if (createdConnectionPublicKey) {
+                await this.deleteClientKeys(createdConnectionPublicKey);
+            }
+            throw this.localizeConnectionUrlBuildError(error);
         }
     };
 
@@ -695,19 +963,23 @@ export default class NostrWalletConnectStore {
      * Update an existing NWC connection with new parameters.
      * @param connectionId The unique identifier of the connection to update.
      * @param updates Partial object containing the fields to update.
-     * @returns Promise<boolean> - True if update was successful, false otherwise.
-     * @throws Error if the connection is not found or update fails.
+     * @returns Promise<{ nostrUrl?: string; success: boolean }> - Success flag (or error flag if connection not found or update fails) and optional regenerated URL if relay or lightning address settings changed.
      */
     @action
     public updateConnection = async (
         connectionId: string,
         updates: Partial<NWCConnection>
     ): Promise<{ nostrUrl?: string; success: boolean }> => {
+        let connectionIndex = -1;
+        let originalConnectionData: StoredNWCConnectionData | undefined;
+        let previousUnsubscribe: (() => void) | undefined;
+        let restorePreviousSubscription = false;
+        let acquiredNewSubscription = false;
         try {
             runInAction(() => {
                 this.error = false;
             });
-            const connectionIndex = this.connections.findIndex(
+            connectionIndex = this.connections.findIndex(
                 (c) => c.id === connectionId
             );
             if (connectionIndex === -1) {
@@ -718,59 +990,212 @@ export default class NostrWalletConnectStore {
                 );
             }
             const connection = this.connections[connectionIndex];
+            originalConnectionData = { ...connection };
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
-            const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
 
-            if (relayUrlChanged) {
-                await this.unsubscribeFromConnection(connectionId);
-                if (!this.nwcWalletServices.has(newRelayUrl)) {
+            if (newRelayUrl && !this.validateRelayUrl(newRelayUrl)) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
+                );
+            }
+
+            const relayUrlChanged =
+                !!newRelayUrl && newRelayUrl !== oldRelayUrl;
+            const includeLightningAddressChanged =
+                updates.includeLightningAddress !== undefined &&
+                updates.includeLightningAddress !==
+                    connection.includeLightningAddress;
+            const nextIncludeLightningAddress =
+                updates.includeLightningAddress ??
+                connection.includeLightningAddress;
+            const nextLud16 =
+                updates.lud16 !== undefined
+                    ? updates.lud16?.trim() || undefined
+                    : nextIncludeLightningAddress &&
+                      (relayUrlChanged || includeLightningAddressChanged)
+                    ? this.getConnectionLud16(nextIncludeLightningAddress)
+                    : connection.lud16;
+            const lud16Changed =
+                updates.lud16 !== undefined &&
+                nextLud16 !== connection.lud16;
+            const permissionsChanged =
+                updates.permissions !== undefined &&
+                JSON.stringify([...updates.permissions].slice().sort()) !==
+                    JSON.stringify([...connection.permissions].slice().sort());
+
+            const shouldReturnUrl =
+                relayUrlChanged ||
+                includeLightningAddressChanged ||
+                (lud16Changed && nextIncludeLightningAddress);
+            // Enforce invariant: if includeLightningAddress is true, lud16 must be valid.
+            // This prevents invalid states where LA is enabled but has no address (either
+            // because getConnectionLud16 returned undefined when wallet lacks LA, or an edit
+            // cleared it). This catches edge cases that URL-only validation guard misses.
+            if (nextIncludeLightningAddress && (!nextLud16 || !isValidLightningAddress(nextLud16))) {
+                throw new InvalidLightningAddressError();
+            }
+
+            const existingClientPrivateKey = shouldReturnUrl
+                ? await this.loadClientPrivateKey(connection.pubkey)
+                : undefined;
+            const walletServicePubkey = this.walletServiceKeys?.publicKey;
+
+            if (
+                shouldReturnUrl &&
+                (!existingClientPrivateKey || !walletServicePubkey)
+            ) {
+                this.setError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                    )
+                );
+                return { success: false };
+            }
+
+            const updatedNostrUrl = shouldReturnUrl
+                ? buildNostrWalletConnectUrl({
+                      walletServicePubkey: walletServicePubkey!,
+                      relayUrl: newRelayUrl || oldRelayUrl,
+                      secret: existingClientPrivateKey!,
+                      lud16: nextIncludeLightningAddress ? nextLud16 : undefined
+                  })
+                : undefined;
+
+            const shouldResubscribe = relayUrlChanged || permissionsChanged;
+            previousUnsubscribe = shouldResubscribe
+                ? this.activeSubscriptions.get(connectionId)
+                : undefined;
+            const subscriptionConnection = shouldResubscribe
+                    ? new NWCConnection({
+                          ...connection,
+                          ...updates,
+                          relayUrl: newRelayUrl || oldRelayUrl,
+                          includeLightningAddress: nextIncludeLightningAddress,
+                          lud16: nextLud16
+                      })
+                : undefined;
+
+            if (shouldResubscribe && subscriptionConnection) {
+                restorePreviousSubscription = !!previousUnsubscribe;
+                if (previousUnsubscribe) {
+                    await this.unsubscribeFromConnection(connectionId);
+                }
+                if (
+                    !this.nwcWalletServices.has(subscriptionConnection.relayUrl)
+                ) {
+                    runInAction(() => {
+                        this.nwcWalletServices.set(
+                            subscriptionConnection.relayUrl,
+                            new nwc.NWCWalletService({
+                                relayUrl: subscriptionConnection.relayUrl
+                            })
+                        );
+                    });
+                }
+                if (
+                    !this.nwcWalletServices.has(subscriptionConnection.relayUrl)
+                ) {
                     await this.initializeNWCWalletServices();
                 }
+                await this.ensureRelayPublished(subscriptionConnection.relayUrl);
+                const subscribed = await this.subscribeToConnection(
+                    subscriptionConnection,
+                    { replaceExisting: true }
+                );
+                if (!subscribed) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                        )
+                    );
+                }
+                acquiredNewSubscription = true;
             }
 
             runInAction(() => {
                 const oldBudgetRenewal = connection.budgetRenewal;
+                const hadBudget = connection.hasBudgetLimit;
                 const newBudgetRenewal = updates.budgetRenewal;
-                const newMaxAmountSats = updates.maxAmountSats;
+                const budgetProvided = Object.prototype.hasOwnProperty.call(
+                    updates,
+                    'maxAmountSats'
+                );
+                const nextMaxAmountSats = budgetProvided
+                    ? updates.maxAmountSats
+                    : connection.maxAmountSats;
 
                 Object.assign(connection, updates);
 
-                const hadBudget = connection.hasBudgetLimit;
                 const hasBudget =
-                    newMaxAmountSats !== undefined && newMaxAmountSats > 0;
+                    nextMaxAmountSats !== undefined && nextMaxAmountSats > 0;
                 const budgetRenewalChanged =
                     newBudgetRenewal !== undefined &&
                     newBudgetRenewal !== oldBudgetRenewal;
 
                 if (!hadBudget && hasBudget) {
                     connection.resetBudget();
-                } else if (hadBudget && !hasBudget) {
+                } else if (hadBudget && budgetProvided && !hasBudget) {
                     connection.lastBudgetReset = undefined;
                     connection.totalSpendSats = 0;
                 } else if (hasBudget && budgetRenewalChanged) {
                     connection.resetBudget();
+                }
+                if (updates.lud16 !== undefined) {
+                    connection.lud16 = nextLud16;
                 }
 
                 this.connections[connectionIndex] = connection;
             });
 
             await this.saveConnections();
-            await this.subscribeToConnection(connection);
-            if (relayUrlChanged) {
+            if (shouldReturnUrl) {
                 return {
-                    nostrUrl:
-                        this.generateConnectionSecret(newRelayUrl)
-                            .connectionUrl,
+                    nostrUrl: updatedNostrUrl,
                     success: true
                 };
             }
             return { success: true };
         } catch (error: any) {
+            if (acquiredNewSubscription) {
+                const activeUnsubscribe =
+                    this.activeSubscriptions.get(connectionId);
+                if (
+                    activeUnsubscribe &&
+                    typeof activeUnsubscribe === 'function'
+                ) {
+                    try {
+                        activeUnsubscribe();
+                    } catch {
+                        // ignore rollback unsubscribe failures
+                    }
+                }
+                this.activeSubscriptions.delete(connectionId);
+            }
+            if (restorePreviousSubscription && originalConnectionData) {
+                try {
+                    await this.subscribeToConnection(
+                        new NWCConnection(originalConnectionData),
+                        { forceResubscribe: true }
+                    );
+                } catch {
+                    // ignore rollback resubscribe failure
+                }
+            }
+            if (connectionIndex !== -1 && originalConnectionData) {
+                runInAction(() => {
+                    Object.assign(this.connections[connectionIndex], {
+                        ...originalConnectionData
+                    });
+                });
+            }
+            const localizedError = this.localizeConnectionUrlBuildError(error);
             console.error('Failed to update NWC connection:', error);
             runInAction(() => {
                 this.setError(
-                    (error as Error).message ||
+                    localizedError.message ||
                         localeString(
                             'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
                         )
@@ -872,22 +1297,491 @@ export default class NostrWalletConnectStore {
             const existsPendingPayment = await Storage.getItem(
                 NWC_PENDING_PAYMENTS
             );
-            if (existsPendingPayment) {
-                const prev: PendingPayment[] = JSON.parse(existsPendingPayment);
-                await Storage.setItem(
-                    NWC_PENDING_PAYMENTS,
-                    JSON.stringify([...prev, ...pendingPayments])
-                );
-                return;
-            }
+            const prev: PendingPayment[] = existsPendingPayment
+                ? JSON.parse(existsPendingPayment)
+                : [];
+            const dedupedPayments = Array.from(
+                [...prev, ...pendingPayments]
+                    .reduce((paymentsByEventId, payment) => {
+                        const existing = paymentsByEventId.get(payment.eventId);
+                        if (
+                            existing?.isProcessed &&
+                            !existing.status &&
+                            !payment.isProcessed
+                        ) {
+                            return paymentsByEventId;
+                        }
+                        paymentsByEventId.set(payment.eventId, payment);
+                        return paymentsByEventId;
+                    }, new Map<string, PendingPayment>())
+                    .values()
+            );
             await Storage.setItem(
                 NWC_PENDING_PAYMENTS,
-                JSON.stringify(pendingPayments)
+                JSON.stringify(dedupedPayments)
             );
         } catch (error) {
             console.error('failed to save pending payment');
         }
     };
+
+    private getStoredPendingPayments = async (): Promise<PendingPayment[]> => {
+        try {
+            const pendingPayments = await Storage.getItem(NWC_PENDING_PAYMENTS);
+            if (!pendingPayments) {
+                return [];
+            }
+            const parsed = JSON.parse(pendingPayments);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            console.error('failed to load stored pending payments', error);
+            return [];
+        }
+    };
+
+    private getProcessedReplayEvents = async (): Promise<Set<string>> => {
+        if (this.processedReplayEventsCache) {
+            return this.processedReplayEventsCache;
+        }
+        try {
+            const stored = await Storage.getItem(NWC_PROCESSED_REPLAY_EVENTS);
+            if (!stored) {
+                this.processedReplayEventsCache = new Set();
+                return this.processedReplayEventsCache;
+            }
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) {
+                this.processedReplayEventsCache = new Set();
+                return this.processedReplayEventsCache;
+            }
+            this.processedReplayEventsCache = new Set(
+                parsed.filter(
+                    (eventId): eventId is string => typeof eventId === 'string'
+                )
+            );
+            return this.processedReplayEventsCache;
+        } catch (error) {
+            console.error('failed to load processed replay events', error);
+            this.processedReplayEventsCache = new Set();
+            return this.processedReplayEventsCache;
+        }
+    };
+
+    private saveProcessedReplayEvents = async (
+        eventIds: Set<string>
+    ): Promise<boolean> => {
+        const orderedIds = Array.from(eventIds).slice(
+            -MAX_PROCESSED_REPLAY_EVENTS
+        );
+        this.processedReplayEventsCache = new Set(orderedIds);
+        try {
+            // Keep a bounded replay window across restarts without growing storage forever.
+            await Storage.setItem(
+                NWC_PROCESSED_REPLAY_EVENTS,
+                JSON.stringify(orderedIds)
+            );
+            return true;
+        } catch (error) {
+            console.error('failed to save processed replay events', error);
+            return false;
+        }
+    };
+
+    private markProcessedReplayEvent = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
+        // Serialize read-modify-write across all callers/connections so
+        // concurrent updates can't lose entries (last-writer-wins on Storage).
+        return await this.withMutex(
+            NWCMutexKey.ProcessedReplayEvents,
+            async () => {
+                const processed = await this.getProcessedReplayEvents();
+                if (processed.has(eventId)) {
+                    return true;
+                }
+                const previousProcessed = new Set(processed);
+                processed.add(eventId);
+                const saved = await this.saveProcessedReplayEvents(processed);
+                if (!saved) {
+                    this.processedReplayEventsCache = previousProcessed;
+                    console.error(
+                        `Critical: Failed to persist processed replay event marker for idempotency (eventId: ${eventId})`
+                    );
+                }
+                return saved;
+            }
+        );
+    };
+
+    private hasProcessedReplayEvent = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
+        const processed = await this.getProcessedReplayEvents();
+        return processed.has(eventId);
+    };
+
+    private getCommittedRestoreMarkerFailures = async (): Promise<
+        Set<string>
+    > => {
+        if (this.committedRestoreMarkerFailuresCache) {
+            return this.committedRestoreMarkerFailuresCache;
+        }
+        try {
+            const stored = await Storage.getItem(
+                NWC_COMMITTED_RESTORE_MARKER_FAILURES
+            );
+            if (!stored) {
+                this.committedRestoreMarkerFailuresCache = new Set();
+                return this.committedRestoreMarkerFailuresCache;
+            }
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) {
+                this.committedRestoreMarkerFailuresCache = new Set();
+                return this.committedRestoreMarkerFailuresCache;
+            }
+            this.committedRestoreMarkerFailuresCache = new Set(
+                parsed.filter(
+                    (eventId): eventId is string => typeof eventId === 'string'
+                )
+            );
+            return this.committedRestoreMarkerFailuresCache;
+        } catch (error) {
+            console.error(
+                'failed to load committed restore marker failures',
+                error
+            );
+            this.committedRestoreMarkerFailuresCache = new Set();
+            return this.committedRestoreMarkerFailuresCache;
+        }
+    };
+
+    private saveCommittedRestoreMarkerFailures = async (
+        eventIds: Set<string>
+    ): Promise<boolean> => {
+        const orderedIds = Array.from(eventIds).slice(
+            -MAX_PROCESSED_REPLAY_EVENTS
+        );
+        this.committedRestoreMarkerFailuresCache = new Set(orderedIds);
+        try {
+            await Storage.setItem(
+                NWC_COMMITTED_RESTORE_MARKER_FAILURES,
+                JSON.stringify(orderedIds)
+            );
+            return true;
+        } catch (error) {
+            console.error(
+                'failed to save committed restore marker failures',
+                error
+            );
+            return false;
+        }
+    };
+
+    private markCommittedRestoreMarkerFailure = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
+        return await this.withMutex(
+            NWCMutexKey.CommittedRestoreMarkerFailures,
+            async () => {
+                const failures = await this.getCommittedRestoreMarkerFailures();
+                if (failures.has(eventId)) {
+                    return true;
+                }
+                const previousFailures = new Set(failures);
+                failures.add(eventId);
+                const saved = await this.saveCommittedRestoreMarkerFailures(
+                    failures
+                );
+                if (!saved) {
+                    this.committedRestoreMarkerFailuresCache = previousFailures;
+                }
+                return saved;
+            }
+        );
+    };
+
+    private removeCommittedRestoreMarkerFailure = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
+        return await this.withMutex(
+            NWCMutexKey.CommittedRestoreMarkerFailures,
+            async () => {
+                const failures = await this.getCommittedRestoreMarkerFailures();
+                if (!failures.has(eventId)) {
+                    return true;
+                }
+                const previousFailures = new Set(failures);
+                failures.delete(eventId);
+                const saved = await this.saveCommittedRestoreMarkerFailures(
+                    failures
+                );
+                if (!saved) {
+                    this.committedRestoreMarkerFailuresCache = previousFailures;
+                }
+                return saved;
+            }
+        );
+    };
+
+    private hasCommittedRestoreMarkerFailure = async (
+        eventId: string
+    ): Promise<boolean> => {
+        if (!eventId) return false;
+        const failures = await this.getCommittedRestoreMarkerFailures();
+        return failures.has(eventId);
+    };
+
+    private getReplayResponses = async (): Promise<
+        Map<string, StoredReplayResponse>
+    > => {
+        if (this.replayResponsesCache) {
+            return this.replayResponsesCache;
+        }
+        try {
+            const stored = await Storage.getItem(NWC_REPLAY_RESPONSES);
+            if (!stored) {
+                this.replayResponsesCache = new Map();
+                return this.replayResponsesCache;
+            }
+            const parsed = JSON.parse(stored);
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                Array.isArray(parsed)
+            ) {
+                this.replayResponsesCache = new Map();
+                return this.replayResponsesCache;
+            }
+            const entries = Object.entries(parsed).filter(
+                ([eventId, value]) =>
+                    typeof eventId === 'string' &&
+                    !!value &&
+                    typeof value === 'object' &&
+                    'method' in value &&
+                    'response' in value &&
+                    'encryptionScheme' in value
+            ) as [string, StoredReplayResponse][];
+            this.replayResponsesCache = new Map<string, StoredReplayResponse>(
+                entries
+            );
+            return this.replayResponsesCache;
+        } catch (error) {
+            console.error('failed to load replay responses', error);
+            this.replayResponsesCache = new Map<string, StoredReplayResponse>();
+            return this.replayResponsesCache;
+        }
+    };
+
+    private saveReplayResponses = async (
+        responses: Map<string, StoredReplayResponse>
+    ): Promise<boolean> => {
+        this.replayResponsesCache = responses;
+        try {
+            await Storage.setItem(
+                NWC_REPLAY_RESPONSES,
+                JSON.stringify(Object.fromEntries(responses))
+            );
+            return true;
+        } catch (error) {
+            console.error('failed to save replay responses', error);
+            return false;
+        }
+    };
+
+    private cacheReplayResponse = async (
+        eventId: string,
+        method: Nip47SingleMethod,
+        response: any,
+        encryptionScheme: NwcEncryptionScheme
+    ): Promise<boolean> => {
+        // Cache the response so we can replay it if the same event arrives again.
+        // This prevents double-charging from duplicate requests.
+        //
+        // IMPORTANT: Failures to persist are caught by the caller (handleEventRequest).
+        // If save fails, the caller logs it and continues with response publication.
+        // On restart, if the same event re-arrives and isn't in cache, it will be
+        // re-executed. This is acceptable: we prefer consistency (execute once) over
+        // availability (always cached).
+        //
+        // In high-concurrency scenarios, it's possible a response is published but
+        // cache save fails. This is tracked in handleEventRequest.result.committed
+        // and caller can warn the user if needed.
+        if (!eventId) return false;
+        return await this.withMutex(NWCMutexKey.ReplayResponses, async () => {
+            const responses = await this.getReplayResponses();
+            const now = Date.now();
+            responses.set(eventId, {
+                method,
+                response,
+                encryptionScheme,
+                cachedAt: now
+            });
+            // Enforce cache size limit: keep only the most recent MAX_REPLAY_RESPONSES
+            // entries by converting to array, slicing, and reconstructing the map.
+            // This prevents unbounded memory growth in long-running sessions.
+            if (responses.size > MAX_REPLAY_RESPONSES) {
+                const entries = Array.from(responses.entries());
+                const trimmed = entries.slice(-MAX_REPLAY_RESPONSES);
+                const trimmedMap = new Map(trimmed);
+                const saved = await this.saveReplayResponses(trimmedMap);
+                if (!saved) {
+                    throw new Error(
+                        `Critical: Failed to persist replay response cache for idempotency (eventId: ${eventId})`
+                    );
+                }
+                return saved;
+            }
+            const saved = await this.saveReplayResponses(responses);
+            if (!saved) {
+                throw new Error(
+                    `Critical: Failed to persist replay response cache for idempotency (eventId: ${eventId})`
+                );
+            }
+            return saved;
+        });
+    };
+
+    private removeReplayResponse = async (eventId: string): Promise<void> => {
+        if (!eventId) return;
+        await this.withMutex(NWCMutexKey.ReplayResponses, async () => {
+            const responses = await this.getReplayResponses();
+            if (responses.delete(eventId)) {
+                const saved = await this.saveReplayResponses(responses);
+                if (!saved) {
+                    throw new Error(
+                        `Critical: Failed to persist replay response removal for idempotency (eventId: ${eventId})`
+                    );
+                }
+            }
+        });
+    };
+
+    private getReplayResponse = async (
+        eventId: string
+    ): Promise<StoredReplayResponse | undefined> => {
+        if (!eventId) return undefined;
+        const responses = await this.getReplayResponses();
+        const cached = responses.get(eventId);
+        if (!cached) return undefined;
+
+        // Validate cache entry is not stale. If the cached entry is older than
+        // REPLAY_CACHE_EXPIRATION_MS, consider it expired to prevent double-charging
+        // vulnerability: payment evicted from FIFO cache after 1000 events could be
+        // replayed without cache protection.
+        const now = Date.now();
+        let cacheAge = now - cached.cachedAt;
+        if (cacheAge < 0) {
+            // System clock went backwards (NTP adjustment or similar).
+            // This weakens replay protection: a cache entry that's actually 23+ hours old
+            // would be treated as "fresh" for the full 24h expiration window.
+            // Mitigation: reduce the effective age by assigning a conservative cachedAt time
+            // so the entry re-checks expiration sooner (within 1 minute of this check).
+            console.warn(
+                'NWC: Clock skew detected — system clock went backwards',
+                {
+                    eventId,
+                    skew: `${Math.abs(cacheAge)}ms`,
+                    cachedAt: cached.cachedAt,
+                    now,
+                    mitigation: 'reducing effective cache age to force re-check in 1 minute'
+                }
+            );
+            // Set cachedAt to (now - EXPIRATION + 60s) so this entry will expire in 60s
+            // instead of silently extending the 24h window
+            const CLOCK_SKEW_RECOVERY_MS = 60 * 1000; // 1 minute
+            cached.cachedAt = Math.max(
+                cached.cachedAt,
+                now - REPLAY_CACHE_EXPIRATION_MS + CLOCK_SKEW_RECOVERY_MS
+            );
+            cacheAge = now - cached.cachedAt;
+        }
+        if (cacheAge >= REPLAY_CACHE_EXPIRATION_MS) {
+            // Cache entry has expired; treat as a cache miss to prevent replay bypass
+            console.warn(
+                'NWC: Replay response cache entry expired (24h+ old), rejecting to prevent double-charging',
+                {
+                    eventId,
+                    cacheAge: `${Math.round(cacheAge / 1000)}s`,
+                    threshold: `${REPLAY_CACHE_EXPIRATION_MS / 1000}s`
+                }
+            );
+            return undefined;
+        }
+
+        return cached;
+    };
+
+    private async replayCachedResponse(
+        connection: NWCConnection,
+        eventId: string,
+        removeAfterPublish = true
+    ): Promise<NWCEventRequestResult | null> {
+        const cached = await this.getReplayResponse(eventId);
+        if (!cached) {
+            return null;
+        }
+
+        try {
+            await this.publishEventToClient(
+                connection,
+                cached.method,
+                cached.response,
+                eventId,
+                cached.encryptionScheme
+            );
+            if (removeAfterPublish) {
+                await this.removeReplayResponse(eventId);
+            }
+            return {
+                success: !cached.response?.error,
+                errorMessage: cached.response?.error?.message,
+                committed: true,
+                published: true
+            };
+        } catch (error) {
+            console.warn('NWC: Failed to replay cached response', {
+                eventId,
+                method: cached.method,
+                error
+            });
+            return null;
+        }
+    }
+
+    private async finalizeCommittedRestoreEvent(
+        connection: NWCConnection,
+        eventId: string
+    ): Promise<boolean> {
+        const cached = await this.getReplayResponse(eventId);
+        if (cached) {
+            const replayResult = await this.replayCachedResponse(
+                connection,
+                eventId,
+                false
+            );
+            if (!replayResult) {
+                await this.markCommittedRestoreMarkerFailure(eventId);
+                return false;
+            }
+        }
+
+        const persisted = await this.markProcessedReplayEvent(eventId);
+        if (!persisted) {
+            await this.markCommittedRestoreMarkerFailure(eventId);
+            return false;
+        }
+
+        await this.removeCommittedRestoreMarkerFailure(eventId);
+        if (cached) {
+            await this.removeReplayResponse(eventId);
+        }
+        return true;
+    }
+
     public deleteAllPendingPayments = async () => {
         try {
             await Storage.setItem(NWC_PENDING_PAYMENTS, JSON.stringify([]));
@@ -947,9 +1841,25 @@ export default class NostrWalletConnectStore {
             }
             const parsed = JSON.parse(pendingPayments);
             const payments = Array.isArray(parsed) ? parsed : [];
+            const dedupedPayments = Array.from(
+                new Map(
+                    payments.map((payment: PendingPayment) => [
+                        payment.eventId,
+                        payment
+                    ])
+                ).values()
+            );
             const restoredPayments = (
                 await Promise.all(
-                    payments.map(async (payment: PendingPayment) => {
+                    dedupedPayments.map(async (payment: PendingPayment) => {
+                        if (
+                            await this.hasProcessedReplayEvent(payment.eventId)
+                        ) {
+                            await this.deletePendingPaymentById(
+                                payment.eventId
+                            );
+                            return null;
+                        }
                         const connection = this.getConnection(
                             payment.connection.id
                         );
@@ -958,7 +1868,7 @@ export default class NostrWalletConnectStore {
                             await this.deletePendingPaymentById(
                                 payment.eventId
                             );
-                            return [];
+                            return null;
                         }
                         if (payment.isProcessed && !payment.status) {
                             if (
@@ -1078,12 +1988,28 @@ export default class NostrWalletConnectStore {
         });
         await Promise.all(promises);
         runInAction(() => {
+            const deletedPayments: string[] = [];
             connection.activity = connection.activity.filter((activity) => {
                 const isInvalidFailure =
                     activity.status === 'failed' &&
                     NostrConnectUtils.isIgnorableError(activity.error || '');
+                if (isInvalidFailure) {
+                    deletedPayments.push(activity.id);
+                }
                 return !isInvalidFailure;
             });
+            // Log payment deletions for audit trail
+            if (deletedPayments.length > 0) {
+                console.log(
+                    'Pruned ignorable failed payments from activity history',
+                    {
+                        connectionId: connection.id,
+                        connectionName: connection.name,
+                        prunedCount: deletedPayments.length,
+                        prunedIds: deletedPayments
+                    }
+                );
+            }
         });
         this.saveConnections();
         return { name: connection.name, activity: connection.activity };
@@ -1117,7 +2043,11 @@ export default class NostrWalletConnectStore {
             this.connections[index] = connection;
         }
     }
-    private generateConnectionSecret(relayUrl: string) {
+    private generateConnectionSecret(
+        relayUrl: string,
+        includeLightningAddress = false,
+        lud16?: string | null
+    ) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
                 localeString(
@@ -1127,10 +2057,24 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        const resolvedLud16 =
+            lud16 !== undefined ? lud16?.trim() || undefined : this.getConnectionLud16(includeLightningAddress);
+        const connectionUrl = buildNostrWalletConnectUrl({
+            walletServicePubkey: this.walletServiceKeys.publicKey,
+            relayUrl,
+            secret: connectionPrivateKey,
+            lud16: resolvedLud16
+        });
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
+    }
+
+    private getConnectionLud16(
+        includeLightningAddress: boolean
+    ): string | undefined {
+        return includeLightningAddress &&
+            this.lightningAddressStore.lightningAddressActivated
+            ? this.lightningAddressStore.lightningAddress
+            : undefined;
     }
     @action
     public startWaitingForConnection = (connectionId: string) => {
@@ -1156,8 +2100,9 @@ export default class NostrWalletConnectStore {
     // SUBSCRIPTION MANAGEMENT
 
     private async subscribeToConnection(
-        connection: NWCConnection
-    ): Promise<void> {
+        connection: NWCConnection,
+        options?: { forceResubscribe?: boolean; replaceExisting?: boolean }
+    ): Promise<boolean> {
         if (!this.isServiceReady()) {
             runInAction(() => {
                 this.error = true;
@@ -1165,10 +2110,25 @@ export default class NostrWalletConnectStore {
                     'stores.NostrWalletConnectStore.error.serviceNotReady'
                 );
             });
-            return;
+            return false;
         }
         try {
-            await this.unsubscribeFromConnection(connection.id);
+            // Subscription state machine:
+            // - forceResubscribe (Android relay reconnect): tear down the
+            //   stale handle then create a fresh subscription. Without this
+            //   the early-return below silently skips re-subscribing after
+            //   a relay disconnect.
+            // - replaceExisting (updateConnection): leave the previous
+            //   handle in place; the caller will dispose of it after the new
+            //   subscription is confirmed (transactional swap).
+            // - default: idempotent skip when already subscribed.
+            if (this.activeSubscriptions.has(connection.id)) {
+                if (options?.forceResubscribe) {
+                    await this.unsubscribeFromConnection(connection.id);
+                } else if (!options?.replaceExisting) {
+                    return true;
+                }
+            }
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
             if (!serviceSecretKey) {
@@ -1184,56 +2144,64 @@ export default class NostrWalletConnectStore {
             );
             const handler: NWCWalletServiceRequestHandler = {};
 
-            if (connection.hasPermission('get_info')) {
-                handler.getInfo = () =>
+            // Always register every supported method handler and perform the
+            // per-connection permission check inside it. This makes the live
+            // path return RESTRICTED (matching the restored-event path) when
+            // the connection lacks a method permission, instead of letting
+            // the SDK respond with NOT_IMPLEMENTED. NIP-47 specifies
+            // RESTRICTED for "method not enabled for this connection".
+            const restrictedResponse = () =>
+                this.handleError(
+                    localeString('backends.NWC.permissionDenied'),
+                    ErrorCodes.RESTRICTED
+                );
+            const gated = <Req, Resp>(
+                method: Nip47SingleMethod,
+                handle: (request: Req) => any
+            ) =>
+                ((request: Req) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleGetInfo(connection)
-                    );
-            }
+                        connection.hasPermission(method)
+                            ? handle(request)
+                            : (restrictedResponse() as Resp)
+                    )) as any;
 
-            if (connection.hasPermission('get_balance')) {
-                handler.getBalance = () =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleGetBalance(connection)
-                    );
-            }
+            // Per NIP-47 spec: get_info MUST ALWAYS be available, regardless of permissions
+            handler.getInfo = () =>
+                this.withGlobalHandler(connection.id, () =>
+                    this.handleGetInfo(connection)
+                );
 
-            if (connection.hasPermission('pay_invoice')) {
-                handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
+            handler.getBalance = gated('get_balance', () =>
+                this.handleGetBalance(connection)
+            );
+            handler.payInvoice = gated(
+                'pay_invoice',
+                (request: Nip47PayInvoiceRequest) =>
+                    this.runPayInvoiceSerialized(() =>
                         this.handlePayInvoice(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('make_invoice')) {
-                handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleMakeInvoice(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('lookup_invoice')) {
-                handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleLookupInvoice(request)
-                    );
-            }
-
-            if (connection.hasPermission('list_transactions')) {
-                handler.listTransactions = (
-                    request: Nip47ListTransactionsRequest
-                ) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleListTransactions(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('sign_message')) {
-                handler.signMessage = (request: Nip47SignMessageRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleSignMessage(request)
-                    );
-            }
+                    )
+            );
+            handler.makeInvoice = gated(
+                'make_invoice',
+                (request: Nip47MakeInvoiceRequest) =>
+                    this.handleMakeInvoice(connection, request)
+            );
+            handler.lookupInvoice = gated(
+                'lookup_invoice',
+                (request: Nip47LookupInvoiceRequest) =>
+                    this.handleLookupInvoice(request)
+            );
+            handler.listTransactions = gated(
+                'list_transactions',
+                (request: Nip47ListTransactionsRequest) =>
+                    this.handleListTransactions(connection, request)
+            );
+            handler.signMessage = gated(
+                'sign_message',
+                (request: Nip47SignMessageRequest) =>
+                    this.handleSignMessage(request)
+            );
 
             const nwcWalletService = this.nwcWalletServices.get(
                 connection.relayUrl
@@ -1258,11 +2226,13 @@ export default class NostrWalletConnectStore {
             await new Promise((resolve) =>
                 setTimeout(resolve, SUBSCRIPTION_DELAY_MS)
             ); //wait for 1 second to prevent rate limiting
+            return true;
         } catch (error: any) {
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
                 error?.message || String(error)
             );
+            return false;
         }
     }
 
@@ -1276,7 +2246,20 @@ export default class NostrWalletConnectStore {
         const subscriptionPromises = this.activeConnections.map(
             async (connection) => {
                 try {
-                    await this.subscribeToConnection(connection);
+                    const subscribed = await this.subscribeToConnection(
+                        connection
+                    );
+                    if (!subscribed) {
+                        return {
+                            success: false,
+                            connection: connection.name,
+                            error: new Error(
+                                localeString(
+                                    'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                                )
+                            )
+                        };
+                    }
                     return { success: true, connection: connection.name };
                 } catch (error) {
                     console.error(
@@ -1390,6 +2373,95 @@ export default class NostrWalletConnectStore {
         await this.markConnectionUsed(connectionId);
         return await handler();
     }
+
+    // Promise-chain mutex used to serialize side-effecting work that touches
+    // singleton stores (TransactionsStore / CashuStore) and budget tracking.
+    // Per-key chains let unrelated work proceed in parallel while preventing
+    // races inside a single critical section.
+    private mutexes: Map<string, Promise<unknown>> = new Map();
+    private withMutex<T>(
+        key: string,
+        fn: () => Promise<T>,
+        timeoutMs: number = 120000
+    ): Promise<T> {
+        const prev = this.mutexes.get(key) || Promise.resolve();
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+        // operationCompletion resolves only when fn() actually finishes
+        // (whether it resolved, rejected, or the timeout fired but fn() is
+        // still in-flight).  Subsequent waiters chain on this so a timed-out
+        // but in-flight operation cannot run concurrently with the next one
+        // and cause a double-spend.
+        let operationResolve!: () => void;
+        const operationCompletion = new Promise<void>((resolve) => {
+            operationResolve = resolve;
+        });
+
+        const next = prev
+            .catch(() => undefined) // Swallow prev failures only
+            .then(() => {
+                // Call fn() once; keep a handle so the chain can wait for
+                // its actual completion independently of the timeout race.
+                let opPromise: Promise<T>;
+                try {
+                    opPromise = fn();
+                } catch (syncError) {
+                    // fn() threw synchronously — release chain immediately.
+                    operationResolve();
+                    throw syncError;
+                }
+                // Signal actual completion (resolve OR reject) so the next
+                // mutex waiter knows it is safe to proceed.
+                opPromise.then(operationResolve, operationResolve);
+
+                // Create a timeout promise that rejects after specified duration
+                return Promise.race([
+                    opPromise,
+                    new Promise<T>((_, reject) => {
+                        timeoutId = setTimeout(
+                            () =>
+                                reject(
+                                    new Error(
+                                        `Mutex operation timeout after ${timeoutMs}ms for key: ${key}`
+                                    )
+                                ),
+                            timeoutMs
+                        );
+                    })
+                ]).finally(() => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                });
+            })
+            .catch((err) => {
+                // Log errors in critical sections for observability
+                console.error(
+                    `[withMutex] Error in critical section '${key}': ${
+                        err instanceof Error ? err.message : String(err)
+                    }`,
+                    err
+                );
+                // Re-throw to propagate error to caller
+                throw err;
+            });
+
+        // Store the actual-operation completion promise so subsequent waiters
+        // block until the in-flight fn() truly finishes, not just until the
+        // timeout races ahead.  This prevents a timed-out but still-running
+        // operation from executing concurrently with the next queued one.
+        this.mutexes.set(key, operationCompletion);
+        return next;
+    }
+    // pay_invoice serializes globally because the underlying TransactionsStore
+    // and CashuStore expose request-scoped state via singleton fields
+    // (payment_preimage, payment_error, paymentError, ...). Two concurrent
+    // dispatches would clobber each other regardless of connection id.
+    private runPayInvoiceSerialized<T>(fn: () => Promise<T>): Promise<T> {
+        return this.withMutex(
+            NWCMutexKey.PayInvoice,
+            fn,
+            PAY_INVOICE_MUTEX_TIMEOUT_MS
+        );
+    }
     // NWC REQUEST HANDLERS
 
     private async handleGetInfo(
@@ -1411,6 +2483,11 @@ export default class NostrWalletConnectStore {
             } else if (nodeInfo?.isSigNet) {
                 network = 'signet';
             }
+            const methods = [...(connection.permissions || [])];
+            // Ensure get_info is always included, as per NIP-47: get_info requires no permissions
+            if (!methods.includes('get_info')) {
+                methods.push('get_info');
+            }
             return {
                 result: {
                     alias:
@@ -1424,7 +2501,7 @@ export default class NostrWalletConnectStore {
                     network,
                     block_height: nodeInfo?.block_height || 0,
                     block_hash: nodeInfo?.block_hash || '',
-                    methods: connection.permissions || [],
+                    methods,
                     notifications: NostrConnectUtils.getNotifications()
                 },
                 error: undefined
@@ -1503,10 +2580,52 @@ export default class NostrWalletConnectStore {
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
+            const hasRequestAmount =
+                request.amount !== undefined && request.amount !== null;
+            const requestAmountMsats = hasRequestAmount
+                ? Number(request.amount)
+                : 0;
+            if (hasRequestAmount) {
+                const validation = validateNip47Amount(requestAmountMsats, 'amount');
+                if (!validation.valid) {
+                    return this.handleError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                        ),
+                        ErrorCodes.INVALID_PARAMS
+                    );
+                }
+            }
+            // All msat-to-sat conversions use ceil (round UP) to ensure
+            // sub-sat amounts never bypass budget limits or appear cheaper to users.
+            // This ensures both backend requests and user-facing notifications show
+            // at least the amount needed to cover the millisatoshi value.
+            const requestAmountSats =
+                requestAmountMsats > 0
+                    ? Math.ceil(requestAmountMsats / 1000)
+                    : 0;
+            // Use same amount for notifications to avoid confusion (1001 msat shows
+            // as 2 sats everywhere, not 1 sat to backend and 2 to user).
+            const notificationSats =
+                requestAmountMsats > 0 ? Math.max(1, requestAmountSats) : 0;
+
             if (this.isCashuConfigured) {
+                // Cashu mints operate in whole sats; reject NIP-47 msat
+                // amounts that would otherwise be silently truncated. Per
+                // NIP-47 the spec error for a malformed amount is
+                // INVALID_PARAMS; clients can downgrade to a sat-aligned
+                // amount or pick a different connection.
+                if (requestAmountMsats > 0 && requestAmountMsats % 1000 !== 0) {
+                    return this.handleError(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                        ),
+                        ErrorCodes.INVALID_PARAMS
+                    );
+                }
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
-                        value: millisatsToSats(request.amount).toString(),
+                        value: requestAmountSats.toString(),
                         memo: request.description || ''
                     });
 
@@ -1539,6 +2658,21 @@ export default class NostrWalletConnectStore {
                             dateTimeUtils.getCurrentTimestamp() +
                             (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
                     }
+                    const cashuPaymentHash = paymentHash || '';
+                    if (!cashuPaymentHash) {
+                        // Spec requires a real payment_hash; without one
+                        // clients can't correlate later lookup_invoice or
+                        // payment_received notifications. Surface an
+                        // internal error rather than fabricating a hash.
+                        // Validate BEFORE mutating local activity / firing
+                        // notifications so a hash-less invoice doesn't leave
+                        // us with stale "pending" history the client never
+                        // acknowledged.
+                        return this.handleError(
+                            'Cashu invoice missing payment_hash',
+                            ErrorCodes.INTERNAL_ERROR
+                        );
+                    }
                     const invoice = this.cashuStore.invoices?.find(
                         (invoice) =>
                             invoice.getPaymentRequest ===
@@ -1546,18 +2680,20 @@ export default class NostrWalletConnectStore {
                     );
                     if (invoice)
                         runInAction(() => {
-                            connection.activity.push({
+                            connection.addActivity({
                                 id: cashuInvoice.paymentRequest,
                                 status: 'pending',
                                 invoice: new CashuInvoice(invoice),
                                 type: 'make_invoice',
-                                payment_source: 'cashu'
+                                payment_source: 'cashu',
+                                satAmount: requestAmountSats,
+                                msatAmount: requestAmountMsats
                             });
                             this.findAndUpdateConnection(connection);
                         });
                     this.saveConnections();
                     this.showInvoiceCreatedNotification(
-                        millisatsToSats(request.amount),
+                        notificationSats,
                         connection.name,
                         request.description
                     );
@@ -1565,8 +2701,8 @@ export default class NostrWalletConnectStore {
                         type: 'incoming',
                         state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
-                        payment_hash: paymentHash || '',
-                        amount: request.amount,
+                        payment_hash: cashuPaymentHash,
+                        amount: requestAmountMsats,
                         description: request.description,
                         description_hash: descriptionHash,
                         expires_at: expiryTime
@@ -1587,7 +2723,8 @@ export default class NostrWalletConnectStore {
 
             const invoiceResult = await this.invoicesStore.createUnifiedInvoice(
                 {
-                    value: millisatsToSats(request.amount).toString(),
+                    value: requestAmountSats.toString(),
+                    value_msat: requestAmountMsats.toString(),
                     memo: request.description || '',
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
@@ -1656,16 +2793,30 @@ export default class NostrWalletConnectStore {
                     (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
             }
 
+            if (!paymentHash) {
+                // Spec requires payment_hash; without one the client
+                // can't correlate settlement. Bail out with an internal
+                // error instead of fabricating a synthetic hash. Validate
+                // BEFORE mutating local activity / firing notifications so
+                // a hash-less invoice doesn't leave us with stale "pending"
+                // history that the client never acknowledged.
+                return this.handleError(
+                    'Backend returned no payment_hash for created invoice',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
+
             if (invoice) {
                 runInAction(() => {
-                    connection.activity.push({
+                    connection.addActivity({
                         id: paymentRequest,
                         invoice: new Invoice(invoice),
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
                         paymentHash,
-                        satAmount: millisatsToSats(request.amount),
+                        satAmount: requestAmountSats,
+                        msatAmount: requestAmountMsats,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);
@@ -1674,21 +2825,23 @@ export default class NostrWalletConnectStore {
                 const invoiceData = {
                     payment_request: paymentRequest,
                     payment_hash: paymentHash,
-                    value: millisatsToSats(request.amount).toString(),
+                    value: requestAmountSats.toString(),
+                    value_msat: requestAmountMsats.toString(),
                     memo: request.description || '',
                     expiry: expiryTime.toString(),
                     creation_date: Math.floor(Date.now() / 1000).toString(),
                     settled: false
                 };
                 runInAction(() => {
-                    connection.activity.push({
+                    connection.addActivity({
                         id: paymentRequest,
                         invoice: new Invoice(invoiceData),
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
                         paymentHash,
-                        satAmount: millisatsToSats(request.amount),
+                        satAmount: requestAmountSats,
+                        msatAmount: requestAmountMsats,
                         createdAt: new Date()
                     });
                     this.findAndUpdateConnection(connection);
@@ -1696,7 +2849,7 @@ export default class NostrWalletConnectStore {
             }
             this.saveConnections();
             this.showInvoiceCreatedNotification(
-                millisatsToSats(request.amount),
+                notificationSats,
                 connection.name,
                 request.description
             );
@@ -1706,7 +2859,7 @@ export default class NostrWalletConnectStore {
                 state: 'pending',
                 invoice: paymentRequest,
                 payment_hash: paymentHash,
-                amount: request.amount,
+                amount: requestAmountMsats,
                 description: request.description,
                 description_hash: descriptionHash,
                 expires_at: expiryTime
@@ -1761,8 +2914,22 @@ export default class NostrWalletConnectStore {
                     matchingInvoice &&
                     matchingInvoice instanceof CashuInvoice
                 ) {
-                    let isPaid = matchingInvoice.isPaid || false;
-                    let amtSat = matchingInvoice.getAmount;
+                    const isPaid = matchingInvoice.isPaid || false;
+                    const amtSat = matchingInvoice.getAmount;
+                    const decodedInvoice =
+                        await NostrConnectUtils.decodeInvoiceTags(
+                            matchingInvoice.getPaymentRequest
+                        );
+                    const lookupPaymentHash =
+                        decodedInvoice.paymentHash ||
+                        request.payment_hash ||
+                        '';
+                    if (!lookupPaymentHash) {
+                        return this.handleError(
+                            'lookup_invoice missing payment_hash',
+                            ErrorCodes.INTERNAL_ERROR
+                        );
+                    }
 
                     const timestamp =
                         Number(matchingInvoice.getTimestamp) ||
@@ -1773,16 +2940,14 @@ export default class NostrWalletConnectStore {
 
                     const result = NostrConnectUtils.createNip47Transaction({
                         type: 'incoming',
-                        state: isPaid ? 'settled' : 'pending',
+                        state: isPaid
+                            ? 'settled'
+                            : matchingInvoice.isExpired
+                            ? 'failed'
+                            : 'pending',
                         invoice: matchingInvoice.getPaymentRequest,
-                        payment_hash: request.payment_hash!,
+                        payment_hash: lookupPaymentHash,
                         amount: satsToMillisats(amtSat || 0),
-                        ...(isPaid && {
-                            preimage:
-                                matchingInvoice.getPaymentRequest ||
-                                request.invoice ||
-                                request.payment_hash
-                        }),
                         description: matchingInvoice.getMemo,
                         settled_at: isPaid
                             ? matchingInvoice.settleDate.getTime() / 1000
@@ -1803,8 +2968,22 @@ export default class NostrWalletConnectStore {
                     );
                 }
             } else {
+                let lookupPaymentHash = request.payment_hash || '';
+                if (!lookupPaymentHash && request.invoice) {
+                    const decodedLookupInvoice =
+                        await NostrConnectUtils.decodeInvoiceTags(
+                            request.invoice
+                        );
+                    lookupPaymentHash = decodedLookupInvoice.paymentHash || '';
+                }
+                if (!lookupPaymentHash) {
+                    return this.handleError(
+                        'lookup_invoice missing payment_hash',
+                        ErrorCodes.INTERNAL_ERROR
+                    );
+                }
                 const rawInvoice = await BackendUtils.lookupInvoice({
-                    r_hash: request.payment_hash!
+                    r_hash: lookupPaymentHash
                 });
                 const invoice = new Invoice(rawInvoice);
                 const state = invoice.isPaid
@@ -1812,11 +2991,20 @@ export default class NostrWalletConnectStore {
                     : invoice.isExpired
                     ? 'failed'
                     : 'pending';
+                const expiresAt =
+                    invoice.expires_at ||
+                    (invoice.originalTimeUntilExpiryInSeconds != null
+                        ? Math.floor(
+                              invoice.getCreationDate.getTime() / 1000
+                          ) + invoice.originalTimeUntilExpiryInSeconds
+                        : undefined);
+                const resolvedLookupPaymentHash =
+                    invoice.getRHash || request.payment_hash || '';
                 const result = NostrConnectUtils.createNip47Transaction({
                     type: 'incoming',
                     state,
                     invoice: invoice.getPaymentRequest,
-                    payment_hash: invoice.getRHash || request.payment_hash!,
+                    payment_hash: resolvedLookupPaymentHash,
                     amount: satsToMillisats(invoice.getAmount), // Convert to msats
                     description: invoice.getMemo,
                     ...(invoice.isPaid && {
@@ -1825,7 +3013,7 @@ export default class NostrWalletConnectStore {
                     description_hash: invoice.getDescriptionHash,
                     settled_at: invoice.settleDate.getTime() / 1000,
                     created_at: invoice.getCreationDate.getTime() / 1000,
-                    expires_at: invoice.getCreationDate.getTime() / 1000
+                    expires_at: expiresAt
                 });
                 return {
                     result,
@@ -1854,7 +3042,7 @@ export default class NostrWalletConnectStore {
                             activity
                         )
                     )
-                    .filter((tx) => tx.amount > 0)
+                    .filter((tx) => !!tx.payment_hash)
                     .sort((a, b) => b.created_at - a.created_at);
             } else {
                 await Promise.all([
@@ -1928,12 +3116,22 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
-            this.messageSignStore.signMessage(request.message);
-            const signature = this.messageSignStore.signature;
+            const signature = await this.messageSignStore.signMessage(
+                request.message,
+                'lightning'
+            );
+            if (!signature) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToSignMessage'
+                    ),
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
             return {
                 result: {
                     message: request.message,
-                    signature: signature || ''
+                    signature
                 },
                 error: undefined
             };
@@ -1955,10 +3153,34 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const amountSats = await this.getInvoiceAmount(
+        const {
+            amountMsats,
+            amountSats,
+            usedRequestAmount,
+            invalidRequestAmount
+        } = await this.getInvoiceAmount(
             request.invoice,
-            invoiceInfo
+            invoiceInfo,
+            request.amount
         );
+        if (invalidRequestAmount) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                ),
+                ErrorCodes.INVALID_PARAMS
+            );
+        }
+        // When no explicit request amount is provided, the decoded invoice amount
+        // must still resolve to a positive millisatoshi value.
+        if (!usedRequestAmount && amountMsats <= 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
+                ),
+                ErrorCodes.INVALID_INVOICE
+            );
+        }
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
                 (Number(invoiceInfo.timestamp) + Number(invoiceInfo.expiry)) *
@@ -1978,23 +3200,77 @@ export default class NostrWalletConnectStore {
                 };
             }
         }
+        // Charge the connection budget in whole sats but round UP from msats
+        // so a sub-sat payment (e.g. 1500 msat) cannot bypass the budget by
+        // appearing as 1 sat instead of 2. Math.ceil keeps budget accounting
+        // strictly >= the actual amount sent, providing a conservative bound.
+        //
+        // IMPORTANT: This means a 1001 msat payment charges 2 sats to budget,
+        // creating a 1 msat "overage" in budget accounting. This is intentional
+        // for budget safety: we prefer to over-charge budget than under-charge.
+        // Callers requesting sub-satoshi-precise budgeting should request amounts
+        // that are multiples of 1000 msat (whole sats).
+        //
+        // For Cashu invoices, we validate amounts are satoshi-aligned (% 1000 === 0)
+        // and charge the actual amount without ceiling to prevent precision loss.
+        const paymentChargeAmountSats =
+            amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
+        // Determine fee limit: support both fee_limit_sat and fee_limit_msat per NIP-47 spec.
+        // fee_limit_msat takes precedence if both are provided.
+        // Validate it before any balance/budget checks so invalid values fail fast.
+        let feeLimitSat = PAYMENT_FEE_LIMIT_SATS;
+        let feeLimitMsat = PAYMENT_FEE_LIMIT_SATS * 1000;
+        const req = request as any;
+        const reqFeeLimitMsat = Number(req.fee_limit_msat);
+        const reqFeeLimitSat = Number(req.fee_limit_sat);
+        if (
+            req.fee_limit_msat !== undefined &&
+            req.fee_limit_msat !== null
+        ) {
+            const validation = validateNip47Amount(reqFeeLimitMsat, 'fee_limit_msat');
+            if (!validation.valid) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            feeLimitMsat = reqFeeLimitMsat;
+            feeLimitSat = Math.floor(reqFeeLimitMsat / 1000);
+        } else if (
+            req.fee_limit_sat !== undefined &&
+            req.fee_limit_sat !== null
+        ) {
+            const validation = validateNip47Amount(reqFeeLimitSat, 'fee_limit_sat');
+            if (!validation.valid) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            feeLimitSat = reqFeeLimitSat;
+            feeLimitMsat = reqFeeLimitSat * 1000;
+        }
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
-            amountSats,
+            paymentChargeAmountSats,
             ErrorCodes.INSUFFICIENT_BALANCE
         );
         if (!budgetCheck.success) {
             return { result: undefined, error: budgetCheck.error };
         }
         const currentLightningBalance = lightningBalance?.lightningBalance || 0;
-        if (currentLightningBalance < amountSats) {
+        if (currentLightningBalance < paymentChargeAmountSats) {
             const errorMessage = localeString(
                 'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
                 {
-                    amount: amountSats.toString(),
+                    amount: paymentChargeAmountSats.toString(),
                     balance: currentLightningBalance.toString()
                 }
             );
@@ -2004,11 +3280,29 @@ export default class NostrWalletConnectStore {
             );
         }
         this.transactionsStore.reset();
-        this.transactionsStore.sendPayment({
+
+        const paymentData: {
+            payment_request: string;
+            fee_limit_sat: string;
+            fee_limit_msat: string;
+            timeout_seconds: string;
+            amount?: string;
+            amount_msat?: string;
+        } = {
             payment_request: request.invoice,
-            fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
+            fee_limit_sat: feeLimitSat.toString(),
+            fee_limit_msat: feeLimitMsat.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
-        });
+        };
+        // Send both units so msat-aware backends keep the exact NWC amount while sat-only paths still work.
+        if (amountMsats > 0) {
+            paymentData.amount = paymentChargeAmountSats.toString();
+            paymentData.amount_msat = amountMsats.toString();
+        } else if (usedRequestAmount && request.amount) {
+            paymentData.amount = paymentChargeAmountSats.toString();
+            paymentData.amount_msat = String(request.amount);
+        }
+        this.transactionsStore.sendPayment(paymentData);
 
         await this.waitForPaymentCompletion();
 
@@ -2021,7 +3315,7 @@ export default class NostrWalletConnectStore {
         );
 
         if (paymentError) {
-            const { paymentRequest } =
+            const { paymentRequest, paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
             if (paymentRequest || request.invoice)
                 if (
@@ -2033,21 +3327,43 @@ export default class NostrWalletConnectStore {
                         paymentRequest || request.invoice,
                         connection,
                         'pay_invoice',
-                        amountSats,
+                        paymentChargeAmountSats,
+                        amountMsats,
                         'lightning',
                         paymentError.error?.message || 'Payment failed',
-                        request.invoice
+                        decodedHash || invoiceInfo.payment_hash || ''
                     );
             return paymentError;
         }
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
+        // NIP-47 pay_invoice success requires a real 32-byte preimage. If we
+        // got here with no error but no preimage, treat it as INTERNAL_ERROR
+        // rather than returning success with an empty preimage.
+        if (!preimage || preimage.length === 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                ),
+                ErrorCodes.INTERNAL_ERROR
+            );
+        }
+
+        // Charge the budget IMMEDIATELY on confirmed success so a missing
+        // activity-row lookup (paymentsStore lag, MPP, normalization mismatch)
+        // can't let a successful payment escape budget accounting. The
+        // pay_invoice mutex + replay-marker guarantee idempotency.
+        this.chargeBudgetOnSuccess(connection, paymentChargeAmountSats, {
+            activityId: request.invoice,
+            method: 'pay_invoice'
+        });
+
         await this.paymentsStore.getPayments();
         const payment = this.paymentsStore.payments.find(
             (payment) => payment.getPaymentRequest === request.invoice
         );
-        if (payment)
+        if (payment) {
             await this.finalizePayment({
                 id: request.invoice,
                 type: 'pay_invoice',
@@ -2055,12 +3371,49 @@ export default class NostrWalletConnectStore {
                 payment_source: 'lightning',
                 connection,
                 amountSats,
-                skipNotification
+                amountMsats,
+                budgetChargeAmountSats: paymentChargeAmountSats,
+                skipNotification,
+                skipBudgetCharge: true
             });
+        } else {
+            const { paymentHash: decodedHash } =
+                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            const fallbackPaymentHash =
+                decodedHash || invoiceInfo.payment_hash || '';
+            if (!fallbackPaymentHash) {
+                return this.handleError(
+                    'fallback payment missing payment_hash',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
+            const notificationTransaction =
+                await this.recordMinimalSuccessActivity({
+                    connection,
+                    invoice: request.invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    amountSats: paymentChargeAmountSats,
+                    amountMsats,
+                    preimage,
+                    feesPaidMsats: satsToMillisats(Number(fees_paid) || 0),
+                    paymentHash: fallbackPaymentHash
+                });
+            if (!skipNotification) {
+                this.showPaymentSentNotification(
+                    paymentChargeAmountSats,
+                    connection.name
+                );
+                this.publishPaymentSentNotification(
+                    connection,
+                    notificationTransaction
+                );
+            }
+        }
 
         return {
             result: {
-                preimage: preimage || '',
+                preimage,
                 fees_paid: satsToMillisats(Number(fees_paid) || 0)
             },
             error: undefined
@@ -2125,15 +3478,44 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        let amount = 0;
+        let amountMsats = 0;
         if (invoice.getAmount && invoice.getAmount > 0) {
-            amount = Math.floor(invoice.getAmount);
+            amountMsats = satsToMillisats(Math.floor(invoice.getAmount));
         } else if ((invoice as any).satoshis) {
-            amount = Math.floor((invoice as any).satoshis);
+            amountMsats = satsToMillisats(
+                Math.floor((invoice as any).satoshis)
+            );
         } else if ((invoice as any).millisatoshis) {
-            amount = millisatsToSats(Number((invoice as any).millisatoshis));
+            amountMsats = Math.floor(Number((invoice as any).millisatoshis));
+        } else if (request.amount !== undefined && request.amount !== null) {
+            const normalizedRequestAmount = Number(request.amount);
+            // Validate request amount: must be finite, integer, positive
+            const validation = validateNip47Amount(normalizedRequestAmount, 'amount');
+            if (!validation.valid || normalizedRequestAmount <= 0) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                    ),
+                    ErrorCodes.INVALID_PARAMS
+                );
+            }
+            amountMsats = normalizedRequestAmount;
         }
-        if (!amount || amount <= 0) {
+        // Cashu mints settle in whole sats. Reject any msat-precise amount
+        // (invoice or request override) so the wallet doesn't silently pay
+        // a different amount than the client requested.
+        if (amountMsats > 0 && amountMsats % 1000 !== 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidAmountMsats'
+                ),
+                ErrorCodes.INVALID_PARAMS
+            );
+        }
+        // Round up to whole sats so sub-sat msat amounts cannot bypass the
+        // budget; matches the lightning path's accounting.
+        const amount = amountMsats > 0 ? Math.ceil(amountMsats / 1000) : 0;
+        if (!amountMsats || amount <= 0) {
             return this.handleError(
                 localeString(
                     'stores.NostrWalletConnectStore.error.invalidAmount'
@@ -2168,7 +3550,7 @@ export default class NostrWalletConnectStore {
             amount: amount.toString()
         });
         if (!cashuInvoice || this.cashuStore.paymentError) {
-            const { paymentRequest } =
+            const { paymentRequest, paymentHash: decodedHash } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
             if (paymentRequest || request.invoice)
                 if (
@@ -2181,9 +3563,10 @@ export default class NostrWalletConnectStore {
                         connection,
                         'pay_invoice',
                         amount,
-                        'lightning',
+                        amountMsats,
+                        'cashu',
                         this.cashuStore.paymentErrorMsg || 'Payment failed',
-                        request.invoice
+                        decodedHash || ''
                     );
             return this.handleError(
                 this.cashuStore.paymentErrorMsg ||
@@ -2202,6 +3585,27 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
         }
+        // NIP-47 pay_invoice success requires an actual 32-byte preimage.
+        // The bolt11 payment request is NOT a preimage; if the mint didn't
+        // return one, surface an internal error instead of returning a fake.
+        const cashuPreimage = cashuInvoice.getPreimage;
+        if (!cashuPreimage || cashuPreimage.length === 0) {
+            return this.handleError(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                ),
+                ErrorCodes.INTERNAL_ERROR
+            );
+        }
+
+        // Charge budget unconditionally on confirmed success — see lightning
+        // path for rationale. Idempotency is enforced by the pay_invoice mutex
+        // and replay-event marker.
+        this.chargeBudgetOnSuccess(connection, amount, {
+            activityId: request.invoice,
+            method: 'pay_invoice'
+        });
+
         const payment = this.cashuStore.payments?.find(
             (payment) => payment.getPaymentRequest === request.invoice
         );
@@ -2212,17 +3616,58 @@ export default class NostrWalletConnectStore {
                 type: 'pay_invoice',
                 payment_source: 'cashu',
                 amountSats: amount,
+                amountMsats,
+                budgetChargeAmountSats: amount,
                 skipNotification,
-                connection
+                connection,
+                skipBudgetCharge: true
             });
+        } else {
+            const { paymentHash: decodedHash } =
+                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            if (!decodedHash) {
+                return this.handleError(
+                    'fallback payment missing payment_hash',
+                    ErrorCodes.INTERNAL_ERROR
+                );
+            }
+            const notificationTransaction =
+                await this.recordMinimalSuccessActivity({
+                    connection,
+                    invoice: request.invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'cashu',
+                    amountSats: amount,
+                    amountMsats,
+                    preimage: cashuPreimage,
+                    feesPaidMsats: satsToMillisats(cashuInvoice.fee || 0),
+                    paymentHash: decodedHash
+                });
+            if (!skipNotification) {
+                this.showPaymentSentNotification(amount, connection.name);
+                this.publishPaymentSentNotification(
+                    connection,
+                    notificationTransaction
+                );
+            }
         }
+        // For Cashu: Check if actual amount charged differs from requested amount
+        // (due to sub-satoshi rounding or Cashu mint behavior)
+        const actualAmountSats = cashuInvoice.getAmount
+            ? Math.floor(Number(cashuInvoice.getAmount))
+            : amount;
+        const actualAmountMsats = satsToMillisats(actualAmountSats);
+        const amountWasRoundedUp = actualAmountMsats > amountMsats;
+
         return {
             result: {
-                preimage:
-                    cashuInvoice.getPreimage ||
-                    cashuInvoice.getPaymentRequest ||
-                    '',
-                fees_paid: satsToMillisats(cashuInvoice.fee || 0)
+                preimage: cashuPreimage,
+                fees_paid: satsToMillisats(cashuInvoice.fee || 0),
+                // Include actual amount charged if it differs from requested
+                // This helps client verify amount was rounded/adjusted
+                ...(amountWasRoundedUp && {
+                    amount_msat: actualAmountMsats.toString()
+                })
             },
             error: undefined
         };
@@ -2337,30 +3782,120 @@ export default class NostrWalletConnectStore {
     }
     private async getInvoiceAmount(
         invoice: string,
-        invoiceInfo: any
-    ): Promise<number> {
-        let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
-        if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
-            backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
-        }
-        if (backendAmount === 0 && invoiceInfo.millisatoshis !== undefined) {
-            backendAmount = millisatsToSats(
-                Number(invoiceInfo.millisatoshis) || 0
+        invoiceInfo: any,
+        requestAmountMsats?: number
+    ): Promise<{
+        amountMsats: number;
+        amountSats: number;
+        usedRequestAmount: boolean;
+        invalidRequestAmount: boolean;
+    }> {
+        // Step 1: Try backend amount
+        let backendAmountMsats = 0;
+        const parseBackendMsat = (value: unknown): number => {
+            const normalized =
+                typeof value === 'string'
+                    ? value.trim().replace(/\s*msat$/i, '')
+                    : value;
+            const amount = Number(normalized);
+            return Number.isFinite(amount) && amount > 0
+                ? Math.floor(amount)
+                : 0;
+        };
+        const numMsatFields = [
+            invoiceInfo.num_msat,
+            invoiceInfo.amount_msat,
+            invoiceInfo.millisatoshis,
+            invoiceInfo.invoice_amount_msat
+        ];
+        const exactMsatField = numMsatFields.find(
+            (value) => value !== undefined && value !== null
+        );
+        if (exactMsatField !== undefined && exactMsatField !== null) {
+            backendAmountMsats = parseBackendMsat(exactMsatField);
+        } else if (invoiceInfo.num_satoshis !== undefined) {
+            backendAmountMsats = satsToMillisats(
+                Math.floor(Number(invoiceInfo.num_satoshis) || 0)
+            );
+        } else if (invoiceInfo.satoshis !== undefined) {
+            backendAmountMsats = satsToMillisats(
+                Math.floor(Number(invoiceInfo.satoshis) || 0)
             );
         }
-        if (backendAmount > 0) {
-            return backendAmount;
-        }
-        const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
-        if (amount > 0) {
-            console.log(
-                'NWC: Backend did not provide amount, using decoded invoice amount:',
-                amount
-            );
-            return amount;
+        if (backendAmountMsats > 0) {
+            return {
+                amountMsats: backendAmountMsats,
+                amountSats: Math.ceil(backendAmountMsats / 1000),
+                usedRequestAmount: false,
+                invalidRequestAmount: false
+            };
         }
 
-        return backendAmount;
+        // Step 2: Try decoded invoice amount.
+        // Wrap the decode in try/catch so a malformed BOLT11 surfaces as an
+        // amount of 0 (caller maps to INVALID_INVOICE/INVALID_PARAMS) instead
+        // of bubbling up as an INTERNAL error.
+        let decodedAmount = 0;
+        try {
+            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
+                invoice
+            );
+            decodedAmount = Number(amount) || 0;
+        } catch (decodeErr) {
+            console.log(
+                'NWC: decodeInvoiceTags failed; treating as zero amount:',
+                decodeErr instanceof Error ? decodeErr.message : decodeErr
+            );
+        }
+        if (decodedAmount > 0) {
+            console.log(
+                'NWC: Backend did not provide amount, using decoded invoice amount:',
+                decodedAmount
+            );
+            return {
+                amountMsats: satsToMillisats(decodedAmount),
+                amountSats: decodedAmount,
+                usedRequestAmount: false,
+                invalidRequestAmount: false
+            };
+        }
+
+        // Step 3: Try request amount if provided
+        // Per NIP-47 spec, request amounts are in millisatoshis
+        const normalizedRequestAmountMsats = Number(requestAmountMsats);
+        const hasRequestAmount =
+            requestAmountMsats !== undefined && requestAmountMsats !== null;
+
+        if (hasRequestAmount) {
+            if (
+                !Number.isFinite(normalizedRequestAmountMsats) ||
+                !Number.isInteger(normalizedRequestAmountMsats) ||
+                normalizedRequestAmountMsats <= 0
+            ) {
+                return {
+                    amountMsats: 0,
+                    amountSats: 0,
+                    usedRequestAmount: false,
+                    invalidRequestAmount: true
+                };
+            }
+
+            const requestedMsats = normalizedRequestAmountMsats;
+            return {
+                amountMsats: requestedMsats,
+                amountSats: Math.ceil(requestedMsats / 1000),
+                usedRequestAmount: true,
+                invalidRequestAmount: false
+            };
+        }
+
+        // Step 4: No valid amount found anywhere
+        return {
+            amountMsats: 0,
+            amountSats: 0,
+            usedRequestAmount: false,
+            invalidRequestAmount: false
+        };
     }
 
     /**
@@ -2387,6 +3922,93 @@ export default class NostrWalletConnectStore {
     }
 
     /**
+     * Charges the connection's budget on a confirmed-successful payment.
+     * Called UNCONDITIONALLY before finalizePayment so a failed payment-row
+     * lookup (e.g. paymentsStore lag) cannot let a successful payment escape
+     * budget accounting. Idempotency is enforced by the caller via the
+     * pay_invoice mutex + replay-event marker.
+     */
+    private chargeBudgetOnSuccess(
+        connection: NWCConnection,
+        chargeAmountSats: number,
+        context: { activityId: string; method: string }
+    ): void {
+        const trackResult = connection.trackSpending(chargeAmountSats);
+        if (!trackResult.success) {
+            console.warn(
+                '[NostrWalletConnectStore.chargeBudgetOnSuccess] Budget limit exceeded during spend tracking',
+                {
+                    timestamp: new Date().toISOString(),
+                    connectionId: connection.id,
+                    connectionName: connection.name,
+                    activityId: context.activityId,
+                    method: context.method,
+                    chargeAmountSats,
+                    totalSpendSats: connection.totalSpendSats,
+                    maxAmountSats: connection.maxAmountSats,
+                    budgetLimitReached: connection.budgetLimitReached,
+                    error: trackResult.errorMessage,
+                    severity: 'warning',
+                    category: 'budget_race_detected'
+                }
+            );
+        }
+    }
+
+    /**
+     * Records minimal activity for a successful payment when paymentsStore
+     * lookup fails (delayed listing / MPP / Cashu mint-quote latency).
+     * Uses the actually-paid amount and the real preimage / fees we already
+     * have from the wallet response so list_transactions stays accurate.
+     */
+    private async recordMinimalSuccessActivity(params: {
+        connection: NWCConnection;
+        invoice: string;
+        type: ConnectionActivityType;
+        payment_source: ConnectionPaymentSourceType;
+        amountSats: number;
+        amountMsats: number;
+        preimage: string;
+        feesPaidMsats: number;
+        paymentHash: string;
+    }): Promise<Nip47Transaction | undefined> {
+        let notificationTransaction: Nip47Transaction | undefined;
+        runInAction(() => {
+            const placeholder: any = {
+                getPaymentRequest: params.invoice,
+                paymentHash: params.paymentHash,
+                getPreimage: params.preimage,
+                payment_preimage: params.preimage,
+                fee_msat: params.feesPaidMsats.toString(),
+                getAmount: params.amountSats,
+                amount: params.amountSats
+            };
+            const paymentObj =
+                params.payment_source == 'cashu'
+                    ? new CashuPayment(placeholder)
+                    : new Payment(placeholder);
+            const activity: ConnectionActivity = {
+                id: params.invoice,
+                type: params.type,
+                payment: paymentObj,
+                status: 'success',
+                payment_source: params.payment_source,
+                satAmount: params.amountSats,
+                msatAmount: params.amountMsats,
+                paymentHash: params.paymentHash
+            };
+            params.connection.addActivity(activity);
+            notificationTransaction =
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                    activity
+                );
+            this.findAndUpdateConnection(params.connection);
+        });
+        await this.saveConnections();
+        return notificationTransaction;
+    }
+
+    /**
      * Processes payment completion: tracks spending, saves, and shows notification
      */
     private async finalizePayment({
@@ -2396,7 +4018,10 @@ export default class NostrWalletConnectStore {
         decoded,
         connection,
         amountSats,
-        skipNotification = false
+        amountMsats,
+        budgetChargeAmountSats,
+        skipNotification = false,
+        skipBudgetCharge = false
     }: {
         id: string;
         type: ConnectionActivityType;
@@ -2404,25 +4029,77 @@ export default class NostrWalletConnectStore {
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
         amountSats: number;
+        amountMsats?: number;
+        budgetChargeAmountSats?: number;
         skipNotification?: boolean;
+        // When true, skip trackSpending — caller has already charged the
+        // budget (see chargeBudgetOnSuccess) and we only need to record
+        // activity and notify here. Avoids double-charging.
+        skipBudgetCharge?: boolean;
     }): Promise<void> {
+        let paymentSentNotification: Nip47Transaction | undefined;
         runInAction(() => {
-            connection.trackSpending(amountSats);
-            connection.activity.push({
+            // Use budgetChargeAmountSats if provided (for sub-satoshi budget enforcement),
+            // otherwise use amountSats (payment amount)
+            const chargeAmount = budgetChargeAmountSats ?? amountSats;
+            const exactAmountMsats =
+                amountMsats ?? satsToMillisats(chargeAmount);
+            if (!skipBudgetCharge) {
+                const trackResult = connection.trackSpending(chargeAmount);
+                if (!trackResult.success) {
+                    const timestamp = new Date().toISOString();
+                    console.warn(
+                        '[NostrWalletConnectStore.finalizePayment] Budget limit exceeded during spend tracking',
+                        {
+                            timestamp,
+                            connectionId: connection.id,
+                            connectionName: connection.name,
+                            activityId: id,
+                            amountSats,
+                            totalSpendSats: connection.totalSpendSats,
+                            maxAmountSats: connection.maxAmountSats,
+                            budgetLimitReached: connection.budgetLimitReached,
+                            error: trackResult.errorMessage,
+                            severity: 'warning',
+                            category: 'budget_race_detected'
+                        }
+                    );
+                }
+            }
+            const paymentObj =
+                payment_source == 'cashu'
+                    ? new CashuPayment(decoded)
+                    : new Payment(decoded);
+            const activity: ConnectionActivity = {
                 id,
                 type,
-                payment:
-                    payment_source == 'cashu'
-                        ? new CashuPayment(decoded)
-                        : new Payment(decoded),
+                payment: paymentObj,
                 status: 'success',
-                payment_source
-            });
+                payment_source,
+                satAmount: amountSats,
+                msatAmount: exactAmountMsats,
+                paymentHash:
+                    paymentObj instanceof Payment
+                        ? paymentObj.paymentHash
+                        : undefined
+            };
+            connection.addActivity(activity);
+            paymentSentNotification =
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                    activity
+                );
             this.findAndUpdateConnection(connection);
         });
         await this.saveConnections();
         if (!skipNotification) {
-            this.showPaymentSentNotification(amountSats, connection.name);
+            this.showPaymentSentNotification(
+                budgetChargeAmountSats ?? amountSats,
+                connection.name
+            );
+            this.publishPaymentSentNotification(
+                connection,
+                paymentSentNotification
+            );
         }
     }
 
@@ -2431,6 +4108,7 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         type: ConnectionActivityType,
         amountSats: number,
+        amountMsats: number | undefined,
         payment_source: ConnectionPaymentSourceType,
         errorMessage: string,
         paymentHash?: string
@@ -2445,6 +4123,7 @@ export default class NostrWalletConnectStore {
                 id,
                 type,
                 satAmount: amountSats,
+                msatAmount: amountMsats ?? satsToMillisats(amountSats),
                 status: 'failed',
                 payment_source,
                 error: errorMessage,
@@ -2458,7 +4137,7 @@ export default class NostrWalletConnectStore {
                 };
             } else {
                 // ➕ add new element
-                connection.activity.push(record);
+                connection.addActivity(record);
             }
 
             this.findAndUpdateConnection(connection);
@@ -2538,6 +4217,22 @@ export default class NostrWalletConnectStore {
             );
         }
     }
+
+    private async loadClientPrivateKey(
+        pubkey: string
+    ): Promise<string | undefined> {
+        try {
+            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+            if (!storedKeys) return undefined;
+
+            const keys: ClientKeys = JSON.parse(storedKeys);
+            return keys[pubkey];
+        } catch (error) {
+            console.error('Failed to load client private key:', error);
+            return undefined;
+        }
+    }
+
     private async deleteClientKeys(pubkey: string): Promise<void> {
         try {
             const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
@@ -2945,9 +4640,23 @@ export default class NostrWalletConnectStore {
                         const resubscribePromises =
                             connectionsToResubscribe.map(async (connection) => {
                                 try {
-                                    await this.subscribeToConnection(
-                                        connection
-                                    );
+                                    // Force a clean resubscribe after the
+                                    // relay reconnect — the default skip
+                                    // path would no-op because the stale
+                                    // unsubscribe handle is still in
+                                    // activeSubscriptions.
+                                    const subscribed =
+                                        await this.subscribeToConnection(
+                                            connection,
+                                            { forceResubscribe: true }
+                                        );
+                                    if (!subscribed) {
+                                        throw new Error(
+                                            localeString(
+                                                'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                                            )
+                                        );
+                                    }
                                 } catch (error) {
                                     console.warn(
                                         `Android: Failed to re-subscribe connection ${connection.name}:`,
@@ -3018,6 +4727,7 @@ export default class NostrWalletConnectStore {
             this.endIOSBackgroundTask();
         }
     }
+
     @action
     public async endIOSBackgroundTask(): Promise<void> {
         if (Platform.OS !== 'ios' || !this.iosBackgroundTaskActive) {
@@ -3115,21 +4825,74 @@ export default class NostrWalletConnectStore {
             return;
         }
 
-        const results = await Promise.all(
+        const results = await Promise.allSettled(
             events.map(async (eventStr) => {
                 try {
-                    const { request, connection, eventId } =
+                    const { request, connection, eventId, encryptionScheme } =
                         await this.retryWithBackoff(
                             () => this.validateAndParsePendingEvent(eventStr),
                             3
                         );
 
+                    if (
+                        request.method === 'pay_invoice' &&
+                        !connection.hasPermission('pay_invoice')
+                    ) {
+                        await this.publishEventToClient(
+                            connection,
+                            request.method,
+                            this.handleError(
+                                localeString('backends.NWC.permissionDenied'),
+                                ErrorCodes.RESTRICTED
+                            ),
+                            eventId,
+                            encryptionScheme
+                        );
+                        // Persist before returning so the same restored event
+                        // doesn't re-publish RESTRICTED on every iOS restore.
+                        if (!(await this.markProcessedReplayEvent(eventId))) {
+                            throw new Error(
+                                'Failed to persist replay marker for RESTRICTED response'
+                            );
+                        }
+                        return null;
+                    }
+
                     if (request.method === 'pay_invoice') {
-                        const { isExpired, amount } =
+                        const { isExpired } =
                             await NostrConnectUtils.decodeInvoiceTags(
                                 request.params?.invoice
                             );
+                        const { amountSats } = await this.getInvoiceAmount(
+                            request.params?.invoice,
+                            {},
+                            request.params?.amount
+                        );
                         if (isExpired) {
+                            // Surface a terminal PAYMENT_FAILED to the client
+                            // and persist the event so future restores don't
+                            // silently re-evaluate the same expired invoice.
+                            // (NIP-47: pay_invoice expired-at-pay-time is a
+                            // payment failure, not a missing record.)
+                            await this.publishEventToClient(
+                                connection,
+                                request.method,
+                                this.handleError(
+                                    localeString(
+                                        'stores.NostrWalletConnectStore.error.invoiceExpired'
+                                    ),
+                                    ErrorCodes.FAILED_TO_PAY_INVOICE
+                                ),
+                                eventId,
+                                encryptionScheme
+                            );
+                            if (
+                                !(await this.markProcessedReplayEvent(eventId))
+                            ) {
+                                throw new Error(
+                                    'Failed to persist replay marker for expired invoice response'
+                                );
+                            }
                             return null;
                         }
                         return {
@@ -3137,34 +4900,187 @@ export default class NostrWalletConnectStore {
                             request,
                             connection,
                             eventId,
-                            amount
+                            amount: amountSats,
+                            encryptionScheme
                         };
+                    }
+
+                    if (
+                        NostrConnectUtils.getFullAccessPermissions().includes(
+                            request.method
+                        )
+                    ) {
+                        if (await this.hasProcessedReplayEvent(eventId)) {
+                            const replayResult =
+                                await this.replayCachedResponse(
+                                    connection,
+                                    eventId
+                                );
+                            if (replayResult) {
+                                return null;
+                            }
+                            return null;
+                        }
+                        try {
+                            if (
+                                await this.hasCommittedRestoreMarkerFailure(
+                                    eventId
+                                )
+                            ) {
+                                await this.finalizeCommittedRestoreEvent(
+                                    connection,
+                                    eventId
+                                );
+                                return null;
+                            }
+
+                            const cached = await this.getReplayResponse(
+                                eventId
+                            );
+                            if (cached) {
+                                const finalized =
+                                    await this.finalizeCommittedRestoreEvent(
+                                        connection,
+                                        eventId
+                                    );
+                                if (!finalized) {
+                                    throw new Error(
+                                        'Failed to finalize committed restored NWC event'
+                                    );
+                                }
+                                return null;
+                            }
+
+                            const result = await this.handleEventRequest(
+                                connection,
+                                request,
+                                eventId,
+                                true,
+                                encryptionScheme,
+                                true
+                            );
+                            // Mark restored full-access methods (make_invoice,
+                            // sign_message, lookup_invoice, ...) as processed so
+                            // a re-delivered restore event doesn't re-execute
+                            // them (NIP-47 idempotency for non-pay_invoice
+                            // methods on iOS background restore).
+                            // Only mark as processed after a response has
+                            // been committed or cached; transient errors
+                            // should retry after restart.
+                            if (!result.committed) {
+                                if (
+                                    result.errorMessage ===
+                                    REPLAY_MARKER_PERSISTENCE_ERROR
+                                ) {
+                                    await this.markCommittedRestoreMarkerFailure(
+                                        eventId
+                                    );
+                                    return null;
+                                }
+                                throw new Error(
+                                    result.errorMessage ||
+                                        'Failed to process restored NWC event'
+                                );
+                            }
+                            if (
+                                !(await this.markProcessedReplayEvent(eventId))
+                            ) {
+                                await this.markCommittedRestoreMarkerFailure(
+                                    eventId
+                                );
+                                throw new Error(
+                                    'Failed to persist replay marker for restored NWC event'
+                                );
+                            }
+                            await this.removeCommittedRestoreMarkerFailure(
+                                eventId
+                            );
+                            if (result.published) {
+                                await this.removeReplayResponse(eventId);
+                            }
+                        } catch (handleError) {
+                            // Transient or retryable error from handleEventRequest:
+                            // do NOT mark processed. Let it retry after restart.
+                            console.warn(
+                                'NWC: Transient error in handleEventRequest for full-access method',
+                                {
+                                    eventId,
+                                    method: request.method,
+                                    error: handleError
+                                }
+                            );
+                            throw handleError;
+                        }
+                        return null;
                     }
 
                     await this.publishNotImplementedNip47Response(
                         connection,
                         request,
-                        eventId
+                        eventId,
+                        encryptionScheme
                     );
+                    // Terminal NOT_IMPLEMENTED — persist so a restored
+                    // event of an unsupported method doesn't keep
+                    // re-publishing the error.
+                    if (!(await this.markProcessedReplayEvent(eventId))) {
+                        throw new Error(
+                            'Failed to persist replay marker for NOT_IMPLEMENTED response'
+                        );
+                    }
                     return null;
                 } catch (error) {
-                    console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
-                        error,
-                        eventStr
-                    });
-                    return null;
+                    if (error instanceof UnsupportedEncryptionError) {
+                        await this.publishUnsupportedEncryptionResponse(
+                            error.connection,
+                            'unsupported_encryption',
+                            error.eventId,
+                            error.encryptionScheme
+                        );
+                        // Terminal UNSUPPORTED_ENCRYPTION error: dedupe
+                        // restored deliveries.
+                        if (
+                            !(await this.markProcessedReplayEvent(
+                                error.eventId
+                            ))
+                        ) {
+                            throw new Error(
+                                'Failed to persist replay marker for UNSUPPORTED_ENCRYPTION response'
+                            );
+                        }
+                        return null;
+                    }
+                    // Transient/retryable error: DO NOT mark event as processed.
+                    // Transient failures (decryption issues, parsing problems, internal
+                    // handleEventRequest exceptions, network timeouts) should be retried
+                    // after restart. Only mark terminal outcomes as processed.
+                    // Rethrow to propagate to map result.
+                    console.warn(
+                        'NWC: PROCESS PENDING EVENTS ERROR (transient, will retry)',
+                        {
+                            error,
+                            eventStr
+                        }
+                    );
+                    throw error;
                 }
             })
         );
 
         const pendingEvents = results
-            .filter((r): r is InvoiceEventType => r !== null)
-            .map((event) => ({
-                ...event,
-                connectionName: event.connection.name,
-                status: false,
-                isProcessed: false
-            }));
+            .filter(
+                (r): r is PromiseFulfilledResult<InvoiceEventType | null> =>
+                    r.status === 'fulfilled' && r.value !== null
+            )
+            .map((result) => {
+                const event = result.value!;
+                return {
+                    ...event,
+                    connectionName: event.connection.name,
+                    status: false,
+                    isProcessed: false
+                };
+            });
 
         const dedupedPendingEvents = Array.from(
             new Map(
@@ -3192,6 +5108,7 @@ export default class NostrWalletConnectStore {
         request: NWCRequest;
         connection: NWCConnection;
         eventId: string;
+        encryptionScheme: NwcEncryptionScheme;
     }> {
         let event: NostrEvent;
         try {
@@ -3232,30 +5149,6 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-        let request: NWCRequest;
-        try {
-            const privateKey = this.walletServiceKeys!.privateKey;
-            if (!privateKey) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
-                    )
-                );
-            }
-            const decryptedContent = nip04.decrypt(
-                privateKey,
-                connection.pubkey,
-                event.content
-            );
-            request = JSON.parse(decryptedContent);
-        } catch (error) {
-            console.error('NWC: Failed to decrypt or parse event content', {
-                error,
-                eventStr
-            });
-            throw error;
-        }
-
         if (!validateEvent(event)) {
             throw new Error(
                 localeString(
@@ -3286,24 +5179,164 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        if (
-            request.method === 'pay_invoice' &&
-            !connection.hasPermission('pay_invoice')
-        ) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
-                )
+        // Validate that the encryption scheme is supported BEFORE calling
+        // getEventEncryptionScheme so an unknown scheme throws UnsupportedEncryptionError
+        // (which the caller handles gracefully) rather than a generic Error.
+        if (!this.isSupportedEncryptionScheme(event.tags)) {
+            // Capture the actual raw tag value for the error so it accurately
+            // reflects the unknown scheme rather than a normalized fallback.
+            const rawScheme =
+                event.tags.find(
+                    (tag) =>
+                        Array.isArray(tag) &&
+                        tag.length >= 2 &&
+                        tag[0] === 'encryption'
+                )?.[1] ?? 'unknown';
+            throw new UnsupportedEncryptionError(
+                connection,
+                event.id,
+                String(rawScheme)
             );
         }
-        return { request, connection, eventId: event.id };
+
+        const encryptionScheme = this.getEventEncryptionScheme(event.tags);
+
+        let request: NWCRequest;
+        try {
+            const privateKey = this.walletServiceKeys!.privateKey;
+            if (!privateKey) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
+                    )
+                );
+            }
+            const decryptedContent =
+                encryptionScheme === 'nip44_v2'
+                    ? (() => {
+                          try {
+                              const conversationKey = nip44.getConversationKey(
+                                  hexToBytes(privateKey),
+                                  connection.pubkey
+                              );
+                              return nip44.decrypt(
+                                  event.content,
+                                  conversationKey
+                              );
+                          } catch (nip44Error) {
+                              // NIP-44 decryption failed. Per NIP-44 security model,
+                              // if a client explicitly declares NIP-44 encryption but
+                              // decryption fails, we must NOT silently downgrade to
+                              // NIP-04 (which would break security guarantees).
+                              // Instead, return an explicit error so clients can
+                              // understand the failure and retry appropriately.
+                              console.error(
+                                  'NWC: NIP-44 decryption failed - rejecting request to prevent security downgrade',
+                                  {
+                                      nip44Error,
+                                      eventId: event.id,
+                                      reason: 'NIP-44 explicitly declared but decryption failed; no implicit NIP-04 fallback'
+                                  }
+                              );
+                              throw new Error(
+                                  `NIP-44 decryption failed and no fallback allowed per NIP-44 security model: ${
+                                      nip44Error instanceof Error
+                                          ? nip44Error.message
+                                          : String(nip44Error)
+                                  }`
+                              );
+                          }
+                      })()
+                    : nip04.decrypt(
+                          privateKey,
+                          connection.pubkey,
+                          event.content
+                      );
+            // Parse JSON separately from decryption to distinguish error types
+            try {
+                request = JSON.parse(decryptedContent);
+            } catch (parseError) {
+                console.error(
+                    'NWC: Failed to parse JSON after successful decryption',
+                    {
+                        parseError,
+                        encryptionScheme,
+                        decryptedContentLength: decryptedContent.length,
+                        diagnostic:
+                            'The encryption/decryption succeeded but the content is not valid JSON. ' +
+                            'This may indicate client sending malformed NIP-47 requests or a protocol mismatch.',
+                        eventStr
+                    }
+                );
+                throw parseError;
+            }
+        } catch (error) {
+            const encryptionTag =
+                event.tags.find(
+                    (tag) =>
+                        Array.isArray(tag) &&
+                        tag.length >= 2 &&
+                        tag[0] === 'encryption'
+                )?.[1] || 'none';
+
+            // Distinguish between decryption and JSON parsing failures for clearer logs
+            const isDecryptionError =
+                error instanceof Error &&
+                error.message.includes('Failed to parse JSON');
+            const errorType = isDecryptionError ? 'JSON_PARSE' : 'DECRYPTION';
+
+            console.error('NWC: Failed to process event content', {
+                error,
+                errorType,
+                encryptionScheme,
+                encryptionTag,
+                diagnostic:
+                    errorType === 'DECRYPTION'
+                        ? `Decryption failed with scheme=${encryptionScheme}, tag=${encryptionTag}. ` +
+                          `If this persists, the client may be using a different encryption scheme than expected.`
+                        : `JSON parsing failed after successful decryption. The decrypted content is not valid JSON.`,
+                eventStr
+            });
+            throw error;
+        }
+
+        return {
+            request,
+            connection,
+            eventId: event.id,
+            encryptionScheme
+        };
     }
 
     @action
     public async processPendingPaymentsEvents(
         pendingEvents: PendingPayment[]
     ): Promise<void> {
-        let remainingEvents = [...pendingEvents];
+        const storedPendingPayments = await this.getStoredPendingPayments();
+        const storedPendingPaymentsById = new Map(
+            storedPendingPayments.map((event) => [event.eventId, event])
+        );
+        const uniquePendingEvents = Array.from(
+            new Map(
+                pendingEvents.map((event) => {
+                    const storedEvent = storedPendingPaymentsById.get(
+                        event.eventId
+                    );
+                    const latestEvent = storedEvent?.isProcessed
+                        ? {
+                              ...event,
+                              ...storedEvent,
+                              connection: event.connection,
+                              connectionName:
+                                  event.connectionName ||
+                                  storedEvent.connectionName
+                          }
+                        : event;
+                    return [event.eventId, latestEvent];
+                })
+            ).values()
+        );
+        let remainingEvents = [...uniquePendingEvents];
         let remainingTotal = remainingEvents.reduce(
             (sum, event) => sum + event.amount,
             0
@@ -3319,127 +5352,307 @@ export default class NostrWalletConnectStore {
                 totalAmount: remainingTotal
             });
 
-        const processingResults = await Promise.allSettled(
-            pendingEvents.map(async (event) => {
-                try {
-                    // Ensure we have a proper NWCConnection instance
-                    // In case the connection was not restored properly
-                    const connection = this.getConnection(event.connection.id);
+        // Serialize per-connection processing so budget checks, payment
+        // dispatch, replay-marker persistence and trackSpending happen
+        // atomically for a given connection. Two approved pay_invoice
+        // requests for the same connection running in parallel could each
+        // pass the budget check before either has been recorded as spent,
+        // bypassing maxAmountSats. Different connections can still run in
+        // parallel.
+        const eventsByConnection = new Map<string, PendingPayment[]>();
+        for (const event of uniquePendingEvents) {
+            const list = eventsByConnection.get(event.connection.id) || [];
+            list.push(event);
+            eventsByConnection.set(event.connection.id, list);
+        }
 
-                    if (!connection) {
-                        return;
-                    }
+        const processSingleEvent = async (event: PendingPayment) => {
+            try {
+                // Persisted replay guards stop a previously approved event
+                // from being re-run after a restart.
+                const connection = this.getConnection(event.connection.id);
+                if (!connection) {
+                    return null;
+                }
 
-                    const result = await this.handleEventRequest(
-                        connection,
-                        event.request,
-                        event.eventId,
-                        true // skip single payment Notification for pending events
-                    );
-                    runInAction(async () => {
-                        if (result.success) {
-                            this.processedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            await this.updatePendingPayment({
-                                ...event,
-                                status: true,
-                                isProcessed: true
-                            });
-                        } else {
-                            this.failedPendingPayInvoiceEventIds.push(
-                                event.eventId
-                            );
-                            if (result.errorMessage) {
-                                let formattedError = result.errorMessage;
-                                try {
-                                    const parsed = JSON.parse(
-                                        result.errorMessage
-                                    );
-                                    if (parsed.message) {
-                                        formattedError = parsed.message;
-                                    } else if (typeof parsed === 'string') {
-                                        formattedError = parsed;
-                                    }
-                                } catch {
-                                    formattedError = result.errorMessage;
-                                }
-                                await this.updatePendingPayment({
-                                    ...event,
-                                    status: false,
-                                    isProcessed: true,
-                                    errorMessage: formattedError
-                                });
-                                this.pendingPayInvoiceErrors.set(
-                                    event.eventId,
-                                    formattedError
+                if (event.isProcessed && !event.status) {
+                    const errorMessage =
+                        event.errorMessage || REPLAY_MARKER_PERSISTENCE_ERROR;
+                    if (
+                        event.errorMessage === REPLAY_MARKER_PERSISTENCE_ERROR
+                    ) {
+                        const cached = await this.getReplayResponse(
+                            event.eventId
+                        );
+                        if (cached) {
+                            const replayResult =
+                                await this.replayCachedResponse(
+                                    connection,
+                                    event.eventId
                                 );
+                            if (replayResult) {
+                                const persisted =
+                                    await this.markProcessedReplayEvent(
+                                        event.eventId
+                                    );
+                                if (persisted) {
+                                    return { event, result: replayResult };
+                                }
+                            }
+                        } else {
+                            const persisted =
+                                await this.markProcessedReplayEvent(
+                                    event.eventId
+                                );
+                            if (persisted) {
+                                return {
+                                    event,
+                                    result: {
+                                        success: false,
+                                        errorMessage,
+                                        committed: true
+                                    }
+                                };
                             }
                         }
-                    });
-
-                    return { event, result };
-                } catch (error) {
-                    console.warn('NWC: Failed to process pending pay invoice', {
-                        error,
-                        eventId: event.eventId
-                    });
-                    runInAction(async () => {
+                    }
+                    runInAction(() => {
                         this.failedPendingPayInvoiceEventIds.push(
                             event.eventId
                         );
-                        const message =
-                            error instanceof Error
-                                ? error.message
-                                : String(error);
-                        let formattedError = message;
+                        this.pendingPayInvoiceErrors.set(
+                            event.eventId,
+                            errorMessage
+                        );
+                    });
+                    return {
+                        event,
+                        result: {
+                            success: false,
+                            errorMessage,
+                            committed: false
+                        }
+                    };
+                }
+
+                let resultEvent = event;
+                let result: NWCEventRequestResult | null = null;
+
+                // Replay detection uses check-then-act pattern that is safe because:
+                // 1. hasProcessedReplayEvent is read-only (no state mutation)
+                // 2. replayCachedResponse is idempotent (returns null if cache misses)
+                // 3. markProcessedReplayEvent uses mutex for atomic read-modify-write
+                // This prevents double-execution even with concurrent connections processing
+                // the same eventId, as the first to successfully mark it gains exclusivity.
+                if (await this.hasProcessedReplayEvent(event.eventId)) {
+                    result = await this.replayCachedResponse(
+                        connection,
+                        event.eventId
+                    );
+                    if (!result) {
+                        return null;
+                    }
+                } else {
+                    result = await this.handleEventRequest(
+                        connection,
+                        event.request,
+                        event.eventId,
+                        true, // skip single payment notification for pending events
+                        event.encryptionScheme || 'nip04'
+                    );
+                    if (result.committed) {
+                        // Persist replay marker IMMEDIATELY after successful handling
+                        // to minimize window where state mutations are visible but marker
+                        // isn't persisted (which would cause replayed transactions on restart).
+                        // Mark as processed now, before updating UI state.
+                        const persisted = await this.markProcessedReplayEvent(
+                            event.eventId
+                        );
+                        if (!persisted) {
+                            // CRITICAL: If marker fails to persist, we cannot safely
+                            // let the payment run again. Keep the item visible,
+                            // but future retries only attempt marker persistence.
+                            console.error(
+                                'NWC: CRITICAL - replay marker persistence failed after handling event. Payment will not be retried.',
+                                {
+                                    eventId: event.eventId,
+                                    method: event.request.method,
+                                    severity: 'CRITICAL'
+                                }
+                            );
+                            // Return error to prevent UI state mutation
+                            result = {
+                                success: false,
+                                errorMessage: REPLAY_MARKER_PERSISTENCE_ERROR,
+                                committed: false
+                            };
+                        }
+                    }
+                }
+                if (result.success) {
+                    resultEvent = {
+                        ...event,
+                        status: true,
+                        isProcessed: true
+                    };
+                    await this.updatePendingPayment(resultEvent);
+                    runInAction(() => {
+                        this.processedPendingPayInvoiceEventIds.push(
+                            event.eventId
+                        );
+                    });
+                } else {
+                    let formattedError: string | undefined;
+                    if (result.errorMessage) {
+                        formattedError = result.errorMessage;
                         try {
-                            const parsed = JSON.parse(message);
+                            const parsed = JSON.parse(result.errorMessage);
                             if (parsed.message) {
                                 formattedError = parsed.message;
                             } else if (typeof parsed === 'string') {
                                 formattedError = parsed;
                             }
                         } catch {
-                            formattedError = message;
+                            // keep raw message
                         }
-                        await this.updatePendingPayment({
+                        resultEvent = {
                             ...event,
                             status: false,
-                            isProcessed: true,
+                            isProcessed:
+                                result.committed ||
+                                result.errorMessage ===
+                                    REPLAY_MARKER_PERSISTENCE_ERROR,
                             errorMessage: formattedError
-                        });
-                        this.pendingPayInvoiceErrors.set(
-                            event.eventId,
-                            formattedError
+                        };
+                        await this.updatePendingPayment(resultEvent);
+                    }
+                    runInAction(() => {
+                        this.failedPendingPayInvoiceEventIds.push(
+                            event.eventId
                         );
+                        if (formattedError) {
+                            this.pendingPayInvoiceErrors.set(
+                                event.eventId,
+                                formattedError
+                            );
+                        }
                     });
-                    return { event, result: { success: false } };
                 }
+                if (result.committed && !result.success) {
+                    console.warn(
+                        'NWC: response publish failed after committing pending event',
+                        {
+                            eventId: event.eventId,
+                            method: event.request.method,
+                            errorMessage: result.errorMessage
+                        }
+                    );
+                }
+                return { event: resultEvent, result };
+            } catch (error) {
+                console.warn('NWC: Failed to process pending pay invoice', {
+                    error,
+                    eventId: event.eventId
+                });
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                let formattedError = message;
+                try {
+                    const parsed = JSON.parse(message);
+                    if (parsed.message) {
+                        formattedError = parsed.message;
+                    } else if (typeof parsed === 'string') {
+                        formattedError = parsed;
+                    }
+                } catch {
+                    formattedError = message;
+                }
+                await this.updatePendingPayment({
+                    ...event,
+                    status: false,
+                    isProcessed: false,
+                    errorMessage: formattedError
+                });
+                runInAction(() => {
+                    this.failedPendingPayInvoiceEventIds.push(event.eventId);
+                    this.pendingPayInvoiceErrors.set(
+                        event.eventId,
+                        formattedError
+                    );
+                });
+                return { event, result: { success: false } };
+            }
+        };
+
+        // Per-connection sequential, cross-connection parallel.
+        const groupResults = await Promise.allSettled(
+            Array.from(eventsByConnection.values()).map(async (group) => {
+                const out: Array<{
+                    event: PendingPayment;
+                    result: any;
+                } | null> = [];
+                for (const event of group) {
+                    out.push(await processSingleEvent(event));
+                }
+                return out;
             })
         );
+
+        const processingResults: PromiseSettledResult<{
+            event: PendingPayment;
+            result: any;
+        } | null>[] = [];
+        for (const group of groupResults) {
+            if (group.status === 'fulfilled') {
+                for (const item of group.value) {
+                    processingResults.push({
+                        status: 'fulfilled',
+                        value: item
+                    } as any);
+                }
+            } else {
+                processingResults.push({
+                    status: 'rejected',
+                    reason: group.reason
+                } as any);
+            }
+        }
+        // Separate processed (committed/published) from successful (success === true)
+        // Only notify users on actual successful payments, but clean up all processed events
+        const processedEventIds = new Set<string>();
         const successfulEventIds = new Set<string>();
+        const latestEventsById = new Map<string, PendingPayment>();
         const successfulPayments: Array<{
             amount: number;
             connectionName: string;
         }> = [];
         for (const result of processingResults) {
             if (result.status === 'fulfilled') {
-                if (result.value?.result?.success) {
-                    successfulEventIds.add(result.value.event.eventId);
-                    successfulPayments.push({
-                        amount: result.value.event.amount,
-                        connectionName: result.value.event.connectionName
-                    });
+                if (result.value?.event) {
+                    latestEventsById.set(
+                        result.value.event.eventId,
+                        result.value.event
+                    );
+                }
+                if (result.value?.result?.committed) {
+                    processedEventIds.add(result.value.event.eventId);
+                    // Only count as successful if success === true
+                    if (result.value?.result?.success === true) {
+                        successfulEventIds.add(result.value.event.eventId);
+                        successfulPayments.push({
+                            amount: result.value.event.amount,
+                            connectionName: result.value.event.connectionName
+                        });
+                    }
                     await this.deletePendingPaymentById(
                         result.value.event.eventId
                     );
                 }
             }
         }
-        remainingEvents = remainingEvents.filter(
-            (e) => !successfulEventIds.has(e.eventId)
-        );
+        remainingEvents = remainingEvents
+            .filter((e) => !processedEventIds.has(e.eventId))
+            .map((e) => latestEventsById.get(e.eventId) || e);
         remainingTotal = remainingEvents.reduce((sum, e) => sum + e.amount, 0);
 
         if (successfulPayments.length > 0) {
@@ -3506,35 +5719,69 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: NWCRequest,
         eventId: string,
-        skipNotification: boolean = false
-    ): Promise<{ success: boolean; errorMessage?: string }> {
+        skipNotification: boolean = false,
+        requestEncryptionScheme: NwcEncryptionScheme = 'nip04',
+        _retainReplayResponse: boolean = false
+    ): Promise<NWCEventRequestResult> {
         let response: any;
         try {
-            switch (request.method) {
-                case 'pay_invoice':
-                    if (!connection.hasPermission('pay_invoice')) {
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
+            if (
+                NWC_METHODS_REQUIRING_CONNECTION_PERMISSION.includes(
+                    request.method as any
+                ) &&
+                !connection.hasPermission(request.method)
+            ) {
+                response = this.handleError(
+                    localeString('backends.NWC.permissionDenied'),
+                    ErrorCodes.RESTRICTED
+                );
+            } else {
+                switch (request.method) {
+                    case 'get_info':
+                        response = await this.handleGetInfo(connection);
+                        break;
+                    case 'get_balance':
+                        response = await this.handleGetBalance(connection);
+                        break;
+                    case 'pay_invoice':
+                        response = await this.runPayInvoiceSerialized(() =>
+                            this.handlePayInvoice(
+                                connection,
+                                request.params,
+                                skipNotification
                             )
-                        };
-                    }
-                    response = await this.handlePayInvoice(
-                        connection,
-                        request.params,
-                        skipNotification
-                    );
-                    break;
-                default:
-                    response = this.handleError(
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                            { method: request.method }
-                        ),
-                        ErrorCodes.NOT_IMPLEMENTED
-                    );
-                    break;
+                        );
+                        break;
+                    case 'make_invoice':
+                        response = await this.handleMakeInvoice(
+                            connection,
+                            request.params
+                        );
+                        break;
+                    case 'lookup_invoice':
+                        response = await this.handleLookupInvoice(
+                            request.params
+                        );
+                        break;
+                    case 'list_transactions':
+                        response = await this.handleListTransactions(
+                            connection,
+                            request.params
+                        );
+                        break;
+                    case 'sign_message':
+                        response = await this.handleSignMessage(request.params);
+                        break;
+                    default:
+                        response = this.handleError(
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                                { method: request.method }
+                            ),
+                            ErrorCodes.NOT_IMPLEMENTED
+                        );
+                        break;
+                }
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
@@ -3555,20 +5802,75 @@ export default class NostrWalletConnectStore {
         }
         const hasError = !!response?.error;
         const errorMessage = response?.error?.message;
+        let committed = !!response;
+        let published = false;
+        let cachePersisted = false;
 
         // Only publish if we have a response
         if (response) {
-            await this.publishEventToClient(
-                connection,
-                request.method,
-                response,
-                eventId
-            );
+            try {
+                if (eventId) {
+                    try {
+                        cachePersisted = await this.cacheReplayResponse(
+                            eventId,
+                            request.method,
+                            response,
+                            requestEncryptionScheme
+                        );
+                    } catch (cacheError) {
+                        console.error(
+                            'NWC: Failed to persist replay response before publish',
+                            {
+                                eventId,
+                                method: request.method,
+                                error: cacheError
+                            }
+                        );
+                    }
+                }
+                await this.publishEventToClient(
+                    connection,
+                    request.method,
+                    response,
+                    eventId,
+                    requestEncryptionScheme
+                );
+                published = true;
+            } catch (error) {
+                console.warn('NWC: Failed to publish event response', {
+                    error,
+                    method: request.method,
+                    connection: connection.name,
+                    eventId
+                });
+                return {
+                    success: false,
+                    errorMessage:
+                        eventId && !cachePersisted && !published
+                            ? REPLAY_MARKER_PERSISTENCE_ERROR
+                            : error instanceof Error
+                            ? error.message
+                            : String(error),
+                    committed: cachePersisted || published ? committed : false,
+                    published
+                };
+            }
+
+            if (eventId && !cachePersisted && !published) {
+                return {
+                    success: false,
+                    errorMessage: REPLAY_MARKER_PERSISTENCE_ERROR,
+                    committed: false,
+                    published
+                };
+            }
         }
 
         return {
             success: !hasError,
-            errorMessage: hasError ? errorMessage : undefined
+            errorMessage: hasError ? errorMessage : undefined,
+            committed,
+            published
         };
     }
     /**
@@ -3577,53 +5879,310 @@ export default class NostrWalletConnectStore {
     private async publishNotImplementedNip47Response(
         connection: NWCConnection,
         request: NWCRequest,
-        eventId: string
+        eventId: string,
+        requestEncryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<void> {
+        const response = this.handleError(
+            localeString(
+                'stores.NostrWalletConnectStore.error.methodNotImplemented',
+                { method: request.method }
+            ),
+            ErrorCodes.NOT_IMPLEMENTED
+        );
+        await this.publishEventToClient(
+            connection,
+            request.method,
+            response,
+            eventId,
+            requestEncryptionScheme
+        );
+    }
+
+    private async publishUnsupportedEncryptionResponse(
+        connection: NWCConnection,
+        originalMethod: string,
+        eventId: string,
+        // Accepted for observability (logged) but intentionally ignored when
+        // choosing the response encryption: the inbound scheme is by definition
+        // unsupported, so the response MUST fall back to NIP-04 (which every
+        // NIP-47 client supports). Sending the error encrypted with the same
+        // unsupported scheme would be unparseable by the client.
+        _requestEncryptionScheme: string = 'nip04'
+    ): Promise<void> {
+        await this.publishEventToClient(
+            connection,
+            originalMethod,
+            this.handleError(
+                'Unsupported encryption scheme',
+                ErrorCodes.UNSUPPORTED_ENCRYPTION
+            ),
+            eventId,
+            'nip04'
+        );
+    }
+
+    // Publishing Events to Nostr client
+    private encryptPayloadForClient(
+        connection: NWCConnection,
+        payloadString: string,
+        encryptionScheme: NwcEncryptionScheme,
+        context: {
+            method?: string;
+            eventId?: string;
+            notificationType?: Nip47NotificationType;
+        } = {}
+    ): { content: string; encryptionScheme: NwcEncryptionScheme } {
+        const servicePrivateKey = this.walletServiceKeys!.privateKey;
+
+        if (encryptionScheme === 'nip44_v2') {
+            try {
+                return {
+                    content: nip44.encrypt(
+                        payloadString,
+                        nip44.getConversationKey(
+                            hexToBytes(servicePrivateKey),
+                            connection.pubkey
+                        )
+                    ),
+                    encryptionScheme: 'nip44_v2'
+                };
+            } catch (error) {
+                // Per NIP-44 security model, if a client explicitly negotiated NIP-44 encryption,
+                // we MUST NOT silently fall back to NIP-04. That would be a security downgrade
+                // attack, allowing attackers to force plaintext transmission of sensitive payment data.
+                // Reject with explicit error instead.
+                console.error(
+                    'NWC: NIP-44 encryption failed; rejecting response to prevent downgrade attack',
+                    {
+                        ...context,
+                        connectionId: connection.id,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : String(error),
+                        clientExpectedScheme: 'nip44_v2'
+                    }
+                );
+                // Return error response with explicit UNSUPPORTED_ENCRYPTION to signal failure
+                throw new Error(
+                    `NIP-44 encryption failed: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        }
+
+        // NIP-04 is the fallback for clients that didn't explicitly negotiate NIP-44
         try {
-            const response = this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.methodNotImplemented',
-                    { method: request.method }
+            return {
+                content: nip04.encrypt(
+                    servicePrivateKey,
+                    connection.pubkey,
+                    payloadString
                 ),
-                ErrorCodes.NOT_IMPLEMENTED
-            );
-            await this.publishEventToClient(
-                connection,
-                request.method,
-                response,
-                eventId
-            );
+                encryptionScheme: 'nip04'
+            };
         } catch (error) {
-            console.warn(
-                'NWC: Failed to publish NOT_IMPLEMENTED for pending event',
-                { eventId, method: request.method, error }
+            // NIP-04 encryption failure is also fatal; we cannot respond to the client
+            console.error(
+                'NWC: NIP-04 encryption failed; response cannot be encrypted',
+                {
+                    ...context,
+                    connectionId: connection.id,
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : String(error)
+                }
+            );
+            throw new Error(
+                `NIP-04 encryption failed: ${error instanceof Error ? error.message : String(error)}`
             );
         }
     }
 
-    // Publishing Events to Nostr client
+    private getNotificationEventKind(
+        encryptionScheme: NwcEncryptionScheme
+    ): number {
+        return encryptionScheme === 'nip44_v2' ? 23197 : 23196;
+    }
+
+    private publishPaymentSentNotification(
+        connection: NWCConnection,
+        notification?: Nip47Transaction
+    ): void {
+        if (!notification?.payment_hash) {
+            return;
+        }
+        this.publishNip47Notification(
+            connection,
+            'payment_sent',
+            notification
+        ).catch((error) => {
+            console.warn('NWC: Failed to publish payment_sent notification', {
+                connectionId: connection.id,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        });
+    }
+
+    private async publishNip47Notification(
+        connection: NWCConnection,
+        notificationType: Nip47NotificationType,
+        notification: Nip47Transaction
+    ): Promise<void> {
+        const servicePrivateKey = this.walletServiceKeys!.privateKey;
+        const servicePublicKey = this.walletServiceKeys!.publicKey;
+        const payloadString = JSON.stringify({
+            notification_type: notificationType,
+            notification
+        });
+        const encryptedPayloads = [
+            this.encryptPayloadForClient(
+                connection,
+                payloadString,
+                'nip44_v2',
+                { notificationType }
+            )
+        ];
+
+        // Clients subscribe to a single notification kind based on the
+        // encryption they negotiated. Publish a NIP-04 copy too when NIP-44
+        // succeeds so older/NIP-04-only clients receive advertised events.
+        if (encryptedPayloads[0].encryptionScheme === 'nip44_v2') {
+            try {
+                encryptedPayloads.push(
+                    this.encryptPayloadForClient(
+                        connection,
+                        payloadString,
+                        'nip04',
+                        { notificationType }
+                    )
+                );
+            } catch (error) {
+                console.warn(
+                    'NWC: Failed to prepare NIP-04 notification copy',
+                    {
+                        notificationType,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                    }
+                );
+            }
+        }
+
+        const publishEncryptedNotification = async (encryptedPayload: {
+            content: string;
+            encryptionScheme: NwcEncryptionScheme;
+        }) => {
+            const tags: string[][] = [
+                ['p', connection.pubkey],
+                ['encryption', encryptedPayload.encryptionScheme],
+                ['notification_type', notificationType]
+            ];
+            const unsignedEvent: UnsignedEvent = {
+                kind: this.getNotificationEventKind(
+                    encryptedPayload.encryptionScheme
+                ),
+                tags,
+                content: encryptedPayload.content,
+                created_at: dateTimeUtils.getCurrentTimestamp(),
+                pubkey: servicePublicKey
+            };
+            const signedEvent = {
+                ...unsignedEvent,
+                id: getEventHash(unsignedEvent),
+                sig: getSignature(unsignedEvent, servicePrivateKey)
+            };
+
+            await this.retryWithBackoff(async () => {
+                if (!this.validateRelayUrl(connection.relayUrl)) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                        )
+                    );
+                }
+                const relay = relayInit(connection.relayUrl);
+                try {
+                    await relay.connect();
+                    await relay.publish(signedEvent);
+                } finally {
+                    try {
+                        relay.close();
+                    } catch (error) {
+                        console.error('NWC: Failed to close relay:', error);
+                    }
+                }
+            }, MAX_RELAY_ATTEMPTS);
+        };
+
+        const publishResults = await Promise.allSettled(
+            encryptedPayloads.map(publishEncryptedNotification)
+        );
+        const failures = publishResults.filter(
+            (result): result is PromiseRejectedResult =>
+                result.status === 'rejected'
+        );
+        if (failures.length === publishResults.length) {
+            throw (
+                failures[0]?.reason || new Error('Notification publish failed')
+            );
+        }
+        if (failures.length > 0) {
+            console.warn('NWC: Some notification publishes failed', {
+                notificationType,
+                failures: failures.map((failure) =>
+                    failure.reason instanceof Error
+                        ? failure.reason.message
+                        : String(failure.reason)
+                )
+            });
+        }
+    }
+
     private async publishEventToClient(
         connection: NWCConnection,
         method: string,
         response: any,
-        eventId?: string
+        eventId?: string,
+        encryptionScheme: NwcEncryptionScheme = 'nip04'
     ): Promise<void> {
         const servicePrivateKey = this.walletServiceKeys!.privateKey;
         const servicePublicKey = this.walletServiceKeys!.publicKey;
-        const content = nip04.encrypt(
-            servicePrivateKey,
-            connection.pubkey,
-            JSON.stringify({
-                result_type: method,
-                ...(response?.error
-                    ? { error: response.error }
-                    : { result: response?.result })
-            })
-        );
-        let tags = [];
-        if (eventId) {
-            tags.push(['e', eventId, 'encryption', 'nip04 nip44_v2']);
+        const normalizedError = response?.error
+            ? {
+                  ...response.error,
+                  code: this.toNip47ErrorCode(response.error.code, method)
+              }
+            : null;
+        const payload: any = {
+            result_type: method
+        };
+
+        if (normalizedError) {
+            payload.error = normalizedError;
+        } else {
+            payload.result = response?.result ?? null;
         }
+        const payloadString = JSON.stringify(payload);
+        const encryptedPayload = this.encryptPayloadForClient(
+            connection,
+            payloadString,
+            encryptionScheme,
+            { method, eventId }
+        );
+        const content = encryptedPayload.content;
+        const actualEncryptionScheme = encryptedPayload.encryptionScheme;
+        let tags: string[][] = [];
+        if (eventId) {
+            tags.push(['e', eventId]);
+        }
+        // Per NIP-47: response events SHOULD include an `encryption` tag
+        // identifying the scheme used (`nip04` or `nip44_v2`) so clients can
+        // decrypt without guessing. Always emit it for both schemes.
+        tags.push(['encryption', actualEncryptionScheme]);
+        tags.push(['p', connection.pubkey]);
         const unsignedEvent: UnsignedEvent = {
             kind: 23195,
             tags,
@@ -3638,6 +6197,13 @@ export default class NostrWalletConnectStore {
         };
 
         await this.retryWithBackoff(async () => {
+            if (!this.validateRelayUrl(connection.relayUrl)) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
+                );
+            }
             const relay = relayInit(connection.relayUrl);
             try {
                 await relay.connect();
@@ -3650,6 +6216,146 @@ export default class NostrWalletConnectStore {
                 }
             }
         }, MAX_RELAY_ATTEMPTS);
+    }
+
+    private isSupportedEncryptionScheme(tags: string[][]): boolean {
+        const encryptionTag = tags.find((tag) => tag[0] === 'encryption');
+        const schemeValue = encryptionTag?.[1];
+
+        // No encryption tag or empty means default (nip04), which is supported
+        if (!schemeValue) {
+            return true;
+        }
+
+        // Validate that the scheme value is a string
+        if (typeof schemeValue !== 'string') {
+            console.warn('NWC: Invalid encryption tag value type', {
+                tagValue: schemeValue,
+                tagType: typeof schemeValue
+            });
+            return false;
+        }
+
+        const normalized = schemeValue.toLowerCase();
+        const validSchemes = ['nip04', 'nip44_v2'];
+
+        // Check if it's one of the supported schemes using exact match
+        if (validSchemes.includes(normalized)) {
+            return true;
+        }
+
+        // Unknown encryption scheme
+        console.warn('NWC: Unsupported encryption scheme', {
+            scheme: normalized,
+            validSchemes
+        });
+        return false;
+    }
+
+    private getEventEncryptionScheme(tags: string[][]): NwcEncryptionScheme {
+        const encryptionTag = tags.find(
+            (tag) =>
+                Array.isArray(tag) && tag.length >= 2 && tag[0] === 'encryption'
+        );
+        const schemeValue = encryptionTag?.[1];
+
+        // No encryption tag means default (nip04)
+        if (!schemeValue) {
+            return 'nip04';
+        }
+
+        // Validate that the scheme value is a string
+        if (typeof schemeValue !== 'string') {
+            throw new Error(
+                `NWC: Invalid encryption tag value type: ${typeof schemeValue}`
+            );
+        }
+
+        const normalized = schemeValue.toLowerCase();
+
+        // Use exact match for scheme detection
+        if (normalized === 'nip44_v2') {
+            return 'nip44_v2';
+        }
+
+        if (normalized === 'nip04') {
+            return 'nip04';
+        }
+
+        // Unknown scheme: throw instead of silently falling back to NIP-04.
+        // Callers must check isSupportedEncryptionScheme() first; if they
+        // reach this path the event must be rejected, not silently downgraded.
+        throw new Error(
+            `NWC: Unknown encryption scheme '${normalized}' — refusing silent NIP-04 downgrade`
+        );
+    }
+
+    // Maps internal error codes to NIP-47 specification error codes.
+    // NIP-47 defines (canonical set across spec + per-method extensions):
+    //   RATE_LIMITED, NOT_IMPLEMENTED, INSUFFICIENT_BALANCE, QUOTA_EXCEEDED,
+    //   RESTRICTED, UNAUTHORIZED, INTERNAL, UNSUPPORTED_ENCRYPTION, OTHER,
+    //   PAYMENT_FAILED (pay_invoice / pay_keysend), NOT_FOUND (lookup_invoice),
+    //   INVALID_PARAMS (widely-supported request-validation extension).
+    // Internal codes that have no direct NIP-47 equivalent are mapped to the
+    // closest spec category — see per-case comments below for the rationale
+    // (e.g. INVALID_INVOICE → INVALID_PARAMS, INVOICE_EXPIRED → NOT_FOUND,
+    // FAILED_TO_PAY_INVOICE → PAYMENT_FAILED, FAILED_TO_CREATE_INVOICE → INTERNAL).
+    private toNip47ErrorCode(code?: string, method?: string): string {
+        switch ((code || '').toUpperCase()) {
+            case 'RATE_LIMITED':
+                return 'RATE_LIMITED';
+            case 'NOT_IMPLEMENTED':
+                return 'NOT_IMPLEMENTED';
+            case 'INSUFFICIENT_BALANCE':
+                return 'INSUFFICIENT_BALANCE';
+            case 'QUOTA_EXCEEDED':
+                return 'QUOTA_EXCEEDED';
+            case 'RESTRICTED':
+                return 'RESTRICTED';
+            case 'NOT_FOUND':
+                return 'NOT_FOUND';
+            case 'UNSUPPORTED_ENCRYPTION':
+                return 'UNSUPPORTED_ENCRYPTION';
+            case 'INVALID_PARAMS':
+                return 'INVALID_PARAMS';
+            case 'INVALID_INVOICE':
+                // An invalid/undecodable invoice is a request-parameter
+                // validation failure; surface as INVALID_PARAMS so clients
+                // can react deterministically (same NIP-47 spec category).
+                return 'INVALID_PARAMS';
+            case 'INVOICE_EXPIRED':
+                // Per NIP-47, expired-at-pay-time is a payment failure for
+                // pay_invoice / pay_keysend, not a missing record. Other
+                // methods (e.g. lookup_invoice) keep the NOT_FOUND mapping.
+                if (method === 'pay_invoice' || method === 'pay_keysend') {
+                    return 'PAYMENT_FAILED';
+                }
+                return 'NOT_FOUND';
+            case 'FAILED_TO_PAY_INVOICE':
+                // Per NIP-47 §pay_invoice errors, payment-flow failures
+                // (timeout / no route / capacity) map to PAYMENT_FAILED.
+                return 'PAYMENT_FAILED';
+            case 'FAILED_TO_CREATE_INVOICE':
+                // No spec-defined code for invoice-creation failures;
+                // treat as an internal wallet-service error.
+                return 'INTERNAL';
+            case 'INTERNAL_ERROR':
+                return 'INTERNAL';
+            default:
+                // Log unmapped error codes for monitoring; fallback to INTERNAL
+                // for safety (NIP-47 doesn't define 'OTHER' code).
+                if (code) {
+                    console.warn(
+                        'NWC: Unmapped error code in toNip47ErrorCode, falling back to INTERNAL',
+                        {
+                            originalCode: code,
+                            method,
+                            severity: 'warning'
+                        }
+                    );
+                }
+                return 'INTERNAL';
+        }
     }
 
     // IOS: handoff request to notification server
@@ -3774,6 +6480,7 @@ export default class NostrWalletConnectStore {
         this.error = true;
         this.errorMessage = message;
     }
+
     private handleError(
         message: string,
         code: ErrorCodes = ErrorCodes.INTERNAL_ERROR
@@ -3822,6 +6529,14 @@ export default class NostrWalletConnectStore {
         error?: string | null;
     }> {
         try {
+            if (!this.validateRelayUrl(relayUrl)) {
+                return {
+                    status: false,
+                    error: localeString(
+                        'stores.NostrWalletConnectStore.error.invalidRelayUrl'
+                    )
+                };
+            }
             const relay = relayInit(relayUrl);
             const timeout = new Promise<void>((_, reject) =>
                 setTimeout(

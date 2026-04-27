@@ -5,6 +5,7 @@ import type {
     Nip47ListTransactionsRequest
 } from '@getalby/sdk/dist/nwc/types';
 
+import bolt11 from 'bolt11';
 import {
     BudgetRenewalType,
     PermissionType,
@@ -20,7 +21,6 @@ import Transaction from '../models/Transaction';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
-import bolt11 from 'bolt11';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -41,6 +41,16 @@ export interface BudgetRenewalOption {
     title: string;
 }
 
+/**
+ * Enum of notification types that Zeus actually publishes.
+ * This must stay in sync with all calls to publishNip47Notification().
+ * If adding a new notification type, update this enum AND add the publishing logic.
+ */
+export enum PublishedNotificationType {
+    PaymentSent = 'payment_sent',
+    // PaymentReceived = 'payment_received' -- requires settlement watcher, not yet implemented
+}
+
 const PRESET_INDEX = {
     FIRST: 0,
     SECOND: 1,
@@ -51,7 +61,15 @@ const PRESET_INDEX = {
 
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
-        return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
+        // Only advertise notification types Zeus actively publishes. This list must
+        // stay in sync with PublishedNotificationType enum and all publishXxxNotification() calls.
+        // If a new notification type is added to PublishedNotificationType, you must also:
+        // 1. Add a publishXxxNotification() method to NostrWalletConnectStore
+        // 2. Call it from the appropriate request handler
+        // 3. Test that the notification is actually sent
+        // Incoming payments still require a settlement watcher before payment_received
+        // can be advertised without causing clients to stop polling.
+        return Object.values(PublishedNotificationType);
     }
 
     static get TIME_UNITS(): TimeUnit[] {
@@ -542,22 +560,54 @@ export default class NostrConnectUtils {
     private static extractPaymentHashFromActivity(
         activity: ConnectionActivity
     ): string {
-        if (activity.paymentHash) {
-            return activity.paymentHash;
+        const normalizeHash = (hash?: string): string | undefined => {
+            if (!hash) return undefined;
+            const normalized = hash.toLowerCase();
+            return /^[a-f0-9]{64}$/.test(normalized) ? normalized : undefined;
+        };
+
+        // Try to find a valid payment hash (64-char hex per NIP-47)
+        const activityHash = normalizeHash(activity.paymentHash);
+        if (activityHash) {
+            return activityHash;
         }
-        if (activity.payment?.paymentHash) {
-            return activity.payment.paymentHash;
+
+        const paymentHash = normalizeHash(activity.payment?.paymentHash);
+        if (paymentHash) {
+            return paymentHash;
         }
+
         if (activity.invoice) {
-            const invoiceHash = (activity.invoice as Invoice).payment_hash;
-            if (invoiceHash) return invoiceHash;
+            const invoiceHash =
+                (activity.invoice as Invoice).getRHash ||
+                (activity.invoice as Invoice).payment_hash;
+            const normalizedInvoiceHash = normalizeHash(invoiceHash);
+            // Validate invoice hash is 64-char hex before returning
+            if (normalizedInvoiceHash) {
+                return normalizedInvoiceHash;
+            }
         }
-        return activity.id || '';
+        
+        // No valid hash found — this is a compliance violation
+        // Return empty string; caller should validate before creating NIP-47 transaction
+        console.error(
+            '[NostrConnectUtils.extractPaymentHashFromActivity] No valid payment hash found',
+            {
+                activityType: activity.type,
+                activityId: activity.id,
+                providedHash: activity.paymentHash || 'MISSING'
+            }
+        );
+        return '';
     }
 
     private static extractAmountFromActivity(
         activity: ConnectionActivity
     ): number {
+        if (activity.msatAmount !== undefined) {
+            return Number(activity.msatAmount);
+        }
+
         if (activity.satAmount !== undefined) {
             return satsToMillisats(activity.satAmount);
         }
@@ -885,13 +935,17 @@ export default class NostrConnectUtils {
 
         // Convert Lightning payments
         if (lightningData.payments) {
-            const paymentTransactions = lightningData.payments.map(
-                (payment: Payment) => {
+            const paymentTransactions = lightningData.payments
+                .map((payment: Payment) => {
                     const amount = Number(payment.getAmount) || 0;
                     const timestamp =
                         Number(payment.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = payment.paymentHash || '';
                     const invoice = payment.getPaymentRequest || '';
+                    // Per NIP-47, payment_hash MUST be the canonical 32-byte
+                    // hash. Skip every fallback so we never fabricate a hash
+                    // for activity that lacks one.
+                    const paymentHash = payment.paymentHash || '';
+                    if (!paymentHash) return null;
                     const feesPaid = satsToMillisats(
                         Number(payment.getFee) || 0
                     );
@@ -919,20 +973,23 @@ export default class NostrConnectUtils {
                         created_at: timestamp,
                         expires_at: 0
                     });
-                }
-            );
+                })
+                .filter((tx): tx is Nip47Transaction => tx !== null);
             transactions.push(...paymentTransactions);
         }
 
         // Convert Lightning invoices
         if (lightningData.invoices) {
-            const invoiceTransactions = lightningData.invoices.map(
-                (invoice: Invoice) => {
+            const invoiceTransactions = lightningData.invoices
+                .map((invoice: Invoice) => {
                     const amount = Number(invoice.getAmount) || 0;
                     const timestamp =
                         Number(invoice.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = invoice.payment_hash || '';
                     const invoiceString = invoice.getPaymentRequest || '';
+                    // See comment above on paymentHash — never fabricate.
+                    const paymentHash =
+                        invoice.getRHash || invoice.payment_hash || '';
+                    if (!paymentHash) return null;
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;
 
@@ -953,8 +1010,8 @@ export default class NostrConnectUtils {
                         created_at: timestamp,
                         expires_at: expiresAt
                     });
-                }
-            );
+                })
+                .filter((tx): tx is Nip47Transaction => tx !== null);
             transactions.push(...invoiceTransactions);
         }
 

@@ -96,3 +96,7 @@ ios/CashuDevKit/zeus_cashu_restore.swift
 ios/LdkNodeMobile/LDKNodeFFI.xcframework
 ios/LdkNodeLibZipFile
 ios/LdkNodeMobile/__MACOSX/
+
+# Trunk linter configuration and cache
+.trunk/
+trunk.yaml
