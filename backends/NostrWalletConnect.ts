@@ -1,9 +1,9 @@
-import bolt11 from 'bolt11';
 import { webln } from '@getalby/sdk';
 
 import { settingsStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 export default class NostrWalletConnect {
     nwc: any;
@@ -41,12 +41,9 @@ export default class NostrWalletConnect {
         // bolt11 to satisfy that check.
         if (result?.paymentRequest && !result.payment_hash) {
             try {
-                const decoded: any = bolt11.decode(result.paymentRequest);
-                const hashTag = decoded.tags?.find(
-                    (t: any) => t.tagName === 'payment_hash'
-                );
-                if (hashTag?.data) {
-                    result.payment_hash = hashTag.data;
+                const decoded = Bolt11Utils.decode(result.paymentRequest);
+                if (decoded.payment_hash) {
+                    result.payment_hash = decoded.payment_hash;
                 }
             } catch (e) {
                 // decoding is best-effort
@@ -75,29 +72,9 @@ export default class NostrWalletConnect {
     payLightningInvoice = async (data: any) =>
         await this.nwc.sendPayment(data.payment_request);
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        Promise.resolve().then(() => {
-            const decoded: any = bolt11.decode(
-                (urlParams && urlParams[0]) || ''
-            );
-            for (let i = 0; i < decoded.tags.length; i++) {
-                const tag = decoded.tags[i];
-                switch (tag.tagName) {
-                    case 'purpose_commit_hash':
-                        decoded.description_hash = tag.data;
-                        break;
-                    case 'payment_hash':
-                        decoded.payment_hash = tag.data;
-                        break;
-                    case 'expire_time':
-                        decoded.expiry = tag.data;
-                        break;
-                    case 'description':
-                        decoded.description = tag.data;
-                        break;
-                }
-            }
-            return decoded;
-        });
+        Promise.resolve().then(() =>
+            Bolt11Utils.decode((urlParams && urlParams[0]) || '')
+        );
     lookupInvoice = async (data: any) =>
         await this.nwc.lookupInvoice({
             payment_hash: Base64Utils.hexToBase64(data.r_hash)

@@ -5,7 +5,7 @@
  */
 
 import BigNumber from 'bignumber.js';
-import bolt11 from 'bolt11';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 
 import libraryVersions from '../fetch-libraries-versions.json';
@@ -28,21 +28,6 @@ import type {
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import { settingsStore } from '../stores/Stores';
-
-const SIGNET_NETWORK = {
-    bech32: 'tbs',
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    validWitnessVersions: [0, 1]
-};
-
-const getBolt11Network = () => {
-    const { ldkNetwork } = settingsStore;
-    if (ldkNetwork === 'signet' || ldkNetwork === 'mutinynet') {
-        return SIGNET_NETWORK;
-    }
-    return undefined;
-};
 
 // Event callback type
 type EventCallback = (event: LdkNodeEvent) => void;
@@ -1202,12 +1187,9 @@ export default class LdkNode {
         // Decode the invoice to get the payment hash
         let paymentHash = '';
         try {
-            const decoded = bolt11.decode(invoice, getBolt11Network());
-            const hashTag = decoded.tags.find(
-                (tag: any) => tag.tagName === 'payment_hash'
-            );
-            if (hashTag) {
-                paymentHash = hashTag.data as string;
+            const decoded = Bolt11Utils.decode(invoice);
+            if (decoded.payment_hash) {
+                paymentHash = decoded.payment_hash;
             }
         } catch (e) {
             console.error('[LDK] Error decoding invoice for payment hash:', e);
@@ -1355,40 +1337,7 @@ export default class LdkNode {
      */
     decodePaymentRequest = async (urlParams?: Array<string>): Promise<any> => {
         const paymentRequest = (urlParams && urlParams[0]) || '';
-        const decoded: any = bolt11.decode(paymentRequest, getBolt11Network());
-
-        // Parse tags for additional fields
-        for (let i = 0; i < decoded.tags.length; i++) {
-            const tag = decoded.tags[i];
-            switch (tag.tagName) {
-                case 'purpose_commit_hash':
-                    decoded.description_hash = tag.data;
-                    break;
-                case 'payment_hash':
-                    decoded.payment_hash = tag.data;
-                    break;
-                case 'expire_time':
-                    decoded.expiry = tag.data;
-                    break;
-                case 'description':
-                    decoded.description = tag.data;
-                    break;
-                case 'min_final_cltv_expiry':
-                    decoded.cltv_expiry = tag.data;
-                    break;
-            }
-        }
-
-        // Map to expected format
-        decoded.destination = decoded.payeeNodeKey;
-        decoded.num_satoshis = decoded.satoshis
-            ? String(decoded.satoshis)
-            : decoded.millisatoshis
-            ? String(Math.floor(Number(decoded.millisatoshis) / 1000))
-            : '0';
-        decoded.num_msat = decoded.millisatoshis || '0';
-
-        return decoded;
+        return Bolt11Utils.decode(paymentRequest);
     };
 
     // ========================================================================

@@ -6,7 +6,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { crypto } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
-import bolt11 from 'bolt11';
+import Bolt11Utils from '../../utils/Bolt11Utils';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
@@ -580,26 +580,22 @@ export default class SwapDetails extends React.Component<
      * Validate the preimage by comparing its hash with the invoice's payment hash.
      */
     validatePreimage = (preimage: string, invoice: string): boolean => {
-        let invoicePreimageHash: any;
-        let decoded: any;
-        let result: any;
+        let decoded;
 
         try {
-            decoded = bolt11.decode(invoice);
+            decoded = Bolt11Utils.decode(invoice);
         } catch (error) {
             console.log(error);
         }
 
-        const paymentHash = decoded.tags.find(
-            (tag: any) => tag.tagName === 'payment_hash'
+        const invoicePreimageHash = Buffer.from(
+            decoded?.payment_hash || '',
+            'hex'
         );
-        invoicePreimageHash = Buffer.from(paymentHash!.data || '', 'hex');
 
-        result = crypto
+        return crypto
             .sha256(Buffer.from(preimage, 'hex'))
             .equals(invoicePreimageHash);
-
-        return result;
     };
 
     getPrivateKeyHex = (keys: any): string | null => {
