@@ -1127,9 +1127,7 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        const connectionUrl = `nostr+walletconnect://${this.walletServiceKeys.publicKey}?relay=${relayUrl}&secret=${connectionPrivateKey}`;
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
     @action
