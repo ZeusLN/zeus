@@ -3,6 +3,31 @@
  * Tests for rounding, clock skew, concurrency, and migration
  */
 
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-tor', () => ({
+    __esModule: true,
+    default: jest.fn(() => ({
+        get: jest.fn(),
+        post: jest.fn()
+    })),
+    RequestMethod: {
+        GET: 'GET',
+        POST: 'POST'
+    }
+}));
+jest.mock('../stores/Stores', () => ({}));
+jest.mock('../utils/BackendUtils');
+jest.mock('../utils/NostrConnectUtils', () => ({
+    __esModule: true,
+    default: {
+        getReadOnlyPermissions: jest.fn(() => []),
+        hasPaymentPermissions: jest.fn(() => false)
+    }
+}));
+jest.mock('../utils/LocaleUtils', () => ({
+    localeString: (key: string) => key
+}));
+
 import {
     normalizeNWCConnectionData
 } from '../models/NWCConnection';

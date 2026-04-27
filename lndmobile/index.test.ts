@@ -68,14 +68,14 @@ describe('sendKeysendPaymentV2', () => {
             expect.objectContaining({
                 method: 'RouterSendPaymentV2',
                 options: expect.objectContaining({
-                    amt_msat: 1500,
-                    fee_limit_sat: 10
+                    amt_msat: 1500
                 })
             }),
             false
         );
         const options = mockSendStreamCommand.mock.calls[0][0].options;
         expect(options).not.toHaveProperty('amt');
+        expect(options).not.toHaveProperty('fee_limit_sat');
     });
 
     it('forwards fee_limit_msat when provided for keysend', async () => {
@@ -107,14 +107,14 @@ describe('sendKeysendPaymentV2', () => {
         expect(mockSendStreamCommand).toHaveBeenCalledWith(
             expect.objectContaining({
                 options: expect.objectContaining({
-                    amt: 2,
-                    fee_limit_sat: 10
+                    amt: 2
                 })
             }),
             false
         );
         const options = mockSendStreamCommand.mock.calls[0][0].options;
         expect(options).not.toHaveProperty('amt_msat');
+        expect(options).not.toHaveProperty('fee_limit_sat');
     });
 });
 

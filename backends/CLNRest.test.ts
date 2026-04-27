@@ -220,7 +220,7 @@ describe('CLNRest createInvoice', () => {
         });
 
         const [, body] = postRequestSpy.mock.calls[0] as [string, any];
-        expect(body.amount_msat).toBe(21000);
+        expect(body.amount_msat).toBe('21000');
     });
 
     it("uses 'any' when value is undefined and value_msat omitted (no NaN)", async () => {
