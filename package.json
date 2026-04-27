@@ -81,7 +81,6 @@
     "bip39": "3.1.0",
     "bitcoinjs-lib": "6.1.5",
     "bolt07": "1.9.4",
-    "bolt11": "1.4.1",
     "bs58check": "2.1.2",
     "buffer": "5.6.0",
     "create-hash": "1.2.0",
