@@ -319,10 +319,9 @@ export default class CLNRest {
             if (valueMsat === undefined) {
                 throw new Error('Invalid value_msat for createInvoice');
             }
-            if (!valueMsat.isZero()) {
-                amountMsat = this.formatIntegerForCln(
-                    valueMsat.integerValue(BigNumber.ROUND_FLOOR)
-                ).toString();
+            const flooredMsat = valueMsat.integerValue(BigNumber.ROUND_FLOOR);
+            if (!flooredMsat.isZero()) {
+                amountMsat = this.formatIntegerForCln(flooredMsat).toString();
                 shouldCheckValue = false;
             }
         }
@@ -334,12 +333,11 @@ export default class CLNRest {
                     throw new Error('Invalid value for createInvoice');
                 }
 
-                if (!valueSat.isZero()) {
-                    amountMsat = this.formatIntegerForCln(
-                        valueSat
-                            .times(1000)
-                            .integerValue(BigNumber.ROUND_FLOOR)
-                    ).toString();
+                const flooredMsat = valueSat
+                    .times(1000)
+                    .integerValue(BigNumber.ROUND_FLOOR);
+                if (!flooredMsat.isZero()) {
+                    amountMsat = this.formatIntegerForCln(flooredMsat).toString();
                 }
             }
         }

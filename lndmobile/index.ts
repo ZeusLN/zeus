@@ -301,6 +301,7 @@ export const sendPaymentV2Sync = async (
         payment_request,
         amt,
         amt_msat,
+        fee_limit_sat,
         fee_limit_msat,
         last_hop_pubkey,
         route_hints,
@@ -320,7 +321,11 @@ export const sendPaymentV2Sync = async (
         no_inflight_updates: true,
         timeout_seconds,
         max_parts,
-        ...(fee_limit_msat != null ? { fee_limit_msat } : {}),
+        ...(fee_limit_msat != null
+            ? { fee_limit_msat }
+            : fee_limit_sat != null
+              ? { fee_limit_sat }
+              : {}),
         route_hints,
         cltv_limit: cltv_limit || 0,
         allow_self_payment: true,

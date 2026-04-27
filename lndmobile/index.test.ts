@@ -48,7 +48,7 @@ jest.mock('../proto/lightning', () => ({
     invoicesrpc: {}
 }));
 
-import { sendKeysendPaymentV2 } from './index';
+import { sendKeysendPaymentV2, sendPaymentV2Sync } from './index';
 
 describe('sendKeysendPaymentV2', () => {
     beforeEach(() => {
@@ -115,5 +115,55 @@ describe('sendKeysendPaymentV2', () => {
         );
         const options = mockSendStreamCommand.mock.calls[0][0].options;
         expect(options).not.toHaveProperty('amt_msat');
+    });
+});
+
+describe('sendPaymentV2Sync', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockRouterSendPaymentHandler = undefined;
+    });
+
+    it('forwards fee_limit_sat when fee_limit_msat is absent', async () => {
+        await sendPaymentV2Sync({
+            payment_request: 'lnbc1test',
+            fee_limit_sat: 10,
+            timeout_seconds: 60
+        });
+
+        expect(mockSendStreamCommand).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: 'RouterSendPaymentV2',
+                options: expect.objectContaining({
+                    fee_limit_sat: 10
+                })
+            }),
+            false
+        );
+
+        const options = mockSendStreamCommand.mock.calls[0][0].options;
+        expect(options).not.toHaveProperty('fee_limit_msat');
+    });
+
+    it('prefers fee_limit_msat over fee_limit_sat when both are provided', async () => {
+        await sendPaymentV2Sync({
+            payment_request: 'lnbc1test',
+            fee_limit_sat: 10,
+            fee_limit_msat: 2500,
+            timeout_seconds: 60
+        });
+
+        expect(mockSendStreamCommand).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: 'RouterSendPaymentV2',
+                options: expect.objectContaining({
+                    fee_limit_msat: 2500
+                })
+            }),
+            false
+        );
+
+        const options = mockSendStreamCommand.mock.calls[0][0].options;
+        expect(options).not.toHaveProperty('fee_limit_sat');
     });
 });
