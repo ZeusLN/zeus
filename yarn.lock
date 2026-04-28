@@ -2862,11 +2862,6 @@
   resolved "https://registry.yarnpkg.com/@types/aes-js/-/aes-js-3.1.4.tgz#90afb62e69b0365a392d2e79579a6f424b772792"
   integrity sha512-v3D66IptpUqh+pHKVNRxY8yvp2ESSZXe0rTzsGdzUhEwag7ljVfgCllkWv2YgiYXDhWFBrEywll4A5JToyTNFA==
 
-"@types/async@^3.2.6":
-  version "3.2.25"
-  resolved "https://registry.yarnpkg.com/@types/async/-/async-3.2.25.tgz#8439f7cde2627e34a15897eb80878835dbea2421"
-  integrity sha512-O6Th/DI18XjrL9TX8LO9F/g26qAz5vynmQqlXt/qLGrskvzCKXKc5/tATz3G2N6lM8eOf3M8/StB14FncAmocg==
-
 "@types/babel__core@^7.1.14":
   version "7.20.5"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.20.5.tgz#3df15f27ba85319caa07ba08d0721889bb39c017"
@@ -3565,11 +3560,6 @@ async-limiter@~1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/async-limiter/-/async-limiter-1.0.1.tgz#dd379e94f0db8310b08291f9d64c3209766617fd"
   integrity sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==
-
-async@^3.2.0:
-  version "3.2.6"
-  resolved "https://registry.yarnpkg.com/async/-/async-3.2.6.tgz#1b0728e14929d51b85b449b7f06e27c1145e38ce"
-  integrity sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA==
 
 available-typed-arrays@^1.0.7:
   version "1.0.7"
@@ -4488,6 +4478,11 @@ cosmiconfig@^9.0.0:
     import-fresh "^3.3.0"
     js-yaml "^4.1.0"
     parse-json "^5.2.0"
+
+craby-modules@^0.1.0-rc.5:
+  version "0.1.0-rc.5"
+  resolved "https://registry.yarnpkg.com/craby-modules/-/craby-modules-0.1.0-rc.5.tgz#c2e538c07dd73dd4c3770ae919296b0b9082e768"
+  integrity sha512-7vr85ismuEySQ7EtDs+XKipxCFfymO4gJR6NoKK/nRSGI4V5ezLRNEG/PpVPDjvY3dpPPbPrnQFL9TybPOguRg==
 
 crc@^3.8.0:
   version "3.8.0"
@@ -8578,6 +8573,13 @@ react-native-nfc-manager@3.17.2:
   resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-3.17.2.tgz#81924946b7fe381bbf85bfb16af90cb05cac4944"
   integrity sha512-0NryP/Iw2hzw4MVH5KCngoRerNUrnRok6VfLrlFcFZRKyTQ7KTgpsdDxCB6cR33qYNyEDrWGBayfAI+ym5gt8Q==
 
+react-native-nitro-tor@0.5.3:
+  version "0.5.3"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-tor/-/react-native-nitro-tor-0.5.3.tgz#f4b57dff15230e7f83bc3a72a7ec42bd5dd5c870"
+  integrity sha512-GHCgxrotKz+EaT3mF5dvepWtmx0MaVxYaeteYZUWYKAkLBhfXwPIWpGDWAu9ugwLYfoMNZ3b2Iuy1Sn+aaGenw==
+  dependencies:
+    craby-modules "^0.1.0-rc.5"
+
 react-native-notifications@5.2.2:
   version "5.2.2"
   resolved "https://registry.yarnpkg.com/react-native-notifications/-/react-native-notifications-5.2.2.tgz#c97f31394a550a6a6fae2647cecd406cae77d11d"
@@ -8690,13 +8692,6 @@ react-native-system-navigation-bar@2.8.0:
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/react-native-system-navigation-bar/-/react-native-system-navigation-bar-2.8.0.tgz#68b0359121fc08751436a01e44639cb3b39bdad8"
   integrity sha512-VaBdTAUCnKfngphHJxZn/Axs6pzANYOr3UQDb9+iOzwqN6br43S4yFtqnnH85WPSMa+4aiOdm0AivG9e0tPUnA==
-
-"react-native-tor@https://github.com/ZeusLN/react-native-tor.git#v0.2.1-zeus":
-  version "0.2.1-zeus"
-  resolved "https://github.com/ZeusLN/react-native-tor.git#b1d7126562edcfda7e8b3b5e1c3dc120d08e023d"
-  dependencies:
-    "@types/async" "^3.2.6"
-    async "^3.2.0"
 
 react-native-udp@4.1.7:
   version "4.1.7"
