@@ -4,7 +4,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
 import BigNumber from 'bignumber.js';
-import bolt11 from 'bolt11';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
@@ -586,7 +586,7 @@ export default class LightningAddressStore {
         paymentArray.map((item: any) => {
             let fee;
             try {
-                const decoded = bolt11.decode(item.hodl);
+                const decoded = Bolt11Utils.decode(item.hodl);
                 if (decoded.millisatoshis) {
                     fee = new BigNumber(decoded.millisatoshis)
                         .minus(item.amount_msat)
@@ -1028,15 +1028,7 @@ export default class LightningAddressStore {
         attestation.isAmountValid = false;
 
         try {
-            const decoded: any = bolt11.decode(content);
-            for (let i = 0; i < decoded.tags.length; i++) {
-                const tag = decoded.tags[i];
-                switch (tag.tagName) {
-                    case 'payment_hash':
-                        decoded.payment_hash = tag.data;
-                        break;
-                }
-            }
+            const decoded = Bolt11Utils.decode(content);
 
             attestation.isValidLightningInvoice = true;
 

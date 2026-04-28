@@ -1,6 +1,6 @@
 import { action, observable, runInAction } from 'mobx';
 import { Alert, InteractionManager } from 'react-native';
-import bolt11 from 'bolt11';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import url from 'url';
 import querystring from 'querystring-es3';
 
@@ -727,7 +727,7 @@ export default class CashuStore {
                             let amount = externalQuote.amount || 0;
                             if (!amount && externalQuote.request) {
                                 try {
-                                    const decoded = bolt11.decode(
+                                    const decoded = Bolt11Utils.decode(
                                         externalQuote.request
                                     );
                                     amount = decoded.satoshis || 0;
@@ -2976,7 +2976,7 @@ export default class CashuStore {
                 // decode bolt11 for metadata
                 let decoded;
                 try {
-                    decoded = bolt11.decode(mintQuote.request);
+                    decoded = Bolt11Utils.decode(mintQuote.request);
                 } catch (e) {
                     if (__DEV__) {
                         console.log(
@@ -3123,7 +3123,7 @@ export default class CashuStore {
                 const cdkQuote = result.quote;
                 let decoded;
                 try {
-                    decoded = bolt11.decode(cdkQuote.request);
+                    decoded = Bolt11Utils.decode(cdkQuote.request);
                 } catch (e) {
                     if (__DEV__) {
                         console.log(
@@ -3263,25 +3263,7 @@ export default class CashuStore {
             }
             const data = await new Promise((resolve, reject) => {
                 try {
-                    const decoded: any = bolt11.decode(bolt11Invoice || '');
-                    for (let i = 0; i < decoded.tags.length; i++) {
-                        const tag = decoded.tags[i];
-                        switch (tag.tagName) {
-                            case 'purpose_commit_hash':
-                                decoded.description_hash = tag.data;
-                                break;
-                            case 'payment_hash':
-                                decoded.payment_hash = tag.data;
-                                break;
-                            case 'expire_time':
-                                decoded.expiry = tag.data;
-                                break;
-                            case 'description':
-                                decoded.description = tag.data;
-                                break;
-                        }
-                    }
-                    resolve(decoded);
+                    resolve(Bolt11Utils.decode(bolt11Invoice || ''));
                 } catch (err) {
                     reject(err);
                 }
