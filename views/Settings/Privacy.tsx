@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { Platform, ScrollView, TouchableOpacity, View } from 'react-native';
+import {
+    NativeModules,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -37,6 +43,7 @@ interface PrivacyState {
     enableMempoolRates: boolean;
     mempoolInstance: string;
     customMempoolInstance: string;
+    screenCaptureProtection: boolean;
 }
 
 @inject('SettingsStore')
@@ -54,7 +61,8 @@ export default class Privacy extends React.Component<
         lurkerMode: false,
         enableMempoolRates: false,
         mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
-        customMempoolInstance: ''
+        customMempoolInstance: '',
+        screenCaptureProtection: false
     };
 
     async componentDidMount() {
@@ -86,7 +94,11 @@ export default class Privacy extends React.Component<
             customMempoolInstance: UrlUtils.withScheme(
                 (settings.privacy && settings.privacy.customMempoolInstance) ||
                     ''
-            )
+            ),
+            screenCaptureProtection:
+                (settings.privacy &&
+                    settings.privacy.screenCaptureProtection) ||
+                false
         });
     }
 
@@ -171,7 +183,8 @@ export default class Privacy extends React.Component<
             lurkerMode,
             enableMempoolRates,
             mempoolInstance,
-            customMempoolInstance
+            customMempoolInstance,
+            screenCaptureProtection
         } = this.state;
         const { updateSettingsGroup, updateSettingsGroupDebounced } =
             SettingsStore;
@@ -446,6 +459,55 @@ export default class Privacy extends React.Component<
                             </>
                         )}
                     </View>
+
+                    {Platform.OS === 'android' && (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                    infoModalText={localeString(
+                                        'views.Settings.Privacy.screenCaptureProtection.explainer'
+                                    )}
+                                >
+                                    {localeString(
+                                        'views.Settings.Privacy.screenCaptureProtection'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={screenCaptureProtection}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
+                                    onValueChange={async () => {
+                                        const newValue =
+                                            !screenCaptureProtection;
+                                        this.setState({
+                                            screenCaptureProtection: newValue
+                                        });
+                                        await updateSettingsGroup('privacy', {
+                                            screenCaptureProtection: newValue
+                                        });
+                                        await NativeModules.MobileTools.setSecureFlag(
+                                            newValue
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+                    )}
 
                     {Platform.OS === 'android' && (
                         <TouchableOpacity
