@@ -303,56 +303,54 @@ export default class Privacy extends React.Component<
                         </View>
                     </View>
 
-                    {Platform.OS === 'android' && (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                    infoModalText={localeString(
-                                        'views.Settings.Privacy.screenCaptureProtection.explainer'
-                                    )}
-                                >
-                                    {localeString(
-                                        'views.Settings.Privacy.screenCaptureProtection'
-                                    )}
-                                </Text>
-                            </View>
-                            <View style={{ alignSelf: 'center', marginLeft: 5 }}>
-                                <Switch
-                                    value={screenCaptureProtection}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        const newValue =
-                                            !screenCaptureProtection;
-                                        this.setState({
-                                            screenCaptureProtection: newValue
-                                        });
-                                        await updateSettings({
-                                            privacy: {
-                                                ...settings.privacy,
-                                                screenCaptureProtection:
-                                                    newValue
-                                            }
-                                        });
-                                        await NativeModules.MobileTools.setSecureFlag(
-                                            newValue
-                                        );
-                                    }}
-                                />
-                            </View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                                infoModalText={localeString(
+                                    Platform.OS === 'android'
+                                        ? 'views.Settings.Privacy.screenCaptureProtection.explainer.android'
+                                        : 'views.Settings.Privacy.screenCaptureProtection.explainer.ios'
+                                )}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.screenCaptureProtection'
+                                )}
+                            </Text>
                         </View>
-                    )}
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={screenCaptureProtection}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                                onValueChange={async () => {
+                                    const newValue = !screenCaptureProtection;
+                                    this.setState({
+                                        screenCaptureProtection: newValue
+                                    });
+                                    await updateSettings({
+                                        privacy: {
+                                            ...settings.privacy,
+                                            screenCaptureProtection: newValue
+                                        }
+                                    });
+                                    await NativeModules.MobileTools.setSecureFlag(
+                                        newValue
+                                    );
+                                }}
+                            />
+                        </View>
+                    </View>
 
                     {Platform.OS === 'android' && (
                         <TouchableOpacity
