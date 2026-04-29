@@ -92,7 +92,7 @@ export default class NWCConnectionQR extends React.Component<
 
     componentWillUnmount() {
         const { NostrWalletConnectStore } = this.props;
-        NostrWalletConnectStore.stopWaitingForConnection();
+        NostrWalletConnectStore.cancelWaitingForConnection();
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
         }

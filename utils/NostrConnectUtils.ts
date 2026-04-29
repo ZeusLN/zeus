@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { Notifications } from 'react-native-notifications';
 import {
     BudgetRenewalType,
     PermissionType,
@@ -23,6 +25,7 @@ import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
+import { numberWithCommas } from './UnitsUtils';
 
 export interface PermissionOption {
     key: PermissionType;
@@ -49,9 +52,84 @@ const PRESET_INDEX = {
     CUSTOM: 4
 } as const;
 
+const NWC_TRAY_NOTIFICATION_KEYS = {
+    outgoingTitle:
+        'stores.NostrWalletConnectStore.paymentSentNotificationTitle',
+    outgoingBody: 'stores.NostrWalletConnectStore.paymentSentNotificationBody',
+    invoiceReadyTitle:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle',
+    invoiceReadyBody:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationBody',
+    invoiceReadyBodyWithDescription:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription'
+} as const;
+
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
+    }
+
+    static notifyOutgoingNwcPayment(
+        amountSats: number,
+        connectionDisplayName: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingTitle);
+        const body = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingBody, {
+            amount: amountLabel,
+            unit,
+            connectionName: connectionDisplayName
+        });
+        NostrConnectUtils.emitOsNotification(title, body);
+    }
+
+    static notifyNwcInvoiceReady(
+        amountSats: number,
+        connectionDisplayName: string,
+        description?: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(
+            NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyTitle
+        );
+        let body: string;
+        if (description) {
+            body = localeString(
+                NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBodyWithDescription,
+                {
+                    amount: amountLabel,
+                    unit,
+                    connectionName: connectionDisplayName,
+                    description
+                }
+            );
+        } else {
+            body = localeString(NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBody, {
+                amount: amountLabel,
+                unit,
+                connectionName: connectionDisplayName
+            });
+        }
+        NostrConnectUtils.emitOsNotification(title, body);
+    }
+
+    private static emitOsNotification(title: string, body: string): void {
+        if (Platform.OS === 'android') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body
+            });
+        } else if (Platform.OS === 'ios') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body,
+                sound: 'chime.aiff'
+            });
+        }
     }
 
     static get TIME_UNITS(): TimeUnit[] {

@@ -34,7 +34,6 @@ import {
     AppState,
     EmitterSubscription
 } from 'react-native';
-import { Notifications } from 'react-native-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,7 +43,6 @@ import NostrConnectUtils from '../utils/NostrConnectUtils';
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import dateTimeUtils from '../utils/DateTimeUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
-import { numberWithCommas } from '../utils/UnitsUtils';
 import { retry } from '../utils/SleepUtils';
 
 import NWCConnection, {
@@ -369,8 +367,6 @@ export default class NostrWalletConnectStore {
             this.error = false;
             this.walletServiceKeys = null;
             this.errorMessage = '';
-            this.loading = false;
-            this.loadingMsg = undefined;
             this.waitingForConnection = false;
             this.currentConnectionId = undefined;
             this.connectionJustSucceeded = false;
@@ -381,6 +377,10 @@ export default class NostrWalletConnectStore {
             this.isInitialized = false;
             await this.unsubscribeFromAllConnections();
         }
+        runInAction(() => {
+            this.loading = false;
+            this.loadingMsg = undefined;
+        });
     };
 
     public isServiceReady(): boolean {
@@ -797,10 +797,11 @@ export default class NostrWalletConnectStore {
     ): NWCConnection | undefined => {
         const { nodeInfo } = this.nodeInfoStore;
         const { implementation } = this.settingsStore;
+        const currentNodeId = nodeInfo?.nodeId;
         const connection = this.connections.find(
             (c) =>
                 c.id === connectionId &&
-                c.nodePubkey === nodeInfo.nodeId &&
+                c.nodePubkey === currentNodeId &&
                 c.implementation === implementation
         );
         return connection;
@@ -931,10 +932,14 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 connection.lastUsed = new Date();
             });
-            if (wasNeverUsed) {
-                await this.saveConnections();
-            } else {
-                this.scheduleSave();
+            try {
+                if (wasNeverUsed) {
+                    await this.saveConnections();
+                } else {
+                    this.scheduleSave();
+                }
+            } catch (err) {
+                console.error('NWC: markConnectionUsed save failed:', err);
             }
 
             if (
@@ -962,9 +967,10 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        const relayParam = /[&?#]/.test(relayUrl)
+            ? encodeURIComponent(relayUrl)
+            : relayUrl;
+        const connectionUrl = `nostr+walletconnect://${this.walletServiceKeys.publicKey}?relay=${relayParam}&secret=${connectionPrivateKey}`;
         return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
     @action
@@ -984,6 +990,11 @@ export default class NostrWalletConnectStore {
                 this.connectionJustSucceeded = false;
             });
         }, 100);
+    };
+    @action
+    public cancelWaitingForConnection = () => {
+        this.waitingForConnection = false;
+        this.currentConnectionId = undefined;
     };
 
     // SUBSCRIPTION MANAGEMENT
@@ -1348,7 +1359,7 @@ export default class NostrWalletConnectStore {
                             this.findAndUpdateConnection(connection);
                         });
                     this.scheduleSave();
-                    this.showInvoiceCreatedNotification(
+                    NostrConnectUtils.notifyNwcInvoiceReady(
                         millisatsToSats(request.amount),
                         connection.name,
                         request.description
@@ -1487,7 +1498,7 @@ export default class NostrWalletConnectStore {
                 });
             }
             this.scheduleSave();
-            this.showInvoiceCreatedNotification(
+            NostrConnectUtils.notifyNwcInvoiceReady(
                 millisatsToSats(request.amount),
                 connection.name,
                 request.description
@@ -2226,7 +2237,7 @@ export default class NostrWalletConnectStore {
             this.findAndUpdateConnection(connection);
         });
         this.scheduleSave();
-        this.showPaymentSentNotification(amountSats, connection.name);
+        NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
 
     private async recordFailedPayment(
@@ -2517,10 +2528,11 @@ export default class NostrWalletConnectStore {
     public get activeConnections(): NWCConnection[] {
         const { nodeInfo } = this.nodeInfoStore;
         const { implementation } = this.settingsStore;
+        const currentNodeId = nodeInfo?.nodeId;
         return this.connections.filter(
             (c) =>
                 c.isActive &&
-                c.nodePubkey === nodeInfo.nodeId &&
+                c.nodePubkey === currentNodeId &&
                 c.implementation === implementation
         );
     }
@@ -2529,10 +2541,11 @@ export default class NostrWalletConnectStore {
     public get expiredConnections(): NWCConnection[] {
         const { nodeInfo } = this.nodeInfoStore;
         const { implementation } = this.settingsStore;
+        const currentNodeId = nodeInfo?.nodeId;
         return this.connections.filter(
             (c) =>
                 c.isExpired &&
-                c.nodePubkey === nodeInfo.nodeId &&
+                c.nodePubkey === currentNodeId &&
                 c.implementation === implementation
         );
     }
@@ -2982,74 +2995,6 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             this.iosAudioKeepAliveActive = false;
         });
-    }
-
-    private showNotification(title: string, body: string): void {
-        if (Platform.OS === 'android') {
-            // @ts-ignore:next-line
-            Notifications.postLocalNotification({
-                title,
-                body
-            });
-        } else if (Platform.OS === 'ios') {
-            // @ts-ignore:next-line
-            Notifications.postLocalNotification({
-                title,
-                body,
-                sound: 'chime.aiff'
-            });
-        }
-    }
-    private showPaymentSentNotification(
-        amountSats: number,
-        connectionName: string
-    ): void {
-        const value = numberWithCommas(amountSats.toString());
-        this.showNotification(
-            localeString(
-                'stores.NostrWalletConnectStore.paymentSentNotificationTitle'
-            ),
-            localeString(
-                'stores.NostrWalletConnectStore.paymentSentNotificationBody',
-                {
-                    amount: value,
-                    unit: localeString('general.sats'),
-                    connectionName
-                }
-            )
-        );
-    }
-
-    private showInvoiceCreatedNotification(
-        amountSats: number,
-        connectionName: string,
-        description?: string
-    ): void {
-        const value = numberWithCommas(amountSats.toString());
-        const body = description
-            ? localeString(
-                  'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription',
-                  {
-                      amount: value,
-                      unit: localeString('general.sats'),
-                      connectionName,
-                      description
-                  }
-              )
-            : localeString(
-                  'stores.NostrWalletConnectStore.invoiceCreatedNotificationBody',
-                  {
-                      amount: value,
-                      unit: localeString('general.sats'),
-                      connectionName
-                  }
-              );
-        this.showNotification(
-            localeString(
-                'stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle'
-            ),
-            body
-        );
     }
 
     @action private setError(message: string) {
