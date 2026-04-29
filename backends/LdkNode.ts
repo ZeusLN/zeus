@@ -1240,9 +1240,11 @@ export default class LdkNode {
     /**
      * Lookup invoice by payment hash
      */
-    lookupInvoice = async (rHash: string): Promise<any> => {
+    lookupInvoice = async (data: { r_hash: string }): Promise<any> => {
         const payments = await LdkNodeInjection.payments.listPayments();
-        const payment = payments.find((p) => p.kind.hash === rHash);
+        const payment = data?.r_hash
+            ? payments.find((p) => p.kind.hash === data.r_hash)
+            : undefined;
 
         if (payment) {
             return this.formatPaymentAsInvoice(payment);
