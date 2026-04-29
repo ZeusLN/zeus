@@ -632,7 +632,7 @@ public class LndMobileService extends Service {
       }
       notificationBuilder
         .setContentText(getLocalizedString("androidNotification.nodeRunningBackground"))
-        .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
+        .setSmallIcon(R.drawable.ic_stat_ic_notification_zeus)
         .setContentIntent(pendingIntent)
         .setOngoing(true)
         .addAction(new Notification.Action.Builder(null, getLocalizedString("androidNotification.shutdown"), stopPendingIntent).build());
