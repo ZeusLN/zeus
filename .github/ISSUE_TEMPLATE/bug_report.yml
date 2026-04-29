@@ -29,12 +29,12 @@ body:
       label: ZEUS version
       description: What version of ZEUS were you running when the bug occurred?
       options:
+        - v13.1.0
         - v13.0.0
         - v0.12.3
         - v0.12.2
         - v0.12.1
         - v0.12.0
-        - v0.11.6
         - Older (specify in comments)
   - type: dropdown
     id: interface
