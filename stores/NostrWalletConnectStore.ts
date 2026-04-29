@@ -1142,9 +1142,7 @@ export default class NostrWalletConnectStore {
         }
         const connectionPrivateKey = generatePrivateKey();
         const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        let connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
+        let connectionUrl = `nostr+walletconnect://${this.walletServiceKeys.publicKey}?relay=${relayUrl}&secret=${connectionPrivateKey}`;
         const lud16 = this.lud16Enabled ? this.getLightningAddress() : null;
         if (lud16) {
             connectionUrl += `&lud16=${encodeURIComponent(lud16)}`;
