@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     BackHandler,
     NativeEventSubscription,
+    NativeModules,
     Platform,
     StatusBar,
     AppState
@@ -355,6 +356,16 @@ export default class App extends React.PureComponent {
 
         // Ensure stealth mode is in a valid state (safety check)
         StealthModeUtils.fixStealthModeIfNeeded();
+
+        if (Platform.OS === 'android') {
+            settingsStore.getSettings().then((settings) => {
+                const protect =
+                    settings?.privacy?.screenCaptureProtection ?? false;
+                NativeModules.MobileTools.setSecureFlag(protect).catch(
+                    () => {}
+                );
+            });
+        }
     }
 
     componentWillUnmount() {

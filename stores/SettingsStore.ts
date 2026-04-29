@@ -72,6 +72,7 @@ interface PrivacySettings {
     clipboard?: boolean;
     lurkerMode?: boolean;
     enableMempoolRates?: boolean;
+    screenCaptureProtection?: boolean;
     // Stealth Mode (Android only)
     stealthMode?: boolean;
     stealthApp?: 'zeus' | 'calculator' | 'vpn' | 'qrscanner' | 'notepad';
@@ -1464,6 +1465,7 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true,
+            screenCaptureProtection: false,
             stealthMode: false,
             stealthApp: 'calculator',
             stealthPinLength: 5,

@@ -1227,6 +1227,8 @@
     "views.Settings.Privacy.clipboard": "Read clipboard",
     "views.Settings.Privacy.clipboard.explainer": "If enabled, Zeus will read values copied to your clipboard and prompt you if they can be used in the app.",
     "views.Settings.Privacy.enableMempoolRates": "Enable Mempool.space fee suggestions",
+    "views.Settings.Privacy.screenCaptureProtection": "Block screen capture",
+    "views.Settings.Privacy.screenCaptureProtection.explainer": "Prevents screenshots and screen recordings of the app.",
     "views.Settings.stealthMode": "Stealth Mode",
     "views.Settings.StealthMode.title": "Stealth Mode",
     "views.Settings.StealthMode.chooseApp": "Choose Stealth App",
