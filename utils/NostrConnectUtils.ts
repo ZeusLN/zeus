@@ -5,6 +5,8 @@ import type {
     Nip47ListTransactionsRequest
 } from '@getalby/sdk/dist/nwc/types';
 
+import { generatePrivateKey, getPublicKey } from 'nostr-tools';
+
 import {
     BudgetRenewalType,
     PermissionType,
@@ -1066,6 +1068,43 @@ export default class NostrConnectUtils {
         return {
             transactions: paginated,
             totalCount
+        };
+    }
+
+    static buildWalletConnectConnectionUrl(
+        walletPubKeyHex: string,
+        relayUrl: string,
+        connectionSecretKeyHex: string,
+        lud16?: string | null
+    ): string {
+        return `nostr+walletconnect://${walletPubKeyHex}?relay=${encodeURIComponent(
+            relayUrl
+        )}&secret=${encodeURIComponent(connectionSecretKeyHex)}${
+            lud16 ? `&lud16=${encodeURIComponent(lud16)}` : ''
+        }`;
+    }
+
+    static generateConnectionSecret(
+        walletPubKeyHex: string,
+        relayUrl: string,
+        lud16?: string | null
+    ): {
+        connectionUrl: string;
+        connectionPrivateKey: string;
+        connectionPublicKey: string;
+    } {
+        const connectionPrivateKey = generatePrivateKey();
+        const connectionPublicKey = getPublicKey(connectionPrivateKey);
+        const connectionUrl = NostrConnectUtils.buildWalletConnectConnectionUrl(
+            walletPubKeyHex,
+            relayUrl,
+            connectionPrivateKey,
+            lud16
+        );
+        return {
+            connectionUrl,
+            connectionPrivateKey,
+            connectionPublicKey
         };
     }
 }
