@@ -1,5 +1,6 @@
 import { action, computed, observable } from 'mobx';
-import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
+import { nwc } from '@getalby/sdk';
+export type Nip47SingleMethod = nwc.Nip47SingleMethod;
 import { localeString } from '../utils/LocaleUtils';
 
 import BaseModel from './BaseModel';
