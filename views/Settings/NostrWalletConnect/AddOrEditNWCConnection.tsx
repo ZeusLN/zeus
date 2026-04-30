@@ -145,7 +145,9 @@ export default class AddOrEditNWCConnection extends React.Component<
     loadConnectionForEdit = async (connectionId: string) => {
         const { NostrWalletConnectStore } = this.props;
         await NostrWalletConnectStore.loadConnections();
-        const connection = NostrWalletConnectStore.getConnection(connectionId);
+        const { connection } = NostrWalletConnectStore.getConnection({
+            connectionId
+        });
         if (connection) {
             const budgetRenewalIndex = NostrConnectUtils.getBudgetRenewalIndex(
                 connection.budgetRenewal
@@ -499,7 +501,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             maxBudgetLimit,
             customRelayUrl
         } = this.state;
-        const { NostrWalletConnectStore } = this.props;
 
         const budgetRenewalOptions =
             NostrConnectUtils.getBudgetRenewalOptions();
@@ -508,7 +509,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         const isCustomRelay =
             selectedRelayUrl === localeString('general.custom');
         if (isCustomRelay) {
-            const { status, error } = await NostrWalletConnectStore.pingRelay(
+            const { status, error } = await NostrConnectUtils.pingRelay(
                 customRelayUrl
             );
             if (!status) {
@@ -571,8 +572,9 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState({ loading: true, error: '' });
         try {
             await NostrWalletConnectStore.loadConnections();
-            const connection =
-                NostrWalletConnectStore.getConnection(connectionId);
+            const { connection } = NostrWalletConnectStore.getConnection({
+                connectionId
+            });
             if (!connection) {
                 throw new Error(
                     localeString(

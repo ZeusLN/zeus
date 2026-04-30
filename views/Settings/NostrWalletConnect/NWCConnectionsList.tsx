@@ -5,8 +5,7 @@ import {
     FlatList,
     TouchableOpacity,
     Text,
-    RefreshControl,
-    Platform
+    RefreshControl
 } from 'react-native';
 import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -24,7 +23,6 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -381,8 +379,7 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation, SettingsStore } =
-            this.props;
+        const { NostrWalletConnectStore, navigation } = this.props;
         const { connections, loading } = NostrWalletConnectStore;
         const { connectionsLoading, error } = this.state;
         return (
@@ -429,27 +426,21 @@ export default class NWCConnectionsList extends React.Component<
                                     />
                                 </TouchableOpacity>
 
-                                {!(
-                                    Platform.OS === 'ios' &&
-                                    BackendUtils.supportsCashuWallet() &&
-                                    !SettingsStore.settings?.ecash?.enableCashu
-                                ) && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('NWCSettings')
-                                        }
-                                        accessibilityLabel={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                    >
-                                        <Gear
-                                            fill={themeColor('text')}
-                                            width={30}
-                                            height={30}
-                                            style={{ alignSelf: 'center' }}
-                                        />
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('NWCSettings')
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'views.Settings.title'
+                                    )}
+                                >
+                                    <Gear
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         )
                     }

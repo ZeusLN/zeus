@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
+import { relayInit } from 'nostr-tools';
 import {
     BudgetRenewalType,
     PermissionType,
@@ -17,7 +18,9 @@ import {
     Nip47NotificationType,
     Nip47SingleMethod,
     Nip47Transaction,
-    Nip47ListTransactionsRequest
+    Nip47ListTransactionsRequest,
+    Nip47MakeInvoiceRequest,
+    Nip47LookupInvoiceRequest
 } from '../stores/NostrWalletConnectStore';
 
 import { localeString } from './LocaleUtils';
@@ -64,72 +67,22 @@ const NWC_TRAY_NOTIFICATION_KEYS = {
         'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription'
 } as const;
 
+export const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
+
+export enum Nip47ErrorCode {
+    INTERNAL_ERROR = 'INTERNAL_ERROR',
+    RATE_LIMITED = 'RATE_LIMITED',
+    INVALID_INVOICE = 'INVALID_INVOICE',
+    FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
+    FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
+    NOT_FOUND = 'NOT_FOUND',
+    INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
+    INVOICE_EXPIRED = 'INVOICE_EXPIRED'
+}
+
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
-    }
-
-    static notifyOutgoingNwcPayment(
-        amountSats: number,
-        connectionDisplayName: string
-    ): void {
-        const amountLabel = numberWithCommas(amountSats.toString());
-        const unit = localeString('general.sats');
-        const title = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingTitle);
-        const body = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingBody, {
-            amount: amountLabel,
-            unit,
-            connectionName: connectionDisplayName
-        });
-        NostrConnectUtils.emitOsNotification(title, body);
-    }
-
-    static notifyNwcInvoiceReady(
-        amountSats: number,
-        connectionDisplayName: string,
-        description?: string
-    ): void {
-        const amountLabel = numberWithCommas(amountSats.toString());
-        const unit = localeString('general.sats');
-        const title = localeString(
-            NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyTitle
-        );
-        let body: string;
-        if (description) {
-            body = localeString(
-                NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBodyWithDescription,
-                {
-                    amount: amountLabel,
-                    unit,
-                    connectionName: connectionDisplayName,
-                    description
-                }
-            );
-        } else {
-            body = localeString(NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBody, {
-                amount: amountLabel,
-                unit,
-                connectionName: connectionDisplayName
-            });
-        }
-        NostrConnectUtils.emitOsNotification(title, body);
-    }
-
-    private static emitOsNotification(title: string, body: string): void {
-        if (Platform.OS === 'android') {
-            // @ts-ignore:next-line
-            Notifications.postLocalNotification({
-                title,
-                body
-            });
-        } else if (Platform.OS === 'ios') {
-            // @ts-ignore:next-line
-            Notifications.postLocalNotification({
-                title,
-                body,
-                sound: 'chime.aiff'
-            });
-        }
     }
 
     static get TIME_UNITS(): TimeUnit[] {
@@ -535,6 +488,232 @@ export default class NostrConnectUtils {
             console.error('Failed to decode invoice:', decodeError);
             throw decodeError;
         }
+    }
+
+    static async lookupInvoicePaidFromNode(options: {
+        paymentRequest?: string;
+        rHash?: string;
+    }): Promise<boolean> {
+        const pr = options.paymentRequest?.trim() || '';
+        if (/^ln/i.test(pr)) {
+            try {
+                const decoded = await NostrConnectUtils.decodeInvoiceTags(
+                    pr,
+                    true
+                );
+                return !!decoded.isPaid;
+            } catch {
+                return false;
+            }
+        }
+        const hash = options.rHash?.trim();
+        if (!hash) return false;
+        try {
+            const result = await BackendUtils.lookupInvoice({ r_hash: hash });
+            return new Invoice(result).isPaid;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Finds a Cashu invoice matching NIP-47 lookup_invoice (BOLT11 string and/or payment_hash).
+     */
+    static async findCashuInvoiceForNwcLookup(
+        invoices: CashuInvoice[],
+        request: Nip47LookupInvoiceRequest
+    ): Promise<CashuInvoice | undefined> {
+        for (const inv of invoices) {
+            if (inv.getPaymentRequest === request.invoice) {
+                return inv;
+            }
+            if (!request.payment_hash) {
+                continue;
+            }
+            try {
+                const decoded = await NostrConnectUtils.decodeInvoiceTags(
+                    inv.getPaymentRequest
+                );
+                if (decoded.paymentHash === request.payment_hash) {
+                    return inv;
+                }
+            } catch {
+                // Skip malformed/undecodable invoices and continue lookup.
+            }
+        }
+        return undefined;
+    }
+
+    /** NIP-47 transaction for a Cashu invoice matched by lookup_invoice. */
+    static async buildNip47TransactionForCashuInvoiceLookup(
+        invoices: CashuInvoice[],
+        request: Nip47LookupInvoiceRequest
+    ): Promise<Nip47Transaction> {
+        const invoice = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
+            invoices || [],
+            request
+        );
+        if (!invoice) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                )
+            );
+        }
+        const isPaid = invoice.isPaid || false;
+        const amtSat = invoice.getAmount;
+        const timestamp =
+            Number(invoice.getTimestamp) || dateTimeUtils.getCurrentTimestamp();
+        const expiresAt =
+            Number(invoice.expires_at) ||
+            timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS;
+
+        return NostrConnectUtils.createNip47Transaction({
+            type: 'incoming',
+            state: isPaid ? 'settled' : 'pending',
+            invoice: invoice.getPaymentRequest,
+            payment_hash: request.payment_hash!,
+            amount: satsToMillisats(amtSat || 0),
+            ...(isPaid && {
+                preimage:
+                    invoice.getPaymentRequest ||
+                    request.invoice ||
+                    request.payment_hash
+            }),
+            description: invoice.getMemo,
+            settled_at: isPaid ? invoice.settleDate.getTime() / 1000 : 0,
+            created_at: timestamp,
+            expires_at: expiresAt
+        });
+    }
+
+    static async buildNip47TransactionForLightningInvoiceLookup(
+        paymentHash: string
+    ): Promise<Nip47Transaction> {
+        let invoice = new Invoice();
+        try {
+            invoice = await BackendUtils.lookupInvoice({
+                r_hash: paymentHash!
+            });
+        } catch (error) {
+            console.error('Failed to lookup invoice:', error);
+            throw error;
+        }
+        const now = Math.floor(Date.now() / 1000);
+
+        const isExpired =
+            Number(invoice.expiry) > 0 &&
+            Number(invoice.timestamp) + Number(invoice.expiry) < now;
+
+        const state = invoice.isPaid
+            ? 'settled'
+            : isExpired
+            ? 'failed'
+            : 'pending';
+
+        return NostrConnectUtils.createNip47Transaction({
+            type: 'incoming',
+            state,
+            invoice: invoice.getPaymentRequest,
+            payment_hash: paymentHash || '',
+            amount: satsToMillisats(invoice.getAmount),
+            description: invoice.getMemo,
+            ...(invoice.isPaid && {
+                preimage: invoice.getRPreimage
+            }),
+            description_hash: invoice.getDescriptionHash,
+            settled_at: invoice.settleDate.getTime() / 1000,
+            created_at: invoice.getCreationDate.getTime() / 1000,
+            expires_at: invoice.getCreationDate.getTime() / 1000
+        });
+    }
+
+    static async decodeInvoiceTagsForMakeInvoice(
+        paymentRequest: string,
+        rHash?: string
+    ): Promise<{
+        paymentHash: string;
+        descriptionHash: string;
+        expiryTime: number;
+    }> {
+        const isLightning = rHash !== undefined;
+        let paymentHash = isLightning ? rHash || '' : '';
+        let descriptionHash = '';
+        let expiryTime = 0;
+
+        try {
+            const decoded = await NostrConnectUtils.decodeInvoiceTags(
+                paymentRequest
+            );
+            if (isLightning) {
+                paymentHash = decoded.paymentHash || rHash!;
+                descriptionHash = decoded.descriptionHash;
+                expiryTime =
+                    decoded?.expiryTime ||
+                    dateTimeUtils.getCurrentTimestamp() +
+                        DEFAULT_INVOICE_EXPIRY_SECONDS;
+            } else {
+                paymentHash = decoded.paymentHash;
+                descriptionHash = decoded.descriptionHash;
+                expiryTime =
+                    decoded?.expiryTime ??
+                    dateTimeUtils.getCurrentTimestamp() +
+                        DEFAULT_INVOICE_EXPIRY_SECONDS;
+            }
+        } catch (decodeError) {
+            if (!isLightning) {
+                console.error(
+                    'decodeInvoiceTagsForMakeInvoice: failed to decode Cashu invoice tags',
+                    decodeError
+                );
+                expiryTime =
+                    dateTimeUtils.getCurrentTimestamp() +
+                    DEFAULT_INVOICE_EXPIRY_SECONDS;
+                return { paymentHash: '', descriptionHash: '', expiryTime };
+            }
+            if (!paymentHash && rHash) {
+                paymentHash = rHash;
+            }
+            if (!paymentHash) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
+                    )
+                );
+            }
+            expiryTime =
+                dateTimeUtils.getCurrentTimestamp() +
+                DEFAULT_INVOICE_EXPIRY_SECONDS;
+        }
+        return { paymentHash, descriptionHash, expiryTime };
+    }
+
+    static buildMakeInvoiceSuccessPayload(
+        connectionDisplayName: string,
+        request: Nip47MakeInvoiceRequest,
+        fields: {
+            paymentRequest: string;
+            paymentHash: string;
+            descriptionHash: string;
+            expiryTime: number;
+        }
+    ): { result: Nip47Transaction; error: undefined } {
+        NostrConnectUtils.notifyNwcInvoiceReady(
+            millisatsToSats(request.amount),
+            connectionDisplayName,
+            request.description
+        );
+        const result = NostrConnectUtils.createNip47Transaction({
+            type: 'incoming',
+            state: 'pending',
+            invoice: fields.paymentRequest,
+            payment_hash: fields.paymentHash || '',
+            amount: request.amount,
+            description: request.description,
+            description_hash: fields.descriptionHash,
+            expires_at: fields.expiryTime
+        });
+        return { result, error: undefined };
     }
 
     /**
@@ -1145,5 +1324,125 @@ export default class NostrConnectUtils {
             transactions: paginated,
             totalCount
         };
+    }
+    static notifyOutgoingNwcPayment(
+        amountSats: number,
+        connectionDisplayName: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingTitle);
+        const body = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingBody, {
+            amount: amountLabel,
+            unit,
+            connectionName: connectionDisplayName
+        });
+        NostrConnectUtils.emitOsNotification(title, body);
+    }
+
+    static notifyNwcInvoiceReady(
+        amountSats: number,
+        connectionDisplayName: string,
+        description?: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(
+            NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyTitle
+        );
+        let body: string;
+        if (description) {
+            body = localeString(
+                NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBodyWithDescription,
+                {
+                    amount: amountLabel,
+                    unit,
+                    connectionName: connectionDisplayName,
+                    description
+                }
+            );
+        } else {
+            body = localeString(NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBody, {
+                amount: amountLabel,
+                unit,
+                connectionName: connectionDisplayName
+            });
+        }
+        NostrConnectUtils.emitOsNotification(title, body);
+    }
+
+    private static emitOsNotification(title: string, body: string): void {
+        if (Platform.OS === 'android') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body
+            });
+        } else if (Platform.OS === 'ios') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body,
+                sound: 'chime.aiff'
+            });
+        }
+    }
+
+    static createNip47Error(
+        message: string,
+        code: Nip47ErrorCode = Nip47ErrorCode.INTERNAL_ERROR
+    ): {
+        result: undefined;
+        error: {
+            code: Nip47ErrorCode;
+            message: string;
+        };
+    } {
+        return {
+            result: undefined,
+            error: {
+                code,
+                message
+            }
+        };
+    }
+
+    static async pingRelay(relayUrl: string): Promise<{
+        status: boolean;
+        error?: string | null;
+    }> {
+        let relay: ReturnType<typeof relayInit> | undefined;
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        try {
+            relay = relayInit(relayUrl);
+            const timeout = new Promise<void>((_, reject) => {
+                timeoutId = setTimeout(
+                    () =>
+                        reject(
+                            new Error(
+                                localeString(
+                                    'views.Settings.NostrWalletConnect.connectionTimeout'
+                                )
+                            )
+                        ),
+                    5000
+                );
+            });
+            await Promise.race([relay.connect(), timeout]);
+            return { status: true, error: null };
+        } catch (_e) {
+            return {
+                status: false,
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.failedToConnectRelay',
+                    { relayUrl }
+                )
+            };
+        } finally {
+            if (timeoutId !== undefined) {
+                clearTimeout(timeoutId);
+            }
+            relay?.close();
+        }
     }
 }

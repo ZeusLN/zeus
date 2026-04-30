@@ -134,9 +134,9 @@ export default class NWCConnectionDetails extends React.Component<
         }
         this.setState({ loading: true });
         try {
-            await NostrWalletConnectStore.loadConnections();
-            const connection =
-                NostrWalletConnectStore.getConnection(connectionId);
+            const { connection } = NostrWalletConnectStore.getConnection({
+                connectionId
+            });
             if (connection) {
                 this.setState({ connection, loading: false });
             } else {
