@@ -169,74 +169,6 @@ export default class NWCSettings extends React.Component<
                             marginTop: 5
                         }}
                     >
-                        {
-                            <View style={{ marginTop: 20 }}>
-                                <View style={{ flexDirection: 'row' }}>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            justifyContent: 'flex-start'
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 17,
-                                                flexShrink: 1
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.persistentNWCService'
-                                            )}
-                                        </Text>
-                                        <Icon
-                                            name="info"
-                                            onPress={
-                                                this
-                                                    .showPersistentNWCBackgroundInfo
-                                            }
-                                            color={themeColor('text')}
-                                            underlayColor="transparent"
-                                            size={24}
-                                            containerStyle={{ marginLeft: 8 }}
-                                        />
-                                    </View>
-                                    <View
-                                        style={{
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={persistentNWCServiceEnabled}
-                                            onValueChange={
-                                                this.togglePersistentNWCService
-                                            }
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress ||
-                                                loading
-                                            }
-                                        />
-                                    </View>
-                                </View>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 14,
-                                        marginTop: 8,
-                                        lineHeight: 20
-                                    }}
-                                >
-                                    {localeString(
-                                        Platform.OS === 'ios'
-                                            ? 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionIOS'
-                                            : 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionAndroid'
-                                    )}
-                                </Text>
-                            </View>
-                        }
-
                         {BackendUtils.supportsCashuWallet() &&
                             settings.ecash.enableCashu && (
                                 <View style={{ marginTop: 20 }}>
@@ -289,6 +221,70 @@ export default class NWCSettings extends React.Component<
                                     </Text>
                                 </View>
                             )}
+                        <View style={{ marginTop: 20 }}>
+                            <View style={{ flexDirection: 'row' }}>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-start'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 17,
+                                            flexShrink: 1
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.NostrWalletConnect.persistentNWCService'
+                                        )}
+                                    </Text>
+                                    <Icon
+                                        name="info"
+                                        onPress={
+                                            this.showPersistentNWCBackgroundInfo
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={24}
+                                        containerStyle={{ marginLeft: 8 }}
+                                    />
+                                </View>
+                                <View
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    <Switch
+                                        value={persistentNWCServiceEnabled}
+                                        onValueChange={
+                                            this.togglePersistentNWCService
+                                        }
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress ||
+                                            loading
+                                        }
+                                    />
+                                </View>
+                            </View>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    marginTop: 8,
+                                    lineHeight: 20
+                                }}
+                            >
+                                {localeString(
+                                    Platform.OS === 'ios'
+                                        ? 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionIOS'
+                                        : 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionAndroid'
+                                )}
+                            </Text>
+                        </View>
                     </ScrollView>
                 )}
             </Screen>
