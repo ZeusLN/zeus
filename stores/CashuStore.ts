@@ -1946,7 +1946,10 @@ export default class CashuStore {
             await this.syncCDKBalances();
 
             // Update local mintUrls from CDK (source of truth)
-            this.mintUrls = await CashuDevKit.getMintUrls();
+            const updatedMintUrls = await CashuDevKit.getMintUrls();
+            runInAction(() => {
+                this.mintUrls = updatedMintUrls;
+            });
 
             // Backup to local storage for migration on restart
             await Storage.setItem(
@@ -1995,7 +1998,10 @@ export default class CashuStore {
         }
 
         delete this.cashuWallets[mintUrl];
-        this.mintUrls = await CashuDevKit.getMintUrls();
+        const updatedMintUrls = await CashuDevKit.getMintUrls();
+        runInAction(() => {
+            this.mintUrls = updatedMintUrls;
+        });
 
         await Storage.setItem(
             `${this.getNodeDir()}-cashu-mintUrls`,
@@ -2625,7 +2631,10 @@ export default class CashuStore {
                 }
 
                 // Get mint URLs from CDK (source of truth) and populate cache
-                this.mintUrls = await CashuDevKit.getMintUrls();
+                const cdkMints = await CashuDevKit.getMintUrls();
+                runInAction(() => {
+                    this.mintUrls = cdkMints;
+                });
                 this.mintUrls.forEach((url) =>
                     this.addedMintsCache.add(this.normalizeMintUrl(url))
                 );
@@ -2771,9 +2780,12 @@ export default class CashuStore {
             } catch (e) {
                 console.warn('CDK initialization failed:', e);
                 // Fallback: use local storage mint URLs if CDK fails
-                this.mintUrls = storedMintUrls
+                const fallbackMints = storedMintUrls
                     ? JSON.parse(storedMintUrls)
                     : [];
+                runInAction(() => {
+                    this.mintUrls = fallbackMints;
+                });
                 await Promise.all(
                     this.mintUrls.map((mintUrl) =>
                         this.initializeWallet(mintUrl)
@@ -2783,7 +2795,12 @@ export default class CashuStore {
         } else {
             // CDK not available - use local storage (should not happen in production)
             console.warn('CDK not available, using local storage');
-            this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
+            const fallbackMints = storedMintUrls
+                ? JSON.parse(storedMintUrls)
+                : [];
+            runInAction(() => {
+                this.mintUrls = fallbackMints;
+            });
             await Promise.all(
                 this.mintUrls.map((mintUrl) => this.initializeWallet(mintUrl))
             );
