@@ -25,6 +25,13 @@ class Storage {
         const stringValue =
             typeof value === 'string' ? value : JSON.stringify(value);
 
+        if (stringValue == null) {
+            console.error(
+                `Storage.setItem: cannot store null/undefined for key "${key}"`
+            );
+            return false;
+        }
+
         const response = await Keychain.setInternetCredentials(
             prefixedKey,
             prefixedKey,
