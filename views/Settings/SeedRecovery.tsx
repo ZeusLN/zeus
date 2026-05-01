@@ -50,12 +50,14 @@ import ModalStore from '../../stores/ModalStore';
 
 import {
     createLndWallet,
+    LndMobileEventEmitter,
     optimizeNeutrinoPeers,
     stopLnd,
     waitForRpcReady,
     STOP_LND_MAX_RETRIES,
     STOP_LND_POLL_DELAY_MS
 } from '../../utils/LndMobileUtils';
+import { sleep } from '../../utils/SleepUtils';
 
 import {
     createLdkNodeWallet,
@@ -789,14 +791,42 @@ export default class SeedRecovery extends React.PureComponent<
                 }
             } else {
                 // Embedded LND restore
-                try {
-                    await stopLnd(
-                        STOP_LND_MAX_RETRIES,
-                        STOP_LND_POLL_DELAY_MS,
-                        true
-                    );
-                } catch (e: any) {}
 
+                // Only stop LND if it's actually running — calling
+                // stopLnd when the daemon isn't up causes
+                // LndmobileStopDaemon to never call back, stalling
+                // the restore flow indefinitely.
+                if (this.props.SettingsStore.embeddedLndStarted) {
+                    this.setState({
+                        successMsg: localeString(
+                            'views.Tools.migration.export.stoppingLnd'
+                        )
+                    });
+                    try {
+                        await stopLnd(
+                            STOP_LND_MAX_RETRIES,
+                            STOP_LND_POLL_DELAY_MS,
+                            true
+                        );
+                    } catch (e: any) {
+                        console.log(
+                            'stopLnd during restore (expected):',
+                            e?.message || e
+                        );
+                    }
+
+                    // Clean up stale event listeners and give the Go
+                    // LND process time to fully shut down before
+                    // starting a new instance.
+                    LndMobileEventEmitter.removeAllListeners('SubscribeState');
+                    await sleep(Platform.OS === 'ios' ? 2000 : 4000);
+                }
+
+                this.setState({
+                    successMsg: localeString(
+                        'views.Tools.migration.status.optimizingPeers'
+                    )
+                });
                 await optimizeNeutrinoPeers(network === 'testnet');
 
                 const recoveryCipherSeed = seedArray.join(' ');
@@ -935,8 +965,32 @@ export default class SeedRecovery extends React.PureComponent<
                             .join(', #')}`}
                     />
                 )}
-                {successMsg && <SuccessMessage message={successMsg} />}
-                {loading && <LoadingIndicator />}
+                {!loading && successMsg && (
+                    <SuccessMessage message={successMsg} />
+                )}
+                {loading && (
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <LoadingIndicator />
+                        {!!successMsg && (
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 15,
+                                    marginTop: 20
+                                }}
+                            >
+                                {successMsg}
+                            </Text>
+                        )}
+                    </View>
+                )}
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
                         <View>
