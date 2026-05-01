@@ -1180,11 +1180,30 @@ export default class LdkNode {
         // Ensure expiry is a number (it comes as a string from the UI)
         const expirySecs = Number(data.expiry_seconds) || 3600;
 
-        if (data.value || data.value_msat) {
-            const amountMsat = data.value_msat
+        const valueMsat =
+            data.value_msat !== undefined && data.value_msat !== null
                 ? Number(data.value_msat)
-                : Number(data.value) * 1000;
+                : undefined;
+        const valueSat =
+            data.value !== undefined && data.value !== null
+                ? Number(data.value)
+                : undefined;
+        const normalizedValueMsat =
+            typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                ? valueMsat
+                : undefined;
+        const normalizedValueSat =
+            typeof valueSat === 'number' && Number.isFinite(valueSat)
+                ? valueSat
+                : undefined;
+        const amountMsat =
+            normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                ? Math.trunc(normalizedValueMsat)
+                : normalizedValueSat !== undefined && normalizedValueSat > 0
+                ? Math.trunc(normalizedValueSat * 1000)
+                : undefined;
 
+        if (amountMsat !== undefined && amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -1261,19 +1280,57 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat =
+            data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                ? (() => {
+                      const v = Number(data.fee_limit_msat);
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v)
+                          : undefined;
+                  })()
+                : data.fee_limit_sat !== undefined &&
+                  data.fee_limit_sat !== null
+                ? (() => {
+                      const v = Number(data.fee_limit_sat);
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v * 1000)
+                          : undefined;
+                  })()
+                : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
 
         let paymentId: string;
 
-        if (data.amt) {
+        // LDK's explicit-amount send path is msat-based, so preserve exact NWC amounts when we have them.
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
-                amountMsat: Number(data.amt) * 1000,
+                amountMsat: (() => {
+                    const v = Number(data.amount_msat);
+                    if (!Number.isFinite(v) || v <= 0) {
+                        throw new Error(
+                            `Invalid amount_msat: expected positive finite number, got ${v}`
+                        );
+                    }
+                    return Math.trunc(v);
+                })(),
+                maxTotalRoutingFeeMsat,
+                maxPathCount
+            });
+        } else if (data.amt) {
+            paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
+                invoice: data.payment_request,
+                amountMsat: (() => {
+                    const v = Number(data.amt);
+                    if (!Number.isFinite(v) || v <= 0) {
+                        throw new Error(
+                            `Invalid amt: expected positive finite number, got ${v}`
+                        );
+                    }
+                    return Math.trunc(v * 1000);
+                })(),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });
@@ -1300,10 +1357,48 @@ export default class LdkNode {
      */
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
-        const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const amountMsat =
+            data.amount_msat !== undefined && data.amount_msat !== null
+                ? (() => {
+                      const v = Number(data.amount_msat);
+                      if (!Number.isFinite(v) || v <= 0) {
+                          throw new Error(
+                              `Invalid amount_msat: expected positive finite number, got ${v}`
+                          );
+                      }
+                      return v;
+                  })()
+                : data.amt !== undefined && data.amt !== null
+                ? (() => {
+                      const v = Number(data.amt);
+                      if (!Number.isFinite(v) || v <= 0) {
+                          throw new Error(
+                              `Invalid amt: expected positive finite number, got ${v}`
+                          );
+                      }
+                      return v * 1000;
+                  })()
+                : (() => {
+                      throw new Error(
+                          'sendKeysend requires a positive amount (amount_msat or amt)'
+                      );
+                  })();
+        const maxTotalRoutingFeeMsat =
+            data.fee_limit_msat !== undefined && data.fee_limit_msat !== null
+                ? (() => {
+                      const v = Number(data.fee_limit_msat);
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v)
+                          : undefined;
+                  })()
+                : data.fee_limit_sat !== undefined && data.fee_limit_sat !== null
+                ? (() => {
+                      const v = Number(data.fee_limit_sat);
+                      return Number.isFinite(v) && v >= 0
+                          ? Math.trunc(v * 1000)
+                          : undefined;
+                  })()
+                : undefined;
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1311,7 +1406,7 @@ export default class LdkNode {
         const paymentId =
             await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
                 nodeId: pubkey,
-                amountMsat: amt * 1000,
+                amountMsat: Math.floor(amountMsat),
                 maxTotalRoutingFeeMsat,
                 maxPathCount
             });

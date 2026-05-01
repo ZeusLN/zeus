@@ -4,6 +4,7 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import { v4 as uuidv4 } from 'uuid';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
@@ -21,6 +22,21 @@ const calls = new Map<string, Promise<any>>();
 
 export default class CLNRest {
     private defaultTimeout: number = 30000;
+
+    private parsePositiveNumber = (value: unknown): BigNumber | undefined => {
+        if (value === undefined || value === null) {
+            return undefined;
+        }
+        const parsed = new BigNumber(value as any);
+        if (!parsed.isFinite() || parsed.isNegative()) {
+            return undefined;
+        }
+        return parsed;
+    };
+
+    private formatIntegerForCln = (value: BigNumber): number | string =>
+        value.lte(Number.MAX_SAFE_INTEGER) ? value.toNumber() : value.toFixed(0);
+
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -282,14 +298,63 @@ export default class CLNRest {
                 invoices: invoiceList
             };
         });
-    createInvoice = (data: any) =>
-        this.postRequest('/v1/invoice', {
+    createInvoice = (data: any) => {
+        // Prefer exact value_msat from NWC when it resolves to a positive
+        // integer; otherwise fall back to the sat-denominated value, and use
+        // 'any' for amountless invoices. CLN rejects amount_msat: 0, so we
+        // must NOT forward a 0 value_msat literal.
+        //
+        // Spec/correctness: an explicitly-supplied invalid value_msat (NaN,
+        // negative, 0) is treated as a hard validation error rather than
+        // silently falling through to data.value, so a buggy upstream
+        // doesn't end up creating an unrelated-amount invoice. A defined
+        // data.value still requires Number.isFinite + > 0 to be honored —
+        // otherwise undefined != 0 evaluates true and Number(undefined)*1000
+        // produces NaN, which CLN would reject opaquely.
+        let amountMsat: string = 'any';
+        let shouldCheckValue = true;
+
+        if (data.value_msat !== undefined && data.value_msat !== null) {
+            const valueMsat = this.parsePositiveNumber(data.value_msat);
+            if (valueMsat === undefined) {
+                throw new Error('Invalid value_msat for createInvoice');
+            }
+            const flooredMsat = valueMsat.integerValue(BigNumber.ROUND_FLOOR);
+            if (!flooredMsat.isZero()) {
+                amountMsat = this.formatIntegerForCln(flooredMsat).toString();
+                shouldCheckValue = false;
+            }
+        }
+
+        if (shouldCheckValue) {
+            if (data.value !== undefined && data.value !== null) {
+                const valueSat = this.parsePositiveNumber(data.value);
+                if (valueSat === undefined) {
+                    throw new Error('Invalid value for createInvoice');
+                }
+
+                const flooredMsat = valueSat
+                    .times(1000)
+                    .integerValue(BigNumber.ROUND_FLOOR);
+                if (!flooredMsat.isZero()) {
+                    amountMsat = this.formatIntegerForCln(flooredMsat).toString();
+                }
+            }
+        }
+
+        return this.postRequest('/v1/invoice', {
             description: data.memo,
-            label: 'zeus.' + Math.random() * 1000000,
-            amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
-            expiry: Number(data.expiry_seconds),
+            // Use UUID v4 for invoice labels: collision-free even under many
+            // concurrent NWC create_invoice calls (CLN rejects duplicate labels).
+            // Format: "zeus.{uuid}" where {uuid} is a v4 UUID string.
+            // BREAKING CHANGE: Previously used numeric format "zeus.{random_number}".
+            // Downstream code should NOT parse label format; treat as opaque identifier.
+            label: 'zeus.' + uuidv4(),
+            amount_msat: amountMsat,
+            expiry: Number(data.expiry_seconds) || 3600,
             exposeprivatechannels: true
         });
+    };
 
     getPayments = () =>
         this.postRequest('/v1/sql', {
@@ -368,27 +433,138 @@ export default class CLNRest {
             string: urlParams && urlParams[0]
         });
 
-    payLightningInvoice = (data: any) =>
-        this.postRequest(
-            '/v1/pay',
-            {
-                bolt11: data.payment_request,
-                amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
-            data.timeout_seconds * 1000
-        );
+    payLightningInvoice = (data: any) => {
+        const timeoutSeconds = (() => {
+            const value =
+                data.timeout_seconds !== undefined &&
+                data.timeout_seconds !== null
+                    ? Number(data.timeout_seconds)
+                    : 60;
+            return Number.isFinite(value) && value >= 0 ? value : 60;
+        })();
+        const request: any = {
+            bolt11: data.payment_request,
+            retry_for: timeoutSeconds
+        };
+
+        // Set fee limit: prefer fee_limit_msat (NIP-47 authoritative) over fee_limit_sat,
+        // then fall back to max_fee_percent if no absolute limit provided.
+        // Per CLN /v1/pay schema (doc/schemas/pay.json) the absolute-fee
+        // parameter is `maxfee` (type "msat", whole number is interpreted as
+        // millisatoshis). The previous parameter name `maxfeesats` is NOT a
+        // valid CLN field and is rejected by the schema's
+        // `additionalProperties: false`. Convert sat -> msat here, using
+        // Math.floor to ensure the result is an integer (CLN schema requires it).
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
+            const v = this.parsePositiveNumber(data.fee_limit_msat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
+            const v = this.parsePositiveNumber(data.fee_limit_sat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.times(1000).integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.max_fee_percent !== undefined &&
+            data.max_fee_percent !== null
+        ) {
+            // Fallback to percentage-based fee limit if absolute limit not provided
+            request.maxfeepercent = data.max_fee_percent;
+        }
+
+        // Only set amount_msat if it resolves to a positive, finite integer.
+        // - When amount_msat is provided, pass it through directly without
+        //   the /1000*1000 round-trip (IEEE-754 float arithmetic loses the
+        //   low msat bit for odd values >= 1001 and breaks NIP-47 msat
+        //   precision).
+        // - Otherwise convert sat → msat, multiplying BEFORE flooring so
+        //   sub-satoshi precision (e.g. 1.5 sats → 1500 msat) is preserved.
+        // - Floor (not ceil) ensures amount stays ≤ requested value; CLN's
+        //   `msat` schema type requires an integer value.
+        // - "Any amount" invoices work when amount/amt is 0/undefined/NaN
+        //   (amount_msat omitted).
+        let amountMsat: BigNumber | undefined;
+        if (data.amount_msat !== undefined && data.amount_msat !== null) {
+            const v = this.parsePositiveNumber(data.amount_msat);
+            if (v !== undefined) {
+                amountMsat = v.integerValue(BigNumber.ROUND_FLOOR);
+            }
+        } else if (data.amt !== undefined && data.amt !== null) {
+            const sats = this.parsePositiveNumber(data.amt);
+            if (sats !== undefined) {
+                amountMsat = sats.times(1000).integerValue(BigNumber.ROUND_FLOOR);
+            }
+        }
+        if (amountMsat !== undefined && amountMsat.gt(0)) {
+            request.amount_msat = this.formatIntegerForCln(amountMsat);
+        }
+
+        return this.postRequest('/v1/pay', request, timeoutSeconds * 1000);
+    };
     sendKeysend = (data: any) => {
+        const timeoutSeconds = (() => {
+            const value =
+                data.timeout_seconds !== undefined &&
+                data.timeout_seconds !== null
+                    ? Number(data.timeout_seconds)
+                    : 60;
+            return Number.isFinite(value) && value >= 0 ? value : 60;
+        })();
+        const rawAmountMsat = this.parsePositiveNumber(data.amount_msat);
+        const rawAmountSat = this.parsePositiveNumber(data.amt);
+        const amountMsat =
+            rawAmountMsat !== undefined
+                ? rawAmountMsat.integerValue(BigNumber.ROUND_FLOOR)
+                : rawAmountSat !== undefined
+                ? rawAmountSat.times(1000).integerValue(BigNumber.ROUND_FLOOR)
+                : undefined;
+        if (amountMsat === undefined || amountMsat.isZero()) {
+            throw new Error(
+                'sendKeysend requires a positive amount (amount_msat or amt)'
+            );
+        }
+        const request: any = {
+            destination: data.pubkey,
+            amount_msat: this.formatIntegerForCln(amountMsat),
+            retry_for: timeoutSeconds
+        };
+        // Mirror the fee-limit logic from payLightningInvoice: prefer absolute
+        // maxfee (msat) over a percentage cap, which is undefined for NWC calls.
+        if (data.fee_limit_msat !== undefined && data.fee_limit_msat !== null) {
+            const v = this.parsePositiveNumber(data.fee_limit_msat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.fee_limit_sat !== undefined &&
+            data.fee_limit_sat !== null
+        ) {
+            const v = this.parsePositiveNumber(data.fee_limit_sat);
+            if (v !== undefined) {
+                request.maxfee = this.formatIntegerForCln(
+                    v.times(1000).integerValue(BigNumber.ROUND_FLOOR)
+                );
+            }
+        } else if (
+            data.max_fee_percent !== undefined &&
+            data.max_fee_percent !== null
+        ) {
+            request.maxfeepercent = data.max_fee_percent;
+        }
         return this.postRequest(
             '/v1/keysend',
-            {
-                destination: data.pubkey,
-                amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
-            data.timeout_seconds * 1000
+            request,
+            timeoutSeconds * 1000
         );
     };
     closeChannel = (urlParams?: Array<string>) => {

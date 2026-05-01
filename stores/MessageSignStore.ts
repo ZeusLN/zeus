@@ -165,50 +165,46 @@ export default class MessageSignStore {
     };
 
     @action
-    public signMessage = (text: string) => {
+    public signMessage = async (
+        text: string,
+        signingMode?: 'lightning' | 'onchain'
+    ): Promise<string | null> => {
         this.loading = true;
 
         try {
+            const activeSigningMode = signingMode || this.signingMode;
             const signOperation =
-                this.signingMode === 'lightning'
+                activeSigningMode === 'lightning'
                     ? BackendUtils.signMessage(text)
                     : BackendUtils.signMessageWithAddr(
                           text,
                           this.selectedAddress
                       );
 
-            // Check if signOperation is a valid Promise
-            if (signOperation && typeof signOperation.then === 'function') {
-                signOperation
-                    .then((data: any) => {
-                        if (data) {
-                            this.signature = data.zbase || data.signature;
-                            this.error = false;
-                            this.errorMessage = '';
-                        } else {
-                            throw new Error(
-                                localeString(
-                                    'views.Settings.SignMessage.noDataReceived'
-                                )
-                            );
-                        }
-                    })
-                    .catch((error: any) => {
-                        this.handleError(error, 'Unknown signing error', true);
-                    })
-                    .finally(() => {
-                        this.loading = false;
-                    });
-            } else {
-                console.error('Sign operation did not return a valid Promise');
-                this.error = true;
-                this.errorMessage = localeString(
-                    'views.Settings.SignMessage.signOperationFailed'
+            if (!signOperation || typeof signOperation.then !== 'function') {
+                throw new Error(
+                    localeString(
+                        'views.Settings.SignMessage.signOperationFailed'
+                    )
                 );
-                this.loading = false;
             }
+
+            const data = await signOperation;
+            if (!data) {
+                throw new Error(
+                    localeString('views.Settings.SignMessage.noDataReceived')
+                );
+            }
+
+            this.signature = data.zbase || data.signature;
+            this.error = false;
+            this.errorMessage = '';
+            return this.signature;
         } catch (error: any) {
-            this.handleError(error, 'Unknown signing error');
+            this.handleError(error, 'Unknown signing error', true);
+            return null;
+        } finally {
+            this.loading = false;
         }
     };
 

@@ -108,8 +108,37 @@ export default class EmbeddedLND extends LND {
     getInvoices = async () => await listInvoices();
     createInvoice = async (data: any) =>
         await addInvoice({
-            amount: data.value ? Number(data.value) : undefined,
-            amount_msat: data.value_msat ? Number(data.value_msat) : undefined,
+            ...(() => {
+                const valueMsat =
+                    data.value_msat !== undefined && data.value_msat !== null
+                        ? Number(data.value_msat)
+                        : undefined;
+                const valueSat =
+                    data.value !== undefined && data.value !== null
+                        ? Number(data.value)
+                        : undefined;
+                const normalizedValueMsat =
+                    typeof valueMsat === 'number' && Number.isFinite(valueMsat)
+                        ? valueMsat
+                        : undefined;
+                const normalizedValueSat =
+                    typeof valueSat === 'number' && Number.isFinite(valueSat)
+                        ? valueSat
+                        : undefined;
+                const amountMsat =
+                    normalizedValueMsat !== undefined && normalizedValueMsat > 0
+                        ? Math.trunc(normalizedValueMsat)
+                        : normalizedValueSat !== undefined &&
+                          normalizedValueSat > 0
+                        ? Math.trunc(normalizedValueSat * 1000)
+                        : undefined;
+                return amountMsat !== undefined
+                    ? {
+                          amount: Math.trunc(amountMsat / 1000),
+                          amount_msat: amountMsat
+                      }
+                    : {};
+            })(),
             memo: data.memo,
             expiry: data.expiry_seconds,
             is_amp: data.is_amp,
@@ -220,13 +249,35 @@ export default class EmbeddedLND extends LND {
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {
+        // lndmobile follows router.send semantics, so normalize Zeus' sat/msat aliases before crossing the bridge.
         const sendPaymentReq = {
             payment_request: data.payment_request,
             payment_hash: data.payment_hash,
             amt: data?.amt,
+            amt_msat:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? data.amount_msat
+                    : undefined,
             max_parts: data?.max_parts,
-            max_shard_amt: data?.max_shard_amt,
-            fee_limit_sat: data?.fee_limit_sat || 0,
+            max_shard_size_msat:
+                data.max_shard_size_msat !== undefined &&
+                data.max_shard_size_msat !== null
+                    ? data.max_shard_size_msat
+                    : data?.max_shard_amt !== undefined &&
+                      data?.max_shard_amt !== null
+                    ? (() => {
+                          const v = Number(data.max_shard_amt);
+                          return Number.isFinite(v) && v >= 0
+                              ? Math.trunc(v * 1000)
+                              : undefined;
+                      })()
+                    : undefined,
+            fee_limit_msat:
+                data.fee_limit_msat != null
+                    ? data.fee_limit_msat
+                    : data?.fee_limit_sat != null
+                    ? data.fee_limit_sat * 1000
+                    : undefined,
             outgoing_chan_ids: data?.outgoing_chan_ids,
             last_hop_pubkey: data?.last_hop_pubkey,
             message: data?.message
@@ -236,24 +287,37 @@ export default class EmbeddedLND extends LND {
             timeout_seconds: data?.timeout_seconds || 60,
             allow_self_payment: true,
             multi_path: data?.multi_path,
-            max_shard_size_msat: data?.max_shard_size_msat,
             dest: data.dest
         };
 
         return await sendPaymentV2Sync(sendPaymentReq);
     };
-    sendKeysend = async (data: any) =>
-        await sendKeysendPaymentV2({
+    sendKeysend = async (data: any) => {
+        const request: any = {
             dest: data.pubkey,
-            amt: data.amt,
+            amt:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? Math.floor(Number(data.amount_msat) / 1000)
+                    : data.amt,
+            amt_msat:
+                data.amount_msat !== undefined && data.amount_msat !== null
+                    ? data.amount_msat
+                    : undefined,
             dest_custom_records: data.dest_custom_records,
             payment_hash: data.payment_hash,
-            fee_limit_sat: data.fee_limit_sat,
+            fee_limit_msat:
+                data.fee_limit_msat != null
+                    ? data.fee_limit_msat
+                    : data?.fee_limit_sat != null
+                    ? data.fee_limit_sat * 1000
+                    : undefined,
             max_shard_size_msat: data.max_shard_size_msat,
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,
             amp: data.amp
-        });
+        };
+        return await sendKeysendPaymentV2(request);
+    };
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =

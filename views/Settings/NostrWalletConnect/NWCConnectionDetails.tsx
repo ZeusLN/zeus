@@ -175,6 +175,17 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     buildConnectionParams = (connection: NWCConnection): any => {
+        const { NostrWalletConnectStore } = this.props;
+        const lightningAddressStore =
+            NostrWalletConnectStore.lightningAddressStore;
+        const resolvedLightningAddress =
+            connection.lud16 ||
+            (lightningAddressStore?.lightningAddressActivated &&
+            lightningAddressStore?.lightningAddress
+                ? lightningAddressStore.lightningAddress
+                : undefined);
+        const canIncludeLightningAddress =
+            connection.includeLightningAddress && !!resolvedLightningAddress;
         const params: any = {
             id: connection.id,
             name: connection.name,
@@ -185,6 +196,10 @@ export default class NWCConnectionDetails extends React.Component<
             lastBudgetReset: connection.lastBudgetReset,
             activity: connection.activity
         };
+        if (canIncludeLightningAddress) {
+            params.includeLightningAddress = true;
+            params.lud16 = resolvedLightningAddress;
+        }
         if (connection.maxAmountSats && connection.maxAmountSats > 0) {
             params.budgetAmount = connection.maxAmountSats;
         }
@@ -215,15 +230,32 @@ export default class NWCConnectionDetails extends React.Component<
         this.setState({ regenerating: true, error: null });
         try {
             const params = this.buildConnectionParams(connection);
-            await NostrWalletConnectStore.deleteConnection(connection.id);
-            const nostrUrl = await NostrWalletConnectStore.createConnection(
-                params
-            );
+            const { nostrUrl, connectionId: createdConnectionId } =
+                await NostrWalletConnectStore.createConnection({
+                    ...params,
+                    id: undefined,
+                    replaceConnectionId: connection.id
+                });
             if (nostrUrl) {
-                const createdConnection =
-                    NostrWalletConnectStore.connections[0];
+                try {
+                    await NostrWalletConnectStore.deleteConnection(
+                        connection.id
+                    );
+                } catch (deleteError) {
+                    try {
+                        await NostrWalletConnectStore.deleteConnection(
+                            createdConnectionId
+                        );
+                    } catch (rollbackError) {
+                        console.warn(
+                            'Failed to roll back regenerated connection after delete failure:',
+                            rollbackError
+                        );
+                    }
+                    throw deleteError;
+                }
                 navigation.navigate('NWCConnectionQR', {
-                    connectionId: createdConnection.id,
+                    connectionId: createdConnectionId,
                     nostrUrl
                 });
             }

@@ -177,6 +177,7 @@ export default class InvoicesStore {
     public createUnifiedInvoice = ({
         memo,
         value,
+        value_msat,
         expirySeconds = '3600',
         lnurl,
         ampInvoice,
@@ -190,6 +191,7 @@ export default class InvoicesStore {
     }: {
         memo: string;
         value: string;
+        value_msat?: string;
         expirySeconds: string;
         lnurl?: LNURLWithdrawParams;
         ampInvoice?: boolean;
@@ -205,6 +207,7 @@ export default class InvoicesStore {
         return this.createInvoice({
             memo,
             value,
+            value_msat,
             expirySeconds,
             lnurl,
             ampInvoice,
@@ -271,6 +274,7 @@ export default class InvoicesStore {
     public createInvoice = async ({
         memo,
         value,
+        value_msat,
         expirySeconds = '3600',
         lnurl,
         ampInvoice,
@@ -283,6 +287,7 @@ export default class InvoicesStore {
     }: {
         memo: string;
         value: string;
+        value_msat?: string;
         expirySeconds: string;
         lnurl?: LNURLWithdrawParams;
         ampInvoice?: boolean;
@@ -303,6 +308,7 @@ export default class InvoicesStore {
         const req: any = {
             memo,
             value,
+            ...(value_msat !== undefined && { value_msat }),
             expiry_seconds: expirySeconds
         };
 

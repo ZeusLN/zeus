@@ -31,6 +31,7 @@ export interface ConnectionActivity {
     error?: string;
     preimage?: string;
     paymentHash?: string;
+    msatAmount?: number;
     satAmount?: number;
     createdAt?: Date;
     expiresAt?: Date;
@@ -70,9 +71,41 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    includeLightningAddress: boolean;
+    lud16?: string;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
+export type StoredNWCConnectionData = Omit<
+    NWCConnectionData,
+    'includeLightningAddress'
+> & {
+    includeLightningAddress?: boolean;
+};
+
+export const normalizeNWCConnectionData = (
+    connection: StoredNWCConnectionData
+): NWCConnectionData => {
+    const metadataLud16 =
+        typeof connection.metadata?.lud16 === 'string'
+            ? connection.metadata.lud16.trim()
+            : undefined;
+    const lud16 = connection.lud16?.trim() || metadataLud16;
+    // Auto-migrate includeLightningAddress: if lud16 is set in metadata,
+    // enable it for existing connections (but only if not explicitly set)
+    let includeLightningAddress = connection.includeLightningAddress;
+    if (includeLightningAddress === undefined && lud16) {
+        includeLightningAddress = true;
+    }
+
+    const normalizedData = {
+        ...connection,
+        includeLightningAddress: includeLightningAddress ?? false,
+        lud16
+    };
+
+    return normalizedData;
+};
 export interface ConnectionWarning {
     type: ConnectionWarningType;
     severity: 'info' | 'warning' | 'error';
@@ -104,6 +137,25 @@ const BUDGET_RENEWAL_MS = {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// Prevents unbounded memory growth; retains up to 500 items with FIFO rotation (oldest dropped via shift)
+// This balances memory efficiency with sufficient transaction history for user reference.
+const MAX_ACTIVITY_ITEMS = 500;
+
+/**
+ * NWCConnection represents a Nostr Wallet Connect (NIP-47) connection with optional budget controls.
+ *
+ * IMPORTANT: Budget enforcement is serialized only for the intended in-process payment flow.
+ * When callers use the connection's mutex-protected path, budget validation and spend tracking
+ * are performed sequentially so `validateBudgetBeforePayment` and `trackSpending()` observe a
+ * consistent connection state within that critical section.
+ *
+ * This is not a universal hard guarantee across all access paths. Budget overages can still occur
+ * if state is mutated outside the mutex-protected flow, if callers bypass the lock, or if multiple
+ * app instances/processes enforce the same budget independently. For strict cross-call or
+ * cross-process budget isolation, coordinate access at the application level.
+ *
+ * @see trackSpending() for serialization and remaining race-condition details
+ */
 export default class NWCConnection extends BaseModel {
     id: string;
     @observable name: string;
@@ -123,12 +175,14 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
+    @observable includeLightningAddress: boolean = false;
+    @observable lud16?: string;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
 
-    constructor(data?: NWCConnectionData) {
-        super(data);
+    constructor(data?: StoredNWCConnectionData) {
+        super(data ? normalizeNWCConnectionData(data) : data);
 
         this.totalSpendSats = Math.floor(Number(this.totalSpendSats || 0));
         this.maxAmountSats =
@@ -390,9 +444,90 @@ export default class NWCConnection extends BaseModel {
     }
 
     @action
-    public trackSpending(amountSats: number): void {
+    public trackSpending(amountSats: number): {
+        success: boolean;
+        errorMessage?: string;
+    } {
         this.validateAmount(amountSats);
+
+        // NOTE: Budget enforcement leverages a per-connection mutex at the
+        // NostrWalletConnectStore level (`runPayInvoiceSerialized`), which
+        // ensures `validateBudgetBeforePayment` and `trackSpending` execute
+        // atomically. This guarantees a single payment cannot bypass validation.
+        // However, this method MUST remain robust to edge cases:
+        // 1. Caller may bypass mutex (bug/logic error)
+        // 2. Amount may be inaccurate if multiple paths charge budget
+        //
+        // Defense-in-depth: if tracking would exceed budget limit, fail the
+        // operation instead of silently clamping. This preserves the budget
+        // invariant while providing clear error feedback for debugging.
+        // Callers should log/monitor any trackSpending failures.
+        if (
+            this.hasBudgetLimit &&
+            this.totalSpendSats + amountSats > (this.maxAmountSats ?? 0)
+        ) {
+            // Record the overage for telemetry/monitoring
+            const totalBeforeAttempt = this.totalSpendSats;
+            const remainingBeforeAttempt = Math.max(
+                0,
+                this.maxAmountSats! - totalBeforeAttempt
+            );
+            const overage = totalBeforeAttempt + amountSats - this.maxAmountSats!;
+
+            console.warn(
+                '[NWCConnection.trackSpending] Budget race detected: concurrent payment would exceed maxAmountSats',
+                {
+                    connectionId: this.id,
+                    connectionName: this.name,
+                    totalSpendSatsBefore: totalBeforeAttempt,
+                    attemptedAmount: amountSats,
+                    maxAmountSats: this.maxAmountSats,
+                    remainingBefore: remainingBeforeAttempt,
+                    overage
+                }
+            );
+
+            // Clamp totalSpendSats to preserve invariant for future validation,
+            // then return error. This prevents subtle budget-tracking corruption.
+            this.totalSpendSats = this.maxAmountSats ?? this.totalSpendSats;
+
+            return {
+                success: false,
+                errorMessage: localeString(
+                    'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
+                    {
+                        amount: amountSats.toString(),
+                        remaining: remainingBeforeAttempt.toString()
+                    }
+                )
+            };
+        }
+
         this.totalSpendSats += amountSats;
+        return { success: true };
+    }
+
+    @action
+    public addActivity(item: ConnectionActivity): void {
+        // Log warning for payment activities without valid paymentHash
+        // per NIP-47 spec. paymentHash should be 64-char hex when present.
+        if (item.type && ['pay_invoice', 'make_invoice'].includes(item.type)) {
+            if (item.paymentHash && !/^[a-f0-9]{64}$/i.test(item.paymentHash)) {
+                console.warn(
+                    '[NWCConnection.addActivity] Payment activity has invalid paymentHash format',
+                    {
+                        connectionId: this.id,
+                        type: item.type,
+                        paymentHash: item.paymentHash
+                    }
+                );
+            }
+        }
+
+        if (this.activity.length >= MAX_ACTIVITY_ITEMS) {
+            this.activity.shift(); // Remove oldest item
+        }
+        this.activity.push(item);
     }
 
     public hasPermission(permission: Nip47SingleMethod): boolean {

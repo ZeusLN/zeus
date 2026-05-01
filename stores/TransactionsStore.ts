@@ -33,10 +33,12 @@ const preimageByteLength = 32;
 export interface SendPaymentReq {
     payment_request?: string;
     amount?: string;
+    amount_msat?: string;
     pubkey?: string;
     max_parts?: string;
     max_shard_amt?: string;
     fee_limit_sat?: string;
+    fee_limit_msat?: string;
     max_fee_percent?: string;
     outgoing_chan_id?: string;
     last_hop_pubkey?: string;
@@ -558,10 +560,12 @@ export default class TransactionsStore {
     private sendPaymentInternal = ({
         payment_request,
         amount,
+        amount_msat,
         pubkey,
         max_parts,
         max_shard_amt,
         fee_limit_sat,
+        fee_limit_msat,
         max_fee_percent,
         outgoing_chan_id,
         last_hop_pubkey,
@@ -585,8 +589,12 @@ export default class TransactionsStore {
         if (payment_request) {
             data.payment_request = payment_request;
         }
-        if (amount) {
-            data.amt = Number(amount);
+        // Preserve exact msat amount as string to avoid precision loss from Number() conversion
+        // which can exceed JS safe integer range (2^53-1). Backend adapters handle conversion.
+        if (amount_msat !== undefined && amount_msat !== null) {
+            data.amount_msat = String(amount_msat);
+        } else if (amount) {
+            data.amt = String(amount);
         }
 
         if (pubkey) {
@@ -610,8 +618,10 @@ export default class TransactionsStore {
         // multi-path payments
         data.max_parts = max_parts ? max_parts : '1';
 
-        if (fee_limit_sat) {
-            data.fee_limit_sat = Number(fee_limit_sat);
+        if (fee_limit_msat !== undefined && fee_limit_msat !== null) {
+            data.fee_limit_msat = String(fee_limit_msat);
+        } else if (fee_limit_sat) {
+            data.fee_limit_sat = String(fee_limit_sat);
         }
 
         // atomic multi-path payments
@@ -640,7 +650,8 @@ export default class TransactionsStore {
 
         // max fee percent for c-lightning
         if (
-            max_fee_percent &&
+            max_fee_percent !== undefined &&
+            max_fee_percent !== null &&
             this.settingsStore.implementation === 'cln-rest'
         ) {
             data.max_fee_percent = max_fee_percent;
