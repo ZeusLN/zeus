@@ -164,7 +164,6 @@ export default class NWCConnectionQR extends React.Component<
                 >
                     <CollapsedQR
                         value={nostrUrl}
-                        showShare={true}
                         hideText={true}
                         expanded
                         iconOnly={true}

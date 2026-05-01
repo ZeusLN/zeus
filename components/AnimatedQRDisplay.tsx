@@ -78,10 +78,6 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
                     value={getDisplayValue()}
                     copyValue={getCopyValue()}
                     iconOnly
-                    showShare={
-                        isSingleFrameSelected ||
-                        (isBbqrSelected && !isMultiFrame)
-                    }
                     showSpeed={
                         isBcurSelected || (isBbqrSelected && isMultiFrame)
                     }
