@@ -58,12 +58,12 @@ export default class SendingOnChain extends React.Component<
         );
 
         this.focusListener = navigation.addListener('focus', () => {
-            if (!TransactionsStore.txid) return;
-            Storage.getItem('note-' + TransactionsStore.txid)
+            const { txid: storedTxid } = TransactionsStore;
+            if (!storedTxid) return;
+            const noteKey = `note-${storedTxid}`;
+            Storage.getItem(noteKey)
                 .then((storedNotes) => {
-                    if (storedNotes) {
-                        this.setState({ storedNotes });
-                    }
+                    this.setState({ storedNotes: storedNotes || '' });
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
@@ -247,7 +247,7 @@ export default class SendingOnChain extends React.Component<
                                         }
                                         onPress={() =>
                                             navigation.navigate('AddNotes', {
-                                                noteKey: txid
+                                                noteKey: `note-${txid}`
                                             })
                                         }
                                         secondary
