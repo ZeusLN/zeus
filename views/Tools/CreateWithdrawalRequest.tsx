@@ -216,7 +216,6 @@ export default class CreateWithdrawalRequest extends Component<
                         <CollapsedQR
                             value={this.state.bolt12 || ''}
                             iconOnly={true}
-                            showShare={true}
                             expanded
                             textBottom
                             truncateLongValue

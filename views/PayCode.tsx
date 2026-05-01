@@ -208,7 +208,6 @@ export default class PayCodeView extends React.Component<
                                 value={qrValue}
                                 copyValue={qrValue}
                                 expanded
-                                showShare
                                 iconOnly
                                 textBottom
                                 truncateLongValue

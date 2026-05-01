@@ -89,7 +89,6 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
 
     const renderItem = ({ item, index }: { item: any; index: number }) => (
         <CollapsedQR
-            showShare={true}
             value={item}
             expanded
             hideText={route.params?.fromContactDetailsView && index === 0}
