@@ -1235,25 +1235,30 @@ export async function createLndWallet({
     const { genSeed, initWallet } = lndMobile.wallet;
 
     if (Platform.OS === 'ios') {
+        log.d('createLndWallet: creating iOS directories');
         await createIOSApplicationSupportAndLndDirectories(lndDir);
         await excludeLndICloudBackup(lndDir);
     }
 
+    log.d('createLndWallet: writing LND config');
     await writeLndConfig({
         lndDir,
         isTestnet,
         isSqlite
     });
+    log.d('createLndWallet: initializing native module');
     await initialize();
 
     if (setStatus)
         setStatus(localeString('views.Tools.migration.status.startingLnd'));
+    log.d('createLndWallet: starting LND');
     await startLnd({
         lndDir,
         walletPassword: '',
         isTorEnabled: false,
         isTestnet: isTestnet || false
     });
+    log.d('createLndWallet: LND started successfully');
 
     let seed: any;
     if (!seedMnemonic) {
@@ -1273,12 +1278,20 @@ export async function createLndWallet({
         setStatus(
             localeString('views.Tools.migration.status.initializingWallet')
         );
+    log.d(
+        `createLndWallet: calling initWallet (recoveryWindow=${
+            isRestore && !hasChannelDb ? 500 : 'none'
+        })`
+    );
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
         isRestore && !hasChannelDb ? 500 : undefined,
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
+    );
+    log.d(
+        `createLndWallet: initWallet returned (has macaroon: ${!!wallet?.admin_macaroon})`
     );
 
     if (hasChannelDb) {
