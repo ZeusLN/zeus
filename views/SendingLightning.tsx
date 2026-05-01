@@ -31,7 +31,6 @@ import ChannelsStore from '../stores/ChannelsStore';
 import ContactStore from '../stores/ContactStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
-import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
@@ -56,7 +55,6 @@ interface SendingLightningProps {
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
-    SettingsStore: SettingsStore;
     route: Route<
         'SendingLightning',
         {
@@ -91,7 +89,6 @@ interface SendingLightningState {
     'ContactStore',
     'LnurlPayStore',
     'PaymentsStore',
-    'SettingsStore',
     'TransactionsStore',
     'NodeInfoStore'
 )
@@ -343,13 +340,8 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const {
-            TransactionsStore,
-            ContactStore,
-            SettingsStore,
-            LnurlPayStore,
-            navigation
-        } = this.props;
+        const { TransactionsStore, ContactStore, LnurlPayStore, navigation } =
+            this.props;
         const {
             loading,
             error,
@@ -361,7 +353,7 @@ export default class SendingLightning extends React.Component<
             noteKey,
             paymentDuration
         } = TransactionsStore;
-        const { implementation } = SettingsStore;
+
         const {
             storedNotes,
             currentPayment,
@@ -617,54 +609,46 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
-                                        {(implementation === 'embedded-lnd' ||
-                                            implementation === 'ldk-node') && (
-                                            <>
-                                                <Button
-                                                    title={localeString(
-                                                        'views.SendingLightning.tryAgain'
-                                                    )}
-                                                    icon={{
-                                                        name: 'rotate-ccw',
-                                                        type: 'feather',
-                                                        size: 25
-                                                    }}
-                                                    onPress={() =>
-                                                        navigation.goBack()
-                                                    }
-                                                    buttonStyle={{
-                                                        backgroundColor:
-                                                            'white',
-                                                        height: 40
-                                                    }}
-                                                    containerStyle={{
-                                                        width: '100%',
-                                                        margin: 3
-                                                    }}
-                                                />
-                                                {BackendUtils.isLocalWallet() && (
-                                                    <Button
-                                                        title={localeString(
-                                                            'views.Settings.EmbeddedNode.Troubleshooting.title'
-                                                        )}
-                                                        icon={{
-                                                            name: 'life-buoy',
-                                                            type: 'feather',
-                                                            size: 25
-                                                        }}
-                                                        onPress={() => {
-                                                            navigation.navigate(
-                                                                'EmbeddedNodeTroubleshooting'
-                                                            );
-                                                        }}
-                                                        containerStyle={{
-                                                            width: '100%',
-                                                            margin: 3
-                                                        }}
-                                                        secondary
-                                                    />
+                                        <Button
+                                            title={localeString(
+                                                'views.SendingLightning.tryAgain'
+                                            )}
+                                            icon={{
+                                                name: 'rotate-ccw',
+                                                type: 'feather',
+                                                size: 25
+                                            }}
+                                            onPress={() => navigation.goBack()}
+                                            buttonStyle={{
+                                                backgroundColor: 'white',
+                                                height: 40
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 3
+                                            }}
+                                        />
+                                        {BackendUtils.isLocalWallet() && (
+                                            <Button
+                                                title={localeString(
+                                                    'views.Settings.EmbeddedNode.Troubleshooting.title'
                                                 )}
-                                            </>
+                                                icon={{
+                                                    name: 'life-buoy',
+                                                    type: 'feather',
+                                                    size: 25
+                                                }}
+                                                onPress={() => {
+                                                    navigation.navigate(
+                                                        'EmbeddedNodeTroubleshooting'
+                                                    );
+                                                }}
+                                                containerStyle={{
+                                                    width: '100%',
+                                                    margin: 3
+                                                }}
+                                                secondary
+                                            />
                                         )}
                                     </>
                                 )}
