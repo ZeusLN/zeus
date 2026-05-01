@@ -315,10 +315,32 @@ export default class CashuStore {
 
         try {
             // Get mnemonic from seed derivation
-            const mnemonic = this.getCDKMnemonic();
+            let mnemonic = this.getCDKMnemonic();
             if (!mnemonic) {
-                console.error('CDK: Unable to derive mnemonic');
-                return false;
+                // Remote nodes have no wallet seed to derive from.
+                // Generate and persist a mnemonic so CDK can operate
+                // and recover funds if a flow is interrupted.
+                mnemonic = bip39scure.generateMnemonic(BIP39_WORD_LIST, 128);
+                const derivedSeedPhrase = mnemonic.split(' ');
+                const nodeDir = this.getNodeDir();
+
+                await Storage.setItem(
+                    nodeDir + '-cashu-seed-phrase',
+                    derivedSeedPhrase
+                );
+                await Storage.setItem(
+                    nodeDir + '-cashu-seed-version',
+                    'v2-bip39'
+                );
+
+                runInAction(() => {
+                    this.seedPhrase = derivedSeedPhrase;
+                    this.seedVersion = 'v2-bip39';
+                });
+
+                console.log(
+                    'CDK: Generated and stored mnemonic for remote node'
+                );
             }
 
             await CashuDevKit.initializeWallet(mnemonic, 'sat');
