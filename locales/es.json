@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "Descargando la copia de seguridad del canal desde Olympus...",
     "views.Tools.migration.status.startingLnd": "Comenzando LND...",
     "views.Tools.migration.status.initializingWallet": "Inicializando la billetera...",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "Importando copia de seguridad...",
     "views.Tools.migration.import.olympusRestoreFailed": "Error al restaurar desde Olympus: {{error}}",
     "views.Tools.migration.import.restoreComplete": "Restauración completa",

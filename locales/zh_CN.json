@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "正在从 Olympus 下载通道备份……",
     "views.Tools.migration.status.startingLnd": "正在启动闪电网络守护进程（LND）……",
     "views.Tools.migration.status.initializingWallet": "正在初始化钱包……",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "正在导入备份……",
     "views.Tools.migration.import.olympusRestoreFailed": "从 Olympus 恢复失败：{{error}}",
     "views.Tools.migration.import.restoreComplete": "恢复完成",

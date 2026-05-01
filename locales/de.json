@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "Kanal-Backup wird von Olympus heruntergeladen...",
     "views.Tools.migration.status.startingLnd": "LND wird gestartet...",
     "views.Tools.migration.status.initializingWallet": "Initialisiere Wallet...",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "Backup wird importiert...",
     "views.Tools.migration.import.olympusRestoreFailed": "Wiederherstellung von Olympus fehlgeschlagen: {{error}}",
     "views.Tools.migration.import.restoreComplete": "Wiederherstellung abgeschlossen",

@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "Stahuje se záloha kanálů z Olympu…",
     "views.Tools.migration.status.startingLnd": "Spouštění LND…",
     "views.Tools.migration.status.initializingWallet": "Inicializace peněženky…",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "Importování zálohy…",
     "views.Tools.migration.import.olympusRestoreFailed": "Obnovení z Olympu selhalo: {{error}}",
     "views.Tools.migration.import.restoreComplete": "Obnovení dokončeno",
