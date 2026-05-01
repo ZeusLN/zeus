@@ -459,22 +459,39 @@ export default class CashuTokenView extends React.Component<
                                                     : 'views.Cashu.AddMint.enableAndAdd'
                                             )}
                                             onPress={async () => {
-                                                if (!enableCashu) {
-                                                    await settingsStore.updateSettings(
-                                                        {
-                                                            ecash: {
-                                                                ...(settingsStore
-                                                                    .settings
-                                                                    .ecash ||
-                                                                    {}),
-                                                                enableCashu:
-                                                                    true
+                                                CashuStore.setLoading(true);
+                                                try {
+                                                    if (!enableCashu) {
+                                                        await settingsStore.updateSettings(
+                                                            {
+                                                                ecash: {
+                                                                    ...(settingsStore
+                                                                        .settings
+                                                                        .ecash ||
+                                                                        {}),
+                                                                    enableCashu:
+                                                                        true
+                                                                }
                                                             }
-                                                        }
+                                                        );
+                                                        await CashuStore.initializeWallets();
+                                                    }
+                                                    await addMint(mint);
+                                                } catch (e) {
+                                                    console.error(
+                                                        'Error enabling Cashu / adding mint:',
+                                                        e
                                                     );
-                                                    await CashuStore.initializeWallets();
+                                                    this.setState({
+                                                        errorMessage:
+                                                            localeString(
+                                                                'stores.CashuStore.errorAddingMint'
+                                                            )
+                                                    });
+                                                    CashuStore.setLoading(
+                                                        false
+                                                    );
                                                 }
-                                                await addMint(mint);
                                             }}
                                             containerStyle={{ marginTop: 15 }}
                                             disabled={!isSupported || loading}
