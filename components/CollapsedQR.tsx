@@ -118,7 +118,6 @@ interface CollapsedQRProps {
     copyText?: string;
     copyValue?: string;
     iconContainerStyle?: any;
-    showShare?: boolean;
     showSpeed?: boolean;
     iconOnly?: boolean;
     hideText?: boolean;
@@ -179,7 +178,6 @@ export default class CollapsedQR extends React.Component<
             copyValue,
             collapseText,
             iconContainerStyle,
-            showShare,
             iconOnly,
             hideText,
             expanded,
@@ -428,73 +426,54 @@ export default class CollapsedQR extends React.Component<
                         onPress={() => this.toggleCollapse()}
                     />
                 )}
-                {showShare ? (
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: 40
-                        }}
-                    >
-                        <CopyButton
-                            iconContainerStyle={iconContainerStyle}
-                            copyValue={copyValue || value}
-                            title={copyText}
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        gap: showSpeed ? 8 : 40
+                    }}
+                >
+                    {showSpeed && (
+                        <QRSpeedMeterButton
+                            showOptions={showSpeedOptions}
+                            onPress={() =>
+                                this.setState({
+                                    showSpeedOptions: !showSpeedOptions
+                                })
+                            }
                             iconOnly={iconOnly}
                         />
-                        <ShareButton
-                            iconContainerStyle={
-                                supportsNFC ? iconContainerStyle : undefined
-                            }
+                    )}
+                    <CopyButton
+                        iconContainerStyle={
+                            !showSpeed ? iconContainerStyle : undefined
+                        }
+                        copyValue={copyValue || value}
+                        title={copyText}
+                        iconOnly={iconOnly}
+                    />
+                    <ShareButton
+                        iconContainerStyle={
+                            supportsNFC && !showSpeed
+                                ? iconContainerStyle
+                                : undefined
+                        }
+                        value={copyValue || value}
+                        qrRef={tempQRRef}
+                        iconOnly={iconOnly}
+                        onPress={handleShare}
+                        onShareComplete={() =>
+                            this.setState({ tempQRRef: null })
+                        }
+                        onShareGiftLink={onShareGiftLink}
+                    />
+                    {supportsNFC && (
+                        <NFCButton
                             value={copyValue || value}
-                            qrRef={tempQRRef}
-                            iconOnly={iconOnly}
-                            onPress={handleShare}
-                            onShareComplete={() =>
-                                this.setState({ tempQRRef: null })
-                            }
-                            onShareGiftLink={onShareGiftLink}
-                        />
-                        {supportsNFC && (
-                            <NFCButton
-                                value={copyValue || value}
-                                iconOnly={iconOnly}
-                            />
-                        )}
-                    </View>
-                ) : (
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: 8
-                        }}
-                    >
-                        {showSpeed && (
-                            <QRSpeedMeterButton
-                                showOptions={showSpeedOptions}
-                                onPress={() =>
-                                    this.setState({
-                                        showSpeedOptions: !showSpeedOptions
-                                    })
-                                }
-                                iconOnly={iconOnly}
-                            />
-                        )}
-                        <CopyButton
-                            copyValue={copyValue || value}
-                            title={copyText}
                             iconOnly={iconOnly}
                         />
-
-                        {supportsNFC && (
-                            <NFCButton
-                                value={copyValue || value}
-                                iconOnly={iconOnly}
-                            />
-                        )}
-                    </View>
-                )}
+                    )}
+                </View>
                 {showSpeedOptions && onQRAnimationSpeedChange && showSpeed && (
                     <View style={styles.speedOptions}>
                         <ButtonGroup
