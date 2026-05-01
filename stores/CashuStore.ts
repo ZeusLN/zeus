@@ -3908,6 +3908,16 @@ export default class CashuStore {
                     value: String(tokenAmt)
                 });
 
+                if (!invoice?.paymentRequest) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        )
+                    };
+                }
+
                 // Create melt quote via CDK
                 const meltQuote = await this.createMeltQuoteCDK(
                     mintUrl,
@@ -3934,6 +3944,16 @@ export default class CashuStore {
                         )}]`,
                         value: receiveAmtSat.toString()
                     });
+
+                    if (!invoice?.paymentRequest) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            )
+                        };
+                    }
                 }
 
                 // Melt via CDK to pay the invoice
