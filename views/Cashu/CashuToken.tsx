@@ -583,53 +583,56 @@ export default class CashuTokenView extends React.Component<
                             />
                         </View>
                     )}
-                {infoIndex === 0 && pendingClaim && (
-                    <View style={{ bottom: 15 }}>
-                        <Button
-                            title={localeString('general.delete')}
-                            onPress={() => {
-                                Alert.alert(
-                                    localeString('cashu.deleteToken.title'),
-                                    localeString('cashu.deleteToken.message'),
-                                    [
-                                        {
-                                            text: localeString(
-                                                'general.cancel'
-                                            ),
-                                            style: 'cancel'
-                                        },
-                                        {
-                                            text: localeString(
-                                                'general.delete'
-                                            ),
-                                            style: 'destructive',
-                                            onPress: async () => {
-                                                const isSpentToken =
-                                                    CashuStore.offlineSpentTokens.some(
-                                                        (t) =>
-                                                            t.encodedToken ===
-                                                            encodedToken
-                                                    );
-                                                if (isSpentToken) {
-                                                    await CashuStore.removeOfflineSpentToken(
-                                                        encodedToken!
-                                                    );
-                                                } else {
-                                                    await CashuStore.removeOfflinePendingToken(
-                                                        encodedToken!
-                                                    );
+                {infoIndex === 0 &&
+                    (pendingClaim || route.params?.offlineSpent) && (
+                        <View style={{ bottom: 15 }}>
+                            <Button
+                                title={localeString('general.delete')}
+                                onPress={() => {
+                                    Alert.alert(
+                                        localeString('cashu.deleteToken.title'),
+                                        localeString(
+                                            'cashu.deleteToken.message'
+                                        ),
+                                        [
+                                            {
+                                                text: localeString(
+                                                    'general.cancel'
+                                                ),
+                                                style: 'cancel'
+                                            },
+                                            {
+                                                text: localeString(
+                                                    'general.delete'
+                                                ),
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    const isSpentToken =
+                                                        CashuStore.offlineSpentTokens.some(
+                                                            (t) =>
+                                                                t.encodedToken ===
+                                                                encodedToken
+                                                        );
+                                                    if (isSpentToken) {
+                                                        await CashuStore.removeOfflineSpentToken(
+                                                            encodedToken!
+                                                        );
+                                                    } else {
+                                                        await CashuStore.removeOfflinePendingToken(
+                                                            encodedToken!
+                                                        );
+                                                    }
+                                                    navigation.goBack();
                                                 }
-                                                navigation.goBack();
                                             }
-                                        }
-                                    ]
-                                );
-                            }}
-                            containerStyle={{ marginTop: 15 }}
-                            warning
-                        />
-                    </View>
-                )}
+                                        ]
+                                    );
+                                }}
+                                containerStyle={{ marginTop: 15 }}
+                                warning
+                            />
+                        </View>
+                    )}
             </Screen>
         );
     }
