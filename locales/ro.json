@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "Se descarcă copia de rezervă a canalului de la Olympus...",
     "views.Tools.migration.status.startingLnd": "Se pornește LND...",
     "views.Tools.migration.status.initializingWallet": "Se inițializează portofelul...",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "Se importă copia de rezervă...",
     "views.Tools.migration.import.olympusRestoreFailed": "Restaurarea din Olympus nu a reușit: {{error}}",
     "views.Tools.migration.import.restoreComplete": "Restaurare finalizată",
