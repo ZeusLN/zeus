@@ -1090,6 +1090,7 @@
     "views.Tools.migration.import.downloadingFromOlympus": "Téléchargement de la sauvegarde de la chaîne depuis Olympus...",
     "views.Tools.migration.status.startingLnd": "Démarrage de LND...",
     "views.Tools.migration.status.initializingWallet": "Initialisation du portefeuille...",
+    "views.Tools.migration.status.optimizingPeers": "Optimizing Neutrino peers...",
     "views.Tools.migration.status.importingBackup": "Importation de la sauvegarde...",
     "views.Tools.migration.import.olympusRestoreFailed": "Échec de la restauration depuis Olympus : {{error}}",
     "views.Tools.migration.import.restoreComplete": "Restauration complète",
