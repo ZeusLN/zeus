@@ -525,7 +525,9 @@ export default class CashuTokenView extends React.Component<
                             )}
                             <Button
                                 title={localeString(
-                                    'views.Cashu.CashuToken.meltTokenSelfCustody'
+                                    BackendUtils.supportsChannelManagement()
+                                        ? 'views.Cashu.CashuToken.meltTokenSelfCustody'
+                                        : 'general.receive'
                                 )}
                                 onPress={async () => {
                                     this.setState({
@@ -538,19 +540,27 @@ export default class CashuTokenView extends React.Component<
                                             decoded,
                                             true
                                         );
-                                    if (errorMessage) {
-                                        this.setState({
-                                            errorMessage
-                                        });
-                                    } else if (success) {
+
+                                    if (success) {
                                         this.setState({
                                             success
+                                        });
+                                    } else {
+                                        this.setState({
+                                            errorMessage:
+                                                errorMessage ||
+                                                localeString(
+                                                    'stores.CashuStore.claimError'
+                                                )
                                         });
                                     }
                                 }}
                                 containerStyle={{ marginTop: 15 }}
                                 disabled={
-                                    !hasOpenChannels || !isSupported || loading
+                                    (BackendUtils.supportsChannelManagement() &&
+                                        !hasOpenChannels) ||
+                                    !isSupported ||
+                                    loading
                                 }
                                 secondary
                             />
