@@ -49,23 +49,30 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
             // Check native stealth status first (most reliable)
             const nativeActive = await StealthModeUtils.isStealthModeActive();
 
+            // Get JS settings to cross-reference
+            const settingsStr = await Storage.getItem(STORAGE_KEY);
+            const settings = settingsStr ? JSON.parse(settingsStr) : {};
+            const jsStealthEnabled = settings?.privacy?.stealthMode || false;
+
+            if (nativeActive && !jsStealthEnabled) {
+                // JS says stealth is off but native is still active —
+                // sync native to match JS (e.g. user toggled off but
+                // the app was killed before the native change applied)
+                await StealthModeUtils.disableStealthMode();
+                return;
+            }
+
             if (nativeActive) {
-                // Get the selected stealth app and config from settings
-                const settingsStr = await Storage.getItem(STORAGE_KEY);
-                if (settingsStr) {
-                    const settings = JSON.parse(settingsStr);
-                    const selectedApp =
-                        settings?.privacy?.stealthApp || 'calculator';
-                    setStealthApp(selectedApp);
-                    setStealthConfig({
-                        pinLength: settings?.privacy?.stealthPinLength || 5,
-                        vpnCountry:
-                            settings?.privacy?.stealthVpnCountry ||
-                            'Switzerland',
-                        vpnServer:
-                            settings?.privacy?.stealthVpnServer || 'Geneva'
-                    });
-                }
+                // Both agree stealth is on — show decoy
+                const selectedApp =
+                    settings?.privacy?.stealthApp || 'calculator';
+                setStealthApp(selectedApp);
+                setStealthConfig({
+                    pinLength: settings?.privacy?.stealthPinLength || 5,
+                    vpnCountry:
+                        settings?.privacy?.stealthVpnCountry || 'Switzerland',
+                    vpnServer: settings?.privacy?.stealthVpnServer || 'Geneva'
+                });
                 setIsStealthActive(true);
             }
         } catch (error) {
