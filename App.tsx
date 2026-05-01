@@ -374,7 +374,7 @@ export default class App extends React.PureComponent {
             }
         }
 
-        // Apply stealth mode when app goes to background
+        // Sync stealth mode when app goes to background
         if (nextAppState === 'background') {
             try {
                 const settings = await settingsStore.getSettings();
@@ -382,6 +382,15 @@ export default class App extends React.PureComponent {
                     const stealthApp =
                         settings.privacy.stealthApp || 'calculator';
                     await StealthModeUtils.enableStealthMode(stealthApp);
+                } else {
+                    // If stealth was toggled off but native state wasn't
+                    // synced (e.g. user pressed Home instead of Back),
+                    // disable it now
+                    const nativeActive =
+                        await StealthModeUtils.isStealthModeActive();
+                    if (nativeActive) {
+                        await StealthModeUtils.disableStealthMode();
+                    }
                 }
             } catch (error) {
                 console.error(
