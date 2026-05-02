@@ -10,9 +10,11 @@ const insets = initialWindowMetrics?.insets ?? {
 };
 import {
     Animated,
+    AppState,
     Dimensions,
     Easing,
     Image,
+    NativeEventSubscription,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -341,6 +343,7 @@ export default class WalletHeader extends React.Component<
     };
 
     focusListener: any = null;
+    appStateListener: NativeEventSubscription | null = null;
 
     componentDidMount() {
         this.readClipboard();
@@ -349,12 +352,22 @@ export default class WalletHeader extends React.Component<
             'focus',
             this.readClipboard
         );
+
+        this.appStateListener = AppState.addEventListener(
+            'change',
+            (nextAppState) => {
+                if (nextAppState === 'active') {
+                    this.readClipboard();
+                }
+            }
+        );
     }
 
     componentWillUnmount(): void {
         if (this.focusListener) {
             this.focusListener();
         }
+        this.appStateListener?.remove();
     }
 
     readClipboard = async () => {
@@ -368,6 +381,8 @@ export default class WalletHeader extends React.Component<
                 this.setState({
                     clipboard
                 });
+            } else {
+                this.setState({ clipboard: '' });
             }
         } else {
             this.setState({ clipboard: '' });

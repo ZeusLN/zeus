@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    AppState,
     FlatList,
     Image,
     NativeModules,
@@ -134,6 +135,7 @@ interface SendState {
 export default class Send extends React.Component<SendProps, SendState> {
     listener: any;
     private backPressSubscription: NativeEventSubscription;
+    private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
     private previousSatAmount: string | number = '0';
 
@@ -302,7 +304,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     async componentDidMount() {
         const { SettingsStore, route } = this.props;
         const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        await getSettings();
 
         if (route.params?.fromGraphSync) {
             clearPendingPaymentData().catch((error) => {
@@ -313,14 +315,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
         }
 
-        if (settings.privacy && settings.privacy.clipboard) {
-            const clipboard = await Clipboard.getString();
-            if (await isClipboardValue(clipboard)) {
-                this.setState({
-                    clipboard
-                });
-            }
-        }
+        await this.readClipboard();
 
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
@@ -331,14 +326,40 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.backPressed.bind(this)
         );
 
+        this.appStateSubscription = AppState.addEventListener(
+            'change',
+            (nextAppState) => {
+                if (nextAppState === 'active') {
+                    this.readClipboard();
+                }
+            }
+        );
+
         const nfcSupported = await NfcManager.isSupported();
         this.setState({ nfcSupported });
     }
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
+        this.appStateSubscription?.remove();
         if (this.listener && this.listener.stop) this.listener.stop();
     }
+
+    readClipboard = async () => {
+        const { SettingsStore } = this.props;
+        const settings = SettingsStore.settings;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+            if (!!clipboard && (await isClipboardValue(clipboard))) {
+                this.setState({ clipboard });
+            } else {
+                this.setState({ clipboard: '' });
+            }
+        } else {
+            this.setState({ clipboard: '' });
+        }
+    };
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
