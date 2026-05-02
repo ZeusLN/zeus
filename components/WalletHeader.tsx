@@ -198,11 +198,14 @@ const ClipboardBadge = ({
     clipboard
 }: {
     navigation: NativeStackNavigationProp<any, any>;
-    clipboard: string;
+    clipboard?: string;
 }) => (
     <TouchableOpacity
         onPress={async () => {
-            const response = await handleAnything(clipboard);
+            const value = clipboard || (await Clipboard.getString());
+            if (!value) return;
+            if (!clipboard && !(await isClipboardValue(value))) return;
+            const response = await handleAnything(value);
             const [route, props] = response;
             navigation.navigate(route, props);
         }}
@@ -732,14 +735,18 @@ export default class WalletHeader extends React.Component<
                                     </View>
                                 )}
 
-                                {!connecting && !!clipboard && (
-                                    <View style={{ marginRight: 15 }}>
-                                        <ClipboardBadge
-                                            navigation={navigation}
-                                            clipboard={clipboard}
-                                        />
-                                    </View>
-                                )}
+                                {!connecting &&
+                                    (!!clipboard ||
+                                        !settings.privacy?.clipboard) && (
+                                        <View style={{ marginRight: 15 }}>
+                                            <ClipboardBadge
+                                                navigation={navigation}
+                                                clipboard={
+                                                    clipboard || undefined
+                                                }
+                                            />
+                                        </View>
+                                    )}
                                 {!connecting && unredeemedTokens?.length > 0 && (
                                     <View style={{ marginRight: 15 }}>
                                         <UnredeemedTokensBadge

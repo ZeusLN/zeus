@@ -1632,15 +1632,26 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {!!clipboard && !destination && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('general.paste')}
-                                onPress={() => this.validateAddress(clipboard)}
-                                secondary
-                            />
-                        </View>
-                    )}
+                    {(!!clipboard ||
+                        !SettingsStore.settings.privacy?.clipboard) &&
+                        !destination && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.paste')}
+                                    onPress={async () => {
+                                        if (clipboard) {
+                                            this.validateAddress(clipboard);
+                                        } else {
+                                            const value =
+                                                await Clipboard.getString();
+                                            if (value)
+                                                this.validateAddress(value);
+                                        }
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                        )}
 
                     {destination && !transactionType && (
                         <View style={styles.button}>
