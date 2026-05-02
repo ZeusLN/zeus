@@ -57,6 +57,7 @@ import LSPStore from '../../stores/LSPStore';
 import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SpliceStore from '../../stores/SpliceStore';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -71,6 +72,7 @@ interface ChannelProps {
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
+    SpliceStore: SpliceStore;
     route: Route<'Channel', { channel: Channel | ClosedChannel }>;
 }
 
@@ -97,7 +99,8 @@ interface ChannelState {
     'LSPStore',
     'ModalStore',
     'NodeInfoStore',
-    'SettingsStore'
+    'SettingsStore',
+    'SpliceStore'
 )
 @observer
 export default class ChannelView extends React.Component<
@@ -315,7 +318,8 @@ export default class ChannelView extends React.Component<
             SettingsStore,
             ModalStore,
             NodeInfoStore,
-            ChannelsStore
+            ChannelsStore,
+            SpliceStore
         } = this.props;
         const {
             channel,
@@ -331,6 +335,10 @@ export default class ChannelView extends React.Component<
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
         const { closeChannelErr, closingChannel } = ChannelsStore;
+
+        const spliceChannelId = channel?.channelId || '';
+        const isSplicing = SpliceStore.isChannelSplicing(spliceChannelId);
+        const spliceOperation = SpliceStore.getSpliceOperation(spliceChannelId);
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -507,7 +515,9 @@ export default class ChannelView extends React.Component<
                             marginBottom: confs ? 6 : 18
                         }}
                     >
-                        {pendingOpen
+                        {isSplicing
+                            ? localeString('channel.status.splicing')
+                            : pendingOpen
                             ? localeString('views.Channel.pendingOpen')
                             : pendingClose || closing
                             ? localeString('views.Channel.pendingClose')
@@ -531,6 +541,56 @@ export default class ChannelView extends React.Component<
                                 confs.current
                             } / ${confs.total}`}
                         </Text>
+                    )}
+                    {isSplicing && spliceOperation && (
+                        <View style={{ marginTop: 15, marginBottom: 10 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Tools.SpliceOut.executing'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    marginTop: 5
+                                }}
+                            >
+                                {`${
+                                    spliceOperation.type === 'out'
+                                        ? localeString('views.Tools.spliceOut')
+                                        : localeString('views.Tools.spliceIn')
+                                } - ${spliceOperation.status
+                                    .charAt(0)
+                                    .toUpperCase()}${spliceOperation.status.slice(
+                                    1
+                                )}`}
+                            </Text>
+                            {spliceOperation.destination && (
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginTop: 2,
+                                        fontSize: 12
+                                    }}
+                                >
+                                    {`${localeString('general.destination')}: ${
+                                        spliceOperation.destination.length > 30
+                                            ? `${spliceOperation.destination.substring(
+                                                  0,
+                                                  30
+                                              )}...`
+                                            : spliceOperation.destination
+                                    }`}
+                                </Text>
+                            )}
+                        </View>
                     )}
                     {!!renewalInfo.maxExtensionInBlocks && (
                         <>

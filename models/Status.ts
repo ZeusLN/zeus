@@ -9,6 +9,7 @@ export enum Status {
     Offline = localeString('channel.status.offline'),
     Opening = localeString('channel.status.opening'),
     Closing = localeString('channel.status.closing'),
+    Splicing = localeString('channel.status.splicing'),
     ReadOnly = localeString('views.Settings.NostrWalletConnect.readOnly'),
     LimitExceed = localeString('general.limitexceed')
 }

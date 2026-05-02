@@ -270,6 +270,12 @@ class BackendUtils {
             VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
         );
     };
+    supportsSplicing = () => this.call('supportsSplicing');
+    supportsSpliceDryrun = () => this.call('supportsSpliceDryrun');
+    supportsSpliceFeeControl = () => this.call('supportsSpliceFeeControl');
+    devSplice = (...args: any[]) => this.call('devSplice', args);
+    spliceIn = (...args: any[]) => this.call('spliceIn', args);
+    spliceOut = (...args: any[]) => this.call('spliceOut', args);
 
     // Implementation type checks
     isLocalWallet = () => {

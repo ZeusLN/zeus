@@ -252,7 +252,20 @@ export const getChainTransactions = async () => {
                     );
                 });
 
-                if (isChannelChange) {
+                // Check if this transaction has a wallet deposit component
+                // (splice transactions have both channel operations and wallet deposits)
+                const hasExternalDeposit = allTxs.rows.find((w: any) => {
+                    if (!w[2]) {
+                        return undefined;
+                    }
+                    return (
+                        w[2].split(':')[0] === tx.hash &&
+                        w[1] === 'deposit' &&
+                        w[0] === 'external'
+                    );
+                });
+
+                if (isChannelChange && !hasExternalDeposit) {
                     return undefined;
                 }
 
@@ -274,7 +287,18 @@ export const getChainTransactions = async () => {
                     );
                 });
 
-                if (isChannelChange) {
+                const hasWalletDeposit = allTxs.rows.find((w: any) => {
+                    if (!w[2]) {
+                        return undefined;
+                    }
+                    return (
+                        w[2].split(':')[0] === tx.hash &&
+                        w[1] === 'deposit' &&
+                        w[0] === 'wallet'
+                    );
+                });
+
+                if (isChannelChange && !hasWalletDeposit) {
                     return undefined;
                 }
 
