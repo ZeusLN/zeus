@@ -63,6 +63,7 @@ import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -2158,7 +2159,7 @@ export default class CashuStore {
         // modal's close animation finishes (onClosed callback)
         setTimeout(() => {
             if (nextThreshold) {
-                const nextThresholdFormatted = nextThreshold.toLocaleString();
+                const nextThresholdFormatted = numberWithCommas(nextThreshold);
                 this.modalStore.toggleInfoModal({
                     title: localeString('cashu.upgradePrompt.dismissedTitle'),
                     text: localeString('cashu.upgradePrompt.dismissed').replace(

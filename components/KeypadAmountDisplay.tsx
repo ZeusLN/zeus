@@ -11,8 +11,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import {
     getDecimalPlaceholder,
     formatBitcoinWithSpaces,
-    numberWithCommas,
-    numberWithDecimals
+    numberWithCommas
 } from '../utils/UnitsUtils';
 
 interface KeypadAmountDisplayProps {
@@ -51,14 +50,13 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             children
         } = this.props;
         const units = forceUnit || UnitsStore!.units;
-        const { symbol, space, rtl, separatorSwap } =
+        const { symbol, space, rtl } =
             units === 'fiat'
                 ? FiatStore!.getSymbol()
                 : {
                       symbol: '',
                       space: false,
-                      rtl: false,
-                      separatorSwap: false
+                      rtl: false
                   };
 
         const color = textAnimation.interpolate({
@@ -71,8 +69,6 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
         const formattedNumber =
             units === 'BTC'
                 ? formatBitcoinWithSpaces(amount)
-                : separatorSwap
-                ? numberWithDecimals(amount)
                 : numberWithCommas(amount);
 
         const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
