@@ -17,6 +17,12 @@ import {
     numberWithDecimals
 } from '../utils/UnitsUtils';
 
+interface KeypadAmountDisplayState {
+    exitingDigit: null | { char: string; key: number };
+    syncedAmount: string;
+    exitKeySeq: number;
+}
+
 interface KeypadAmountDisplayProps {
     amount: string;
     shakeAnimation: Animated.Value;
@@ -35,7 +41,98 @@ interface KeypadAmountDisplayProps {
 
 @inject('FiatStore', 'UnitsStore')
 @observer
-export default class KeypadAmountDisplay extends React.Component<KeypadAmountDisplayProps> {
+export default class KeypadAmountDisplay extends React.Component<
+    KeypadAmountDisplayProps,
+    KeypadAmountDisplayState
+> {
+    constructor(props: KeypadAmountDisplayProps) {
+        super(props);
+        this.state = {
+            exitingDigit: null,
+            syncedAmount: props.amount,
+            exitKeySeq: 0
+        };
+    }
+
+    private static digitsOnlyFromFormatted(formatted: string): string {
+        let out = '';
+        for (let i = 0; i < formatted.length; i++) {
+            const c = formatted.charAt(i);
+            if (c >= '0' && c <= '9') {
+                out += c;
+            }
+        }
+        return out;
+    }
+
+    private static formattedForAmount(
+        props: KeypadAmountDisplayProps,
+        amount: string
+    ): string {
+        const { forceUnit, FiatStore, UnitsStore } = props;
+        const units = forceUnit || UnitsStore!.units;
+        const { separatorSwap } =
+            units === 'fiat'
+                ? FiatStore!.getSymbol()
+                : {
+                      separatorSwap: false
+                  };
+        if (units === 'BTC') {
+            return formatBitcoinWithSpaces(amount);
+        }
+        return separatorSwap
+            ? numberWithDecimals(amount)
+            : numberWithCommas(amount);
+    }
+
+    static getDerivedStateFromProps(
+        props: KeypadAmountDisplayProps,
+        state: KeypadAmountDisplayState
+    ): Partial<KeypadAmountDisplayState> | null {
+        if (props.amount === state.syncedAmount) {
+            return null;
+        }
+
+        const prevF = KeypadAmountDisplay.formattedForAmount(
+            props,
+            state.syncedAmount
+        );
+        const currF = KeypadAmountDisplay.formattedForAmount(
+            props,
+            props.amount
+        );
+        const prevD = KeypadAmountDisplay.digitsOnlyFromFormatted(prevF);
+        const currD = KeypadAmountDisplay.digitsOnlyFromFormatted(currF);
+
+        const next: Partial<KeypadAmountDisplayState> = {
+            syncedAmount: props.amount
+        };
+
+        if (currD.length > prevD.length) {
+            next.exitingDigit = null;
+            return next;
+        }
+
+        if (prevD.length === currD.length + 1 && currD === prevD.slice(0, -1)) {
+            const nextKey = state.exitKeySeq + 1;
+            next.exitingDigit = {
+                char: prevD.charAt(prevD.length - 1),
+                key: nextKey
+            };
+            next.exitKeySeq = nextKey;
+            return next;
+        }
+
+        if (state.exitingDigit !== null) {
+            next.exitingDigit = null;
+        }
+        return next;
+    }
+
+    private getFormattedNumber(amount: string): string {
+        return KeypadAmountDisplay.formattedForAmount(this.props, amount);
+    }
+
     renderFormattedNumber(
         formattedNumber: string,
         textColor: Animated.AnimatedInterpolation<string> | string,
@@ -59,6 +156,7 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                         value={char}
                         color={textColor}
                         style={textStyle}
+                        lineHeight={lineHeight}
                     />
                 );
             }
@@ -90,14 +188,13 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             children
         } = this.props;
         const units = forceUnit || UnitsStore!.units;
-        const { symbol, space, rtl, separatorSwap } =
+        const { symbol, space, rtl } =
             units === 'fiat'
                 ? FiatStore!.getSymbol()
                 : {
                       symbol: '',
                       space: false,
-                      rtl: false,
-                      separatorSwap: false
+                      rtl: false
                   };
 
         const color = textAnimation.interpolate({
@@ -107,12 +204,7 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
 
         const decimalPlaceholder = getDecimalPlaceholder(amount, units);
 
-        const formattedNumber =
-            units === 'BTC'
-                ? formatBitcoinWithSpaces(amount)
-                : separatorSwap
-                ? numberWithDecimals(amount)
-                : numberWithCommas(amount);
+        const formattedNumber = this.getFormattedNumber(amount);
 
         const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
 
@@ -131,6 +223,25 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
         }
 
         const textColor = amount === '0' ? themeColor('secondaryText') : color;
+
+        const mainChars =
+            prefix.length +
+            formattedNumber.length +
+            (decimalPlaceholder.string?.length ?? 0);
+        const totalWeightedChars = mainChars + suffix.length * 0.25;
+        const scaledFontSize =
+            totalWeightedChars > 0
+                ? Math.min(
+                      fontSize,
+                      Math.max(
+                          Math.floor(350 / (totalWeightedChars * 0.47)),
+                          20
+                      )
+                  )
+                : fontSize;
+        const scaledLineHeight = Math.round(
+            lineHeight * (scaledFontSize / fontSize)
+        );
 
         const conversionElement = showConversion && (
             <View
@@ -172,46 +283,77 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                         {prefix ? (
                             <Animated.Text
                                 style={{
+                                    zIndex: 1,
                                     color: textColor,
-                                    fontSize,
+                                    fontSize: scaledFontSize,
                                     fontFamily: 'PPNeueMontreal-Medium',
-                                    lineHeight
+                                    lineHeight: scaledLineHeight
                                 }}
                             >
                                 {prefix}
                             </Animated.Text>
                         ) : null}
-                        {this.renderFormattedNumber(
-                            formattedNumber,
-                            textColor,
-                            fontSize,
-                            lineHeight
-                        )}
-                        {decimalPlaceholder.string ? (
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontSize,
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    lineHeight
-                                }}
-                            >
-                                {decimalPlaceholder.string}
-                            </Text>
-                        ) : null}
-                        {suffix ? (
-                            <Animated.Text
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: fontSize * 0.25,
-                                    color: textColor,
-                                    fontSize: Math.max(fontSize * 0.2, 12),
-                                    fontFamily: 'PPNeueMontreal-Medium'
-                                }}
-                            >
-                                {suffix}
-                            </Animated.Text>
-                        ) : null}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'baseline',
+                                height: scaledLineHeight,
+                                overflow: 'hidden',
+                                zIndex: 0
+                            }}
+                        >
+                            {this.renderFormattedNumber(
+                                formattedNumber,
+                                textColor,
+                                scaledFontSize,
+                                scaledLineHeight
+                            )}
+                            {this.state.exitingDigit ? (
+                                <AnimatedDigit
+                                    key={`exit-${this.state.exitingDigit.key}`}
+                                    variant="exit"
+                                    value={this.state.exitingDigit.char}
+                                    color={textColor}
+                                    style={{
+                                        fontSize: scaledFontSize,
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        lineHeight: scaledLineHeight
+                                    }}
+                                    lineHeight={scaledLineHeight}
+                                    onExitComplete={() =>
+                                        this.setState({ exitingDigit: null })
+                                    }
+                                />
+                            ) : null}
+                            {decimalPlaceholder.string ? (
+                                <Text
+                                    style={{
+                                        zIndex: 1,
+                                        color: themeColor('secondaryText'),
+                                        fontSize: scaledFontSize,
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        lineHeight: scaledLineHeight
+                                    }}
+                                >
+                                    {decimalPlaceholder.string}
+                                </Text>
+                            ) : null}
+                            {suffix ? (
+                                <Animated.Text
+                                    style={{
+                                        zIndex: 1,
+                                        color: textColor,
+                                        fontSize: Math.max(
+                                            scaledFontSize * 0.2,
+                                            12
+                                        ),
+                                        fontFamily: 'PPNeueMontreal-Medium'
+                                    }}
+                                >
+                                    {suffix}
+                                </Animated.Text>
+                            ) : null}
+                        </View>
                     </View>
                 </Animated.View>
 
