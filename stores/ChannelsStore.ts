@@ -19,6 +19,9 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
+import Storage from '../storage';
+import { notesStore } from './Stores';
+
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
 }
@@ -1220,6 +1223,13 @@ export default class ChannelsStore {
                         this.channelRequest = null;
                         this.channelSuccess = true;
                         this.connectingToPeer = false;
+
+                        if (data?.funding_txid_str) {
+                            const noteKey = `note-${data.funding_txid_str}`;
+                            const note = localeString('views.OpenChannel.openedChannel');
+                            Storage.setItem(noteKey, note);
+                            notesStore.storeNoteKeys(noteKey, note);
+                        }
                     })
                 )
                 .catch((error: Error) => {
