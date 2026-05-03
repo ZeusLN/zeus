@@ -91,6 +91,8 @@ export default class ConnectivityStore {
     @action
     public start = () => {
         if (this.netInfoUnsubscribe) return;
+        if (this.settingsStore.settings?.networking?.disableOfflineCheck)
+            return;
 
         NetInfo.configure({
             reachabilityUrl: this.getReachabilityUrl(),
