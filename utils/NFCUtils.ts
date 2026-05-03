@@ -7,7 +7,12 @@ import NfcManager, {
 } from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
 import CashuStore from '../stores/CashuStore';
-import { isCREQ, decodeCREQ, CREQParams } from './CREQUtils';
+import {
+    isCREQ,
+    decodeCREQ,
+    findCompatibleMint,
+    CREQParams
+} from './CREQUtils';
 
 export function decodeNdefTextPayload(data: Uint8Array): string | null {
     if (data.length === 0) return '';
@@ -347,7 +352,12 @@ export async function payViaNfcTap(
         }
 
         // 2. Find a compatible mint and create token
-        const mintUrl = findCompatibleMint(cashuStore, creqParams);
+        const mintUrl = findCompatibleMint(
+            creqParams,
+            cashuStore.mintUrls,
+            cashuStore.mintBalances,
+            cashuStore.selectedMintUrl
+        );
         if (!mintUrl) {
             return {
                 success: false,
@@ -372,35 +382,6 @@ export async function payViaNfcTap(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);
     }
-}
-
-function findCompatibleMint(
-    cashuStore: CashuStore,
-    creqParams: CREQParams
-): string | undefined {
-    const { mintUrls, mintBalances, selectedMintUrl } = cashuStore;
-    const amount = creqParams.amount || 0;
-
-    // If CREQ specifies mints, find one we have with sufficient balance
-    if (creqParams.mints && creqParams.mints.length > 0) {
-        for (const mint of creqParams.mints) {
-            if (
-                mintUrls.includes(mint) &&
-                (mintBalances[mint] || 0) >= amount
-            ) {
-                return mint;
-            }
-        }
-        return undefined;
-    }
-
-    // No mint restriction - prefer selected mint if it has balance
-    if (selectedMintUrl && (mintBalances[selectedMintUrl] || 0) >= amount) {
-        return selectedMintUrl;
-    }
-
-    // Fall back to any mint with sufficient balance
-    return mintUrls.find((url) => (mintBalances[url] || 0) >= amount);
 }
 
 /**
