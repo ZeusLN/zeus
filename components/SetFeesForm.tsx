@@ -9,6 +9,7 @@ import {
     ErrorMessage
 } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
+import ToggleButton from './../components/ToggleButton';
 
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -43,6 +44,7 @@ interface SetFeesFormState {
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
+    isFeeRatePPM: boolean;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'SettingsStore')
@@ -62,9 +64,39 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound: props.feeRateInbound || '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
-            newMaxHtlc: props.maxHtlc || ''
+            newMaxHtlc: props.maxHtlc || '',
+            isFeeRatePPM: false
         };
     }
+
+    toggleFeeRateMode = (key: string) => {
+        const isFeeRatePPM = key === 'ppm';
+        if (this.state.isFeeRatePPM === isFeeRatePPM) return;
+
+        let { newFeeRate, newFeeRateInbound } = this.state;
+
+        if (isFeeRatePPM) {
+            if (newFeeRate !== '') {
+                newFeeRate = (Number(newFeeRate) * 10000).toString();
+            }
+            if (newFeeRateInbound !== '') {
+                newFeeRateInbound = (Number(newFeeRateInbound) * 10000).toString();
+            }
+        } else {
+            if (newFeeRate !== '') {
+                newFeeRate = (Number(newFeeRate) / 10000).toString();
+            }
+            if (newFeeRateInbound !== '') {
+                newFeeRateInbound = (Number(newFeeRateInbound) / 10000).toString();
+            }
+        }
+
+        this.setState({
+            isFeeRatePPM,
+            newFeeRate: isNaN(Number(newFeeRate)) ? '' : newFeeRate,
+            newFeeRateInbound: isNaN(Number(newFeeRateInbound)) ? '' : newFeeRateInbound
+        });
+    };
 
     render() {
         const {
@@ -75,7 +107,8 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
-            newMaxHtlc
+            newMaxHtlc,
+            isFeeRatePPM
         } = this.state;
         const {
             FeeStore,
@@ -140,6 +173,17 @@ export default class SetFeesForm extends React.Component<
                     autoCorrect={false}
                 />
 
+                <View style={{ marginBottom: 15, marginTop: 5, zIndex: 3 }}>
+                    <ToggleButton
+                        options={[
+                            { key: 'percent', label: '%' },
+                            { key: 'ppm', label: 'ppm' }
+                        ]}
+                        value={isFeeRatePPM ? 'ppm' : 'percent'}
+                        onToggle={this.toggleFeeRateMode}
+                    />
+                </View>
+
                 <Text
                     style={{
                         ...styles.text,
@@ -147,17 +191,17 @@ export default class SetFeesForm extends React.Component<
                     }}
                 >
                     {`${localeString('components.SetFeesForm.feeRate')} (${
-                        implementation === 'cln-rest'
-                            ? localeString(
-                                  'components.SetFeesForm.ppmMilliMsat'
-                              )
+                        isFeeRatePPM
+                            ? 'ppm'
                             : localeString('general.percentage')
                     })`}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
                     placeholder={
-                        feeRate || implementation === 'cln-rest' ? '1' : '0.001'
+                        feeRate
+                            ? (isFeeRatePPM ? (Number(feeRate) * 10000).toString() : feeRate)
+                            : (isFeeRatePPM ? '10' : (implementation === 'cln-rest' ? '1' : '0.001'))
                     }
                     value={newFeeRate}
                     onChangeText={(text: string) =>
@@ -205,12 +249,20 @@ export default class SetFeesForm extends React.Component<
                                 'views.Channel.inbound'
                             )} ${localeString(
                                 'components.SetFeesForm.feeRate'
-                            )} (${localeString('general.percentage')})`}
+                            )} (${
+                                isFeeRatePPM
+                                    ? 'ppm'
+                                    : localeString('general.percentage')
+                            })`}
                         </Text>
                         <TextInput
                             // @ts-ignore:next-line
                             keyboardType="decimal"
-                            placeholder={feeRateInbound || '1'}
+                            placeholder={
+                                feeRateInbound
+                                    ? (isFeeRatePPM ? (Number(feeRateInbound) * 10000).toString() : feeRateInbound)
+                                    : (isFeeRatePPM ? '10000' : '1')
+                            }
                             value={newFeeRateInbound}
                             onChangeText={(text: string) =>
                                 this.setState({
@@ -300,11 +352,18 @@ export default class SetFeesForm extends React.Component<
                                 'components.SetFeesForm.submit'
                             )}
                             onPress={() => {
+                                const finalFeeRate = isFeeRatePPM && newFeeRate !== '' 
+                                    ? (Number(newFeeRate) / 10000).toString() 
+                                    : newFeeRate;
+                                const finalFeeRateInbound = isFeeRatePPM && newFeeRateInbound !== '' 
+                                    ? (Number(newFeeRateInbound) / 10000).toString() 
+                                    : newFeeRateInbound;
+
                                 setFees(
                                     newBaseFee,
-                                    newFeeRate,
+                                    finalFeeRate,
                                     newBaseFeeInbound,
-                                    newFeeRateInbound,
+                                    finalFeeRateInbound,
                                     Number(newTimeLockDelta),
                                     channelPoint,
                                     channelId,
