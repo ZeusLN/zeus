@@ -383,11 +383,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                 );
                 return;
             }
-            // If no CREQ found on tag, fall through to regular tag scan
-            if (result.error !== 'No CREQ found on tag') {
-                if (result.error) {
-                    this.setState({ error_msg: result.error });
-                }
+            // Only stop for definitive failures; otherwise fall through
+            // to regular tag scanning (e.g. technology mismatch, plain NDEF tag)
+            const stopErrors = [
+                'NFC not enabled',
+                'No compatible mint with sufficient balance'
+            ];
+            if (stopErrors.includes(result.error)) {
+                this.setState({ error_msg: result.error });
                 return;
             }
         }
