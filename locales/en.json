@@ -1663,6 +1663,7 @@
     "components.LayerBalances.moreAccounts": "More accounts",
     "components.LayerBalances.moveFundsToLn": "Move on-chain funds to lightning",
     "components.LayerBalances.lightningViaEcash": "Lightning via ecash",
+    "components.LayerBalances.ecashCreq": "Ecash (tap-to-pay)",
     "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
     "backends.LND.restReq.connectionError": "Connection error",
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
