@@ -21,51 +21,18 @@ interface NetworkingProps {
     SettingsStore: SettingsStore;
 }
 
-interface NetworkingState {
-    disableOfflineCheck: boolean;
-}
-
 @inject('ConnectivityStore', 'SettingsStore')
 @observer
-export default class Networking extends React.Component<
-    NetworkingProps,
-    NetworkingState
-> {
-    state = {
-        disableOfflineCheck: false
-    };
-
-    focusListener: any;
-
+export default class Networking extends React.Component<NetworkingProps> {
     async componentDidMount() {
-        const { navigation, SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
-
-        this.setState({
-            disableOfflineCheck:
-                settings?.networking?.disableOfflineCheck || false
-        });
-
-        this.focusListener = navigation.addListener('focus', async () => {
-            const refreshed = await getSettings();
-            this.setState({
-                disableOfflineCheck:
-                    refreshed?.networking?.disableOfflineCheck || false
-            });
-        });
-    }
-
-    componentWillUnmount() {
-        if (this.focusListener) {
-            this.focusListener();
-        }
+        await this.props.SettingsStore.getSettings();
     }
 
     render() {
         const { navigation, ConnectivityStore, SettingsStore } = this.props;
-        const { disableOfflineCheck } = this.state;
         const { settings, updateSettings } = SettingsStore;
+        const disableOfflineCheck =
+            settings?.networking?.disableOfflineCheck || false;
 
         return (
             <Screen>
@@ -111,9 +78,6 @@ export default class Networking extends React.Component<
                                 }
                                 onValueChange={async () => {
                                     const newValue = !disableOfflineCheck;
-                                    this.setState({
-                                        disableOfflineCheck: newValue
-                                    });
                                     await updateSettings({
                                         networking: {
                                             ...settings.networking,
