@@ -98,4 +98,36 @@ export function decodeCREQ(creq: string): CREQParams {
     return params;
 }
 
-export default { isCREQ, encodeCREQ, decodeCREQ };
+/**
+ * Find a mint from the user's wallets that can fulfill a CREQ payment.
+ * Prefers mints listed in the CREQ, then the selected mint, then any with
+ * sufficient balance.
+ */
+export function findCompatibleMint(
+    creqParams: CREQParams,
+    mintUrls: string[],
+    mintBalances: { [key: string]: number },
+    selectedMintUrl: string
+): string | undefined {
+    const amount = creqParams.amount || 0;
+
+    if (creqParams.mints && creqParams.mints.length > 0) {
+        for (const mint of creqParams.mints) {
+            if (
+                mintUrls.includes(mint) &&
+                (mintBalances[mint] || 0) >= amount
+            ) {
+                return mint;
+            }
+        }
+        return undefined;
+    }
+
+    if (selectedMintUrl && (mintBalances[selectedMintUrl] || 0) >= amount) {
+        return selectedMintUrl;
+    }
+
+    return mintUrls.find((url) => (mintBalances[url] || 0) >= amount);
+}
+
+export default { isCREQ, encodeCREQ, decodeCREQ, findCompatibleMint };

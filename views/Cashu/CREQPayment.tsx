@@ -22,7 +22,7 @@ import { writeTokenToTag } from '../../utils/NFCUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import type { CREQParams } from '../../utils/CREQUtils';
+import { findCompatibleMint, CREQParams } from '../../utils/CREQUtils';
 
 interface CREQPaymentProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -70,7 +70,7 @@ export default class CREQPayment extends React.Component<
         }
 
         // Find a compatible mint
-        const mintUrl = this.findCompatibleMint();
+        const mintUrl = this.getCompatibleMint();
         if (!mintUrl) {
             this.setState({
                 error: 'No compatible mint with sufficient balance'
@@ -112,32 +112,15 @@ export default class CREQPayment extends React.Component<
         });
     };
 
-    findCompatibleMint(): string | undefined {
+    getCompatibleMint(): string | undefined {
         const { CashuStore } = this.props;
         const { creqParams } = this.props.route.params;
-        const { mintUrls, mintBalances, selectedMintUrl } = CashuStore;
-        const amount = creqParams.amount || 0;
-
-        // If CREQ specifies mints, find one we have with sufficient balance
-        if (creqParams.mints && creqParams.mints.length > 0) {
-            for (const mint of creqParams.mints) {
-                if (
-                    mintUrls.includes(mint) &&
-                    (mintBalances[mint] || 0) >= amount
-                ) {
-                    return mint;
-                }
-            }
-            return undefined;
-        }
-
-        // No mint restriction - prefer selected mint if it has balance
-        if (selectedMintUrl && (mintBalances[selectedMintUrl] || 0) >= amount) {
-            return selectedMintUrl;
-        }
-
-        // Fall back to any mint with sufficient balance
-        return mintUrls.find((url) => (mintBalances[url] || 0) >= amount);
+        return findCompatibleMint(
+            creqParams,
+            CashuStore.mintUrls,
+            CashuStore.mintBalances,
+            CashuStore.selectedMintUrl
+        );
     }
 
     render() {
@@ -146,7 +129,7 @@ export default class CREQPayment extends React.Component<
         const { loading, success, error, tokenCreated, writingNfc } =
             this.state;
 
-        const compatibleMint = this.findCompatibleMint();
+        const compatibleMint = this.getCompatibleMint();
 
         return (
             <Screen>
