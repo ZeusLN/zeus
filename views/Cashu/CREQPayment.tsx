@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -153,7 +153,7 @@ export default class CREQPayment extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('general.payment'),
+                        text: localeString('views.Payment.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -203,13 +203,9 @@ export default class CREQPayment extends React.Component<
                             />
                         )}
 
-                        {!!creqParams.unit && (
-                            <KeyValue keyValue="Unit" value={creqParams.unit} />
-                        )}
-
                         {creqParams.mints && creqParams.mints.length > 0 && (
                             <KeyValue
-                                keyValue="Mint"
+                                keyValue={localeString('cashu.mint')}
                                 value={creqParams.mints.join(', ')}
                             />
                         )}
@@ -239,15 +235,9 @@ export default class CREQPayment extends React.Component<
                         {!!tokenCreated && !success && (
                             <View style={styles.button}>
                                 <Button
-                                    title={
-                                        Platform.OS === 'android'
-                                            ? localeString(
-                                                  'components.CollapsedQr.startNfc'
-                                              )
-                                            : localeString(
-                                                  'components.CollapsedQr.startNfc'
-                                              )
-                                    }
+                                    title={localeString(
+                                        'views.Cashu.CREQPayment.tapToDeliver'
+                                    )}
                                     onPress={this.writeViaNfc}
                                 />
                             </View>
