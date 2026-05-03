@@ -146,9 +146,7 @@ function parseApduResponse(response: number[]): {
  */
 export function buildNdefTextMessage(text: string): number[] {
     const langCode = [0x65, 0x6e]; // "en"
-    const textBytes = Array.from(
-        new global.TextEncoder().encode(text) as Uint8Array
-    );
+    const textBytes = Array.from(Buffer.from(text, 'utf-8'));
     const payloadLength = 1 + langCode.length + textBytes.length;
 
     // NDEF record header
@@ -442,5 +440,5 @@ function parseNdefTextPayload(recordBytes: number[]): string | null {
 
     const langLen = payload[0] & 0x3f;
     const textData = payload.slice(1 + langLen);
-    return new global.TextDecoder('utf-8').decode(new Uint8Array(textData));
+    return Buffer.from(textData).toString('utf-8');
 }
