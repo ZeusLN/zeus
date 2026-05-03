@@ -147,7 +147,12 @@ export default class Networking extends React.Component<
                             title={localeString(
                                 'views.Settings.Networking.resetOfflineDetection'
                             )}
-                            onPress={() => ConnectivityStore.reset()}
+                            onPress={() => {
+                                ConnectivityStore.reset();
+                                if (!disableOfflineCheck) {
+                                    ConnectivityStore.start();
+                                }
+                            }}
                             secondary
                         />
                     </View>
