@@ -9,9 +9,17 @@ import {
     StatusBar,
     Animated,
     Clipboard,
-    Alert
+    Alert,
+    AlertButton,
+    AppState,
+    Linking
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    Camera,
+    useCameraDevice,
+    useCodeScanner
+} from 'react-native-vision-camera';
 import { useStealthTapDetector } from './StealthTapDetector';
 
 interface QRScannerAppProps {
@@ -33,9 +41,12 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
 }) => {
     const [scanHistory, setScanHistory] = React.useState<ScanResult[]>([]);
     const [showHistory, setShowHistory] = React.useState(false);
-    const [isScanning, _setIsScanning] = React.useState(true);
+    const [cameraAuthorized, setCameraAuthorized] = React.useState(false);
+    const [cameraActive, setCameraActive] = React.useState(true);
+    const lastScannedRef = React.useRef<string | null>(null);
 
     const scanLineAnim = React.useRef(new Animated.Value(0)).current;
+    const device = useCameraDevice('back');
 
     // Secret unlock: tap "QR Scanner" title requiredTaps times within 4 seconds
     const { handleTap: handleSecretTap } = useStealthTapDetector({
@@ -46,28 +57,56 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
 
     React.useEffect(() => {
         loadHistory();
+
+        (async () => {
+            const status = Camera.getCameraPermissionStatus();
+            if (status === 'granted') {
+                setCameraAuthorized(true);
+            } else {
+                const result = await Camera.requestCameraPermission();
+                setCameraAuthorized(result === 'granted');
+            }
+        })();
+
+        const sub = AppState.addEventListener('change', (state) => {
+            setCameraActive(state === 'active');
+            if (state === 'active') {
+                const status = Camera.getCameraPermissionStatus();
+                if (status === 'granted') {
+                    setCameraAuthorized(true);
+                }
+            }
+        });
+
+        return () => sub.remove();
     }, []);
 
+    const historyLoaded = React.useRef(false);
     React.useEffect(() => {
-        if (isScanning) {
-            const loop = Animated.loop(
-                Animated.sequence([
-                    Animated.timing(scanLineAnim, {
-                        toValue: 1,
-                        duration: 2000,
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(scanLineAnim, {
-                        toValue: 0,
-                        duration: 2000,
-                        useNativeDriver: true
-                    })
-                ])
-            );
-            loop.start();
-            return () => loop.stop();
-        }
-    }, [isScanning, scanLineAnim]);
+        if (!historyLoaded.current) return;
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(scanHistory)).catch(
+            () => {}
+        );
+    }, [scanHistory]);
+
+    React.useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(scanLineAnim, {
+                    toValue: 1,
+                    duration: 2000,
+                    useNativeDriver: true
+                }),
+                Animated.timing(scanLineAnim, {
+                    toValue: 0,
+                    duration: 2000,
+                    useNativeDriver: true
+                })
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [scanLineAnim]);
 
     const loadHistory = async () => {
         try {
@@ -77,26 +116,78 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
             }
         } catch (error) {
             console.error('Failed to load scan history:', error);
+        } finally {
+            historyLoaded.current = true;
         }
     };
 
-    const saveHistory = async (history: ScanResult[]) => {
-        try {
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-            setScanHistory(history);
-        } catch (error) {
-            console.error('Failed to save scan history:', error);
-        }
+    const isURL = (text: string): boolean => /^https?:\/\//i.test(text);
+
+    const resetScanner = () => {
+        lastScannedRef.current = null;
     };
 
-    const handleCopyToClipboard = (content: string) => {
-        Clipboard.setString(content);
-        Alert.alert('Copied', 'Content copied to clipboard');
+    const buildContentButtons = (
+        content: string,
+        onDismiss?: () => void
+    ): AlertButton[] => {
+        const buttons: AlertButton[] = [
+            {
+                text: 'Copy',
+                onPress: () => {
+                    Clipboard.setString(content);
+                    onDismiss?.();
+                }
+            }
+        ];
+        if (isURL(content)) {
+            buttons.push({
+                text: 'Open',
+                onPress: () => {
+                    Linking.openURL(content);
+                    onDismiss?.();
+                }
+            });
+        }
+        return buttons;
+    };
+
+    const handleScan = React.useCallback((data: string) => {
+        // Deduplicate rapid-fire scans of the same code
+        if (data === lastScannedRef.current) return;
+        lastScannedRef.current = data;
+
+        const newResult: ScanResult = {
+            id: Date.now().toString(),
+            content: data,
+            timestamp: Date.now()
+        };
+        setScanHistory((prev) => [newResult, ...prev]);
+
+        const buttons = buildContentButtons(data, resetScanner);
+        buttons.push({ text: 'OK', onPress: resetScanner });
+        Alert.alert('Scanned', data, buttons);
+    }, []);
+
+    const codeScanner = useCodeScanner({
+        codeTypes: ['qr'],
+        onCodeScanned: (codes) => {
+            const code = codes.find((c) => c.value != null)?.value;
+            if (code != null) {
+                handleScan(code);
+            }
+        }
+    });
+
+    const handleHistoryItemPress = (content: string) => {
+        const buttons = buildContentButtons(content);
+        buttons.push({ text: 'Cancel', style: 'cancel' });
+        Alert.alert('QR Code', content, buttons);
     };
 
     const handleDeleteResult = (id: string) => {
         const updated = scanHistory.filter((item) => item.id !== id);
-        saveHistory(updated);
+        setScanHistory(updated);
     };
 
     const formatTimestamp = (timestamp: number) => {
@@ -118,7 +209,7 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
         <View style={styles.historyItem}>
             <TouchableOpacity
                 style={styles.historyContent}
-                onPress={() => handleCopyToClipboard(item.content)}
+                onPress={() => handleHistoryItemPress(item.content)}
             >
                 <Text style={styles.historyText} numberOfLines={2}>
                     {item.content}
@@ -142,30 +233,62 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
 
             {/* Scanner View */}
             <View style={styles.scannerContainer}>
-                {/* Simulated camera view */}
-                <View style={styles.cameraView}>
-                    {/* Corner markers */}
-                    <View style={[styles.corner, styles.topLeft]} />
-                    <View style={[styles.corner, styles.topRight]} />
-                    <View style={[styles.corner, styles.bottomLeft]} />
-                    <View style={[styles.corner, styles.bottomRight]} />
-
-                    {/* Scan line */}
-                    <Animated.View
-                        style={[
-                            styles.scanLine,
-                            { transform: [{ translateY }] }
-                        ]}
+                {device && cameraAuthorized ? (
+                    <Camera
+                        style={StyleSheet.absoluteFill}
+                        device={device}
+                        codeScanner={codeScanner}
+                        isActive={cameraActive && !showHistory}
                     />
+                ) : (
+                    <View style={styles.cameraFallback}>
+                        {!cameraAuthorized ? (
+                            <>
+                                <Text style={styles.fallbackText}>
+                                    Camera access required
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => Linking.openSettings()}
+                                >
+                                    <Text style={styles.settingsLink}>
+                                        Open Settings
+                                    </Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <Text style={styles.fallbackText}>
+                                No camera found
+                            </Text>
+                        )}
+                    </View>
+                )}
 
-                    {/* Center frame */}
-                    <View style={styles.scanFrame} />
+                {/* Overlay */}
+                <View style={styles.overlay} pointerEvents="none">
+                    <View style={styles.scanArea}>
+                        {/* Corner markers */}
+                        <View style={[styles.corner, styles.topLeft]} />
+                        <View style={[styles.corner, styles.topRight]} />
+                        <View style={[styles.corner, styles.bottomLeft]} />
+                        <View style={[styles.corner, styles.bottomRight]} />
+
+                        {/* Scan line */}
+                        <Animated.View
+                            style={[
+                                styles.scanLine,
+                                { transform: [{ translateY }] }
+                            ]}
+                        />
+
+                        {/* Center frame */}
+                        <View style={styles.scanFrame} />
+                    </View>
+
+                    {/* Instructions */}
+                    <Text style={styles.instructions}>
+                        Point camera at a QR code or barcode
+                    </Text>
                 </View>
-
-                {/* Instructions */}
-                <Text style={styles.instructions}>
-                    Point camera at a QR code or barcode
-                </Text>
             </View>
 
             {/* Bottom Bar */}
@@ -243,16 +366,33 @@ const styles = StyleSheet.create({
         backgroundColor: '#000'
     },
     scannerContainer: {
-        flex: 1,
+        flex: 1
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center'
     },
-    cameraView: {
+    scanArea: {
         width: 250,
         height: 250,
         justifyContent: 'center',
+        alignItems: 'center'
+    },
+    cameraFallback: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#1a1a1a'
+    },
+    fallbackText: {
+        color: '#888',
+        fontSize: 16
+    },
+    settingsLink: {
+        color: '#00C853',
+        fontSize: 14,
+        marginTop: 10
     },
     corner: {
         position: 'absolute',
