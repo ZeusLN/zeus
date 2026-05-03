@@ -252,6 +252,11 @@ export interface Settings {
     bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
     ecash: EcashSettings;
+    networking?: NetworkingSettings;
+}
+
+interface NetworkingSettings {
+    disableOfflineCheck?: boolean;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -1596,6 +1601,9 @@ export default class SettingsStore {
             enableCashu: false,
             automaticallySweep: false,
             sweepThresholdSats: 10000
+        },
+        networking: {
+            disableOfflineCheck: false
         },
         selectNodeOnStartup: false
     };

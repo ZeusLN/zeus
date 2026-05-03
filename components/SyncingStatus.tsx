@@ -42,7 +42,7 @@ export default class SyncingStatus extends React.PureComponent<
         if (ConnectivityStore!.isOffline) {
             return (
                 <TouchableOpacity
-                    onPress={() => navigation.navigate('Sync')}
+                    onPress={() => navigation.navigate('Networking')}
                     style={style || {}}
                 >
                     <View

@@ -94,6 +94,7 @@ import MultiQR from './views/MultiQR';
 import Settings from './views/Settings/Settings';
 import WalletConfiguration from './views/Settings/WalletConfiguration';
 import Wallets from './views/Settings/Wallets';
+import Networking from './views/Settings/Networking';
 import Privacy from './views/Settings/Privacy';
 import StealthMode from './views/Settings/StealthMode';
 import Security from './views/Settings/Security';
@@ -633,6 +634,12 @@ export default class App extends React.PureComponent {
                                                         <Stack.Screen
                                                             name="Wallets" // @ts-ignore:next-line
                                                             component={Wallets}
+                                                        />
+                                                        <Stack.Screen
+                                                            name="Networking" // @ts-ignore:next-line
+                                                            component={
+                                                                Networking
+                                                            }
                                                         />
                                                         <Stack.Screen
                                                             name="Privacy" // @ts-ignore:next-line
