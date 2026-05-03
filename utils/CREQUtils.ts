@@ -83,14 +83,15 @@ export function decodeCREQ(creq: string): CREQParams {
     if (map.a !== undefined) params.amount = map.a as number;
     if (map.u !== undefined) params.unit = map.u as string;
     if (map.s !== undefined) params.singleUse = map.s as boolean;
-    if (map.m !== undefined) params.mints = map.m as string[];
+    if (Array.isArray(map.m)) {
+        params.mints = map.m.filter((m): m is string => typeof m === 'string');
+    }
     if (map.d !== undefined) params.description = map.d as string;
-    if (map.t !== undefined) {
-        const transports = map.t as Record<string, unknown>[];
-        params.transports = transports.map((tr) => ({
+    if (Array.isArray(map.t)) {
+        params.transports = (map.t as any[]).map((tr) => ({
             t: tr.t as string,
             a: tr.a as string,
-            ...(tr.g !== undefined ? { g: tr.g as string[][] } : {})
+            ...(Array.isArray(tr.g) ? { g: tr.g as string[][] } : {})
         }));
     }
 
