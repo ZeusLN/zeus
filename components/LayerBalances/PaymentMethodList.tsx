@@ -30,6 +30,7 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
+    creq?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
@@ -61,7 +62,8 @@ const LAYER_LOCALE_MAP: Record<string, string> = {
     'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
     'Lightning address': 'general.lightningAddress',
     Offer: 'views.Settings.Bolt12Offer',
-    'On-chain': 'general.onchain'
+    'On-chain': 'general.onchain',
+    'Ecash (CREQ)': 'components.LayerBalances.ecashCreq'
 };
 
 const getGradientColors = (): [string, string] => {
@@ -72,7 +74,8 @@ const getGradientColors = (): [string, string] => {
 };
 
 const LayerIcon = ({ layer }: { layer: string }) => {
-    if (layer === 'Lightning via ecash') return <EcashSvg />;
+    if (layer === 'Lightning via ecash' || layer === 'Ecash (CREQ)')
+        return <EcashSvg />;
     if (layer === 'On-chain') return <OnChainSvg />;
     if (['Lightning', 'Lightning address', 'Offer'].includes(layer))
         return <LightningSvg />;
@@ -166,6 +169,7 @@ const SwipeableRow = ({
     lightning,
     lightningAddress,
     offer,
+    creq,
     lnurlParams
 }: {
     item: DataRow;
@@ -177,6 +181,7 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
+    creq?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
@@ -235,6 +240,25 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'Ecash (CREQ)' && creq) {
+        const { decodeCREQ } = require('../../utils/CREQUtils');
+        return (
+            <RectButton
+                style={[styles.rectButton, rowDisabled && { opacity: 0.5 }]}
+                onPress={() => {
+                    if (rowDisabled) return;
+                    const creqParams = decodeCREQ(creq);
+                    navigation.navigate('CREQPayment', {
+                        creqParams,
+                        creqString: creq
+                    });
+                }}
+            >
+                <Row item={item} />
+            </RectButton>
+        );
+    }
+
     if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
@@ -263,6 +287,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            creq,
             lnurlParams,
             lightningBalance,
             onchainBalance,
@@ -314,6 +339,20 @@ export default class PaymentMethodList extends Component<
             });
         }
 
+        if (
+            creq &&
+            BackendUtils.supportsCashuWallet() &&
+            settingsStore?.settings?.ecash?.enableCashu
+        ) {
+            DATA.push({
+                layer: 'Ecash (CREQ)',
+                subtitle: creq.substring(0, 30) + '...',
+                balance: ecashBalance,
+                disabled: false,
+                satAmount
+            });
+        }
+
         // Only show on-chain balance for non-Lnbank accounts
         if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
@@ -353,6 +392,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            creq,
             lnurlParams
         } = this.props;
         const satAmountNum =
@@ -380,6 +420,7 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
+                            creq={creq}
                             lnurlParams={lnurlParams}
                         />
                     )}

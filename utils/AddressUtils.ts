@@ -83,7 +83,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let satAmount, lightning, offer;
+    let satAmount, lightning, offer, creq;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -110,23 +110,32 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         offer = result.lno || result.LNO;
     }
 
-    return [value, satAmount, lightning, offer];
+    if (result.creq || result.CREQ) {
+        creq = result.creq || result.CREQ;
+    }
+
+    return [value, satAmount, lightning, offer, creq];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, satAmount, lightning, offer;
+        let value, satAmount, lightning, offer, creq;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
-            const [parsedValue, parsedSatAmount, parsedLightning, parsedOffer] =
-                bitcoinQrParser(
-                    input,
-                    input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
-                );
+            const [
+                parsedValue,
+                parsedSatAmount,
+                parsedLightning,
+                parsedOffer,
+                parsedCreq
+            ] = bitcoinQrParser(
+                input,
+                input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
+            );
             value = parsedValue;
 
             if (parsedSatAmount) {
@@ -140,6 +149,10 @@ class AddressUtils {
             if (parsedOffer) {
                 offer = parsedOffer;
             }
+
+            if (parsedCreq) {
+                creq = parsedCreq;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -150,7 +163,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, satAmount, lightning, offer };
+        return { value, satAmount, lightning, offer, creq };
     };
 
     processLNDHubAddress = (input: string) => {
