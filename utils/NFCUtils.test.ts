@@ -13,10 +13,11 @@ jest.mock('react-native-nfc-manager', () => ({
         unregisterTagEvent: () => {}
     },
     NfcEvents: { DiscoverTag: 'DiscoverTag', SessionClosed: 'SessionClosed' },
+    NfcTech: { IsoDep: 'IsoDep' },
     Ndef: { text: { decodePayload: () => {} } }
 }));
 
-import { decodeNdefTextPayload } from './NFCUtils';
+import { decodeNdefTextPayload, buildNdefTextMessage } from './NFCUtils';
 
 // NDEF Text Record payload structure:
 //   byte 0:   status byte — lower 6 bits = language code length
@@ -52,5 +53,59 @@ describe('decodeNdefTextPayload', () => {
     it('returns null for a truncated multi-byte sequence', () => {
         // 0xC3 starts a 2-byte sequence but has no continuation byte
         expect(decodeNdefTextPayload(withHeader(0xc3))).toBeNull();
+    });
+});
+
+describe('buildNdefTextMessage', () => {
+    it('builds a valid NDEF text message with NLEN prefix', () => {
+        const msg = buildNdefTextMessage('hello');
+        // First 2 bytes are NLEN (big-endian length of the NDEF record)
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(nlen).toBe(msg.length - 2);
+
+        // NDEF record flags: MB=1, ME=1, SR=1, TNF=01 => 0xD1
+        expect(msg[2]).toBe(0xd1);
+        // Type length = 1
+        expect(msg[3]).toBe(0x01);
+        // Type = 'T' (Text)
+        expect(msg[5]).toBe(0x54);
+
+        // Payload: status byte (lang length=2) + "en" + "hello"
+        expect(msg[6]).toBe(0x02); // lang code length
+        expect(msg[7]).toBe(0x65); // 'e'
+        expect(msg[8]).toBe(0x6e); // 'n'
+        // "hello" bytes
+        expect(msg[9]).toBe(0x68);
+        expect(msg[10]).toBe(0x65);
+        expect(msg[11]).toBe(0x6c);
+        expect(msg[12]).toBe(0x6c);
+        expect(msg[13]).toBe(0x6f);
+    });
+
+    it('handles empty text', () => {
+        const msg = buildNdefTextMessage('');
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(nlen).toBeGreaterThan(0);
+        // Should still have the NDEF header + lang code
+        expect(msg[2]).toBe(0xd1);
+    });
+
+    it('handles UTF-8 multi-byte characters', () => {
+        const msg = buildNdefTextMessage('ü');
+        // ü in UTF-8 is 0xC3 0xBC (2 bytes)
+        const nlen = (msg[0] << 8) | msg[1];
+        const recordBytes = msg.slice(2, 2 + nlen);
+        // payload length should account for lang (3 bytes: status + "en") + 2 bytes for ü
+        const payloadLen = recordBytes[2]; // SR payload length byte
+        expect(payloadLen).toBe(2 + 2 + 1); // langLen(2) + "en" + status byte... wait
+        // Actually: status(1) + lang(2) + text(2) = 5
+        expect(payloadLen).toBe(5);
+    });
+
+    it('produces a CREQ-sized message correctly', () => {
+        const creq = 'creqA' + 'x'.repeat(200);
+        const msg = buildNdefTextMessage(creq);
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(msg.length).toBe(2 + nlen);
     });
 });
