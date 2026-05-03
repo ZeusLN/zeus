@@ -6,6 +6,7 @@ import NfcManager, {
     Ndef
 } from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
+import CashuStore from '../stores/CashuStore';
 import { isCREQ, decodeCREQ, CREQParams } from './CREQUtils';
 
 export function decodeNdefTextPayload(data: Uint8Array): string | null {
@@ -177,6 +178,89 @@ export function buildNdefTextMessage(text: string): number[] {
     return [(nlen >> 8) & 0xff, nlen & 0xff, ...record];
 }
 
+// --- Session-internal APDU operations (call within an active IsoDep session) ---
+
+async function selectNdefApp(): Promise<void> {
+    const resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(buildSelectAidApdu(NDEF_AID))
+    );
+    if (!resp.ok) throw new Error('Failed to select NDEF application');
+}
+
+async function readNdefText(): Promise<string | null> {
+    // SELECT CC
+    let resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(buildSelectFileApdu(FILE_CC))
+    );
+    if (!resp.ok) throw new Error('Failed to select CC file');
+
+    // READ CC
+    resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(buildReadBinaryApdu(0, 15))
+    );
+    if (!resp.ok) throw new Error('Failed to read CC');
+
+    // SELECT NDEF file
+    resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(
+            buildSelectFileApdu(FILE_NDEF)
+        )
+    );
+    if (!resp.ok) throw new Error('Failed to select NDEF file');
+
+    // READ NLEN
+    resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(buildReadBinaryApdu(0, 2))
+    );
+    if (!resp.ok) throw new Error('Failed to read NLEN');
+    const nlen = (resp.data[0] << 8) | resp.data[1];
+
+    // READ body in chunks
+    const ndefBytes: number[] = [];
+    let offset = 2;
+    while (ndefBytes.length < nlen) {
+        const toRead = Math.min(nlen - ndefBytes.length, 255);
+        resp = parseApduResponse(
+            await NfcManager.isoDepHandler.transceive(
+                buildReadBinaryApdu(offset, toRead)
+            )
+        );
+        if (!resp.ok) throw new Error('Failed to read NDEF body');
+        ndefBytes.push(...resp.data);
+        offset += resp.data.length;
+    }
+
+    return parseNdefTextPayload(ndefBytes);
+}
+
+async function writeNdefText(token: string): Promise<void> {
+    // SELECT NDEF file
+    let resp = parseApduResponse(
+        await NfcManager.isoDepHandler.transceive(
+            buildSelectFileApdu(FILE_NDEF)
+        )
+    );
+    if (!resp.ok) throw new Error('Failed to select NDEF file');
+
+    const ndefMessage = buildNdefTextMessage(token);
+
+    // Write in chunks (max 255 bytes per UPDATE BINARY)
+    let offset = 0;
+    while (offset < ndefMessage.length) {
+        const chunkSize = Math.min(ndefMessage.length - offset, 255);
+        const chunk = ndefMessage.slice(offset, offset + chunkSize);
+        resp = parseApduResponse(
+            await NfcManager.isoDepHandler.transceive(
+                buildUpdateBinaryApdu(offset, chunk)
+            )
+        );
+        if (!resp.ok) throw new Error(`Failed to write at offset ${offset}`);
+        offset += chunkSize;
+    }
+}
+
+// --- Public NFC operations ---
+
 /**
  * Read a CREQ payment request from an NFC Type 4 tag via IsoDep APDUs.
  * Works on both Android and iOS.
@@ -190,63 +274,8 @@ export async function readCREQFromTag(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
         await NfcManager.requestTechnology(NfcTech.IsoDep);
-
-        // SELECT NDEF application
-        let resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildSelectAidApdu(NDEF_AID)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to select NDEF application');
-
-        // SELECT Capability Container
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildSelectFileApdu(FILE_CC)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to select CC file');
-
-        // READ CC (15 bytes)
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildReadBinaryApdu(0, 15)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to read CC');
-
-        // SELECT NDEF file
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildSelectFileApdu(FILE_NDEF)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to select NDEF file');
-
-        // READ NLEN (first 2 bytes)
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(buildReadBinaryApdu(0, 2))
-        );
-        if (!resp.ok) throw new Error('Failed to read NLEN');
-        const nlen = (resp.data[0] << 8) | resp.data[1];
-
-        // READ NDEF message body in chunks
-        const ndefBytes: number[] = [];
-        let offset = 2;
-        while (ndefBytes.length < nlen) {
-            const toRead = Math.min(nlen - ndefBytes.length, 255);
-            resp = parseApduResponse(
-                await NfcManager.isoDepHandler.transceive(
-                    buildReadBinaryApdu(offset, toRead)
-                )
-            );
-            if (!resp.ok) throw new Error('Failed to read NDEF body');
-            ndefBytes.push(...resp.data);
-            offset += resp.data.length;
-        }
-
-        // Parse NDEF Text record to extract the CREQ string
-        const text = parseNdefTextPayload(ndefBytes);
+        await selectNdefApp();
+        const text = await readNdefText();
         if (!text || !isCREQ(text)) return undefined;
 
         return { creqParams: decodeCREQ(text), creqString: text };
@@ -273,40 +302,8 @@ export async function writeTokenToTag(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
         await NfcManager.requestTechnology(NfcTech.IsoDep);
-
-        // SELECT NDEF application
-        let resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildSelectAidApdu(NDEF_AID)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to select NDEF application');
-
-        // SELECT NDEF file
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildSelectFileApdu(FILE_NDEF)
-            )
-        );
-        if (!resp.ok) throw new Error('Failed to select NDEF file');
-
-        // Build NDEF message with token as Text record
-        const ndefMessage = buildNdefTextMessage(token);
-
-        // Write in chunks (max 255 bytes per UPDATE BINARY)
-        let offset = 0;
-        while (offset < ndefMessage.length) {
-            const chunkSize = Math.min(ndefMessage.length - offset, 255);
-            const chunk = ndefMessage.slice(offset, offset + chunkSize);
-            resp = parseApduResponse(
-                await NfcManager.isoDepHandler.transceive(
-                    buildUpdateBinaryApdu(offset, chunk)
-                )
-            );
-            if (!resp.ok)
-                throw new Error(`Failed to write at offset ${offset}`);
-            offset += chunkSize;
-        }
+        await selectNdefApp();
+        await writeNdefText(token);
 
         return true;
     } catch (e) {
@@ -316,6 +313,96 @@ export async function writeTokenToTag(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);
     }
+}
+
+/**
+ * Single-tap NFC payment: read CREQ from merchant tag, create Cashu token,
+ * write it back — all in one NFC session. No user confirmation.
+ *
+ * Returns the decoded CREQ params on success, or an error string on failure.
+ */
+export async function payViaNfcTap(
+    modalStore: ModalStore,
+    cashuStore: CashuStore
+): Promise<
+    | { success: true; creqParams: CREQParams }
+    | { success: false; error: string }
+> {
+    if (!(await checkNfcEnabled(modalStore)))
+        return { success: false, error: 'NFC not enabled' };
+
+    try {
+        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
+
+        await NfcManager.requestTechnology(NfcTech.IsoDep);
+
+        // 1. Read CREQ from merchant
+        await selectNdefApp();
+        const text = await readNdefText();
+        if (!text || !isCREQ(text)) {
+            return { success: false, error: 'No CREQ found on tag' };
+        }
+
+        const creqParams = decodeCREQ(text);
+        if (!creqParams.amount) {
+            return { success: false, error: 'CREQ has no amount' };
+        }
+
+        // 2. Find a compatible mint and create token
+        const mintUrl = findCompatibleMint(cashuStore, creqParams);
+        if (!mintUrl) {
+            return {
+                success: false,
+                error: 'No compatible mint with sufficient balance'
+            };
+        }
+
+        const token = await cashuStore.sendTokenCDK(
+            mintUrl,
+            creqParams.amount,
+            creqParams.description
+        );
+
+        // 3. Write token back to merchant tag
+        await writeNdefText(token.encoded);
+
+        return { success: true, creqParams };
+    } catch (e: any) {
+        console.warn('payViaNfcTap error:', e);
+        return { success: false, error: e.message || 'NFC payment failed' };
+    } finally {
+        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
+        NfcManager.cancelTechnologyRequest().catch(() => 0);
+    }
+}
+
+function findCompatibleMint(
+    cashuStore: CashuStore,
+    creqParams: CREQParams
+): string | undefined {
+    const { mintUrls, mintBalances, selectedMintUrl } = cashuStore;
+    const amount = creqParams.amount || 0;
+
+    // If CREQ specifies mints, find one we have with sufficient balance
+    if (creqParams.mints && creqParams.mints.length > 0) {
+        for (const mint of creqParams.mints) {
+            if (
+                mintUrls.includes(mint) &&
+                (mintBalances[mint] || 0) >= amount
+            ) {
+                return mint;
+            }
+        }
+        return undefined;
+    }
+
+    // No mint restriction - prefer selected mint if it has balance
+    if (selectedMintUrl && (mintBalances[selectedMintUrl] || 0) >= amount) {
+        return selectedMintUrl;
+    }
+
+    // Fall back to any mint with sufficient balance
+    return mintUrls.find((url) => (mintBalances[url] || 0) >= amount);
 }
 
 /**

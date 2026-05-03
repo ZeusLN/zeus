@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     FlatList,
     Image,
     NativeModules,
@@ -48,9 +49,11 @@ import UTXOPicker from '../components/UTXOPicker';
 
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { scanNfcTag, payViaNfcTap } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import { cashuStore } from '../stores/Stores';
 import { getUnformattedAmount, getAmountFromSats } from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
@@ -365,6 +368,31 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
+        // Try CREQ tap-to-pay first if ecash is enabled
+        if (BackendUtils.supportsCashuWallet() && cashuStore.cdkInitialized) {
+            const result = await payViaNfcTap(
+                this.props.ModalStore,
+                cashuStore
+            );
+            if (result.success) {
+                Alert.alert(
+                    localeString('general.success'),
+                    `${result.creqParams.amount} ${
+                        result.creqParams.unit || 'sat'
+                    }`
+                );
+                return;
+            }
+            // If no CREQ found on tag, fall through to regular tag scan
+            if (result.error !== 'No CREQ found on tag') {
+                if (result.error) {
+                    this.setState({ error_msg: result.error });
+                }
+                return;
+            }
+        }
+
+        // Fall back to regular NFC tag reading
         const str = await scanNfcTag(this.props.ModalStore);
         if (str) this.validateAddress(str);
     };
