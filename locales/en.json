@@ -315,6 +315,8 @@
     "views.EditFee.titleDisplayOnly": "Transaction fees",
     "views.LnurlPay.LnurlPay.amount": "Amount to pay",
     "views.LnurlPay.LnurlPay.comment": "Comment",
+    "views.LnurlPay.LnurlPay.nickname": "Nickname (optional)",
+    "views.LnurlPay.LnurlPay.nicknamePlaceholder": "Your name",
     "views.LnurlPay.LnurlPay.confirm": "Confirm",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",
