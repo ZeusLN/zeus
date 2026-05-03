@@ -1226,7 +1226,7 @@ export default class ChannelsStore {
 
                         if (data?.funding_txid_str) {
                             const noteKey = `note-${data.funding_txid_str}`;
-                            const note = localeString('views.OpenChannel.openedChannel');
+                            const note = localeString('views.OpenChannel.openedChannelNote');
                             Storage.setItem(noteKey, note);
                             notesStore.storeNoteKeys(noteKey, note);
                         }
