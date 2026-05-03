@@ -126,6 +126,8 @@ interface CollapsedQRProps {
     truncateLongValue?: boolean;
     logo?: any;
     nfcSupported?: boolean;
+    nfcWritable?: boolean;
+    onNfcTokenReceived?: (content: string) => void;
     satAmount?: string | number;
     displayAmount?: boolean;
     labelBottom?: string;
@@ -471,6 +473,8 @@ export default class CollapsedQR extends React.Component<
                         <NFCButton
                             value={copyValue || value}
                             iconOnly={iconOnly}
+                            writable={this.props.nfcWritable}
+                            onTokenReceived={this.props.onNfcTokenReceived}
                         />
                     )}
                 </View>
