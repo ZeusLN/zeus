@@ -12,6 +12,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { decodeCREQ } from '../../utils/CREQUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -241,7 +242,6 @@ const SwipeableRow = ({
     }
 
     if (item.layer === 'Ecash (CREQ)' && creq) {
-        const { decodeCREQ } = require('../../utils/CREQUtils');
         return (
             <RectButton
                 style={[styles.rectButton, rowDisabled && { opacity: 0.5 }]}
