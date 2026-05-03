@@ -1476,7 +1476,7 @@ PODS:
     - React-Core
   - react-native-get-random-values (1.9.0):
     - React-Core
-  - react-native-hce (0.1.2):
+  - react-native-hce (0.3.0):
     - React
   - react-native-image-picker (8.2.1):
     - hermes-engine
@@ -2879,7 +2879,7 @@ SPEC CHECKSUMS:
   react-native-document-picker: 936a9aa901feaaa7946c4ff10bbfe1ffc991be43
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
-  react-native-hce: f42561549a16f53ae98edb7f1b68ad87b6e732e1
+  react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: 48d850454b4a389753053e1d7378b624d3b47d77
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
   react-native-nfc-manager: c8891e460b4943b695d63f7f4effc6345bbefc83
