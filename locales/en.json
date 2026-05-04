@@ -26,6 +26,8 @@
     "general.wallet": "Wallet",
     "general.wallets": "Wallets",
     "general.offline": "Offline",
+    "general.online": "Online",
+    "general.status": "Status",
     "general.readOnlyWallet": "Read-only wallet",
     "general.custodialWallet": "Custodial wallet",
     "general.selfCustodial": "Self-custodial",

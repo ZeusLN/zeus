@@ -407,6 +407,7 @@ export default class WalletHeader extends React.Component<
         const { paid, redeemingAll } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
+        const isOffline = ConnectivityStore?.isOffline ?? false;
         const selectedNode: any =
             (settings &&
                 settings.nodes?.length &&
@@ -537,7 +538,7 @@ export default class WalletHeader extends React.Component<
         };
 
         const OfflineBadge = () => {
-            return ConnectivityStore?.isOffline ? (
+            return isOffline ? (
                 <TouchableOpacity
                     onPress={() => navigation.navigate('Networking')}
                 >
@@ -745,15 +746,11 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!connecting &&
-                                    isSyncing &&
-                                    !ConnectivityStore?.isOffline && (
-                                        <View style={{ marginRight: 15 }}>
-                                            <SyncBadge
-                                                navigation={navigation}
-                                            />
-                                        </View>
-                                    )}
+                                {!connecting && isSyncing && !isOffline && (
+                                    <View style={{ marginRight: 15 }}>
+                                        <SyncBadge navigation={navigation} />
+                                    </View>
+                                )}
                                 {!connecting && AlertStore?.hasError && (
                                     <AlertButton />
                                 )}
