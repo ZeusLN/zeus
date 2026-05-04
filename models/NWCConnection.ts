@@ -14,7 +14,7 @@ import CashuPayment from './CashuPayment';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 
 export type ConnectionActivityType = 'pay_invoice' | 'make_invoice';
-
+export type ConnectionActivityStatus = 'success' | 'pending' | 'failed';
 export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
 
 export enum PermissionType {
@@ -26,7 +26,7 @@ export interface ConnectionActivity {
     id: string; // lightning invoice
     type: ConnectionActivityType;
     payment_source: ConnectionPaymentSourceType;
-    status: 'success' | 'pending' | 'failed';
+    status: ConnectionActivityStatus;
     payment?: Payment | CashuPayment | null;
     invoice?: Invoice | CashuInvoice | null;
     error?: string;

@@ -628,8 +628,17 @@ export default class AddOrEditNWCConnection extends React.Component<
                     connectionId,
                     params
                 );
-                if (updated) {
+                if (updated.success) {
                     setTimeout(() => navigation.goBack(), 100);
+                } else {
+                    this.setState({
+                        error:
+                            NostrWalletConnectStore.errorMessage ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                            ),
+                        loading: false
+                    });
                 }
             } else {
                 const nostrUrl = await NostrWalletConnectStore.createConnection(
