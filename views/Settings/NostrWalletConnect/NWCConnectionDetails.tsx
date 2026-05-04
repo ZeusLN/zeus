@@ -374,7 +374,7 @@ export default class NWCConnectionDetails extends React.Component<
 
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.Transaction.status'
+                                            'general.status'
                                         )}
                                         valueIndicatorColor={
                                             connection.isExpired

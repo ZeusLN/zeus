@@ -848,7 +848,7 @@ export default class SwapDetails extends React.Component<
 
                     {updates && (
                         <KeyValue
-                            keyValue={localeString('views.Channel.status')}
+                            keyValue={localeString('general.status')}
                             value={SwapStore?.formatStatus(updates)}
                             color={SwapStore?.statusColor(updates as SwapState)}
                         />
