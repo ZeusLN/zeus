@@ -5,8 +5,7 @@ import {
     FlatList,
     TouchableOpacity,
     Text,
-    RefreshControl,
-    Platform
+    RefreshControl
 } from 'react-native';
 import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -15,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
+import Amount from '../../../components/Amount';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Tag } from '../../../components/Channels/Tag';
 
@@ -33,7 +33,6 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
-import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionsListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -52,7 +51,6 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
-    hasPendingPayments: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -67,8 +65,7 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All,
-            hasPendingPayments: false
+            filter: ConnectionFilter.All
         };
     }
 
@@ -76,29 +73,11 @@ export default class NWCConnectionsList extends React.Component<
         const { navigation } = this.props;
         navigation.addListener('focus', this.handleFocus);
         this.getConnections();
-        this.getPendingPayments();
     }
     componentWillUnmount() {
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
-    getPendingPayments = async () => {
-        try {
-            this.setState({ connectionsLoading: true });
-            const { NostrWalletConnectStore } = this.props;
-            const pendingPayments =
-                await NostrWalletConnectStore.getPendingPayments();
-            this.setState({
-                hasPendingPayments: pendingPayments.length > 0,
-                connectionsLoading: false
-            });
-        } catch (e) {
-            this.setState({
-                error: (e as Error).message,
-                connectionsLoading: false
-            });
-        }
-    };
     getConnections = async () => {
         try {
             this.setState({
@@ -124,7 +103,6 @@ export default class NWCConnectionsList extends React.Component<
     };
     handleFocus = async () => {
         await this.getConnections();
-        await this.getPendingPayments();
     };
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;
@@ -261,23 +239,23 @@ export default class NWCConnectionsList extends React.Component<
                                 style={{
                                     flexDirection: 'row',
                                     gap: 10,
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    marginBottom: 8
                                 }}
                             >
-                                <Text
-                                    style={[
-                                        styles.budgetAmount,
-                                        { color: themeColor('text') }
-                                    ]}
-                                >
-                                    {`${connection.remainingBudget.toLocaleString()} ${localeString(
-                                        'general.sats'
-                                    )}`}
-                                </Text>
+                                <Amount
+                                    sats={connection.remainingBudget}
+                                    toggleable
+                                    fontSize={20}
+                                    colorOverride={themeColor('text')}
+                                />
                                 <Text
                                     style={[
                                         styles.budgetLabel,
-                                        { color: themeColor('secondaryText') }
+                                        {
+                                            color: themeColor('secondaryText'),
+                                            marginBottom: 0
+                                        }
                                     ]}
                                 >
                                     {localeString(
@@ -331,19 +309,60 @@ export default class NWCConnectionsList extends React.Component<
                                               'views.Settings.NostrWalletConnect.neverUsed'
                                           )}
                                 </Text>
-                                <Text
-                                    style={[
-                                        styles.budgetDetailText,
-                                        { color: themeColor('secondaryText') }
-                                    ]}
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'flex-end',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        marginLeft: 8
+                                    }}
                                 >
-                                    {`${connection.totalSpendSats.toLocaleString()} / ${connection.maxAmountSats.toLocaleString()} ${localeString(
-                                        'general.sats'
-                                    )}`}
-                                    {connection.budgetRenewal !== 'never'
-                                        ? ` (${connection.budgetRenewal})`
-                                        : ''}
-                                </Text>
+                                    <Amount
+                                        sats={connection.totalSpendSats}
+                                        toggleable
+                                        fontSize={14}
+                                        colorOverride={themeColor(
+                                            'secondaryText'
+                                        )}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.budgetDetailText,
+                                            {
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }
+                                        ]}
+                                    >
+                                        {'/'}
+                                    </Text>
+                                    <Amount
+                                        sats={connection.maxAmountSats}
+                                        toggleable
+                                        fontSize={14}
+                                        colorOverride={themeColor(
+                                            'secondaryText'
+                                        )}
+                                    />
+                                    {connection.budgetRenewal !== 'never' && (
+                                        <Text
+                                            style={[
+                                                styles.budgetDetailText,
+                                                {
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }
+                                            ]}
+                                        >
+                                            {`(${connection.budgetRenewal})`}
+                                        </Text>
+                                    )}
+                                </View>
                             </View>
                         </View>
                     )}
@@ -402,18 +421,9 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation, SettingsStore } =
-            this.props;
+        const { NostrWalletConnectStore, navigation } = this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { connectionsLoading, error, hasPendingPayments } = this.state;
-        const shouldReduceIconSize =
-            hasPendingPayments &&
-            !(
-                Platform.OS === 'ios' &&
-                (SettingsStore.implementation !== 'embedded-lnd' ||
-                    !SettingsStore.settings?.ecash?.enableCashu)
-            );
-        const HeaderIconSize = shouldReduceIconSize ? 24 : 30;
+        const { connectionsLoading, error } = this.state;
         return (
             <Screen>
                 <Header
@@ -452,50 +462,27 @@ export default class NWCConnectionsList extends React.Component<
                                 >
                                     <Add
                                         fill={themeColor('text')}
-                                        width={HeaderIconSize}
-                                        height={HeaderIconSize}
+                                        width={30}
+                                        height={30}
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                {hasPendingPayments && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'NWCPendingPayments'
-                                            )
-                                        }
-                                    >
-                                        <ClockIcon
-                                            color={themeColor('bitcoin')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
-                                        />
-                                    </TouchableOpacity>
-                                )}
 
-                                {!(
-                                    Platform.OS === 'ios' &&
-                                    (SettingsStore.implementation !==
-                                        'embedded-lnd' ||
-                                        !SettingsStore.settings?.ecash
-                                            ?.enableCashu)
-                                ) && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('NWCSettings')
-                                        }
-                                        accessibilityLabel={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                    >
-                                        <Gear
-                                            fill={themeColor('text')}
-                                            width={HeaderIconSize}
-                                            height={HeaderIconSize}
-                                            style={{ alignSelf: 'center' }}
-                                        />
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('NWCSettings')
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'views.Settings.title'
+                                    )}
+                                >
+                                    <Gear
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         )
                     }
@@ -722,12 +709,6 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         marginBottom: 6
     },
-    budgetAmount: {
-        fontSize: 20,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontWeight: '600',
-        marginBottom: 8
-    },
     budgetBarContainer: {
         position: 'relative',
         marginBottom: 8,
@@ -752,7 +733,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between'
     },
     budgetDetailText: {
-        fontSize: 12,
+        fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book'
     },
     emptyState: {
