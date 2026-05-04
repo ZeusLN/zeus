@@ -23,7 +23,12 @@ interface NetworkingProps {
 
 @inject('ConnectivityStore', 'SettingsStore')
 @observer
-export default class Networking extends React.Component<NetworkingProps> {
+export default class Networking extends React.Component<
+    NetworkingProps,
+    { disableOfflineCheck: boolean | undefined }
+> {
+    state = { disableOfflineCheck: undefined as boolean | undefined };
+
     async componentDidMount() {
         await this.props.SettingsStore.getSettings();
     }
@@ -32,7 +37,9 @@ export default class Networking extends React.Component<NetworkingProps> {
         const { navigation, ConnectivityStore, SettingsStore } = this.props;
         const { settings, updateSettings } = SettingsStore;
         const disableOfflineCheck =
-            settings?.networking?.disableOfflineCheck || false;
+            this.state.disableOfflineCheck ??
+            settings?.networking?.disableOfflineCheck ??
+            false;
 
         return (
             <Screen>
@@ -73,16 +80,19 @@ export default class Networking extends React.Component<NetworkingProps> {
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={disableOfflineCheck}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
                                 onValueChange={async () => {
                                     const newValue = !disableOfflineCheck;
+                                    this.setState({
+                                        disableOfflineCheck: newValue
+                                    });
                                     await updateSettings({
                                         networking: {
                                             ...settings.networking,
                                             disableOfflineCheck: newValue
                                         }
+                                    });
+                                    this.setState({
+                                        disableOfflineCheck: undefined
                                     });
                                     if (newValue) {
                                         ConnectivityStore.reset();
