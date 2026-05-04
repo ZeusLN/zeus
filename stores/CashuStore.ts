@@ -324,19 +324,28 @@ export default class CashuStore {
                 const derivedSeedPhrase = mnemonic.split(' ');
                 const nodeDir = this.getNodeDir();
 
-                await Storage.setItem(
-                    nodeDir + '-cashu-seed-phrase',
-                    derivedSeedPhrase
-                );
-                await Storage.setItem(
-                    nodeDir + '-cashu-seed-version',
-                    'v2-bip39'
-                );
-
+                // Set in-memory state first so ensureSeed() / deriveCashuPubkey()
+                // work even if Keychain storage throws below
                 runInAction(() => {
                     this.seedPhrase = derivedSeedPhrase;
                     this.seedVersion = 'v2-bip39';
                 });
+
+                try {
+                    await Storage.setItem(
+                        nodeDir + '-cashu-seed-phrase',
+                        derivedSeedPhrase
+                    );
+                    await Storage.setItem(
+                        nodeDir + '-cashu-seed-version',
+                        'v2-bip39'
+                    );
+                } catch (storageErr) {
+                    console.warn(
+                        'CDK: Failed to persist mnemonic to Keychain, will retry on next launch:',
+                        storageErr
+                    );
+                }
 
                 console.log(
                     'CDK: Generated and stored mnemonic for remote node'
