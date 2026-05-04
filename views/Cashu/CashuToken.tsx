@@ -536,7 +536,7 @@ export default class CashuTokenView extends React.Component<
 
                                     const { success, errorMessage } =
                                         await claimToken(
-                                            token!!,
+                                            encodedToken!,
                                             decoded,
                                             true
                                         );
