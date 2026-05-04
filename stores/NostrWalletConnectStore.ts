@@ -1813,7 +1813,7 @@ export default class NostrWalletConnectStore {
         } else if ((invoice as any).satoshis) {
             amount = Math.floor((invoice as any).satoshis);
         } else if ((invoice as any).millisatoshis) {
-            amount = millisatsToSats(Number((invoice as any).millisatoshis));
+            amount = millisatsToSats(Number(invoice.millisatoshis));
         }
         if (!amount || amount <= 0) {
             return NostrConnectUtils.createNip47Error(
