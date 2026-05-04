@@ -266,7 +266,7 @@ const ActivityListItem = observer(
                         <>
                             {'\n'}
                             {`${localeString(
-                                'views.Channel.status'
+                                'general.status'
                             )}: ${swapStore.formatStatus(item.status)}`}
                         </>
                     )}

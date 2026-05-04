@@ -109,7 +109,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                             fontSize: 16
                         }}
                     >
-                        {`${localeString('views.Channel.status')}`}
+                        {`${localeString('general.status')}`}
                     </Text>
                     <Text
                         style={{

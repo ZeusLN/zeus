@@ -204,9 +204,7 @@ export default class WatchtowerDetails extends React.Component<
                     >
                         <View style={styles.infoSection}>
                             <KeyValue
-                                keyValue={localeString(
-                                    'views.Transaction.status'
-                                )}
+                                keyValue={localeString('general.status')}
                                 value={
                                     displayData.active_session_candidate
                                         ? localeString('general.active')

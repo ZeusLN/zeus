@@ -7,6 +7,7 @@ import NetInfo, {
 import SettingsStore from './SettingsStore';
 
 const REACHABILITY_POLL_INTERVAL = 15000; // 15s
+const OFFLINE_DEBOUNCE_MS = 10000; // 10s
 const DEFAULT_REACHABILITY_HOST = 'mempool.space';
 
 export default class ConnectivityStore {
@@ -14,6 +15,7 @@ export default class ConnectivityStore {
 
     private netInfoUnsubscribe: NetInfoSubscription | null = null;
     private reachabilityInterval: ReturnType<typeof setInterval> | null = null;
+    private offlineDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectCallbacks: Array<() => void> = [];
     private settingsStore: SettingsStore;
 
@@ -42,16 +44,46 @@ export default class ConnectivityStore {
         this.reconnectCallbacks.push(callback);
     };
 
+    private clearDebounce = () => {
+        if (this.offlineDebounceTimer) {
+            clearTimeout(this.offlineDebounceTimer);
+            this.offlineDebounceTimer = null;
+        }
+    };
+
     private updateState = (state: NetInfoState) => {
+        // isConnected === false is a reliable native signal (airplane mode, no
+        // network interface) — surface immediately without debouncing
+        if (state.isConnected === false) {
+            this.clearDebounce();
+            runInAction(() => {
+                this.isOffline = true;
+            });
+            return;
+        }
+
+        // isInternetReachable === false can be a false positive on Android when
+        // the JS reachability fetch fails transiently; debounce before surfacing
+        if (state.isInternetReachable === false) {
+            if (!this.offlineDebounceTimer) {
+                this.offlineDebounceTimer = setTimeout(() => {
+                    this.offlineDebounceTimer = null;
+                    runInAction(() => {
+                        this.isOffline = true;
+                    });
+                }, OFFLINE_DEBOUNCE_MS);
+            }
+            return;
+        }
+
+        // Online — isConnected is not false and isInternetReachable is true or
+        // null (null = unknown, treat as online to avoid false positives)
+        this.clearDebounce();
         const wasOffline = this.isOffline;
         runInAction(() => {
-            // isInternetReachable can be null (unknown) initially;
-            // treat null as "not offline" to avoid false positives
-            this.isOffline =
-                state.isConnected === false ||
-                state.isInternetReachable === false;
+            this.isOffline = false;
         });
-        if (wasOffline && !this.isOffline) {
+        if (wasOffline) {
             this.reconnectCallbacks.forEach((cb) => cb());
         }
     };
@@ -59,6 +91,8 @@ export default class ConnectivityStore {
     @action
     public start = () => {
         if (this.netInfoUnsubscribe) return;
+        if (this.settingsStore.settings?.networking?.disableOfflineCheck)
+            return;
 
         NetInfo.configure({
             reachabilityUrl: this.getReachabilityUrl(),
@@ -84,6 +118,7 @@ export default class ConnectivityStore {
             clearInterval(this.reachabilityInterval);
             this.reachabilityInterval = null;
         }
+        this.clearDebounce();
     };
 
     @action
