@@ -23,7 +23,6 @@ import ShowHideToggle from '../components/ShowHideToggle';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
-import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -268,8 +267,6 @@ export default class Lockscreen extends React.Component<
             error: false
         });
 
-        const shareIntentData = route.params?.shareIntentData;
-
         if (
             (passphraseAttempt && passphraseAttempt === passphrase) ||
             (pinAttempt && pinAttempt === pin)
@@ -308,14 +305,6 @@ export default class Lockscreen extends React.Component<
                     navigation.replace('Wallets', { fromStartup: true });
                 }
                 return;
-            } else if (
-                !(
-                    SettingsStore.settings.selectNodeOnStartup &&
-                    SettingsStore.initialStart
-                ) &&
-                !shareIntentData
-            ) {
-                LinkingUtils.handleInitialUrl(navigation);
             }
             if (!SettingsStore.settings.selectNodeOnStartup) {
                 if (
