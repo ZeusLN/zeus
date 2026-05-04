@@ -1469,24 +1469,21 @@ export default class Rebalance extends React.Component<
                 id="rebalance-advanced"
                 title={localeString('general.advancedSettings')}
             >
-                <>
-                    {this.renderNumericInput(
-                        localeString('views.PaymentRequest.feeLimit') +
-                            ' (' +
-                            localeString('general.sats') +
-                            ')',
-                        feeLimit,
-                        REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
-                        (text: string) => this.setState({ feeLimit: text })
-                    )}
-                    {this.renderNumericInput(
-                        localeString('views.PaymentRequest.timeout'),
-                        timeoutSeconds.toString(),
-                        REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
-                        (text: string) =>
-                            this.setState({ timeoutSeconds: text })
-                    )}
-                </>
+                {this.renderNumericInput(
+                    localeString('views.PaymentRequest.feeLimit') +
+                        ' (' +
+                        localeString('general.sats') +
+                        ')',
+                    feeLimit,
+                    REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
+                    (text: string) => this.setState({ feeLimit: text })
+                )}
+                {this.renderNumericInput(
+                    localeString('views.PaymentRequest.timeout'),
+                    timeoutSeconds.toString(),
+                    REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
+                    (text: string) => this.setState({ timeoutSeconds: text })
+                )}
             </Accordion>
         );
     };

@@ -535,69 +535,67 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             'general.advancedSettings'
                                         )}
                                     >
-                                        <>
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'general.discountCode'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'general.discountCode'
-                                                )}
-                                                value={this.state.token}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        token: text
-                                                    })
-                                                }
-                                                style={styles.textInput}
-                                                autoCapitalize="none"
-                                            />
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'general.discountCode'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={localeString(
+                                                'general.discountCode'
+                                            )}
+                                            value={this.state.token}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    token: text
+                                                })
+                                            }
+                                            style={styles.textInput}
+                                            autoCapitalize="none"
+                                        />
 
-                                            {/*
+                                        {/*
                                                 TODO add conditions for refund onchain address
                                                 */}
-                                            {false && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                    </Text>
-                                                    <TextInput
-                                                        placeholder={localeString(
-                                                            'views.LSPS1.refundOnchainAddress'
-                                                        )}
-                                                        value={
-                                                            this.state
-                                                                .refundOnchainAddress
-                                                        }
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) =>
-                                                            this.setState({
-                                                                refundOnchainAddress:
-                                                                    text
-                                                            })
-                                                        }
-                                                        style={styles.textInput}
-                                                    />
-                                                </>
-                                            )}
-                                        </>
+                                        {false && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.LSPS1.refundOnchainAddress'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'views.LSPS1.refundOnchainAddress'
+                                                    )}
+                                                    value={
+                                                        this.state
+                                                            .refundOnchainAddress
+                                                    }
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            refundOnchainAddress:
+                                                                text
+                                                        })
+                                                    }
+                                                    style={styles.textInput}
+                                                />
+                                            </>
+                                        )}
                                     </Accordion>
                                 </ScrollView>
                             )}

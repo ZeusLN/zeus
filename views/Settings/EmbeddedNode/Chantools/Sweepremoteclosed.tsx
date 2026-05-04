@@ -246,38 +246,7 @@ export default class Sweepremoteclosed extends React.Component<
                                 id="sweep-remote-closed-advanced"
                                 title={localeString('general.advancedSettings')}
                             >
-                                <>
-                                    {!isLdkNode && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                                infoModalText={localeString(
-                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow.explainer'
-                                                )}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={'200'}
-                                                value={recoveryWindow}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        recoveryWindow:
-                                                            text.trim()
-                                                    })
-                                                }
-                                                locked={loading}
-                                                keyboardType="numeric"
-                                            />
-                                        </>
-                                    )}
+                                {!isLdkNode && (
                                     <>
                                         <Text
                                             style={{
@@ -287,81 +256,106 @@ export default class Sweepremoteclosed extends React.Component<
                                                 )
                                             }}
                                             infoModalText={localeString(
-                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.sleepSeconds.explainer'
+                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow.explainer'
                                             )}
                                         >
                                             {localeString(
-                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.sleepSeconds'
+                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow'
                                             )}
                                         </Text>
                                         <TextInput
-                                            placeholder={'0'}
-                                            value={sleepSeconds}
+                                            placeholder={'200'}
+                                            value={recoveryWindow}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    sleepSeconds: text.trim()
+                                                    recoveryWindow: text.trim()
                                                 })
                                             }
                                             locked={loading}
                                             keyboardType="numeric"
                                         />
                                     </>
-                                    {!isLdkNode && (
-                                        <>
-                                            <View style={{ marginTop: 10 }}>
-                                                <DropdownSetting
-                                                    title={localeString(
-                                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl'
-                                                    )}
-                                                    selectedValue={apiUrl}
-                                                    onValueChange={(
-                                                        value: string
-                                                    ) => {
-                                                        this.setState({
-                                                            apiUrl: value
-                                                        });
-                                                    }}
-                                                    values={API_URL_KEYS}
-                                                />
-                                            </View>
-                                            {apiUrl === 'custom' && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            ...styles.text,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl'
-                                                        )}
-                                                    </Text>
-                                                    <TextInput
-                                                        value={customApiUrl}
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) =>
-                                                            this.setState({
-                                                                customApiUrl:
-                                                                    text
-                                                                        .trim()
-                                                                        .replace(
-                                                                            /^\s\n+|\s\n+$/g,
-                                                                            ''
-                                                                        )
-                                                            })
-                                                        }
-                                                        autoCapitalize="none"
-                                                        autoCorrect={false}
-                                                        locked={loading}
-                                                    />
-                                                </>
-                                            )}
-                                        </>
-                                    )}
+                                )}
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                        infoModalText={localeString(
+                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.sleepSeconds.explainer'
+                                        )}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.sleepSeconds'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'0'}
+                                        value={sleepSeconds}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                sleepSeconds: text.trim()
+                                            })
+                                        }
+                                        locked={loading}
+                                        keyboardType="numeric"
+                                    />
                                 </>
+                                {!isLdkNode && (
+                                    <>
+                                        <View style={{ marginTop: 10 }}>
+                                            <DropdownSetting
+                                                title={localeString(
+                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl'
+                                                )}
+                                                selectedValue={apiUrl}
+                                                onValueChange={(
+                                                    value: string
+                                                ) => {
+                                                    this.setState({
+                                                        apiUrl: value
+                                                    });
+                                                }}
+                                                values={API_URL_KEYS}
+                                            />
+                                        </View>
+                                        {apiUrl === 'custom' && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    value={customApiUrl}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            customApiUrl: text
+                                                                .trim()
+                                                                .replace(
+                                                                    /^\s\n+|\s\n+$/g,
+                                                                    ''
+                                                                )
+                                                        })
+                                                    }
+                                                    autoCapitalize="none"
+                                                    autoCorrect={false}
+                                                    locked={loading}
+                                                />
+                                            </>
+                                        )}
+                                    </>
+                                )}
                             </Accordion>
                         </ScrollView>
                         <View style={{ bottom: 10 }}>

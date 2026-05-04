@@ -871,274 +871,261 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 'general.advancedSettings'
                                             )}
                                         >
-                                            <>
-                                                {info?.max_initial_client_balance_sat !==
-                                                    '0' && (
-                                                    <>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.LSPS1.initialClientBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                        </Text>
-                                                        <TextInput
-                                                            placeholder={`${localeString(
-                                                                'views.LSPS1.clientBalance'
-                                                            )} (${localeString(
-                                                                'general.sats'
-                                                            )})`}
-                                                            value={numberWithCommas(
-                                                                clientBalanceSat
-                                                            ).toString()}
-                                                            onChangeText={(
-                                                                text: any
-                                                            ) => {
-                                                                const value =
-                                                                    text.replace(
-                                                                        /,/g,
-                                                                        ''
-                                                                    );
-                                                                this.setState({
-                                                                    clientBalanceSat:
-                                                                        value
-                                                                });
-                                                            }}
-                                                            keyboardType="numeric"
-                                                        />
-                                                        <Row
-                                                            justify="space-between"
-                                                            style={{
-                                                                marginVertical: 10
-                                                            }}
-                                                        >
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {numberWithCommas(
-                                                                    info?.min_initial_client_balance_sat
-                                                                )}
-                                                            </Text>
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {numberWithCommas(
-                                                                    info?.max_initial_client_balance_sat
-                                                                )}
-                                                            </Text>
-                                                        </Row>
-                                                        <Slider
-                                                            style={{
-                                                                width: '100%',
-                                                                height: 40
-                                                            }}
-                                                            minimumValue={parseInt(
-                                                                info?.min_initial_client_balance_sat
-                                                            )}
-                                                            maximumValue={parseInt(
-                                                                info?.max_initial_client_balance_sat
-                                                            )}
-                                                            minimumTrackTintColor={themeColor(
-                                                                'highlight'
-                                                            )}
-                                                            maximumTrackTintColor="black"
-                                                            thumbTintColor={themeColor(
-                                                                'highlight'
-                                                            )}
-                                                            value={parseInt(
-                                                                clientBalanceSat.toString()
-                                                            )}
-                                                            onValueChange={(
-                                                                value: number
-                                                            ) =>
-                                                                this.setState({
-                                                                    clientBalanceSat:
-                                                                        value
-                                                                })
-                                                            }
-                                                            step={10000}
-                                                        />
-                                                    </>
-                                                )}
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        marginTop: 10
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.LSPS1.requiredChannelConfirmations'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    placeholder={localeString(
-                                                        'views.LSPS1.requiredChannelConfirmations'
-                                                    )}
-                                                    value={
-                                                        this.state
-                                                            .requiredChannelConfirmations
-                                                    }
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            requiredChannelConfirmations:
-                                                                text
-                                                        })
-                                                    }
-                                                    style={styles.textInput}
-                                                    keyboardType="numeric"
-                                                />
-
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.LSPS1.confirmWithinBlocks'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    placeholder={localeString(
-                                                        'views.LSPS1.confirmWithinBlocks'
-                                                    )}
-                                                    value={
-                                                        this.state
-                                                            .confirmsWithinBlocks
-                                                    }
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            confirmsWithinBlocks:
-                                                                text
-                                                        })
-                                                    }
-                                                    style={styles.textInput}
-                                                    keyboardType="numeric"
-                                                />
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'general.discountCode'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    placeholder={localeString(
-                                                        'general.discountCode'
-                                                    )}
-                                                    value={this.state.token}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            token: text
-                                                        })
-                                                    }
-                                                    style={styles.textInput}
-                                                    autoCapitalize="none"
-                                                />
-
-                                                {info?.min_onchain_payment_confirmations && (
-                                                    <>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'views.LSPS1.refundOnchainAddress'
-                                                            )}
-                                                        </Text>
-                                                        <TextInput
-                                                            placeholder={localeString(
-                                                                'views.LSPS1.refundOnchainAddress'
-                                                            )}
-                                                            value={
-                                                                this.state
-                                                                    .refundOnchainAddress
-                                                            }
-                                                            onChangeText={(
-                                                                text: string
-                                                            ) =>
-                                                                this.setState({
-                                                                    refundOnchainAddress:
-                                                                        text
-                                                                })
-                                                            }
-                                                            style={
-                                                                styles.textInput
-                                                            }
-                                                        />
-                                                    </>
-                                                )}
-                                                {!isOlympus && (
-                                                    <View
+                                            {info?.max_initial_client_balance_sat !==
+                                                '0' && (
+                                                <>
+                                                    <Text
                                                         style={{
-                                                            flexDirection:
-                                                                'row',
-                                                            justifyContent:
-                                                                'space-between',
-                                                            alignItems:
-                                                                'center',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {`${localeString(
+                                                            'views.LSPS1.initialClientBalance'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )})`}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={`${localeString(
+                                                            'views.LSPS1.clientBalance'
+                                                        )} (${localeString(
+                                                            'general.sats'
+                                                        )})`}
+                                                        value={numberWithCommas(
+                                                            clientBalanceSat
+                                                        ).toString()}
+                                                        onChangeText={(
+                                                            text: any
+                                                        ) => {
+                                                            const value =
+                                                                text.replace(
+                                                                    /,/g,
+                                                                    ''
+                                                                );
+                                                            this.setState({
+                                                                clientBalanceSat:
+                                                                    value
+                                                            });
+                                                        }}
+                                                        keyboardType="numeric"
+                                                    />
+                                                    <Row
+                                                        justify="space-between"
+                                                        style={{
                                                             marginVertical: 10
                                                         }}
                                                     >
                                                         <Text
                                                             style={{
-                                                                fontSize: 16,
                                                                 color: themeColor(
-                                                                    'secondaryText'
+                                                                    'text'
                                                                 )
                                                             }}
                                                         >
-                                                            {localeString(
-                                                                'views.OpenChannel.announceChannel'
+                                                            {numberWithCommas(
+                                                                info?.min_initial_client_balance_sat
                                                             )}
                                                         </Text>
-                                                        <Switch
-                                                            value={
-                                                                this.state
-                                                                    .announceChannel
-                                                            }
-                                                            onValueChange={async () => {
-                                                                this.setState({
-                                                                    announceChannel:
-                                                                        !this
-                                                                            .state
-                                                                            .announceChannel
-                                                                });
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
                                                             }}
-                                                        />
-                                                    </View>
+                                                        >
+                                                            {numberWithCommas(
+                                                                info?.max_initial_client_balance_sat
+                                                            )}
+                                                        </Text>
+                                                    </Row>
+                                                    <Slider
+                                                        style={{
+                                                            width: '100%',
+                                                            height: 40
+                                                        }}
+                                                        minimumValue={parseInt(
+                                                            info?.min_initial_client_balance_sat
+                                                        )}
+                                                        maximumValue={parseInt(
+                                                            info?.max_initial_client_balance_sat
+                                                        )}
+                                                        minimumTrackTintColor={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                        maximumTrackTintColor="black"
+                                                        thumbTintColor={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                        value={parseInt(
+                                                            clientBalanceSat.toString()
+                                                        )}
+                                                        onValueChange={(
+                                                            value: number
+                                                        ) =>
+                                                            this.setState({
+                                                                clientBalanceSat:
+                                                                    value
+                                                            })
+                                                        }
+                                                        step={10000}
+                                                    />
+                                                </>
+                                            )}
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginTop: 10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
                                                 )}
-                                            </>
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.requiredChannelConfirmations'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .requiredChannelConfirmations
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        requiredChannelConfirmations:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
+
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.LSPS1.confirmWithinBlocks'
+                                                )}
+                                                value={
+                                                    this.state
+                                                        .confirmsWithinBlocks
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        confirmsWithinBlocks:
+                                                            text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                keyboardType="numeric"
+                                            />
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'general.discountCode'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'general.discountCode'
+                                                )}
+                                                value={this.state.token}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        token: text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                                autoCapitalize="none"
+                                            />
+
+                                            {info?.min_onchain_payment_confirmations && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.LSPS1.refundOnchainAddress'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={localeString(
+                                                            'views.LSPS1.refundOnchainAddress'
+                                                        )}
+                                                        value={
+                                                            this.state
+                                                                .refundOnchainAddress
+                                                        }
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                refundOnchainAddress:
+                                                                    text
+                                                            })
+                                                        }
+                                                        style={styles.textInput}
+                                                    />
+                                                </>
+                                            )}
+                                            {!isOlympus && (
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        marginVertical: 10
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 16,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.announceChannel'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={
+                                                            this.state
+                                                                .announceChannel
+                                                        }
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                announceChannel:
+                                                                    !this.state
+                                                                        .announceChannel
+                                                            });
+                                                        }}
+                                                    />
+                                                </View>
+                                            )}
                                         </Accordion>
                                     )}
                                 </ScrollView>

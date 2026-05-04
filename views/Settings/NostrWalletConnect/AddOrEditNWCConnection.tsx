@@ -1358,102 +1358,40 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     marginBottom: 0
                                 }}
                             >
-                                <>
-                                    {/* Budget Renewal */}
-                                    {NostrConnectUtils.hasPaymentPermissions(
-                                        selectedPermissions
-                                    ) && (
-                                        <View
-                                            style={[
-                                                styles.renewalContainer,
-                                                { marginTop: 10 }
-                                            ]}
-                                        >
-                                            <View
-                                                style={
-                                                    styles.sectionTitleContainer
-                                                }
-                                            >
-                                                <Body bold>
-                                                    {localeString(
-                                                        'views.Settings.NostrWalletConnect.budgetRenewal'
-                                                    )}
-                                                </Body>
-                                            </View>
-                                            <ButtonGroup
-                                                onPress={(
-                                                    selectedIndex: number
-                                                ) => {
-                                                    this.updateStateWithChangeTracking(
-                                                        {
-                                                            selectedBudgetRenewalIndex:
-                                                                selectedIndex
-                                                        }
-                                                    );
-                                                }}
-                                                selectedIndex={
-                                                    selectedBudgetRenewalIndex
-                                                }
-                                                buttons={budgetRenewalButtons}
-                                                selectedButtonStyle={{
-                                                    backgroundColor:
-                                                        themeColor('highlight'),
-                                                    borderRadius: 8
-                                                }}
-                                                containerStyle={{
-                                                    backgroundColor:
-                                                        themeColor('secondary'),
-                                                    borderRadius: 8,
-                                                    borderColor:
-                                                        themeColor('secondary'),
-                                                    marginHorizontal: 10,
-                                                    marginTop: 10,
-                                                    height: 40
-                                                }}
-                                                innerBorderStyle={{
-                                                    color: themeColor(
-                                                        'secondary'
-                                                    )
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-
-                                    {/* Connection Expiration (for all permission types) */}
-                                    <View style={styles.section}>
+                                {/* Budget Renewal */}
+                                {NostrConnectUtils.hasPaymentPermissions(
+                                    selectedPermissions
+                                ) && (
+                                    <View
+                                        style={[
+                                            styles.renewalContainer,
+                                            { marginTop: 10 }
+                                        ]}
+                                    >
                                         <View
                                             style={styles.sectionTitleContainer}
                                         >
                                             <Body bold>
                                                 {localeString(
-                                                    'views.Settings.NostrWalletConnect.connectionExpiration'
+                                                    'views.Settings.NostrWalletConnect.budgetRenewal'
                                                 )}
                                             </Body>
                                         </View>
-                                        <View
-                                            style={
-                                                styles.sectionDescriptionContainer
-                                            }
-                                        >
-                                            <Body small color="secondaryText">
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.connectionExpirationDescription'
-                                                )}
-                                            </Body>
-                                        </View>
-
                                         <ButtonGroup
                                             onPress={(
                                                 selectedIndex: number
                                             ) => {
-                                                this.selectExpiryPreset(
-                                                    selectedIndex
+                                                this.updateStateWithChangeTracking(
+                                                    {
+                                                        selectedBudgetRenewalIndex:
+                                                            selectedIndex
+                                                    }
                                                 );
                                             }}
                                             selectedIndex={
-                                                selectedExpiryPresetIndex
+                                                selectedBudgetRenewalIndex
                                             }
-                                            buttons={expiryPresetButtons}
+                                            buttons={budgetRenewalButtons}
                                             selectedButtonStyle={{
                                                 backgroundColor:
                                                     themeColor('highlight'),
@@ -1473,69 +1411,121 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                 color: themeColor('secondary')
                                             }}
                                         />
+                                    </View>
+                                )}
 
-                                        {/* Custom Expiry Input */}
-                                        {showCustomExpiryInput && (
+                                {/* Connection Expiration (for all permission types) */}
+                                <View style={styles.section}>
+                                    <View style={styles.sectionTitleContainer}>
+                                        <Body bold>
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.connectionExpiration'
+                                            )}
+                                        </Body>
+                                    </View>
+                                    <View
+                                        style={
+                                            styles.sectionDescriptionContainer
+                                        }
+                                    >
+                                        <Body small color="secondaryText">
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.connectionExpirationDescription'
+                                            )}
+                                        </Body>
+                                    </View>
+
+                                    <ButtonGroup
+                                        onPress={(selectedIndex: number) => {
+                                            this.selectExpiryPreset(
+                                                selectedIndex
+                                            );
+                                        }}
+                                        selectedIndex={
+                                            selectedExpiryPresetIndex
+                                        }
+                                        buttons={expiryPresetButtons}
+                                        selectedButtonStyle={{
+                                            backgroundColor:
+                                                themeColor('highlight'),
+                                            borderRadius: 8
+                                        }}
+                                        containerStyle={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 8,
+                                            borderColor:
+                                                themeColor('secondary'),
+                                            marginHorizontal: 10,
+                                            marginTop: 10,
+                                            height: 40
+                                        }}
+                                        innerBorderStyle={{
+                                            color: themeColor('secondary')
+                                        }}
+                                    />
+
+                                    {/* Custom Expiry Input */}
+                                    {showCustomExpiryInput && (
+                                        <View
+                                            style={{
+                                                marginHorizontal: 10,
+                                                marginTop: 10
+                                            }}
+                                        >
                                             <View
                                                 style={{
-                                                    marginHorizontal: 10,
-                                                    marginTop: 10
+                                                    flexDirection: 'row',
+                                                    gap: 8
                                                 }}
                                             >
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        gap: 8
-                                                    }}
-                                                >
-                                                    <TextInput
-                                                        placeholder={'1-999'}
-                                                        value={customExpiryValue?.toString()}
-                                                        onChangeText={
-                                                            this
-                                                                .handleCustomExpiryValueChange
+                                                <TextInput
+                                                    placeholder={'1-999'}
+                                                    value={customExpiryValue?.toString()}
+                                                    onChangeText={
+                                                        this
+                                                            .handleCustomExpiryValueChange
+                                                    }
+                                                    keyboardType="numeric"
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <View style={{ flex: 1 }}>
+                                                    <DropdownSetting
+                                                        selectedValue={
+                                                            customExpiryUnit
                                                         }
-                                                        keyboardType="numeric"
-                                                        style={{ flex: 1 }}
-                                                    />
-                                                    <View style={{ flex: 1 }}>
-                                                        <DropdownSetting
-                                                            selectedValue={
-                                                                customExpiryUnit
-                                                            }
-                                                            values={NostrConnectUtils.TIME_UNITS.map(
-                                                                (unit) => ({
-                                                                    key: unit,
-                                                                    value: unit
-                                                                })
-                                                            )}
-                                                            onValueChange={(
-                                                                value: string
-                                                            ) => {
-                                                                const newExpiryDate =
-                                                                    NostrConnectUtils.getExpiryDateFromPreset(
-                                                                        selectedExpiryPresetIndex,
-                                                                        customExpiryValue ||
-                                                                            undefined,
-                                                                        value as TimeUnit
-                                                                    );
-
-                                                                this.updateStateWithChangeTracking(
-                                                                    {
-                                                                        customExpiryUnit:
-                                                                            value as TimeUnit,
-                                                                        expiresAt:
-                                                                            newExpiryDate
-                                                                    }
+                                                        values={NostrConnectUtils.TIME_UNITS.map(
+                                                            (unit) => ({
+                                                                key: unit,
+                                                                value: unit
+                                                            })
+                                                        )}
+                                                        onValueChange={(
+                                                            value: string
+                                                        ) => {
+                                                            const newExpiryDate =
+                                                                NostrConnectUtils.getExpiryDateFromPreset(
+                                                                    selectedExpiryPresetIndex,
+                                                                    customExpiryValue ||
+                                                                        undefined,
+                                                                    value as TimeUnit
                                                                 );
-                                                            }}
-                                                        />
-                                                    </View>
+
+                                                            this.updateStateWithChangeTracking(
+                                                                {
+                                                                    customExpiryUnit:
+                                                                        value as TimeUnit,
+                                                                    expiresAt:
+                                                                        newExpiryDate
+                                                                }
+                                                            );
+                                                        }}
+                                                    />
                                                 </View>
                                             </View>
-                                        )}
-                                    </View>
-                                </>
+                                        </View>
+                                    )}
+                                </View>
                             </Accordion>
                         </View>
                     </ScrollView>

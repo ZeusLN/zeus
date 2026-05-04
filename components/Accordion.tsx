@@ -10,8 +10,9 @@ import {
     StyleProp
 } from 'react-native';
 import Animated, {
+    Easing,
     useAnimatedStyle,
-    useDerivedValue,
+    useAnimatedReaction,
     useSharedValue,
     withTiming,
     interpolate,
@@ -24,7 +25,20 @@ import KeyValue from './KeyValue';
 import { Row } from './layout/Row';
 import { themeColor } from '../utils/ThemeUtils';
 
-const ANIMATION_DURATION_MS = 400;
+const MIN_DURATION_MS = 220;
+const MAX_DURATION_MS = 420;
+const EASING = Easing.bezier(0.25, 0.1, 0.25, 1); // gentle ease-in-out
+
+function getAnimationDuration(contentHeight: number): number {
+    'worklet';
+    // ~0.6ms per pixel, clamped to [220, 420]
+    return Math.round(
+        Math.min(
+            MAX_DURATION_MS,
+            Math.max(MIN_DURATION_MS, contentHeight * 0.6 + 160)
+        )
+    );
+}
 
 const formHeaderBase: ViewStyle = {
     paddingHorizontal: 0,
@@ -52,23 +66,44 @@ type AccordionItemProps = {
 
 function AccordionItem({ isExpanded, children, viewKey }: AccordionItemProps) {
     const height = useSharedValue(0);
+    const animatedHeight = useSharedValue(0);
 
-    const derivedHeight = useDerivedValue(() =>
-        withTiming(height.value * Number(isExpanded.value), {
-            duration: ANIMATION_DURATION_MS
-        })
+    useAnimatedReaction(
+        () => ({ isOpen: isExpanded.value, h: height.value }),
+        (current, previous) => {
+            if (current.h === 0) return; // not measured yet
+
+            const target = current.isOpen ? current.h : 0;
+
+            if (previous === null || previous.h === 0) {
+                // First time we have a real measurement: snap, no animation
+                animatedHeight.value = target;
+                return;
+            }
+
+            if (current.isOpen !== previous.isOpen) {
+                // User toggled: run the timed animation
+                animatedHeight.value = withTiming(target, {
+                    duration: getAnimationDuration(current.h),
+                    easing: EASING
+                });
+            } else if (current.h !== previous.h && current.isOpen) {
+                animatedHeight.value = current.h;
+            }
+        }
     );
 
-    const bodyStyle = useAnimatedStyle(() => {
-        const safeHeight = Math.max(height.value, 1);
-        return {
-            height: derivedHeight.value,
-            opacity:
-                height.value === 0
-                    ? 0
-                    : interpolate(derivedHeight.value, [0, safeHeight], [0, 1])
-        };
-    });
+    const bodyStyle = useAnimatedStyle(() => ({
+        height: animatedHeight.value,
+        opacity:
+            height.value === 0
+                ? 0
+                : interpolate(
+                      animatedHeight.value,
+                      [0, Math.max(height.value, 1)],
+                      [0, 1]
+                  )
+    }));
 
     const handleLayout = useCallback(
         (e: LayoutChangeEvent) => {
