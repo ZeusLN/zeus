@@ -354,7 +354,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } else if (nextAppState === 'active') {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
-            } else {
+            } else if (this.props.navigation.isFocused()) {
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
@@ -455,7 +455,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (shareIntentData) {
                     this.setState({ pendingShareIntent: shareIntentData });
                 }
-                await this.fetchData(true, transientRetryCount);
+                await this.fetchData(transientRetryCount);
             } else if (loginRequired) {
                 navigation.navigate('Lockscreen', { shareIntentData });
             } else if (
@@ -487,7 +487,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (shareIntentData) {
                     this.setState({ pendingShareIntent: shareIntentData });
                 }
-                await this.fetchData(true, transientRetryCount);
+                await this.fetchData(transientRetryCount);
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
                 // to prevent interference when user is on other screens
@@ -509,10 +509,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }, 100);
     }
 
-    async fetchData(
-        skipHandleInitialUrl: boolean = false,
-        transientRetryCount = 0
-    ) {
+    async fetchData(transientRetryCount = 0) {
         const {
             AlertStore,
             NodeInfoStore,
@@ -1305,13 +1302,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.setState({
                 initialLoad: false
             });
-            SettingsStore.fetchLock = false;
-            if (!skipHandleInitialUrl) {
+            if (!this.state.pendingShareIntent) {
                 LinkingUtils.handleInitialUrl(this.props.navigation);
             }
         }
 
         SettingsStore.fetchLock = false;
+
+        // Process any deep link that was deferred while login was required
+        LinkingUtils.processPendingDeepLink(this.props.navigation);
 
         // Process pending share intent after wallet is fully loaded and synced
         this.processPendingShareIntent();
