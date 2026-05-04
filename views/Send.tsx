@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    AppState,
     FlatList,
     Image,
     NativeModules,
@@ -134,6 +135,7 @@ interface SendState {
 export default class Send extends React.Component<SendProps, SendState> {
     listener: any;
     private backPressSubscription: NativeEventSubscription;
+    private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
     private previousSatAmount: string | number = '0';
 
@@ -302,7 +304,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     async componentDidMount() {
         const { SettingsStore, route } = this.props;
         const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        await getSettings();
 
         if (route.params?.fromGraphSync) {
             clearPendingPaymentData().catch((error) => {
@@ -313,14 +315,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
         }
 
-        if (settings.privacy && settings.privacy.clipboard) {
-            const clipboard = await Clipboard.getString();
-            if (await isClipboardValue(clipboard)) {
-                this.setState({
-                    clipboard
-                });
-            }
-        }
+        await this.readClipboard();
 
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
@@ -331,14 +326,39 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.backPressed.bind(this)
         );
 
+        this.appStateSubscription = AppState.addEventListener(
+            'change',
+            (nextAppState) => {
+                if (nextAppState === 'active') {
+                    this.readClipboard();
+                }
+            }
+        );
+
         const nfcSupported = await NfcManager.isSupported();
         this.setState({ nfcSupported });
     }
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
+        this.appStateSubscription?.remove();
         if (this.listener && this.listener.stop) this.listener.stop();
     }
+
+    readClipboard = async () => {
+        const { SettingsStore } = this.props;
+        const settings = SettingsStore.settings;
+        let clipboard = '';
+
+        if (settings.privacy?.clipboard) {
+            const value = await Clipboard.getString();
+            if (value && (await isClipboardValue(value))) {
+                clipboard = value;
+            }
+        }
+
+        this.setState({ clipboard });
+    };
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
@@ -1611,15 +1631,26 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {!!clipboard && !destination && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('general.paste')}
-                                onPress={() => this.validateAddress(clipboard)}
-                                secondary
-                            />
-                        </View>
-                    )}
+                    {(!!clipboard ||
+                        !SettingsStore.settings.privacy?.clipboard) &&
+                        !destination && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.paste')}
+                                    onPress={async () => {
+                                        if (clipboard) {
+                                            this.validateAddress(clipboard);
+                                        } else {
+                                            const value =
+                                                await Clipboard.getString();
+                                            if (value)
+                                                this.validateAddress(value);
+                                        }
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                        )}
 
                     {destination && !transactionType && (
                         <View style={styles.button}>
