@@ -577,6 +577,9 @@ export default class CashuStore {
     @action
     public fetchMintInfo = async (mintUrl: string) => {
         try {
+            if (this.mintInfos[mintUrl]) {
+                return this.mintInfos[mintUrl];
+            }
             const mintInfo = await Promise.race([
                 CashuDevKit.fetchMintInfo(mintUrl),
                 new Promise<never>((_, reject) =>
@@ -1222,6 +1225,8 @@ export default class CashuStore {
         this.clearPayReq();
         this.shownThresholdModals = [];
         this.addedMintsCache.clear();
+        this.mintInfos = {};
+        this.mintInfoCache.clear();
         this.originalSeedVersion = undefined;
         this.offlinePendingTokens = [];
         this.offlinePendingBalance = 0;
@@ -2725,15 +2730,8 @@ export default class CashuStore {
                     )
                 );
 
-                // Sync balances and fetch mint info from CDK
+                // Sync balances from CDK
                 await this.syncCDKBalances(true); // Include transactions on init
-                if (!this.isOffline) {
-                    await Promise.all(
-                        this.mintUrls.map((mintUrl) =>
-                            this.fetchMintInfo(mintUrl)
-                        )
-                    );
-                }
 
                 // Enrich tokens with proofs if missing (migration for old tokens)
                 await this.enrichTokensWithProofs();
@@ -2791,15 +2789,10 @@ export default class CashuStore {
                     // Keep -pubkey for display purposes
                 }
 
-                // Only re-sync balances and mint info if proofs were actually
+                // Only re-sync balances if proofs were actually
                 // migrated from local storage into CDK during cleanup above
                 if (proofsMigrated) {
                     await this.syncCDKBalances(true);
-                    await Promise.all(
-                        this.mintUrls.map((mintUrl) =>
-                            this.fetchMintInfo(mintUrl)
-                        )
-                    );
                     await this.enrichTokensWithProofs();
                 }
 
@@ -2896,6 +2889,15 @@ export default class CashuStore {
             }
         } catch (e) {
             console.error('Error adding initial mints:', e);
+        }
+
+        // Fetch mint info in background after initialization (skip when offline)
+        if (!this.isOffline) {
+            Promise.all(
+                this.mintUrls.map((mintUrl) => this.fetchMintInfo(mintUrl))
+            ).catch((e) =>
+                console.error('CDK: Background mint info fetch failed:', e)
+            );
         }
 
         // Check status of pending items after initialization (skip when offline)
