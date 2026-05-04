@@ -782,6 +782,7 @@
     "views.OpenChannel.peerSuccess": "Successfully connected to peer",
     "views.OpenChannel.channelSuccess": "Successfully opened channel",
     "views.OpenChannel.channelsSuccess": "Successfully opened channels",
+    "views.OpenChannel.openedChannelNote": "Opened channel",
     "views.OpenChannel.viewStatus": "View status",
     "views.OpenChannel.openChannelToPeer": "Open channel to this peer",
     "views.OpenChannel.channelPendingNote": "The channel will be available once the funding transaction has enough confirmations.",
