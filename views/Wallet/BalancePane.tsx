@@ -213,16 +213,18 @@ export default class BalancePane extends React.PureComponent<
                 )}
                 {pendingOpenBalance > 0 ? (
                     <>
-                        <Amount
-                            sats={pendingOpenBalance}
-                            sensitive
-                            jumboText
-                            toggleable
-                            pending
-                            onPendingPress={() =>
-                                this.handlePendingPress('lightning')
-                            }
-                        />
+                        <View style={styles.pendingAmountSpacing}>
+                            <Amount
+                                sats={pendingOpenBalance}
+                                sensitive
+                                jumboText
+                                toggleable
+                                pending
+                                onPendingPress={() =>
+                                    this.handlePendingPress('lightning')
+                                }
+                            />
+                        </View>
                         <View style={styles.conversion}>
                             <Conversion
                                 sats={lightningBalance}
@@ -242,16 +244,18 @@ export default class BalancePane extends React.PureComponent<
             const hasAnyPending = hasOnchainPending;
             const renderPendingBalance = (sats: string | number) => (
                 <>
-                    <Amount
-                        sats={sats}
-                        sensitive
-                        jumboText
-                        toggleable
-                        pending
-                        onPendingPress={() =>
-                            this.handlePendingPress('onchain')
-                        }
-                    />
+                    <View style={styles.pendingAmountSpacing}>
+                        <Amount
+                            sats={sats}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                            onPendingPress={() =>
+                                this.handlePendingPress('onchain')
+                            }
+                        />
+                    </View>
                     <View style={styles.conversionSecondary}>
                         <Conversion
                             sats={combinedBalanceValue}
@@ -278,18 +282,20 @@ export default class BalancePane extends React.PureComponent<
                     {hasOnchainPending &&
                         renderPendingBalance(pendingUnconfirmedBalance)}
                     {cashuOfflinePendingBalance > 0 && (
-                        <Amount
-                            sats={cashuOfflinePendingBalance}
-                            sensitive
-                            jumboText
-                            toggleable
-                            pending
-                            onPendingPress={() =>
-                                this.setState({
-                                    showOfflinePendingModal: true
-                                })
-                            }
-                        />
+                        <View style={styles.pendingAmountSpacing}>
+                            <Amount
+                                sats={cashuOfflinePendingBalance}
+                                sensitive
+                                jumboText
+                                toggleable
+                                pending
+                                onPendingPress={() =>
+                                    this.setState({
+                                        showOfflinePendingModal: true
+                                    })
+                                }
+                            />
+                        </View>
                     )}
                 </View>
             );
@@ -1202,11 +1208,11 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     conversion: {
-        top: 10,
+        marginTop: 10,
         alignItems: 'center'
     },
     conversionSecondary: {
-        top: 3,
+        marginTop: 8,
         alignItems: 'center'
     },
     balancePaneContainer: {
@@ -1321,6 +1327,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingVertical: 12,
         marginTop: 20
+    },
+    pendingAmountSpacing: {
+        marginTop: 6
     },
     balanceContainer: {
         marginTop: 60,
