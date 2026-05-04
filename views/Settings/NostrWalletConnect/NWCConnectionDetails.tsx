@@ -16,6 +16,7 @@ import { Body } from '../../../components/text/Body';
 import Button from '../../../components/Button';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import KeyValue from '../../../components/KeyValue';
+import Amount from '../../../components/Amount';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import ModalStore from '../../../stores/ModalStore';
@@ -414,21 +415,44 @@ export default class NWCConnectionDetails extends React.Component<
                                                   )
                                         }
                                     />
-                                    {connection.maxAmountSats && (
+                                    {connection.maxAmountSats ? (
                                         <KeyValue
                                             keyValue={localeString(
                                                 'views.Settings.NostrWalletConnect.budget'
                                             )}
-                                            value={`${connection.maxAmountSats.toLocaleString()} ${localeString(
-                                                'general.sats'
-                                            )}${
-                                                connection.budgetRenewal !==
-                                                'never'
-                                                    ? ` (${connection.budgetRenewal})`
-                                                    : ''
-                                            }`}
+                                            value={
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        flexShrink: 1,
+                                                        gap: 4
+                                                    }}
+                                                >
+                                                    <Amount
+                                                        sats={
+                                                            connection.maxAmountSats
+                                                        }
+                                                        toggleable
+                                                    />
+                                                    {connection.budgetRenewal !==
+                                                        'never' && (
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {`(${connection.budgetRenewal})`}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                            }
                                         />
-                                    )}
+                                    ) : null}
 
                                     {connection.maxAmountSats && (
                                         <>
@@ -436,18 +460,29 @@ export default class NWCConnectionDetails extends React.Component<
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.totalSpent'
                                                 )}
-                                                value={`${connection.totalSpendSats.toLocaleString()} ${localeString(
-                                                    'general.sats'
-                                                )}`}
+                                                value={
+                                                    <Amount
+                                                        sats={
+                                                            connection.totalSpendSats
+                                                        }
+                                                        toggleable
+                                                        debit
+                                                    />
+                                                }
                                             />
 
                                             <KeyValue
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.remainingBudget'
                                                 )}
-                                                value={`${connection.remainingBudget.toLocaleString()} ${localeString(
-                                                    'general.sats'
-                                                )}`}
+                                                value={
+                                                    <Amount
+                                                        sats={
+                                                            connection.remainingBudget
+                                                        }
+                                                        toggleable
+                                                    />
+                                                }
                                             />
                                         </>
                                     )}
