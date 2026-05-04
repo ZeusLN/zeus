@@ -8,6 +8,17 @@ import { settingsStore } from '../stores/Stores';
 
 class LinkingUtils {
     private shareIntentProcessed = false;
+    private pendingDeepLink: string | null = null;
+
+    processPendingDeepLink = (
+        navigation: NativeStackNavigationProp<any, any>
+    ) => {
+        if (this.pendingDeepLink) {
+            const url = this.pendingDeepLink;
+            this.pendingDeepLink = null;
+            this.handleDeepLink(url, navigation);
+        }
+    };
 
     handleInitialUrl = (navigation: NativeStackNavigationProp<any, any>) =>
         Linking.getInitialURL().then(async (url) => {
@@ -94,6 +105,11 @@ class LinkingUtils {
         url: string,
         navigation: NativeStackNavigationProp<any, any>
     ) => {
+        if (settingsStore.loginRequired()) {
+            this.pendingDeepLink = url;
+            return;
+        }
+
         if (url.startsWith('nostr:')) {
             Linking.openURL(url);
         } else {
