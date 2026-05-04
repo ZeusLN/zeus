@@ -106,20 +106,53 @@ export default class Networking extends React.Component<NetworkingProps> {
                         )}
                     </Text>
 
-                    <View style={{ marginTop: 30, marginBottom: 20 }}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.Networking.resetOfflineDetection'
-                            )}
-                            onPress={() => {
-                                ConnectivityStore.reset();
-                                if (!disableOfflineCheck) {
-                                    ConnectivityStore.start();
-                                }
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            marginTop: 30
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontSize: 17,
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
-                            secondary
-                        />
+                        >
+                            {`${localeString('general.status')}: `}
+                        </Text>
+                        <Text
+                            style={{
+                                color: ConnectivityStore.isOffline
+                                    ? themeColor('error')
+                                    : themeColor('success'),
+                                fontSize: 17,
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {ConnectivityStore.isOffline
+                                ? localeString('general.offline')
+                                : localeString('general.online')}
+                        </Text>
                     </View>
+
+                    {ConnectivityStore.isOffline && (
+                        <View style={{ marginTop: 15, marginBottom: 20 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.Networking.resetOfflineDetection'
+                                )}
+                                onPress={() => {
+                                    ConnectivityStore.reset();
+                                    if (!disableOfflineCheck) {
+                                        ConnectivityStore.start();
+                                    }
+                                }}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </ScrollView>
             </Screen>
         );
