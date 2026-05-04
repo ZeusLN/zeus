@@ -50,6 +50,7 @@ import { retry } from '../utils/SleepUtils';
 import NWCConnection, {
     BudgetRenewalType,
     ConnectionActivity,
+    ConnectionActivityStatus,
     ConnectionActivityType,
     ConnectionPaymentSourceType,
     ConnectionWarningType,
@@ -567,7 +568,7 @@ export default class NostrWalletConnectStore {
      * @param connectionId The unique identifier of the connection to update.
      * @param updates Partial object containing the fields to update.
      * @returns Promise<boolean> - True if update was successful, false otherwise.
-     * @throws Error if the connection is not found or update fails.
+     * @throws Error if the connection is not found, name is invalid or duplicate, or update fails.
      */
     @action
     public updateConnection = async (
@@ -585,6 +586,28 @@ export default class NostrWalletConnectStore {
                         'stores.NostrWalletConnectStore.error.connectionNotFound'
                     )
                 );
+            }
+            if (updates.name !== undefined) {
+                const newName =
+                    typeof updates.name === 'string' ? updates.name.trim() : '';
+                if (!newName) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.connectionNameRequired'
+                        )
+                    );
+                }
+                const { connection: sameName } = this.getConnection({
+                    connectionName: newName
+                });
+                if (sameName && sameName.id !== connectionId) {
+                    throw new Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.connectionNameExists'
+                        )
+                    );
+                }
+                updates.name = newName;
             }
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
@@ -1316,9 +1339,9 @@ export default class NostrWalletConnectStore {
     }: {
         connection: NWCConnection;
         request: Nip47MakeInvoiceRequest;
-        status: 'pending' | 'success' | 'failed';
-        type: 'make_invoice' | 'pay_invoice';
-        payment_source: 'cashu' | 'lightning';
+        status: ConnectionActivityStatus;
+        type: ConnectionActivityType;
+        payment_source: ConnectionPaymentSourceType;
         paymentRequest: string;
         rHash?: string;
     }): Promise<{ result: Nip47Transaction; error: undefined }> {
@@ -1693,7 +1716,7 @@ export default class NostrWalletConnectStore {
                         'pay_invoice',
                         amountSats,
                         'lightning',
-                        paymentError.error?.message || 'Payment failed',
+                        paymentError.error?.message,
                         request.invoice
                     );
             return paymentError;
@@ -1840,8 +1863,8 @@ export default class NostrWalletConnectStore {
                         connection,
                         'pay_invoice',
                         amount,
-                        'lightning',
-                        this.cashuStore.paymentErrorMsg || 'Payment failed',
+                        'cashu',
+                        this.cashuStore.paymentErrorMsg,
                         request.invoice
                     );
             return NostrConnectUtils.createNip47Error(
@@ -2110,7 +2133,7 @@ export default class NostrWalletConnectStore {
         type: ConnectionActivityType,
         amountSats: number,
         payment_source: ConnectionPaymentSourceType,
-        errorMessage: string,
+        errorMessage: string = localeString('error.paymentFailed'),
         paymentHash?: string
     ): Promise<void> {
         const index = connection.activity.findIndex((conn) => conn.id === id);
