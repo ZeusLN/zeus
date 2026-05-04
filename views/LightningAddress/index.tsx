@@ -417,7 +417,7 @@ export default class LightningAddress extends React.Component<
                                                 }}
                                             >
                                                 {`${localeString(
-                                                    'views.Transaction.status'
+                                                    'general.status'
                                                 )}: `}
                                             </Text>
                                             <Text
