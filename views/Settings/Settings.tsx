@@ -15,7 +15,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
-import NetworkingIcon from '../../assets/images/SVG/Sync.svg';
+import NetworkingIcon from '../../assets/images/SVG/Network.svg';
 import CurrencyIcon from '../../assets/images/SVG/Bitcoin.svg';
 import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
@@ -411,8 +411,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             <View style={styles.icon}>
                                 <NetworkingIcon
                                     fill={themeColor('text')}
-                                    width={26}
-                                    height={26}
+                                    width={22}
+                                    height={22}
                                 />
                             </View>
                             <Text
