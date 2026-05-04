@@ -315,10 +315,41 @@ export default class CashuStore {
 
         try {
             // Get mnemonic from seed derivation
-            const mnemonic = this.getCDKMnemonic();
+            let mnemonic = this.getCDKMnemonic();
             if (!mnemonic) {
-                console.error('CDK: Unable to derive mnemonic');
-                return false;
+                // Remote nodes have no wallet seed to derive from.
+                // Generate and persist a mnemonic so CDK can operate
+                // and recover funds if a flow is interrupted.
+                mnemonic = bip39scure.generateMnemonic(BIP39_WORD_LIST, 128);
+                const derivedSeedPhrase = mnemonic.split(' ');
+                const nodeDir = this.getNodeDir();
+
+                // Set in-memory state first so ensureSeed() / deriveCashuPubkey()
+                // work even if Keychain storage throws below
+                runInAction(() => {
+                    this.seedPhrase = derivedSeedPhrase;
+                    this.seedVersion = 'v2-bip39';
+                });
+
+                try {
+                    await Storage.setItem(
+                        nodeDir + '-cashu-seed-phrase',
+                        derivedSeedPhrase
+                    );
+                    await Storage.setItem(
+                        nodeDir + '-cashu-seed-version',
+                        'v2-bip39'
+                    );
+                } catch (storageErr) {
+                    console.warn(
+                        'CDK: Failed to persist mnemonic to Keychain, will retry on next launch:',
+                        storageErr
+                    );
+                }
+
+                console.log(
+                    'CDK: Generated and stored mnemonic for remote node'
+                );
             }
 
             await CashuDevKit.initializeWallet(mnemonic, 'sat');
@@ -3886,6 +3917,16 @@ export default class CashuStore {
                     value: String(tokenAmt)
                 });
 
+                if (!invoice?.paymentRequest) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        )
+                    };
+                }
+
                 // Create melt quote via CDK
                 const meltQuote = await this.createMeltQuoteCDK(
                     mintUrl,
@@ -3912,6 +3953,16 @@ export default class CashuStore {
                         )}]`,
                         value: receiveAmtSat.toString()
                     });
+
+                    if (!invoice?.paymentRequest) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            )
+                        };
+                    }
                 }
 
                 // Melt via CDK to pay the invoice
