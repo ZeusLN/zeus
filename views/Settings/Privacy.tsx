@@ -317,9 +317,7 @@ export default class Privacy extends React.Component<
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
                                 infoModalText={localeString(
-                                    Platform.OS === 'android'
-                                        ? 'views.Settings.Privacy.screenCaptureProtection.explainer.android'
-                                        : 'views.Settings.Privacy.screenCaptureProtection.explainer.ios'
+                                    'views.Settings.Privacy.screenCaptureProtection.explainer'
                                 )}
                             >
                                 {localeString(
