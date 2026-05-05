@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
+import DropdownSetting from '../../../components/DropdownSetting';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import TextInput from '../../../components/TextInput';
@@ -15,8 +16,11 @@ import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import {
     getDefaultRgsServer,
+    getRgsServersForNetwork,
     SupportedNetwork
 } from '../../../utils/LdkNodeUtils';
+
+const CUSTOM_VALUE = '__custom__';
 
 interface RapidGossipSyncProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -24,7 +28,8 @@ interface RapidGossipSyncProps {
 }
 
 interface RapidGossipSyncState {
-    rgsServer: string;
+    selectedValue: string;
+    customServer: string;
     savedRgsServer: string;
 }
 
@@ -34,10 +39,27 @@ export default class RapidGossipSync extends React.Component<
     RapidGossipSyncProps,
     RapidGossipSyncState
 > {
-    state = {
-        rgsServer: this.props.SettingsStore.ldkRgsServer || '',
-        savedRgsServer: this.props.SettingsStore.ldkRgsServer || ''
-    };
+    constructor(props: RapidGossipSyncProps) {
+        super(props);
+
+        const { SettingsStore } = props;
+        const saved = SettingsStore.ldkRgsServer || '';
+        const network =
+            (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
+            'mainnet';
+        const servers = getRgsServersForNetwork(network);
+        const presetUrls = servers.map((s) => s.value);
+
+        const isPreset = saved === '' || presetUrls.includes(saved);
+
+        this.state = {
+            selectedValue: isPreset
+                ? saved || servers[0]?.value || ''
+                : CUSTOM_VALUE,
+            customServer: isPreset ? '' : saved,
+            savedRgsServer: isPreset ? saved || servers[0]?.value || '' : saved
+        };
+    }
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
@@ -55,18 +77,38 @@ export default class RapidGossipSync extends React.Component<
         }
     };
 
+    getEffectiveServer = (): string => {
+        const { selectedValue, customServer } = this.state;
+        return selectedValue === CUSTOM_VALUE ? customServer : selectedValue;
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { rgsServer, savedRgsServer } = this.state;
+        const { selectedValue, customServer, savedRgsServer } = this.state;
         const { ldkNetwork } = SettingsStore;
 
-        const defaultServer = getDefaultRgsServer(
-            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet'
-        );
+        const network =
+            (ldkNetwork?.toLowerCase() as SupportedNetwork) || 'mainnet';
+        const servers = getRgsServersForNetwork(network);
+        const defaultServer = getDefaultRgsServer(network);
+        const defaultServerLabel =
+            servers.find((s) => s.value === defaultServer)?.key ||
+            defaultServer;
 
-        const showReset = rgsServer !== '' && rgsServer !== defaultServer;
+        const dropdownValues = [
+            ...servers,
+            {
+                key: localeString('general.custom'),
+                value: CUSTOM_VALUE
+            }
+        ];
 
-        const hasUnsavedChanges = rgsServer !== savedRgsServer;
+        const effectiveServer = this.getEffectiveServer();
+        const hasUnsavedChanges =
+            effectiveServer !== savedRgsServer &&
+            !(selectedValue === CUSTOM_VALUE && customServer.trim() === '');
+        const showReset =
+            effectiveServer !== '' && effectiveServer !== defaultServer;
 
         return (
             <Screen>
@@ -99,27 +141,38 @@ export default class RapidGossipSync extends React.Component<
                             </Text>
                         </View>
 
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {localeString(
+                        <DropdownSetting
+                            title={localeString(
                                 'views.Settings.EmbeddedNode.RapidGossipSync.serverUrl'
                             )}
-                        </Text>
-                        <TextInput
-                            value={rgsServer}
-                            placeholder={defaultServer || ''}
-                            onChangeText={(text: string) => {
+                            selectedValue={selectedValue}
+                            onValueChange={(value: string) => {
                                 this.setState({
-                                    rgsServer: text
+                                    selectedValue: value,
+                                    customServer:
+                                        value === CUSTOM_VALUE
+                                            ? customServer
+                                            : ''
                                 });
                             }}
-                            autoCapitalize="none"
-                            autoCorrect={false}
+                            values={dropdownValues}
                         />
+
+                        {selectedValue === CUSTOM_VALUE && (
+                            <TextInput
+                                value={customServer}
+                                placeholder={localeString(
+                                    'views.Settings.EmbeddedNode.RapidGossipSync.serverUrl'
+                                )}
+                                onChangeText={(text: string) => {
+                                    this.setState({
+                                        customServer: text
+                                    });
+                                }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        )}
 
                         <View style={{ marginTop: 10 }}>
                             <Text
@@ -132,7 +185,8 @@ export default class RapidGossipSync extends React.Component<
                                     'views.Settings.EmbeddedNode.defaultServer'
                                 )}
                                 :{' '}
-                                {defaultServer || localeString('general.none')}
+                                {defaultServerLabel ||
+                                    localeString('general.none')}
                             </Text>
                         </View>
 
@@ -143,7 +197,9 @@ export default class RapidGossipSync extends React.Component<
                                     accessibilityLabel={localeString(
                                         'general.save'
                                     )}
-                                    onPress={() => this.saveSettings(rgsServer)}
+                                    onPress={() =>
+                                        this.saveSettings(effectiveServer)
+                                    }
                                 />
                             </View>
                         )}
@@ -158,7 +214,8 @@ export default class RapidGossipSync extends React.Component<
                                     secondary
                                     onPress={async () => {
                                         this.setState({
-                                            rgsServer: defaultServer || ''
+                                            selectedValue: defaultServer || '',
+                                            customServer: ''
                                         });
                                         await this.saveSettings(
                                             defaultServer || ''

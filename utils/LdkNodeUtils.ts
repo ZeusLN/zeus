@@ -45,12 +45,19 @@ export const ESPLORA_SERVERS_MUTINYNET: EsploraServer[] = [
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
 // Default RGS (Rapid Gossip Sync) servers
-export const RGS_SERVERS_MAINNET = [
-    'https://rapidsync.lightningdevkit.org/snapshot'
+export const RGS_SERVERS_MAINNET: EsploraServer[] = [
+    { key: 'ZEUS', value: 'https://rgs.zeusln.com/snapshot' },
+    {
+        key: 'LDK (rapidsync.lightningdevkit.org)',
+        value: 'https://rapidsync.lightningdevkit.org/snapshot'
+    }
 ];
 
-export const RGS_SERVERS_TESTNET = [
-    'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+export const RGS_SERVERS_TESTNET: EsploraServer[] = [
+    {
+        key: 'LDK (rapidsync.lightningdevkit.org)',
+        value: 'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+    }
 ];
 
 // Default pathfinding scores server
@@ -127,19 +134,28 @@ export function getDefaultEsploraServer(network: SupportedNetwork): string {
 }
 
 /**
+ * Get all RGS servers for a network
+ */
+export function getRgsServersForNetwork(
+    network: SupportedNetwork
+): EsploraServer[] {
+    switch (network) {
+        case 'mainnet':
+            return RGS_SERVERS_MAINNET;
+        case 'testnet':
+            return RGS_SERVERS_TESTNET;
+        default:
+            return [];
+    }
+}
+
+/**
  * Get default RGS server for network
  */
 export function getDefaultRgsServer(
     network: SupportedNetwork
 ): string | undefined {
-    switch (network) {
-        case 'mainnet':
-            return RGS_SERVERS_MAINNET[0];
-        case 'testnet':
-            return RGS_SERVERS_TESTNET[0];
-        default:
-            return undefined;
-    }
+    return getRgsServersForNetwork(network)[0]?.value || undefined;
 }
 
 /**
@@ -429,6 +445,7 @@ export default {
     getNetworkType,
     getEsploraServersForNetwork,
     getDefaultEsploraServer,
+    getRgsServersForNetwork,
     getDefaultRgsServer,
     generateMnemonic,
     createLdkNodeWallet,
