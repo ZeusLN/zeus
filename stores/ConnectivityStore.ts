@@ -6,16 +6,20 @@ import NetInfo, {
 
 import SettingsStore from './SettingsStore';
 
-const REACHABILITY_POLL_INTERVAL = 15000; // 15s
-const OFFLINE_DEBOUNCE_MS = 10000; // 10s
+const POLL_INTERVAL = 15000; // 15s
+const VERIFY_TIMEOUT_MS = 5000;
 const DEFAULT_REACHABILITY_HOST = 'mempool.space';
+const FALLBACK_REACHABILITY_URLS = [
+    'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo',
+    'https://cloudflare.com/cdn-cgi/trace'
+];
 
 export default class ConnectivityStore {
     @observable public isOffline: boolean = false;
 
     private netInfoUnsubscribe: NetInfoSubscription | null = null;
-    private reachabilityInterval: ReturnType<typeof setInterval> | null = null;
-    private offlineDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private pollInterval: ReturnType<typeof setInterval> | null = null;
+    private verifyInFlight: boolean = false;
     private reconnectCallbacks: Array<() => void> = [];
     private settingsStore: SettingsStore;
 
@@ -31,7 +35,6 @@ export default class ConnectivityStore {
                 ? privacy.customBlockExplorer
                 : privacy?.defaultBlockExplorer || DEFAULT_REACHABILITY_HOST;
 
-        // Custom host may include scheme (e.g. http://mynode:3006#mempool.space)
         if (custom && host.indexOf('://') !== -1) {
             const hostUrl = host.split('#')[0];
             return `${hostUrl}/api/blocks/tip/height`;
@@ -44,48 +47,72 @@ export default class ConnectivityStore {
         this.reconnectCallbacks.push(callback);
     };
 
-    private clearDebounce = () => {
-        if (this.offlineDebounceTimer) {
-            clearTimeout(this.offlineDebounceTimer);
-            this.offlineDebounceTimer = null;
+    private probeUrl = async (url: string): Promise<boolean> => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+        try {
+            await fetch(url, {
+                method: 'HEAD',
+                signal: controller.signal
+            });
+            return true;
+        } catch {
+            return false;
+        } finally {
+            clearTimeout(timeout);
         }
     };
 
+    private verifyConnectivity = async (): Promise<boolean> => {
+        const urls = [this.getReachabilityUrl(), ...FALLBACK_REACHABILITY_URLS];
+        const results = await Promise.all(
+            urls.map((url) => this.probeUrl(url))
+        );
+        return results.some((ok) => ok);
+    };
+
+    /**
+     * Core logic: probe fallback URLs and update isOffline accordingly.
+     * Called by the poll interval and on NetInfo state changes.
+     */
+    private check = () => {
+        if (this.verifyInFlight) return;
+        this.verifyInFlight = true;
+        this.verifyConnectivity().then((online) => {
+            this.verifyInFlight = false;
+            const wasOffline = this.isOffline;
+            runInAction(() => {
+                this.isOffline = !online;
+            });
+            if (online && wasOffline) {
+                this.reconnectCallbacks.forEach((cb) => cb());
+            }
+        });
+    };
+
     private updateState = (state: NetInfoState) => {
-        // isConnected === false is a reliable native signal (airplane mode, no
-        // network interface) — surface immediately without debouncing
+        // isConnected === false is a reliable native signal — mark immediately
         if (state.isConnected === false) {
-            this.clearDebounce();
             runInAction(() => {
                 this.isOffline = true;
             });
             return;
         }
 
-        // isInternetReachable === false can be a false positive on Android when
-        // the JS reachability fetch fails transiently; debounce before surfacing
-        if (state.isInternetReachable === false) {
-            if (!this.offlineDebounceTimer) {
-                this.offlineDebounceTimer = setTimeout(() => {
-                    this.offlineDebounceTimer = null;
-                    runInAction(() => {
-                        this.isOffline = true;
-                    });
-                }, OFFLINE_DEBOUNCE_MS);
+        // isInternetReachable === true is reliable — mark online immediately
+        if (state.isInternetReachable === true) {
+            const wasOffline = this.isOffline;
+            runInAction(() => {
+                this.isOffline = false;
+            });
+            if (wasOffline) {
+                this.reconnectCallbacks.forEach((cb) => cb());
             }
             return;
         }
 
-        // Online — isConnected is not false and isInternetReachable is true or
-        // null (null = unknown, treat as online to avoid false positives)
-        this.clearDebounce();
-        const wasOffline = this.isOffline;
-        runInAction(() => {
-            this.isOffline = false;
-        });
-        if (wasOffline) {
-            this.reconnectCallbacks.forEach((cb) => cb());
-        }
+        // null or false — verify ourselves with fallback probes
+        this.check();
     };
 
     @action
@@ -101,11 +128,9 @@ export default class ConnectivityStore {
         });
 
         this.netInfoUnsubscribe = NetInfo.addEventListener(this.updateState);
-        // Poll every 15s so isInternetReachable gets re-evaluated
-        // after reconnect (the listener alone can leave it stale)
-        this.reachabilityInterval = setInterval(() => {
+        this.pollInterval = setInterval(() => {
             NetInfo.fetch().then(this.updateState);
-        }, REACHABILITY_POLL_INTERVAL);
+        }, POLL_INTERVAL);
     };
 
     @action
@@ -114,11 +139,10 @@ export default class ConnectivityStore {
             this.netInfoUnsubscribe();
             this.netInfoUnsubscribe = null;
         }
-        if (this.reachabilityInterval) {
-            clearInterval(this.reachabilityInterval);
-            this.reachabilityInterval = null;
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
         }
-        this.clearDebounce();
     };
 
     @action

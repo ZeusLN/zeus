@@ -3,7 +3,6 @@ import { View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
@@ -146,23 +145,6 @@ export default class Networking extends React.Component<
                                 : localeString('general.online')}
                         </Text>
                     </View>
-
-                    {ConnectivityStore.isOffline && (
-                        <View style={{ marginTop: 15, marginBottom: 20 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.Networking.resetOfflineDetection'
-                                )}
-                                onPress={() => {
-                                    ConnectivityStore.reset();
-                                    if (!disableOfflineCheck) {
-                                        ConnectivityStore.start();
-                                    }
-                                }}
-                                secondary
-                            />
-                        </View>
-                    )}
                 </ScrollView>
             </Screen>
         );
