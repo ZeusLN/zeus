@@ -200,7 +200,7 @@ const ClipboardBadge = ({
 }) => (
     <TouchableOpacity
         onPress={async () => {
-            const response = await handleAnything(clipboard);
+            const response = await handleAnything(clipboard.trim());
             const [route, props] = response;
             navigation.navigate(route, props);
         }}
