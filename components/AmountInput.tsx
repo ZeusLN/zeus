@@ -235,7 +235,7 @@ export default class AmountInput extends React.Component<
                                 opacity: locked ? 0.8 : 1
                             }
                         ]}
-                    >
+                >
                         <Text
                             style={[
                                 styles.amountText,
@@ -251,6 +251,48 @@ export default class AmountInput extends React.Component<
                             {formattedAmount}
                         </Text>
                     </TouchableOpacity>
+                    <TextInput
+                        keyboardType="numeric"
+                        placeholder={'0'}
+                        value={
+                            amount !== undefined
+                                ? amount
+                                : sats
+                                ? getAmount(sats)
+                                : undefined
+                        }
+                        onChangeText={(text: string) => {
+                            // remove spaces and non-numeric chars
+                            const formatted = text.replace(/[^\d.,]/g, '');
+                            const satAmount = getSatAmount(
+                                formatted,
+                                forceUnit
+                            );
+                            onAmountChange(formatted, satAmount);
+                            this.setState({ satAmount });
+                        }}
+                        locked={locked}
+                        prefix={
+                            effectiveUnits !== 'sats' &&
+                            (effectiveUnits === 'BTC'
+                                ? '₿'
+                                : !getSymbol().rtl
+                                ? getSymbol().symbol
+                                : null)
+                        }
+                        suffix={
+                            effectiveUnits === 'sats'
+                                ? effectiveUnits
+                                : getSymbol().rtl &&
+                                  effectiveUnits === 'fiat' &&
+                                  getSymbol().symbol
+                        }
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row'
+                        }}
+                        error={error}
+                    />
                     {!hideUnitChangeButton && !locked && (
                         <TouchableOpacity
                             onPress={() => this.onChangeUnits()}
