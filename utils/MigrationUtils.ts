@@ -445,6 +445,30 @@ class MigrationsUtils {
                 DEFAULT_SLIDE_TO_PAY_THRESHOLD;
         }
 
+        // migrate old default RGS server to new ZEUS RGS server
+        const MOD_KEY_RGS = 'rgs-default-zeus';
+        const modRgs = await EncryptedStorage.getItem(MOD_KEY_RGS);
+        if (!modRgs) {
+            const OLD_RGS_DEFAULT =
+                'https://rapidsync.lightningdevkit.org/snapshot';
+            const NEW_RGS_DEFAULT = 'https://rgs.zeusln.com/snapshot';
+            if (newSettings.nodes && Array.isArray(newSettings.nodes)) {
+                for (const node of newSettings.nodes) {
+                    const isMainnet =
+                        !node.ldkNetwork || node.ldkNetwork === 'mainnet';
+                    if (
+                        isMainnet &&
+                        (!node.ldkRgsServer ||
+                            node.ldkRgsServer === OLD_RGS_DEFAULT)
+                    ) {
+                        node.ldkRgsServer = NEW_RGS_DEFAULT;
+                    }
+                }
+            }
+            settingsStore.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY_RGS, 'true');
+        }
+
         return newSettings;
     }
 
