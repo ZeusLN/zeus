@@ -253,6 +253,7 @@ import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
 import AddMint from './views/Cashu/AddMint';
 import CashuToken from './views/Cashu/CashuToken';
+import CREQPayment from './views/Cashu/CREQPayment';
 import SendEcash from './views/Cashu/SendEcash';
 import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
@@ -1476,6 +1477,12 @@ export default class App extends React.PureComponent {
                                                             name="SendEcash" // @ts-ignore:next-line
                                                             component={
                                                                 SendEcash
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="CREQPayment" // @ts-ignore:next-line
+                                                            component={
+                                                                CREQPayment
                                                             }
                                                         />
                                                         <Stack.Screen
