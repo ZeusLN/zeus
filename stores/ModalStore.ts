@@ -17,6 +17,7 @@ export default class ModalStore {
     @observable public showNewChannelModal: boolean = false;
     @observable public showRatingModal: boolean = false;
     @observable public showRestoreChannelModal: boolean = false;
+    @observable public showScreenRecordingWarning: boolean = false;
     @observable public modalUrl: string;
     @observable public modalIsEmail: boolean = false;
     @observable public clipboardValue: string;
@@ -84,6 +85,11 @@ export default class ModalStore {
     @action
     public toggleAlertModal = (status: boolean) => {
         this.showAlertModal = status;
+    };
+
+    @action
+    public toggleScreenRecordingWarning = (status: boolean) => {
+        this.showScreenRecordingWarning = status;
     };
 
     @action

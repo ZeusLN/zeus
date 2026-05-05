@@ -11,6 +11,8 @@ import {
 import {
     AppState,
     BackHandler,
+    EmitterSubscription,
+    NativeEventEmitter,
     NativeEventSubscription,
     NativeModules,
     Platform,
@@ -64,6 +66,7 @@ import NewChannelModal from './components/Modals/NewChannelModal';
 import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
 import RatingModal from './components/Modals/RatingModal';
 import RestoreChannelModal from './components/Modals/RestoreChannelModal';
+import ScreenRecordingWarningModal from './components/Modals/ScreenRecordingWarningModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -324,6 +327,7 @@ const Stack = createNativeStackNavigator();
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription;
+    private screenRecordingSubscription?: EmitterSubscription;
     private navigation: any = null;
 
     private static SCREENS_WITH_CUSTOM_BACK_HANDLER = [
@@ -384,11 +388,24 @@ export default class App extends React.PureComponent {
             const protect = settings?.privacy?.screenCaptureProtection ?? false;
             NativeModules.MobileTools.setSecureFlag(protect).catch(() => {});
         });
+
+        if (Platform.OS === 'ios') {
+            const emitter = new NativeEventEmitter(NativeModules.MobileTools);
+            this.screenRecordingSubscription = emitter.addListener(
+                'ScreenRecordingStateChanged',
+                ({ isCapturing }: { isCapturing: boolean }) => {
+                    modalStore.toggleScreenRecordingWarning(isCapturing);
+                }
+            );
+        }
     }
 
     componentWillUnmount() {
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
+        }
+        if (this.screenRecordingSubscription) {
+            this.screenRecordingSubscription.remove();
         }
     }
 
@@ -1857,6 +1874,8 @@ export default class App extends React.PureComponent {
                                 <RatingModal />
                                 {/* @ts-ignore:next-line */}
                                 <RestoreChannelModal />
+                                {/* @ts-ignore:next-line */}
+                                <ScreenRecordingWarningModal />
                                 <CopiedToastHost />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
