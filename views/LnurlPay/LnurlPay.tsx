@@ -265,12 +265,23 @@ export default class LnurlPay extends React.Component<
                     CashuStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
 
-                        if (CashuStore.getPayReqError) {
+                        const payReqError = CashuStore.getPayReqError;
+                        const isInsufficientFunds =
+                            typeof payReqError === 'string' &&
+                            payReqError
+                                .toLowerCase()
+                                .includes(
+                                    localeString(
+                                        'stores.CashuStore.notEnoughFunds'
+                                    ).toLowerCase()
+                                );
+
+                        if (payReqError && !isInsufficientFunds) {
                             Alert.alert(
                                 localeString(
                                     'views.LnurlPay.LnurlPay.invalidInvoice'
                                 ),
-                                CashuStore.getPayReqError,
+                                payReqError,
                                 [
                                     {
                                         text: localeString('general.ok'),
