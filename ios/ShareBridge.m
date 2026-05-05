@@ -16,7 +16,6 @@
 }
 @end
 
-static UIWindow *_privacyOverlayWindow = nil;
 static RNSecureContainer *_secureTextField = nil;
 static UIView *_originalRootParent = nil;
 static NSUInteger _originalRootViewIndex = 0;
@@ -86,23 +85,13 @@ RCT_EXPORT_MODULE(MobileTools);
     _originalRootViewIndex = 0;
 }
 
-- (void)showOverlay {
-    if (!_privacyOverlayWindow) return;
-    _privacyOverlayWindow.hidden = NO;
-    [CATransaction flush];
-}
-
-- (void)hideOverlay {
-    if (!_privacyOverlayWindow) return;
-    _privacyOverlayWindow.hidden = YES;
-}
-
 - (void)screenCaptureChanged {
-    if ([UIScreen mainScreen].isCaptured) {
-        [self showOverlay];
-    } else {
-        [self hideOverlay];
-    }
+    [self sendEventWithName:@"ScreenRecordingStateChanged"
+                       body:@{@"isCapturing": @([UIScreen mainScreen].isCaptured)}];
+}
+
+- (NSArray<NSString *> *)supportedEvents {
+    return @[@"ScreenRecordingStateChanged"];
 }
 
 RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
@@ -114,19 +103,9 @@ RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
 
     if (enable) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (!_privacyOverlayWindow) {
-                UIViewController *vc = [[UIViewController alloc] init];
-                vc.view.backgroundColor = [UIColor blackColor];
-                _privacyOverlayWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-                _privacyOverlayWindow.backgroundColor = [UIColor blackColor];
-                _privacyOverlayWindow.windowLevel = UIWindowLevelStatusBar + 1;
-                _privacyOverlayWindow.rootViewController = vc;
-                _privacyOverlayWindow.userInteractionEnabled = NO;
-                _privacyOverlayWindow.hidden = YES;
-            }
             [self applySecureTextFieldHack];
             if ([UIScreen mainScreen].isCaptured) {
-                [self showOverlay];
+                [self screenCaptureChanged];
             }
         });
 
@@ -134,10 +113,10 @@ RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
                    name:UIScreenCapturedDidChangeNotification object:nil];
     } else {
         dispatch_async(dispatch_get_main_queue(), ^{
-            _privacyOverlayWindow.hidden = YES;
-            _privacyOverlayWindow = nil;
             [self removeSecureTextFieldHack];
         });
+        [self sendEventWithName:@"ScreenRecordingStateChanged"
+                           body:@{@"isCapturing": @NO}];
     }
 
     resolve(@(YES));
