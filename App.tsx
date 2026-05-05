@@ -506,7 +506,18 @@ export default class App extends React.PureComponent {
                                                                 null && {
                                                                 animation: (
                                                                     route.params as any
-                                                                ).animation
+                                                                ).animation,
+                                                                animationDuration:
+                                                                    (
+                                                                        route.params as any
+                                                                    )
+                                                                        .animation ===
+                                                                    'slide_from_bottom'
+                                                                        ? Platform.OS ===
+                                                                          'android'
+                                                                            ? 300
+                                                                            : 350
+                                                                        : undefined
                                                             })
                                                         })}
                                                         screenListeners={({
