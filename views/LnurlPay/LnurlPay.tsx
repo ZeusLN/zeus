@@ -57,6 +57,7 @@ interface LnurlPayState {
     lightningAddress: string;
     matchedContact: Contact | null;
     comment: string;
+    nickname: string;
     loading: boolean;
 }
 
@@ -88,6 +89,7 @@ export default class LnurlPay extends React.Component<
                 lightningAddress: '',
                 matchedContact: null,
                 comment: '',
+                nickname: '',
                 loading: false
             };
 
@@ -196,7 +198,8 @@ export default class LnurlPay extends React.Component<
             domain: lnurl.domain,
             lightningAddress: lightningAddress || '',
             matchedContact,
-            comment: ''
+            comment: '',
+            nickname: ''
         };
     }
 
@@ -205,15 +208,22 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
             this.props;
-        const { domain, comment, lightningAddress } = this.state;
+        const { domain, comment, nickname, lightningAddress } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
-        const qs = querystring.parse(u.query);
+        const qs = querystring.parse(u.query || '');
         qs.amount = Number(
             (parseFloat(satAmount.toString()) * 1000).toString()
         );
-        qs.comment = comment;
+        if (comment) {
+            qs.comment = comment;
+        }
+
+        if (nickname && lnurl.payerData && lnurl.payerData.name) {
+            qs.payerdata = JSON.stringify({ name: nickname });
+        }
+
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
@@ -372,6 +382,7 @@ export default class LnurlPay extends React.Component<
             lightningAddress,
             matchedContact,
             comment,
+            nickname,
             loading
         } = this.state;
 
@@ -567,6 +578,32 @@ export default class LnurlPay extends React.Component<
                                         this.setState({ comment: text });
                                     }}
                                     locked={loading}
+                                />
+                            </>
+                        ) : null}
+
+                        {lnurl.payerData && lnurl.payerData.name ? (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        marginTop: 10,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.LnurlPay.LnurlPay.nickname'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={nickname}
+                                    onChangeText={(text: string) => {
+                                        this.setState({ nickname: text });
+                                    }}
+                                    locked={loading}
+                                    placeholder={localeString(
+                                        'views.LnurlPay.LnurlPay.nicknamePlaceholder'
+                                    )}
                                 />
                             </>
                         ) : null}
