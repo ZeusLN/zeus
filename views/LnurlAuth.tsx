@@ -21,11 +21,12 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import {
+    ecdsaSignDERHex,
+    getCompressedPublicKeyHex
+} from '../utils/SigningUtils';
 import DropdownSetting from '../components/DropdownSetting';
 import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
-
-const EC = require('elliptic').ec;
-const ec = new EC('secp256k1');
 
 const LNURLAUTH_CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
@@ -125,19 +126,12 @@ export default class LnurlAuth extends React.Component<
                     .update(Base64Utils.stringToUint8Array(this.state.domain))
                     .digest();
 
-                const linkingKeyPair = ec.keyFromPrivate(linkingKeyPriv, true);
-                const pubPoint = linkingKeyPair.getPublic();
-                // Need to compress the key
-                const linkingKeyPub = pubPoint.encodeCompressed('hex');
+                const linkingKeyPub = getCompressedPublicKeyHex(linkingKeyPriv);
 
-                const signedMessage = ec.sign(
+                const signedMessageDERHex = ecdsaSignDERHex(
                     Base64Utils.hexToBytes(this.state.k1),
-                    linkingKeyPriv,
-                    { canonical: true }
+                    linkingKeyPriv
                 );
-                const signedMessageDER = signedMessage.toDER();
-                const signedMessageDERHex =
-                    Base64Utils.bytesToHex(signedMessageDER);
 
                 this.setState({
                     linkingKeyPub,
