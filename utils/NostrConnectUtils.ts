@@ -20,7 +20,7 @@ import Transaction from '../models/Transaction';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
-import bolt11 from 'bolt11';
+import Bolt11Utils from './Bolt11Utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -408,23 +408,10 @@ export default class NostrConnectUtils {
         isPaid?: boolean;
     }> {
         try {
-            const decoded = bolt11.decode(invoice);
-            if (!decoded || !decoded.tags) {
-                throw new Error('Invalid payment request structure');
-            }
-            let paymentHash = '';
-            let descriptionHash = '';
-            let description = '';
-
-            for (const tag of decoded.tags) {
-                if (tag.tagName === 'payment_hash') {
-                    paymentHash = String(tag.data || '');
-                } else if (tag.tagName === 'purpose_commit_hash') {
-                    descriptionHash = String(tag.data || '');
-                } else if (tag.tagName === 'description') {
-                    description = String(tag.data || '');
-                }
-            }
+            const decoded = Bolt11Utils.decode(invoice);
+            const paymentHash = decoded.payment_hash || '';
+            const descriptionHash = decoded.description_hash || '';
+            const description = decoded.description || '';
             const createdAt = decoded.timestamp || 0;
             const expireTime = decoded.timeExpireDate || 0;
             const currentTime = Math.floor(Date.now() / 1000);
@@ -449,8 +436,8 @@ export default class NostrConnectUtils {
                 expiryTime: expireTime,
                 createdAt,
                 isExpired,
-                paymentRequest: decoded.paymentRequest!,
-                network: decoded.network?.toString() || 'bitcoin',
+                paymentRequest: decoded.paymentRequest,
+                network: decoded.network?.bech32 || 'bitcoin',
                 isPaid
             };
         } catch (decodeError) {

@@ -1,10 +1,9 @@
-import bolt11 from 'bolt11';
-
 import { settingsStore } from '../stores/Stores';
 
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
+import Bolt11Utils from './../utils/Bolt11Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
@@ -50,29 +49,9 @@ export default class LndHub extends LND {
         });
     getNewAddress = () => this.getRequest('/getbtc');
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        Promise.resolve().then(() => {
-            const decoded: any = bolt11.decode(
-                (urlParams && urlParams[0]) || ''
-            );
-            for (let i = 0; i < decoded.tags.length; i++) {
-                const tag = decoded.tags[i];
-                switch (tag.tagName) {
-                    case 'purpose_commit_hash':
-                        decoded.description_hash = tag.data;
-                        break;
-                    case 'payment_hash':
-                        decoded.payment_hash = tag.data;
-                        break;
-                    case 'expire_time':
-                        decoded.expiry = tag.data;
-                        break;
-                    case 'description':
-                        decoded.description = tag.data;
-                        break;
-                }
-            }
-            return decoded;
-        });
+        Promise.resolve().then(() =>
+            Bolt11Utils.decode((urlParams && urlParams[0]) || '')
+        );
     payLightningInvoice = (data: any) =>
         this.postRequest('/payinvoice', {
             invoice: data.payment_request,
