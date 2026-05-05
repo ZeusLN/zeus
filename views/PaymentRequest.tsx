@@ -20,6 +20,7 @@ import Button from '../components/Button';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
+import Accordion from '../components/Accordion';
 import Header from '../components/Header';
 import HopPicker from '../components/HopPicker';
 import KeyValue from '../components/KeyValue';
@@ -94,7 +95,6 @@ interface InvoiceState {
     timeoutSeconds: string;
     outgoingChanId: string | any;
     lastHopPubkey: string | any;
-    settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
@@ -138,7 +138,6 @@ export default class PaymentRequest extends React.Component<
         timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
-        settingsToggle: false,
         zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
@@ -490,7 +489,6 @@ export default class PaymentRequest extends React.Component<
             feeOption,
             customAmount,
             zaplockerToggle,
-            settingsToggle,
             timeoutSeconds,
             lightningReadyToSend,
             slideToPayThreshold,
@@ -1016,74 +1014,43 @@ export default class PaymentRequest extends React.Component<
 
                                 {(BackendUtils.supportsCustomFeeLimit() ||
                                     isCLightning) && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                settingsToggle: !settingsToggle
-                                            });
+                                    <Accordion
+                                        headerLayout="form"
+                                        id="payment-request-fee-settings"
+                                        title={localeString(
+                                            'views.Settings.title'
+                                        )}
+                                        headerStyle={{
+                                            marginTop: 10,
+                                            marginBottom: 10
                                         }}
                                     >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Settings.title'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {settingsToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-
-                                <FeeLimit
-                                    satAmount={
-                                        isNoAmountInvoice
-                                            ? customAmount
-                                            : requestAmount || 0
-                                    }
-                                    onFeeLimitSatChange={(value: string) =>
-                                        this.setState({
-                                            feeLimitSat: value
-                                        })
-                                    }
-                                    onMaxFeePercentChange={(value: string) =>
-                                        this.setState({
-                                            maxFeePercent: value
-                                        })
-                                    }
-                                    feeOption={feeOption}
-                                    SettingsStore={SettingsStore}
-                                    InvoicesStore={InvoicesStore}
-                                    displayFeeRecommendation
-                                    hide={!settingsToggle}
-                                />
-
-                                {settingsToggle && (
-                                    <>
+                                        <FeeLimit
+                                            satAmount={
+                                                isNoAmountInvoice
+                                                    ? customAmount
+                                                    : requestAmount || 0
+                                            }
+                                            onFeeLimitSatChange={(
+                                                value: string
+                                            ) =>
+                                                this.setState({
+                                                    feeLimitSat: value
+                                                })
+                                            }
+                                            onMaxFeePercentChange={(
+                                                value: string
+                                            ) =>
+                                                this.setState({
+                                                    maxFeePercent: value
+                                                })
+                                            }
+                                            feeOption={feeOption}
+                                            SettingsStore={SettingsStore}
+                                            InvoicesStore={InvoicesStore}
+                                            displayFeeRecommendation
+                                            hide={false}
+                                        />
                                         {!!pay_req &&
                                             BackendUtils.supportsHopPicking() && (
                                                 <>
@@ -1353,7 +1320,36 @@ export default class PaymentRequest extends React.Component<
                                                     />
                                                 </>
                                             )}
-                                    </>
+                                    </Accordion>
+                                )}
+                                {!(
+                                    BackendUtils.supportsCustomFeeLimit() ||
+                                    isCLightning
+                                ) && (
+                                    <FeeLimit
+                                        satAmount={
+                                            isNoAmountInvoice
+                                                ? customAmount
+                                                : requestAmount || 0
+                                        }
+                                        onFeeLimitSatChange={(value: string) =>
+                                            this.setState({
+                                                feeLimitSat: value
+                                            })
+                                        }
+                                        onMaxFeePercentChange={(
+                                            value: string
+                                        ) =>
+                                            this.setState({
+                                                maxFeePercent: value
+                                            })
+                                        }
+                                        feeOption={feeOption}
+                                        SettingsStore={SettingsStore}
+                                        InvoicesStore={InvoicesStore}
+                                        displayFeeRecommendation
+                                        hide
+                                    />
                                 )}
                                 {enableDonations &&
                                     NodeInfoStore!.nodeInfo.isMainNet && (
