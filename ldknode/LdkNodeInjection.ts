@@ -963,13 +963,14 @@ const initializeNode = async ({
         );
     }
 
-    // Use a longer timeout for restore-from-seed (no local DB yet) since
-    // every read falls through to VSS sequentially. Even existing nodes
-    // may have an incomplete local DB (e.g. after a previous fallback
-    // build), so the default is generous to avoid false alerts.
+    // VSS itself is gated on connectivity upstream (LdkNodeUtils.initNode skips
+    // VSS entirely when offline), so this timeout only kicks in when we're
+    // online but VSS is sluggish. A tight 10s budget for existing nodes is
+    // enough for the typical incremental sync; restore-from-seed needs longer
+    // because every read falls through to VSS sequentially.
     const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
     const hasLocalDb = await RNFS.exists(localDbPath);
-    const vssBuildTimeout = hasLocalDb ? 30 : 60;
+    const vssBuildTimeout = hasLocalDb ? 10 : 60;
     await setVssBuildTimeout(vssBuildTimeout);
     console.log(
         `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
