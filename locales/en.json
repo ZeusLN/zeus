@@ -1233,7 +1233,7 @@
     "views.Settings.Privacy.screenCaptureProtection": "Block screen capture",
     "views.Settings.Privacy.screenCaptureProtection.explainer": "Prevents the app from being captured in screenshots or screen recordings.",
     "components.ScreenRecordingWarningModal.title": "Screen recording detected",
-    "components.ScreenRecordingWarningModal.message": "Zeus has been hidden from this recording to protect your privacy. The app will appear blank in the captured video.",
+    "components.ScreenRecordingWarningModal.message": "ZEUS has been hidden from this recording to protect your privacy. The app will appear blank in the captured video.",
     "views.Settings.stealthMode": "Stealth Mode",
     "views.Settings.StealthMode.title": "Stealth Mode",
     "views.Settings.StealthMode.chooseApp": "Choose Stealth App",
