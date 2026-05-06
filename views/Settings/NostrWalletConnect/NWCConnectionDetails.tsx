@@ -200,6 +200,39 @@ export default class NWCConnectionDetails extends React.Component<
         return params;
     };
 
+    confirmRegenerateConnection = () => {
+        const { connection } = this.state;
+        if (!connection) {
+            this.setState({
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            });
+            return;
+        }
+        confirmAction(
+            localeString(
+                'views.Settings.NostrWalletConnect.regenerateConnection'
+            ),
+            localeString(
+                'views.Settings.NostrWalletConnect.regenerateConnection.confirm'
+            ),
+            {
+                text: localeString(
+                    'views.Settings.NostrWalletConnect.regenerateConnection'
+                ),
+                onPress: () => {
+                    this.regenerateConnection();
+                }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
+    };
+
     regenerateConnection = async () => {
         const { NostrWalletConnectStore, navigation } = this.props;
         const { connection } = this.state;
@@ -290,7 +323,11 @@ export default class NWCConnectionDetails extends React.Component<
                     centerComponent={
                         connection
                             ? {
-                                  text: connection.name,
+                                  text: regenerating
+                                      ? localeString(
+                                            'views.Settings.NostrWalletConnect.regeneratingConnection'
+                                        )
+                                      : connection.name,
                                   style: {
                                       color: themeColor('text'),
                                       fontFamily: 'PPNeueMontreal-Book'
@@ -636,7 +673,7 @@ export default class NWCConnectionDetails extends React.Component<
                                 title={localeString(
                                     'views.Settings.NostrWalletConnect.regenerateConnection'
                                 )}
-                                onPress={this.regenerateConnection}
+                                onPress={this.confirmRegenerateConnection}
                                 disabled={regenerating}
                                 secondary={regenerating}
                                 noUppercase
