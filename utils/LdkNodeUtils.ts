@@ -408,8 +408,14 @@ export async function startLdkNodeWallet({
         }
     }
 
-    // Only sync if the node actually started
-    if (nodeStarted) {
+    // Only sync if the node actually started, and skip entirely when offline.
+    // syncWallets() makes blocking Esplora + RGS requests that would otherwise
+    // wait on the underlying HTTP client timeouts (~30s+). The post-sync RGS
+    // status check would also surface a misleading "empty graph" alert when
+    // we never had a chance to fetch a snapshot.
+    if (nodeStarted && connectivityStore.isOffline) {
+        console.log('LDK Node: Offline — skipping wallet sync');
+    } else if (nodeStarted) {
         onSyncStart?.();
         try {
             await LdkNode.node.syncWallets();
