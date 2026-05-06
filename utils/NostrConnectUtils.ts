@@ -960,7 +960,7 @@ export default class NostrConnectUtils {
         const state: 'settled' | 'pending' | 'failed' =
             activity.status === 'success'
                 ? 'settled'
-                : activity.status === 'failed'
+                : activity.status === 'failed' || activity.status === 'expired'
                 ? 'failed'
                 : 'pending';
 
@@ -1403,6 +1403,119 @@ export default class NostrConnectUtils {
                 message
             }
         };
+    }
+
+    /** Integer sats ≥ 0 from a scalar field on a decoded payreq payload. */
+    private static nonNegativeSats(value: unknown): number {
+        return Math.max(0, Math.floor(Number(value) || 0));
+    }
+
+    /**
+     * Sats from the Lightning wallet payreq decode (num_satoshis, satoshis,
+     * millisatoshis) — same shape as decodePaymentRequest / typical LND decode fields.
+     */
+    private static satsFromLightningDecodedPayReq(decodedPayReq: any): number {
+        if (!decodedPayReq || typeof decodedPayReq !== 'object') {
+            return 0;
+        }
+
+        const { nonNegativeSats: n } = NostrConnectUtils;
+
+        const fromNumSat = n(decodedPayReq.num_satoshis);
+        if (fromNumSat > 0) {
+            return fromNumSat;
+        }
+        if (decodedPayReq.satoshis !== undefined) {
+            const fromSat = n(decodedPayReq.satoshis);
+            if (fromSat > 0) {
+                return fromSat;
+            }
+        }
+        if (decodedPayReq.millisatoshis !== undefined) {
+            const ms = Number(decodedPayReq.millisatoshis) || 0;
+            if (ms > 0) {
+                return millisatsToSats(ms);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Amount in sats from a decoded payreq / Invoice (Cashu getPayReq, bolt11 decode, etc.).
+     * Prefer getRequestAmount when present, then getAmount, then raw BOLT11 fields.
+     */
+    static payInvoiceAmountSatsFromDecodedInvoice(invoice: any): number {
+        if (!invoice) return 0;
+
+        const { nonNegativeSats: n } = NostrConnectUtils;
+
+        let sats = n(invoice.getRequestAmount);
+        if (sats <= 0) {
+            sats = n(invoice.getAmount);
+        }
+        if (sats <= 0 && invoice.satoshis != null) {
+            sats = n(invoice.satoshis);
+        }
+        if (sats <= 0 && invoice.num_satoshis != null) {
+            sats = n(invoice.num_satoshis);
+        }
+        if (sats <= 0 && invoice.millisatoshis != null) {
+            const ms = Number(invoice.millisatoshis) || 0;
+            if (ms > 0) {
+                sats = millisatsToSats(ms);
+            }
+        }
+        return sats;
+    }
+
+    /**
+     * Single resolver for NWC pay_invoice: Lightning (wallet payreq decode) or
+     * Cashu (decoded Invoice / payreq model).
+     */
+    static async getPayInvoiceAmountSats(params: {
+        paymentRequest: string;
+        /** Lightning: object from decodePaymentRequest */
+        lightningDecodedPayReq?: any;
+        /** Cashu: Invoice (or similar) from getPayReq */
+        decodedInvoice?: any;
+    }): Promise<number> {
+        const { paymentRequest, lightningDecodedPayReq, decodedInvoice } =
+            params;
+
+        if (lightningDecodedPayReq) {
+            const fromLightning =
+                NostrConnectUtils.satsFromLightningDecodedPayReq(
+                    lightningDecodedPayReq
+                );
+            if (fromLightning > 0) {
+                return fromLightning;
+            }
+            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
+                paymentRequest
+            );
+            if (amount > 0) {
+                if (__DEV__) {
+                    console.log(
+                        'NWC: Lightning decode had no amount; using BOLT11 tags:',
+                        amount
+                    );
+                }
+                return amount;
+            }
+            return 0;
+        }
+
+        const fromDecoded =
+            NostrConnectUtils.payInvoiceAmountSatsFromDecodedInvoice(
+                decodedInvoice
+            );
+        if (fromDecoded > 0) {
+            return fromDecoded;
+        }
+        const { amount } = await NostrConnectUtils.decodeInvoiceTags(
+            paymentRequest
+        );
+        return amount > 0 ? amount : 0;
     }
 
     static async pingRelay(relayUrl: string): Promise<{
