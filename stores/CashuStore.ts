@@ -293,6 +293,7 @@ export default class CashuStore {
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
+    private connectivityCallbackRegistered: boolean = false;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -1727,6 +1728,13 @@ export default class CashuStore {
         // before any wallet implementation init so isOffline is reliable
         // before we hit network-bound code paths. Here we only register the
         // Cashu-specific reconnect handler.
+        //
+        // initializeWallets can run multiple times in a session (handleFocus,
+        // handleAppStateChange) so guard against re-registering the callback;
+        // duplicates would trigger redundant sweeps and pending checks on
+        // every reconnect.
+        if (this.connectivityCallbackRegistered) return;
+        this.connectivityCallbackRegistered = true;
         connectivityStore.onReconnect(() => {
             // delay briefly to let the network stabilize
             if (!this.isSweeping) {
