@@ -24,6 +24,20 @@ static NSUInteger _originalRootViewIndex = 0;
 
 RCT_EXPORT_MODULE(MobileTools);
 
+- (UIWindow *)activeWindow {
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if ([scene isKindOfClass:[UIWindowScene class]] &&
+            scene.activationState == UISceneActivationStateForegroundActive) {
+            UIWindowScene *windowScene = (UIWindowScene *)scene;
+            for (UIWindow *w in windowScene.windows) {
+                if (w.isKeyWindow) return w;
+            }
+            return windowScene.windows.firstObject;
+        }
+    }
+    return nil;
+}
+
 - (NSURL *)getSharedFileURL {
     NSString *appGroupID = @"group.com.zeusln.zeus";
     NSURL *containerURL = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:appGroupID];
@@ -34,7 +48,7 @@ RCT_EXPORT_MODULE(MobileTools);
 }
 
 - (void)applySecureTextFieldHack {
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    UIWindow *window = [self activeWindow];
     if (!window || !window.rootViewController) return;
     UIView *rootView = window.rootViewController.view;
     if (!rootView || _secureTextField) return;
@@ -74,7 +88,7 @@ RCT_EXPORT_MODULE(MobileTools);
 
 - (void)removeSecureTextFieldHack {
     if (!_secureTextField || !_originalRootParent) return;
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    UIWindow *window = [self activeWindow];
     UIView *rootView = window ? window.rootViewController.view : nil;
     if (rootView) {
         [_originalRootParent insertSubview:rootView atIndex:_originalRootViewIndex];
@@ -87,7 +101,7 @@ RCT_EXPORT_MODULE(MobileTools);
 
 - (void)screenCaptureChanged {
     [self sendEventWithName:@"ScreenRecordingStateChanged"
-                       body:@{@"isCapturing": @([UIScreen mainScreen].isCaptured)}];
+                       body:@{@"isCapturing": @([self activeWindow].windowScene.screen.isCaptured)}];
 }
 
 - (NSArray<NSString *> *)supportedEvents {
@@ -104,7 +118,7 @@ RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
     if (enable) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self applySecureTextFieldHack];
-            if ([UIScreen mainScreen].isCaptured) {
+            if ([self activeWindow].windowScene.screen.isCaptured) {
                 [self screenCaptureChanged];
             }
         });
@@ -131,13 +145,13 @@ RCT_EXPORT_METHOD(getSharedImageBase64:(RCTPromiseResolveBlock)resolve
       resolve(nil);
       return;
     }
-
+    
     if (![[NSFileManager defaultManager] fileExistsAtPath:fileURL.path]) {
         resolve(nil);
         return;
     }
     NSString *base64String = [NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil];
-
+    
     if (base64String && base64String.length > 0) {
       resolve(base64String);
     } else {

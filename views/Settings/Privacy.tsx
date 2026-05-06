@@ -496,9 +496,22 @@ export default class Privacy extends React.Component<
                                     await updateSettingsGroup('privacy', {
                                         screenCaptureProtection: newValue
                                     });
-                                    await NativeModules.MobileTools.setSecureFlag(
-                                        newValue
-                                    );
+                                    try {
+                                        await NativeModules.MobileTools.setSecureFlag(
+                                            newValue
+                                        );
+                                    } catch (e) {
+                                        console.error(
+                                            'setSecureFlag failed:',
+                                            e
+                                        );
+                                        this.setState({
+                                            screenCaptureProtection: !newValue
+                                        });
+                                        await updateSettingsGroup('privacy', {
+                                            screenCaptureProtection: !newValue
+                                        });
+                                    }
                                 }}
                             />
                         </View>
