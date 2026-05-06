@@ -1723,7 +1723,10 @@ export default class CashuStore {
     // =========================================================================
 
     public startConnectivityMonitoring = () => {
-        connectivityStore.start();
+        // ConnectivityStore.start() is owned by Wallet.fetchData() — it runs
+        // before any wallet implementation init so isOffline is reliable
+        // before we hit network-bound code paths. Here we only register the
+        // Cashu-specific reconnect handler.
         connectivityStore.onReconnect(() => {
             // delay briefly to let the network stabilize
             if (!this.isSweeping) {
@@ -1733,10 +1736,6 @@ export default class CashuStore {
                 }, 3000);
             }
         });
-    };
-
-    public stopConnectivityMonitoring = () => {
-        connectivityStore.stop();
     };
 
     @action
@@ -1766,7 +1765,6 @@ export default class CashuStore {
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
-        this.stopConnectivityMonitoring();
     };
 
     @action
