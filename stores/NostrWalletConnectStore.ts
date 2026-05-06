@@ -870,7 +870,7 @@ export default class NostrWalletConnectStore {
                             });
                         } else if (activity.invoice.isExpired) {
                             runInAction(() => {
-                                activity.status = 'failed';
+                                activity.status = 'expired';
                             });
                         }
                     } else {
@@ -900,7 +900,7 @@ export default class NostrWalletConnectStore {
                             if (settled) {
                                 activity.status = 'success';
                             } else if (invoice.isExpired) {
-                                activity.status = 'failed';
+                                activity.status = 'expired';
                             }
                         });
                     };
@@ -1636,32 +1636,25 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const amountSats = await this.getInvoiceAmount(
-            request.invoice,
-            invoiceInfo
-        );
+        const amountSats = await NostrConnectUtils.getPayInvoiceAmountSats({
+            paymentRequest: request.invoice,
+            lightningDecodedPayReq: invoiceInfo
+        });
+
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
                 (Number(invoiceInfo.timestamp) + Number(invoiceInfo.expiry)) *
                 1000;
-            const now = Date.now();
-
-            if (now > expiryTime) {
-                const errorMessage = localeString(
-                    'stores.NostrWalletConnectStore.error.invoiceExpired'
+            if (Date.now() > expiryTime) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceExpired'
+                    ),
+                    Nip47ErrorCode.INVOICE_EXPIRED
                 );
-                return {
-                    result: undefined,
-                    error: {
-                        code: Nip47ErrorCode.INVOICE_EXPIRED,
-                        message: errorMessage
-                    }
-                };
             }
         }
-        const lightningBalance = await this.balanceStore.getLightningBalance(
-            true
-        );
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
@@ -1670,27 +1663,30 @@ export default class NostrWalletConnectStore {
         if (!budgetCheck.success) {
             return { result: undefined, error: budgetCheck.error };
         }
+
+        const lightningBalance = await this.balanceStore.getLightningBalance(
+            true
+        );
         const currentLightningBalance = lightningBalance?.lightningBalance || 0;
         if (currentLightningBalance < amountSats) {
-            const errorMessage = localeString(
-                'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
-                {
-                    amount: amountSats.toString(),
-                    balance: currentLightningBalance.toString()
-                }
-            );
             return NostrConnectUtils.createNip47Error(
-                errorMessage,
+                localeString(
+                    'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
+                    {
+                        amount: amountSats.toString(),
+                        balance: currentLightningBalance.toString()
+                    }
+                ),
                 Nip47ErrorCode.INSUFFICIENT_BALANCE
             );
         }
+
         this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         });
-
         await this.waitForPaymentCompletion();
 
         const paymentError = this.checkPaymentErrors(
@@ -1700,35 +1696,25 @@ export default class NostrWalletConnectStore {
                 'stores.NostrWalletConnectStore.error.noPreimageReceived'
             )
         );
-
         if (paymentError) {
-            const { paymentRequest } =
-                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
-            if (paymentRequest || request.invoice)
-                if (
-                    !NostrConnectUtils.isIgnorableError(
-                        paymentError.error?.message
-                    )
-                )
-                    await this.recordFailedPayment(
-                        paymentRequest || request.invoice,
-                        connection,
-                        'pay_invoice',
-                        amountSats,
-                        'lightning',
-                        paymentError.error?.message,
-                        request.invoice
-                    );
+            await this.recordFailedPayment({
+                rawInvoice: request.invoice,
+                connection,
+                amountSats,
+                payment_source: 'lightning',
+                errorMessage: paymentError.error?.message
+            });
             return paymentError;
         }
+
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
         await this.paymentsStore.getPayments();
         const payment = this.paymentsStore.payments.find(
-            (payment) => payment.getPaymentRequest === request.invoice
+            (p) => p.getPaymentRequest === request.invoice
         );
-        if (payment)
+        if (payment) {
             await this.finalizePayment({
                 id: request.invoice,
                 type: 'pay_invoice',
@@ -1737,6 +1723,7 @@ export default class NostrWalletConnectStore {
                 connection,
                 amountSats
             });
+        }
 
         return {
             result: {
@@ -1751,23 +1738,29 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47PayInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
-        const cashuStatus = this.cashuConfigurationStatus;
-        if (!cashuStatus.isConfigured) {
+        if (!this.isCashuConfigured) {
+            const selectedMintUrl = this.cashuStore.selectedMintUrl;
+            const errorMessage = !selectedMintUrl
+                ? localeString(
+                      'stores.NostrWalletConnectStore.error.noCashuMintSelected'
+                  )
+                : localeString(
+                      'stores.NostrWalletConnectStore.error.cashuMintNotConfigured',
+                      { mintUrl: selectedMintUrl }
+                  );
             return NostrConnectUtils.createNip47Error(
-                cashuStatus.errorMessage ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.noCashuMintSelected'
-                    ),
+                errorMessage,
                 Nip47ErrorCode.INTERNAL_ERROR
             );
         }
 
         await this.cashuStore.getPayReq(request.invoice);
         const invoice = this.cashuStore.payReq;
-        const error = this.cashuStore.getPayReqError;
-        if (error) {
+        const decodeError = this.cashuStore.getPayReqError;
+
+        if (decodeError) {
             return NostrConnectUtils.createNip47Error(
-                error,
+                decodeError,
                 Nip47ErrorCode.INVALID_INVOICE
             );
         }
@@ -1795,10 +1788,7 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INVALID_INVOICE
             );
         }
-        if (
-            !invoice.getPaymentRequest ||
-            invoice.getPaymentRequest.trim() === ''
-        ) {
+        if (!invoice.getPaymentRequest?.trim()) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
                     'stores.NostrWalletConnectStore.error.invalidPaymentRequest'
@@ -1807,15 +1797,12 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        let amount = 0;
-        if (invoice.getAmount && invoice.getAmount > 0) {
-            amount = Math.floor(invoice.getAmount);
-        } else if ((invoice as any).satoshis) {
-            amount = Math.floor((invoice as any).satoshis);
-        } else if ((invoice as any).millisatoshis) {
-            amount = millisatsToSats(Number(invoice.millisatoshis));
-        }
-        if (!amount || amount <= 0) {
+        const amountSats = await NostrConnectUtils.getPayInvoiceAmountSats({
+            paymentRequest: request.invoice,
+            decodedInvoice: invoice
+        });
+
+        if (amountSats <= 0) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
                     'stores.NostrWalletConnectStore.error.invalidAmount'
@@ -1823,9 +1810,10 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INVALID_INVOICE
             );
         }
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
-            amount,
+            amountSats,
             Nip47ErrorCode.INSUFFICIENT_BALANCE
         );
         if (!budgetCheck.success) {
@@ -1833,12 +1821,12 @@ export default class NostrWalletConnectStore {
         }
 
         const currentBalance = this.cashuStore.totalBalanceSats || 0;
-        if (currentBalance < amount) {
+        if (currentBalance < amountSats) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
                     'stores.NostrWalletConnectStore.error.cashuInsufficientBalance',
                     {
-                        amount: amount.toString(),
+                        amount: amountSats.toString(),
                         balance: currentBalance.toString()
                     }
                 ),
@@ -1847,45 +1835,34 @@ export default class NostrWalletConnectStore {
         }
 
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
-            amount: amount.toString()
+            amount: amountSats.toString()
         });
-        if (!cashuInvoice || this.cashuStore.paymentError) {
-            const { paymentRequest } =
-                await NostrConnectUtils.decodeInvoiceTags(request.invoice);
-            if (paymentRequest || request.invoice)
-                if (
-                    !NostrConnectUtils.isIgnorableError(
-                        this.cashuStore.paymentErrorMsg || ''
-                    )
-                )
-                    await this.recordFailedPayment(
-                        paymentRequest || request.invoice,
-                        connection,
-                        'pay_invoice',
-                        amount,
-                        'cashu',
-                        this.cashuStore.paymentErrorMsg,
-                        request.invoice
-                    );
-            return NostrConnectUtils.createNip47Error(
+
+        if (
+            !cashuInvoice ||
+            this.cashuStore.paymentError ||
+            cashuInvoice.isFailed
+        ) {
+            const paymentErrorMsg =
                 this.cashuStore.paymentErrorMsg ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
-                    ),
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToPayInvoice'
+                );
+            await this.recordFailedPayment({
+                rawInvoice: request.invoice,
+                connection,
+                amountSats,
+                payment_source: 'cashu',
+                errorMessage: paymentErrorMsg
+            });
+            return NostrConnectUtils.createNip47Error(
+                paymentErrorMsg,
                 Nip47ErrorCode.FAILED_TO_PAY_INVOICE
             );
         }
 
-        if (cashuInvoice.isFailed) {
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.cashuPaymentFailed'
-                ),
-                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
-            );
-        }
         const payment = this.cashuStore.payments?.find(
-            (payment) => payment.getPaymentRequest === request.invoice
+            (p) => p.getPaymentRequest === request.invoice
         );
         if (payment) {
             await this.finalizePayment({
@@ -1893,10 +1870,11 @@ export default class NostrWalletConnectStore {
                 decoded: payment,
                 type: 'pay_invoice',
                 payment_source: 'cashu',
-                amountSats: amount,
+                amountSats,
                 connection
             });
         }
+
         return {
             result: {
                 preimage:
@@ -2022,34 +2000,6 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-    private async getInvoiceAmount(
-        invoice: string,
-        invoiceInfo: any
-    ): Promise<number> {
-        let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
-        if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
-            backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
-        }
-        if (backendAmount === 0 && invoiceInfo.millisatoshis !== undefined) {
-            backendAmount = millisatsToSats(
-                Number(invoiceInfo.millisatoshis) || 0
-            );
-        }
-        if (backendAmount > 0) {
-            return backendAmount;
-        }
-        const { amount } = await NostrConnectUtils.decodeInvoiceTags(invoice);
-        if (amount > 0) {
-            console.log(
-                'NWC: Backend did not provide amount, using decoded invoice amount:',
-                amount
-            );
-            return amount;
-        }
-
-        return backendAmount;
-    }
-
     /**
      * Resolves when `transactionsStore.loading` becomes false, or after the
      * payment timeout. Uses a MobX reaction instead of polling every 200ms.
@@ -2127,22 +2077,33 @@ export default class NostrWalletConnectStore {
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
 
-    private async recordFailedPayment(
-        id: string,
-        connection: NWCConnection,
-        type: ConnectionActivityType,
-        amountSats: number,
-        payment_source: ConnectionPaymentSourceType,
-        errorMessage: string = localeString('error.paymentFailed'),
-        paymentHash?: string
-    ): Promise<void> {
+    private async recordFailedPayment({
+        rawInvoice,
+        connection,
+        amountSats,
+        payment_source,
+        errorMessage = localeString('error.paymentFailed'),
+        paymentHash
+    }: {
+        rawInvoice: string;
+        connection: NWCConnection;
+        amountSats: number;
+        payment_source: ConnectionPaymentSourceType;
+        errorMessage?: string;
+        paymentHash?: string;
+    }): Promise<void> {
+        if (NostrConnectUtils.isIgnorableError(errorMessage || '')) return;
+        const { paymentRequest } = await NostrConnectUtils.decodeInvoiceTags(
+            rawInvoice
+        );
+        const id = paymentRequest || rawInvoice;
         const index = connection.activity.findIndex((conn) => conn.id === id);
         const activity = index !== -1 ? connection.activity[index] : undefined;
         if (activity?.status === 'success') return;
         runInAction(() => {
             const record: ConnectionActivity = {
                 id,
-                type,
+                type: 'pay_invoice',
                 satAmount: amountSats,
                 status: 'failed',
                 payment_source,
@@ -2376,43 +2337,11 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    // COMPUTED PROPERTIES & GETTERS
     @computed
     get isCashuConfigured(): boolean {
         return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
     }
-    @computed
-    get cashuConfigurationStatus(): {
-        isEnabled: boolean;
-        isConfigured: boolean;
-        selectedMintUrl?: string;
-        errorMessage?: string;
-    } {
-        const isEnabled = this.cashuEnabled;
-        const isConfigured = this.cashuStore.isProperlyConfigured();
-        const selectedMintUrl = this.cashuStore.selectedMintUrl;
 
-        let errorMessage: string | undefined;
-        if (isEnabled && !isConfigured) {
-            if (!selectedMintUrl) {
-                errorMessage = localeString(
-                    'stores.NostrWalletConnectStore.error.noCashuMintSelected'
-                );
-            } else {
-                errorMessage = localeString(
-                    'stores.NostrWalletConnectStore.error.cashuMintNotConfigured',
-                    { mintUrl: selectedMintUrl }
-                );
-            }
-        }
-
-        return {
-            isEnabled,
-            isConfigured,
-            selectedMintUrl,
-            errorMessage
-        };
-    }
     public async loadMaxBudget() {
         try {
             if (this.isCashuConfigured) {

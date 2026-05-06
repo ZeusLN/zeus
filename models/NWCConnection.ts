@@ -13,7 +13,11 @@ import CashuPayment from './CashuPayment';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 
 export type ConnectionActivityType = 'pay_invoice' | 'make_invoice';
-export type ConnectionActivityStatus = 'success' | 'pending' | 'failed';
+export type ConnectionActivityStatus =
+    | 'success'
+    | 'pending'
+    | 'failed'
+    | 'expired';
 export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
 
 export enum PermissionType {
