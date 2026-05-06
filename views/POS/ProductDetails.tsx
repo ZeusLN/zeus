@@ -11,7 +11,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, ListItem } from '@rneui/themed';
+import { Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -308,10 +308,9 @@ export default class ProductDetails extends React.Component<
                                 {!isLoading && (
                                     <View
                                         style={{
-                                            padding:
+                                            paddingVertical:
                                                 Platform.OS === 'ios' ? 8 : 0,
-                                            paddingLeft: 15,
-                                            paddingRight: 15
+                                            paddingHorizontal: 15
                                         }}
                                     >
                                         <View>
@@ -387,8 +386,6 @@ export default class ProductDetails extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
                                                 marginBottom: 5
                                             }}
                                             infoModalText={localeString(
@@ -430,61 +427,41 @@ export default class ProductDetails extends React.Component<
                                             }}
                                             values={this.state.categories}
                                         />
-                                        <ListItem
-                                            containerStyle={{
-                                                borderBottomWidth: 0,
-                                                backgroundColor: 'transparent'
-                                            }}
-                                        >
-                                            <ListItem.Title
+                                        <View style={styles.switchRow}>
+                                            <Text
                                                 style={{
                                                     color: themeColor(
                                                         'secondaryText'
                                                     ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    left: -10
+                                                    fontSize: 17
                                                 }}
                                             >
                                                 {localeString('general.active')}
-                                            </ListItem.Title>
-                                            <View
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
+                                            </Text>
+                                            <Switch
+                                                value={
+                                                    product?.status ===
+                                                    ProductStatus.Inactive
+                                                        ? false
+                                                        : true
+                                                }
+                                                onValueChange={async (
+                                                    value: boolean
+                                                ) => {
+                                                    this.setValue(
+                                                        'status',
+                                                        value
+                                                    );
                                                 }}
-                                            >
-                                                <Switch
-                                                    value={
-                                                        product?.status ===
-                                                        ProductStatus.Inactive
-                                                            ? false
-                                                            : true
-                                                    }
-                                                    onValueChange={async (
-                                                        value: boolean
-                                                    ) => {
-                                                        this.setValue(
-                                                            'status',
-                                                            value
-                                                        );
-                                                    }}
-                                                />
-                                            </View>
-                                        </ListItem>
+                                            />
+                                        </View>
                                     </View>
                                 )}
                                 <Divider
                                     orientation="horizontal"
                                     style={{ marginTop: 6 }}
                                 />
-                                <View
-                                    style={{
-                                        paddingHorizontal: 20,
-                                        paddingVertical: 20
-                                    }}
-                                >
+                                <View style={{ padding: 20 }}>
                                     <Button
                                         title={localeString(
                                             'views.Settings.POS.saveProduct'
@@ -547,5 +524,11 @@ const styles = StyleSheet.create({
         width: '100%',
         fontFamily: 'PPNeueMontreal-Book',
         top: 5
+    },
+    switchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16
     }
 });
