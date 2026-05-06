@@ -34,13 +34,15 @@ export interface NWCFilterState {
     received: boolean;
     failed: boolean;
     pending: boolean;
+    expired: boolean;
 }
 
 export const NWC_DEFAULT_FILTERS: NWCFilterState = {
     sent: true,
     received: true,
     failed: true,
-    pending: true
+    pending: true,
+    expired: true
 };
 
 interface ConnectionActivityProps {
@@ -149,6 +151,13 @@ export default class NWCConnectionActivity extends React.Component<
                 );
             }
 
+            if (item.status === 'expired') {
+                return (
+                    (isSent && filters.sent && filters.expired) ||
+                    (isReceived && filters.expired)
+                );
+            }
+
             if (item.status === 'pending') {
                 return (
                     (isSent && filters.sent && filters.pending) ||
@@ -182,6 +191,7 @@ export default class NWCConnectionActivity extends React.Component<
             return item.type === 'make_invoice' ? 'success' : 'warning';
         }
         if (item.status === 'failed') return 'warning';
+        if (item.status === 'expired') return 'secondaryText';
         if (item.status === 'pending') return 'highlight';
         return 'secondaryText';
     };
@@ -192,12 +202,14 @@ export default class NWCConnectionActivity extends React.Component<
         if (isSent) {
             if (item.status === 'failed')
                 return localeString('views.Payment.failedPayment');
+            if (item.status === 'expired')
+                return localeString('views.Activity.expiredRequested');
             if (item.status === 'pending')
                 return localeString('views.Payment.inTransitPayment');
             return localeString('views.Activity.youSent');
         }
 
-        if (item.isExpired)
+        if (item.status === 'expired' || item.isExpired)
             return localeString('views.Activity.expiredRequested');
         if (item.status === 'success')
             return localeString('views.Activity.youReceived');
@@ -323,7 +335,8 @@ export default class NWCConnectionActivity extends React.Component<
             filters.sent === NWC_DEFAULT_FILTERS.sent &&
             filters.received === NWC_DEFAULT_FILTERS.received &&
             filters.failed === NWC_DEFAULT_FILTERS.failed &&
-            filters.pending === NWC_DEFAULT_FILTERS.pending
+            filters.pending === NWC_DEFAULT_FILTERS.pending &&
+            filters.expired === NWC_DEFAULT_FILTERS.expired
         );
     };
 
