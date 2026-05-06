@@ -2554,8 +2554,10 @@ export default class CashuStore {
                     : [];
 
                 // If no mints in local storage (e.g. fresh recovery),
-                // try to restore mint list from Nostr backup
-                if (localMintUrls.length === 0) {
+                // try to restore mint list from Nostr backup. Skip when
+                // offline — every relay would otherwise time out and add
+                // several seconds to startup.
+                if (localMintUrls.length === 0 && !this.isOffline) {
                     try {
                         const nostrMints = await this.nostrRestoreMints();
                         if (nostrMints && nostrMints.length > 0) {

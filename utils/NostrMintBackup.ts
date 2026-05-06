@@ -112,9 +112,18 @@ export async function backupMintsToNostr(
     return timestamp;
 }
 
+// Per-relay budget. Sequential 10s × N relays was the previous model and
+// dominated startup when one relay was slow; with parallel fan-out a
+// tighter budget caps the worst case.
+const RELAY_FETCH_TIMEOUT_MS = 5000;
+
 /**
  * Restores mint URLs from Nostr relays by fetching the kind 30078
  * event and decrypting with NIP-44.
+ *
+ * Queries all relays in parallel and returns as soon as any one of them
+ * yields a backup. Falls back to null if every relay finishes without
+ * finding data.
  */
 export async function restoreMintsFromNostr(
     privateKeyHex: string,
@@ -126,24 +135,37 @@ export async function restoreMintsFromNostr(
         publicKeyHex
     );
 
-    // Try each relay until we get a result
-    for (const relayUrl of relays) {
-        try {
-            const result = await fetchFromRelay(
-                relayUrl,
-                publicKeyHex,
-                conversationKey
-            );
-            if (result) return result;
-        } catch (e) {
-            console.warn(
-                `Nostr mint restore: failed to fetch from ${relayUrl}:`,
-                e
-            );
+    return new Promise((resolve) => {
+        let pending = relays.length;
+        if (pending === 0) {
+            resolve(null);
+            return;
         }
-    }
-
-    return null;
+        let settled = false;
+        relays.forEach(async (relayUrl) => {
+            try {
+                const result = await fetchFromRelay(
+                    relayUrl,
+                    publicKeyHex,
+                    conversationKey
+                );
+                if (result && !settled) {
+                    settled = true;
+                    resolve(result);
+                    return;
+                }
+            } catch (e) {
+                console.warn(
+                    `Nostr mint restore: failed to fetch from ${relayUrl}:`,
+                    e
+                );
+            }
+            if (--pending === 0 && !settled) {
+                settled = true;
+                resolve(null);
+            }
+        });
+    });
 }
 
 function fetchFromRelay(
@@ -157,7 +179,7 @@ function fetchFromRelay(
                 relay.close();
             } catch {}
             resolve(null);
-        }, 10000);
+        }, RELAY_FETCH_TIMEOUT_MS);
 
         const relay = relayInit(relayUrl);
 
