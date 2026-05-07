@@ -21,6 +21,7 @@ interface KeypadAmountDisplayState {
     exitingDigit: null | { char: string; key: number };
     syncedAmount: string;
     exitKeySeq: number;
+    placeholderAmount: string;
 }
 
 interface KeypadAmountDisplayProps {
@@ -50,7 +51,8 @@ export default class KeypadAmountDisplay extends React.Component<
         this.state = {
             exitingDigit: null,
             syncedAmount: props.amount,
-            exitKeySeq: 0
+            exitKeySeq: 0,
+            placeholderAmount: props.amount
         };
     }
 
@@ -110,6 +112,7 @@ export default class KeypadAmountDisplay extends React.Component<
 
         if (currD.length > prevD.length) {
             next.exitingDigit = null;
+            next.placeholderAmount = props.amount;
             return next;
         }
 
@@ -126,6 +129,7 @@ export default class KeypadAmountDisplay extends React.Component<
         if (state.exitingDigit !== null) {
             next.exitingDigit = null;
         }
+        next.placeholderAmount = props.amount;
         return next;
     }
 
@@ -202,7 +206,10 @@ export default class KeypadAmountDisplay extends React.Component<
             outputRange: [themeColor('text'), 'red']
         });
 
-        const decimalPlaceholder = getDecimalPlaceholder(amount, units);
+        const decimalPlaceholder = getDecimalPlaceholder(
+            this.state.placeholderAmount,
+            units
+        );
 
         const formattedNumber = this.getFormattedNumber(amount);
 
@@ -321,7 +328,10 @@ export default class KeypadAmountDisplay extends React.Component<
                                     }}
                                     lineHeight={scaledLineHeight}
                                     onExitComplete={() =>
-                                        this.setState({ exitingDigit: null })
+                                        this.setState({
+                                            exitingDigit: null,
+                                            placeholderAmount: this.props.amount
+                                        })
                                     }
                                 />
                             ) : null}
