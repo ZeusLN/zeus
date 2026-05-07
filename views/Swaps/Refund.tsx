@@ -167,6 +167,9 @@ export default class RefundSwap extends React.Component<
             rawToggle
         } = this.state;
 
+        const isValidMinerFee =
+            Number(minerFee) > 0 && Number.isInteger(Number(minerFee));
+
         const rawDetails = {
             endpoint: swapData.endpoint.replace('/v2', ''),
             swapId: swapData.id,
@@ -385,6 +388,7 @@ export default class RefundSwap extends React.Component<
                                 }
                                 keyboardType="numeric"
                                 placeholder="0"
+                                error={!!minerFee && !isValidMinerFee}
                             />
                         </>
                     )}
@@ -506,7 +510,7 @@ export default class RefundSwap extends React.Component<
                             !destinationAddress ||
                             this.state.loading ||
                             fetchingAddress ||
-                            (selectedFeeIndex === 1 && !minerFee)
+                            (selectedFeeIndex === 1 && !isValidMinerFee)
                         }
                     />
                 </View>
