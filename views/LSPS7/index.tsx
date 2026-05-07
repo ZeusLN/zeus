@@ -67,6 +67,7 @@ interface LSPS7State {
 @observer
 export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     listener: any;
+    private scrollViewRef = React.createRef<ScrollView>();
     constructor(props: LSPS7Props) {
         super(props);
 
@@ -316,7 +317,10 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                     <ErrorMessage message={LSPStore.error_msg} />
                 ) : (
                     <>
-                        <ScrollView style={{ flex: 1 }}>
+                        <ScrollView
+                            ref={this.scrollViewRef}
+                            style={{ flex: 1 }}
+                        >
                             {createExtensionOrderResponse &&
                                 Object.keys(createExtensionOrderResponse)
                                     .length > 0 &&
@@ -341,6 +345,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                     <Accordion
                                         headerLayout="form"
                                         id="lsps7-service-info"
+                                        scrollRef={this.scrollViewRef}
                                         title={localeString(
                                             'views.LSPS1.serviceInfo'
                                         )}
@@ -531,6 +536,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                     <Accordion
                                         headerLayout="form"
                                         id="lsps7-advanced-settings"
+                                        scrollRef={this.scrollViewRef}
                                         title={localeString(
                                             'general.advancedSettings'
                                         )}

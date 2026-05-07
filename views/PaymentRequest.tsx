@@ -125,6 +125,7 @@ export default class PaymentRequest extends React.Component<
     listener: any;
     focusListener: any;
     isComponentMounted: boolean = false;
+    private scrollViewRef = React.createRef<ScrollView>();
     state = {
         customAmount: '',
         satAmount: '',
@@ -699,7 +700,10 @@ export default class PaymentRequest extends React.Component<
                 )}
 
                 <View style={{ flex: 1 }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
+                    <ScrollView
+                        ref={this.scrollViewRef}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         {!!getPayReqError && (
                             <View style={styles.content}>
                                 <Text
@@ -1017,6 +1021,7 @@ export default class PaymentRequest extends React.Component<
                                     <Accordion
                                         headerLayout="form"
                                         id="payment-request-fee-settings"
+                                        scrollRef={this.scrollViewRef}
                                         title={localeString(
                                             'views.Settings.title'
                                         )}

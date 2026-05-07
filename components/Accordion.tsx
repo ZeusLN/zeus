@@ -1,5 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
 import {
+    ScrollView,
     StyleSheet,
     View,
     Text,
@@ -11,31 +18,31 @@ import {
 } from 'react-native';
 import Animated, {
     Easing,
-    useAnimatedStyle,
+    Extrapolation,
+    interpolate,
     useAnimatedReaction,
+    useAnimatedStyle,
+    useDerivedValue,
     useSharedValue,
     withTiming,
-    interpolate,
     SharedValue
 } from 'react-native-reanimated';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import KeyValue from './KeyValue';
 import { Row } from './layout/Row';
 import { themeColor } from '../utils/ThemeUtils';
 
-const MIN_DURATION_MS = 220;
-const MAX_DURATION_MS = 420;
-const EASING = Easing.bezier(0.25, 0.1, 0.25, 1); // gentle ease-in-out
+const MIN_DURATION_MS = 200;
+const MAX_DURATION_MS = 400;
+const EASING = Easing.bezier(0.4, 0, 0.2, 1);
 
 function getAnimationDuration(contentHeight: number): number {
     'worklet';
-    // ~0.6ms per pixel, clamped to [220, 420]
     return Math.round(
         Math.min(
             MAX_DURATION_MS,
-            Math.max(MIN_DURATION_MS, contentHeight * 0.6 + 160)
+            Math.max(MIN_DURATION_MS, contentHeight * 0.5 + 160)
         )
     );
 }
@@ -50,11 +57,39 @@ const formBodyContentBase: ViewStyle = {
     paddingHorizontal: 0
 };
 
-function FormHeaderCaret({ isOpen }: { isOpen: boolean }) {
-    return isOpen ? (
-        <CaretDown fill={themeColor('text')} width="20" height="20" />
-    ) : (
-        <CaretRight fill={themeColor('text')} width="20" height="20" />
+interface AnimatedRotateWrapperProps {
+    isExpanded: SharedValue<boolean>;
+    openDeg?: number;
+    closedDeg?: number;
+    children: React.ReactNode;
+}
+
+export function AnimatedRotateWrapper({
+    isExpanded,
+    openDeg = 0,
+    closedDeg = -90,
+    children
+}: AnimatedRotateWrapperProps) {
+    const rotationDeg = useDerivedValue(() =>
+        withTiming(isExpanded.value ? openDeg : closedDeg, {
+            duration: MIN_DURATION_MS,
+            easing: EASING
+        })
+    );
+
+    const style = useAnimatedStyle(() => ({
+        transform: [{ rotate: `${rotationDeg.value}deg` }]
+    }));
+
+    return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+function AnimatedCaret({ isExpanded }: { isExpanded: SharedValue<boolean> }) {
+    const fill = themeColor('text');
+    return (
+        <AnimatedRotateWrapper isExpanded={isExpanded}>
+            <CaretDown fill={fill} width="20" height="20" />
+        </AnimatedRotateWrapper>
     );
 }
 
@@ -93,17 +128,22 @@ function AccordionItem({ isExpanded, children, viewKey }: AccordionItemProps) {
         }
     );
 
-    const bodyStyle = useAnimatedStyle(() => ({
-        height: animatedHeight.value,
-        opacity:
-            height.value === 0
-                ? 0
-                : interpolate(
-                      animatedHeight.value,
-                      [0, Math.max(height.value, 1)],
-                      [0, 1]
-                  )
-    }));
+    const bodyStyle = useAnimatedStyle(() => {
+        const h = Math.max(height.value, 1);
+        const ah = animatedHeight.value;
+        return {
+            height: ah,
+            opacity:
+                height.value === 0
+                    ? 0
+                    : interpolate(
+                          ah,
+                          [0, h * 0.4, h],
+                          [0, 1, 1],
+                          Extrapolation.CLAMP
+                      )
+        };
+    });
 
     const handleLayout = useCallback(
         (e: LayoutChangeEvent) => {
@@ -149,11 +189,15 @@ export interface AccordionProps {
     containerStyle?: StyleProp<ViewStyle>;
     id?: string;
     /** Replaces the entire header (no default title or caret). */
-    renderHeader?: (isOpen: boolean) => React.ReactNode;
+    renderHeader?: (
+        isOpen: boolean,
+        isExpanded: SharedValue<boolean>
+    ) => React.ReactNode;
     /** When headerLayout is form and renderHeader is omitted, custom title row only; caret stays on the right. */
     renderFormTitle?: (isOpen: boolean) => React.ReactNode;
     onToggle?: (isOpen: boolean) => void;
     disabled?: boolean;
+    scrollRef?: React.RefObject<ScrollView | null>;
 }
 
 export function Accordion({
@@ -174,7 +218,8 @@ export function Accordion({
     renderHeader,
     renderFormTitle,
     onToggle,
-    disabled = false
+    disabled = false,
+    scrollRef
 }: AccordionProps) {
     const isControlled = open != null;
     const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
@@ -185,6 +230,45 @@ export function Accordion({
     useEffect(() => {
         isOpen.value = currentOpen;
     }, [currentOpen, isOpen]);
+
+    const containerRef = useRef<View>(null);
+
+    const prevOpenRef = useRef(currentOpen);
+
+    useEffect(() => {
+        const wasOpen = prevOpenRef.current;
+        prevOpenRef.current = currentOpen;
+        if (wasOpen || !currentOpen || !scrollRef?.current) return;
+        const timer = setTimeout(() => {
+            if (!containerRef.current || !scrollRef.current) return;
+            containerRef.current.measureLayout(
+                scrollRef.current as any,
+                (_x: number, y: number, _w: number, h: number) => {
+                    (scrollRef.current as any)?.measure(
+                        (
+                            _fx: number,
+                            _fy: number,
+                            _fw: number,
+                            visibleH: number
+                        ) => {
+                            const topAligned = y - 16;
+                            const bottomAligned = y + h - visibleH + 24;
+                            const targetY = Math.min(topAligned, bottomAligned);
+                            if (targetY > 0) {
+                                scrollRef.current?.scrollTo({
+                                    y: targetY,
+                                    animated: true
+                                });
+                            }
+                        }
+                    );
+                },
+                () => {}
+            );
+        }, MAX_DURATION_MS + 10); // fire after the animation finishes
+
+        return () => clearTimeout(timer);
+    }, [currentOpen, scrollRef]);
 
     const viewKey = useMemo(() => id ?? title, [id, title]);
 
@@ -215,10 +299,10 @@ export function Accordion({
                         <KeyValue keyValue={title} />
                     )}
                 </View>
-                <FormHeaderCaret isOpen={isExpanded} />
+                <AnimatedCaret isExpanded={isOpen} />
             </Row>
         ),
-        [renderFormTitle, title]
+        [renderFormTitle, title, isOpen]
     );
 
     const resolvedRenderHeader = useMemo(() => {
@@ -255,7 +339,7 @@ export function Accordion({
     }, [disabled, isControlled, isOpen, onToggle]);
 
     return (
-        <View style={resolvedContainerStyle}>
+        <View ref={containerRef} style={resolvedContainerStyle}>
             <TouchableOpacity
                 activeOpacity={0.75}
                 disabled={disabled}
@@ -270,7 +354,7 @@ export function Accordion({
                 accessibilityState={{ disabled, expanded: currentOpen }}
             >
                 {resolvedRenderHeader ? (
-                    resolvedRenderHeader(currentOpen)
+                    resolvedRenderHeader(currentOpen, isOpen)
                 ) : (
                     <Text style={[styles.title, titleStyle]}>{title}</Text>
                 )}

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
@@ -15,6 +15,7 @@ import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
+import Accordion from '../../components/Accordion';
 import AddressInput from '../../components/AddressInput';
 import {
     ErrorMessage,
@@ -31,9 +32,6 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 
 import Swap from '../../models/Swap';
-
-import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 interface RefundSwapProps {
     navigation: any;
@@ -58,7 +56,6 @@ interface RefundSwapState {
     refundStatus: string;
     uncooperative: boolean;
     fetchingAddress: boolean;
-    rawToggle: boolean;
 }
 
 @inject('SwapStore', 'NodeInfoStore', 'InvoicesStore')
@@ -75,9 +72,10 @@ export default class RefundSwap extends React.Component<
         swapData: this.props.route.params.swapData,
         refundStatus: '',
         uncooperative: false,
-        fetchingAddress: false,
-        rawToggle: false
+        fetchingAddress: false
     };
+
+    private scrollViewRef = React.createRef<ScrollView>();
 
     createRefundTransaction = async (
         swapData: Swap,
@@ -147,8 +145,7 @@ export default class RefundSwap extends React.Component<
             loading,
             refundStatus,
             uncooperative,
-            fetchingAddress,
-            rawToggle
+            fetchingAddress
         } = this.state;
 
         const rawDetails = {
@@ -189,7 +186,10 @@ export default class RefundSwap extends React.Component<
                     }
                     navigation={this.props.navigation}
                 />
-                <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
+                <ScrollView
+                    ref={this.scrollViewRef}
+                    style={{ flex: 1, paddingHorizontal: 20 }}
+                >
                     {error && (
                         <View style={{ marginBottom: 10 }}>
                             <ErrorMessage message={error} />
@@ -326,53 +326,36 @@ export default class RefundSwap extends React.Component<
                         </View>
                     </Row>
 
-                    <TouchableOpacity
-                        onPress={() => {
-                            this.setState({
-                                rawToggle: !rawToggle
-                            });
+                    <Accordion
+                        id="refund-raw-details"
+                        title="Raw details"
+                        headerLayout="form"
+                        embedded
+                        scrollRef={this.scrollViewRef}
+                        headerStyle={{
+                            marginTop: 10,
+                            marginBottom: 10
                         }}
+                        renderFormTitle={() => (
+                            <KeyValue
+                                keyValue={'Raw details'}
+                                color={themeColor('secondaryText')}
+                            />
+                        )}
                     >
-                        <View
-                            style={{
-                                marginTop: 10,
-                                marginBottom: 10
-                            }}
-                        >
-                            <Row justify="space-between">
-                                <View style={{ flex: 1 }}>
+                        <>
+                            {Object.entries(rawDetails).map(([key, value]) => {
+                                if (!value) return;
+                                return (
                                     <KeyValue
-                                        keyValue={'Raw details'}
-                                        color={themeColor('secondaryText')}
+                                        key={key}
+                                        keyValue={pascalToHumanReadable(key)}
+                                        value={value.toString()}
                                     />
-                                </View>
-                                {rawToggle ? (
-                                    <CaretDown
-                                        fill={themeColor('secondaryText')}
-                                        width="20"
-                                        height="20"
-                                    />
-                                ) : (
-                                    <CaretRight
-                                        fill={themeColor('secondaryText')}
-                                        width="20"
-                                        height="20"
-                                    />
-                                )}
-                            </Row>
-                        </View>
-                    </TouchableOpacity>
-
-                    {rawToggle &&
-                        Object.entries(rawDetails).map(([key, value]) => {
-                            if (!value) return;
-                            return (
-                                <KeyValue
-                                    keyValue={pascalToHumanReadable(key)}
-                                    value={value.toString()}
-                                />
-                            );
-                        })}
+                                );
+                            })}
+                        </>
+                    </Accordion>
                 </ScrollView>
 
                 <View style={{ marginBottom: 15 }}>

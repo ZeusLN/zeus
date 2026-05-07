@@ -37,8 +37,6 @@ import NWCConnection, {
     TimeUnit
 } from '../../../models/NWCConnection';
 
-import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
-
 interface AddOrEditNWCConnectionProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<
@@ -99,6 +97,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     }
 
     private unsubscribeFocus?: () => void;
+    private scrollViewRef = React.createRef<ScrollView>();
 
     loadData = async () => {
         const { route, NostrWalletConnectStore } = this.props;
@@ -677,57 +676,32 @@ export default class AddOrEditNWCConnection extends React.Component<
                     id="nwc-custom-permissions"
                     title={permissionType.title}
                     containerStyle={{ marginTop: 20 }}
-                    renderHeader={(isOpen) => (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between'
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontWeight: '400'
-                                    }}
-                                >
-                                    {permissionType.title}
-                                </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 14,
-                                        marginTop: 4,
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {permissionType.description}
-                                </Text>
-                            </View>
-                            <View style={{ marginLeft: 10 }}>
-                                <ForwardIcon
-                                    stroke={themeColor('text')}
-                                    style={{
-                                        transform: [
-                                            {
-                                                rotate: isOpen
-                                                    ? '90deg'
-                                                    : '0deg'
-                                            }
-                                        ]
-                                    }}
-                                />
-                            </View>
-                        </View>
+                    scrollRef={this.scrollViewRef}
+                    renderFormTitle={() => (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontWeight: '400'
+                                }}
+                            >
+                                {permissionType.title}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    marginTop: 4,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {permissionType.description}
+                            </Text>
+                        </>
                     )}
-                    headerStyle={{
-                        paddingHorizontal: 0,
-                        paddingVertical: 0,
-                        marginBottom: 0
-                    }}
+                    headerStyle={{ marginBottom: 0 }}
                 >
                     <View style={{ marginTop: 8 }}>
                         <View
@@ -952,6 +926,7 @@ export default class AddOrEditNWCConnection extends React.Component<
 
                 <View style={styles.mainContainer}>
                     <ScrollView
+                        ref={this.scrollViewRef}
                         style={styles.scrollContainer}
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
@@ -1315,46 +1290,24 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 headerLayout="form"
                                 id="nwc-advanced-settings"
                                 title={localeString('general.advancedSettings')}
-                                renderHeader={(isOpen) => (
-                                    <View
+                                scrollRef={this.scrollViewRef}
+                                renderFormTitle={() => (
+                                    <Text
                                         style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            marginHorizontal: 15,
-                                            paddingVertical: 10
+                                            color: themeColor('text'),
+                                            fontSize: 17,
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontWeight: '400'
                                         }}
                                     >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 17,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontWeight: '400'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'general.advancedSettings'
-                                            )}
-                                        </Text>
-                                        <ForwardIcon
-                                            stroke={themeColor('text')}
-                                            style={{
-                                                transform: [
-                                                    {
-                                                        rotate: isOpen
-                                                            ? '90deg'
-                                                            : '0deg'
-                                                    }
-                                                ]
-                                            }}
-                                        />
-                                    </View>
+                                        {localeString(
+                                            'general.advancedSettings'
+                                        )}
+                                    </Text>
                                 )}
                                 headerStyle={{
-                                    paddingHorizontal: 0,
-                                    paddingVertical: 0,
+                                    paddingHorizontal: 15,
+                                    paddingVertical: 10,
                                     marginBottom: 0
                                 }}
                             >

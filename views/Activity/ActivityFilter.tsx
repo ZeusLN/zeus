@@ -30,13 +30,12 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
-import Accordion from '../../components/Accordion';
+import Accordion, { AnimatedRotateWrapper } from '../../components/Accordion';
 
 import { LSPOrderState } from '../../models/LSP';
 import { SwapState } from '../../models/Swap';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 interface ActivityFilterProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -721,7 +720,10 @@ export default class ActivityFilter extends React.Component<
                                                 )
                                             }
                                             embedded
-                                            renderHeader={(isOpen) => (
+                                            renderHeader={(
+                                                _isOpen,
+                                                isExpanded
+                                            ) => (
                                                 <ListItem
                                                     containerStyle={{
                                                         borderBottomWidth: 0,
@@ -729,31 +731,17 @@ export default class ActivityFilter extends React.Component<
                                                             'transparent'
                                                     }}
                                                 >
-                                                    <View
-                                                        style={{
-                                                            marginRight: 0,
-                                                            justifyContent:
-                                                                'center'
-                                                        }}
+                                                    <AnimatedRotateWrapper
+                                                        isExpanded={isExpanded}
                                                     >
-                                                        {isOpen ? (
-                                                            <CaretDown
-                                                                fill={themeColor(
-                                                                    'text'
-                                                                )}
-                                                                width={24}
-                                                                height={24}
-                                                            />
-                                                        ) : (
-                                                            <CaretRight
-                                                                fill={themeColor(
-                                                                    'text'
-                                                                )}
-                                                                width={24}
-                                                                height={24}
-                                                            />
-                                                        )}
-                                                    </View>
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width={24}
+                                                            height={24}
+                                                        />
+                                                    </AnimatedRotateWrapper>
                                                     <ListItem.Content>
                                                         <ListItem.Title
                                                             style={{
@@ -835,7 +823,8 @@ export default class ActivityFilter extends React.Component<
                                                                         }
                                                                         embedded
                                                                         renderHeader={(
-                                                                            isOpen
+                                                                            _isOpen,
+                                                                            isExpanded
                                                                         ) => (
                                                                             <ListItem
                                                                                 containerStyle={{
@@ -844,39 +833,23 @@ export default class ActivityFilter extends React.Component<
                                                                                         'transparent'
                                                                                 }}
                                                                             >
-                                                                                <View
-                                                                                    style={{
-                                                                                        marginRight: 0,
-                                                                                        justifyContent:
-                                                                                            'center'
-                                                                                    }}
+                                                                                <AnimatedRotateWrapper
+                                                                                    isExpanded={
+                                                                                        isExpanded
+                                                                                    }
                                                                                 >
-                                                                                    {isOpen ? (
-                                                                                        <CaretDown
-                                                                                            fill={themeColor(
-                                                                                                'text'
-                                                                                            )}
-                                                                                            width={
-                                                                                                24
-                                                                                            }
-                                                                                            height={
-                                                                                                24
-                                                                                            }
-                                                                                        />
-                                                                                    ) : (
-                                                                                        <CaretRight
-                                                                                            fill={themeColor(
-                                                                                                'text'
-                                                                                            )}
-                                                                                            width={
-                                                                                                24
-                                                                                            }
-                                                                                            height={
-                                                                                                24
-                                                                                            }
-                                                                                        />
-                                                                                    )}
-                                                                                </View>
+                                                                                    <CaretDown
+                                                                                        fill={themeColor(
+                                                                                            'text'
+                                                                                        )}
+                                                                                        width={
+                                                                                            24
+                                                                                        }
+                                                                                        height={
+                                                                                            24
+                                                                                        }
+                                                                                    />
+                                                                                </AnimatedRotateWrapper>
                                                                                 <ListItem.Content>
                                                                                     <ListItem.Title
                                                                                         style={{
@@ -971,7 +944,8 @@ export default class ActivityFilter extends React.Component<
                                                                                                 }
                                                                                                 embedded
                                                                                                 renderHeader={(
-                                                                                                    isOpen
+                                                                                                    _isOpen,
+                                                                                                    isExpanded
                                                                                                 ) => (
                                                                                                     <ListItem
                                                                                                         containerStyle={{
@@ -980,39 +954,23 @@ export default class ActivityFilter extends React.Component<
                                                                                                                 'transparent'
                                                                                                         }}
                                                                                                     >
-                                                                                                        <View
-                                                                                                            style={{
-                                                                                                                marginRight: 5,
-                                                                                                                justifyContent:
-                                                                                                                    'center'
-                                                                                                            }}
+                                                                                                        <AnimatedRotateWrapper
+                                                                                                            isExpanded={
+                                                                                                                isExpanded
+                                                                                                            }
                                                                                                         >
-                                                                                                            {isOpen ? (
-                                                                                                                <CaretDown
-                                                                                                                    fill={themeColor(
-                                                                                                                        'text'
-                                                                                                                    )}
-                                                                                                                    width={
-                                                                                                                        24
-                                                                                                                    }
-                                                                                                                    height={
-                                                                                                                        24
-                                                                                                                    }
-                                                                                                                />
-                                                                                                            ) : (
-                                                                                                                <CaretRight
-                                                                                                                    fill={themeColor(
-                                                                                                                        'text'
-                                                                                                                    )}
-                                                                                                                    width={
-                                                                                                                        24
-                                                                                                                    }
-                                                                                                                    height={
-                                                                                                                        24
-                                                                                                                    }
-                                                                                                                />
-                                                                                                            )}
-                                                                                                        </View>
+                                                                                                            <CaretDown
+                                                                                                                fill={themeColor(
+                                                                                                                    'text'
+                                                                                                                )}
+                                                                                                                width={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                                height={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                            />
+                                                                                                        </AnimatedRotateWrapper>
                                                                                                         <ListItem.Content>
                                                                                                             <ListItem.Title
                                                                                                                 style={{
@@ -1162,7 +1120,8 @@ export default class ActivityFilter extends React.Component<
                                                                     }
                                                                     embedded
                                                                     renderHeader={(
-                                                                        isOpen
+                                                                        _isOpen,
+                                                                        isExpanded
                                                                     ) => (
                                                                         <ListItem
                                                                             containerStyle={{
@@ -1171,39 +1130,23 @@ export default class ActivityFilter extends React.Component<
                                                                                     'transparent'
                                                                             }}
                                                                         >
-                                                                            <View
-                                                                                style={{
-                                                                                    marginRight: 0,
-                                                                                    justifyContent:
-                                                                                        'center'
-                                                                                }}
+                                                                            <AnimatedRotateWrapper
+                                                                                isExpanded={
+                                                                                    isExpanded
+                                                                                }
                                                                             >
-                                                                                {isOpen ? (
-                                                                                    <CaretDown
-                                                                                        fill={themeColor(
-                                                                                            'text'
-                                                                                        )}
-                                                                                        width={
-                                                                                            24
-                                                                                        }
-                                                                                        height={
-                                                                                            24
-                                                                                        }
-                                                                                    />
-                                                                                ) : (
-                                                                                    <CaretRight
-                                                                                        fill={themeColor(
-                                                                                            'text'
-                                                                                        )}
-                                                                                        width={
-                                                                                            24
-                                                                                        }
-                                                                                        height={
-                                                                                            24
-                                                                                        }
-                                                                                    />
-                                                                                )}
-                                                                            </View>
+                                                                                <CaretDown
+                                                                                    fill={themeColor(
+                                                                                        'text'
+                                                                                    )}
+                                                                                    width={
+                                                                                        24
+                                                                                    }
+                                                                                    height={
+                                                                                        24
+                                                                                    }
+                                                                                />
+                                                                            </AnimatedRotateWrapper>
                                                                             <ListItem.Content>
                                                                                 <ListItem.Title
                                                                                     style={{
