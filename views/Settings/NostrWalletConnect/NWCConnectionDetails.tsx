@@ -452,6 +452,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                   )
                                         }
                                     />
+
                                     {connection.maxAmountSats ? (
                                         <KeyValue
                                             keyValue={localeString(
@@ -504,6 +505,21 @@ export default class NWCConnectionDetails extends React.Component<
                                                         }
                                                         toggleable
                                                         debit
+                                                    />
+                                                }
+                                            />
+
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.NostrWalletConnect.totalReceived'
+                                                )}
+                                                value={
+                                                    <Amount
+                                                        credit
+                                                        sats={
+                                                            connection.totalReceivedActivitySats
+                                                        }
+                                                        toggleable
                                                     />
                                                 }
                                             />
