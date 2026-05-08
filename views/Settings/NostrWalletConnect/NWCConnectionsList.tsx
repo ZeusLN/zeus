@@ -610,9 +610,9 @@ export default class NWCConnectionsList extends React.Component<
                                         <Divider
                                             style={[
                                                 {
-                                                    marginBottom: 15,
+                                                    marginBottom: 10,
                                                     backgroundColor:
-                                                        themeColor('border')
+                                                        themeColor('separator')
                                                 }
                                             ]}
                                         />

@@ -222,6 +222,35 @@ export default class NWCConnection extends BaseModel {
         if (!this.hasBudgetLimit) return 0;
         return Math.min(100, (this.totalSpendSats / this.maxAmountSats!) * 100);
     }
+
+    /**
+     * Sum of settled incoming invoice amounts recorded on this connection's
+     * activity log (successful make_invoice only).
+     */
+    @computed
+    public get totalReceivedActivitySats(): number {
+        if (!this.activity?.length) return 0;
+        return this.activity.reduce((sum, a) => {
+            if (a.type !== 'make_invoice' || a.status !== 'success') {
+                return sum;
+            }
+            const fromInvoice =
+                a.invoice != null
+                    ? Math.floor(Number(a.invoice.getAmount) || 0)
+                    : 0;
+            const fromPayment =
+                a.payment != null
+                    ? Math.floor(Number(a.payment.getAmount) || 0)
+                    : 0;
+            const fromSat = Math.floor(Number(a.satAmount) || 0);
+            let sats = 0;
+            if (fromInvoice > 0) sats = fromInvoice;
+            else if (fromSat > 0) sats = fromSat;
+            else sats = fromPayment;
+            return sum + Math.max(0, sats);
+        }, 0);
+    }
+
     @action
     public addWarning(warningType: ConnectionWarningType): void {
         if (!this._warningTypes.includes(warningType)) {
