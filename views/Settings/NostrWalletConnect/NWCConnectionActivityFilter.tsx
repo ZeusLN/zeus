@@ -74,7 +74,8 @@ export default class NWCConnectionActivityFilter extends React.Component<
             selectedFilters.sent === NWC_DEFAULT_FILTERS.sent &&
             selectedFilters.received === NWC_DEFAULT_FILTERS.received &&
             selectedFilters.failed === NWC_DEFAULT_FILTERS.failed &&
-            selectedFilters.pending === NWC_DEFAULT_FILTERS.pending
+            selectedFilters.pending === NWC_DEFAULT_FILTERS.pending &&
+            selectedFilters.expired === NWC_DEFAULT_FILTERS.expired
         );
     };
 
@@ -108,6 +109,11 @@ export default class NWCConnectionActivityFilter extends React.Component<
                 label: localeString('views.Wallet.Invoices.unpaid'),
                 value: selectedFilters.pending,
                 key: 'pending' as keyof NWCFilterState
+            },
+            {
+                label: localeString('channel.expirationStatus.expired'),
+                value: selectedFilters.expired,
+                key: 'expired' as keyof NWCFilterState
             }
         ];
 

@@ -34,13 +34,15 @@ export interface NWCFilterState {
     received: boolean;
     failed: boolean;
     pending: boolean;
+    expired: boolean;
 }
 
 export const NWC_DEFAULT_FILTERS: NWCFilterState = {
     sent: true,
     received: true,
     failed: true,
-    pending: true
+    pending: true,
+    expired: true
 };
 
 interface ConnectionActivityProps {
@@ -149,6 +151,13 @@ export default class NWCConnectionActivity extends React.Component<
                 );
             }
 
+            if (item.status === 'expired') {
+                return (
+                    (isSent && filters.sent && filters.expired) ||
+                    (isReceived && filters.expired)
+                );
+            }
+
             if (item.status === 'pending') {
                 return (
                     (isSent && filters.sent && filters.pending) ||
@@ -182,6 +191,7 @@ export default class NWCConnectionActivity extends React.Component<
             return item.type === 'make_invoice' ? 'success' : 'warning';
         }
         if (item.status === 'failed') return 'warning';
+        if (item.status === 'expired') return 'secondaryText';
         if (item.status === 'pending') return 'highlight';
         return 'secondaryText';
     };
@@ -192,26 +202,18 @@ export default class NWCConnectionActivity extends React.Component<
         if (isSent) {
             if (item.status === 'failed')
                 return localeString('views.Payment.failedPayment');
+            if (item.status === 'expired')
+                return localeString('views.Activity.expiredRequested');
             if (item.status === 'pending')
                 return localeString('views.Payment.inTransitPayment');
             return localeString('views.Activity.youSent');
         }
 
-        if (item.isExpired)
+        if (item.status === 'expired' || item.isExpired)
             return localeString('views.Activity.expiredRequested');
         if (item.status === 'success')
             return localeString('views.Activity.youReceived');
         return localeString('views.Activity.requestedPayment');
-    };
-
-    getActivitySubtitle = (item: ConnectionActivity): string => {
-        if (
-            (item.type === 'make_invoice' || item.type === 'pay_invoice') &&
-            item.payment_source === 'cashu'
-        ) {
-            return localeString('general.cashu');
-        }
-        return localeString('views.PaymentRequest.title');
     };
 
     getAmount = (item: ConnectionActivity) => {
@@ -224,6 +226,60 @@ export default class NWCConnectionActivity extends React.Component<
         }
 
         return item.satAmount;
+    };
+
+    getActivityMemo = (item: ConnectionActivity): string | undefined => {
+        const payment: any = item.payment;
+        const invoice: any = item.invoice;
+        const raw =
+            payment?.getKeysendMessageOrMemo ??
+            payment?.getMemo ??
+            invoice?.getKeysendMessageOrMemo ??
+            invoice?.getMemo;
+        if (raw == null) return undefined;
+        const s = String(raw).trim();
+        return s.length > 0 ? s : undefined;
+    };
+
+    getActivitySubtitleNode = (item: ConnectionActivity): React.ReactNode => {
+        const memo = this.getActivityMemo(item);
+        const memoDisplay = memo
+            ? PrivacyUtils.sensitiveValue({
+                  input: memo,
+                  condenseAtLength: 100
+              })?.toString()
+            : '';
+
+        let baseLabel: string;
+        if (item.type === 'make_invoice') {
+            if (item.payment_source === 'cashu') {
+                baseLabel =
+                    item.status === 'success'
+                        ? localeString('general.cashu')
+                        : localeString('views.Cashu.CashuInvoice.title');
+            } else {
+                baseLabel =
+                    item.status === 'success'
+                        ? localeString('general.lightning')
+                        : localeString('views.PaymentRequest.title');
+            }
+        } else if (item.payment_source === 'cashu') {
+            baseLabel = localeString('general.cashu');
+        } else {
+            baseLabel = localeString('general.lightning');
+        }
+
+        return (
+            <Text>
+                {baseLabel}
+                {memo ? ': ' : ''}
+                {memo ? (
+                    <Text style={{ fontStyle: 'italic' }}>{memoDisplay}</Text>
+                ) : (
+                    ''
+                )}
+            </Text>
+        );
     };
 
     navigateToPaymentDetails = (item: ConnectionActivity) => {
@@ -279,13 +335,14 @@ export default class NWCConnectionActivity extends React.Component<
             filters.sent === NWC_DEFAULT_FILTERS.sent &&
             filters.received === NWC_DEFAULT_FILTERS.received &&
             filters.failed === NWC_DEFAULT_FILTERS.failed &&
-            filters.pending === NWC_DEFAULT_FILTERS.pending
+            filters.pending === NWC_DEFAULT_FILTERS.pending &&
+            filters.expired === NWC_DEFAULT_FILTERS.expired
         );
     };
 
     renderActivityListItem = ({ item }: { item: ConnectionActivity }) => {
         const title = this.getActivityTitle(item);
-        const subtitle = this.getActivitySubtitle(item);
+        const subtitleNode = this.getActivitySubtitleNode(item);
         const displayTime =
             item.invoice?.getDisplayTime || item.payment?.getDisplayTime;
         const displayTimeShort =
@@ -296,6 +353,7 @@ export default class NWCConnectionActivity extends React.Component<
                 'HH:MM tt'
             );
         const note = item.payment?.getNote || item.invoice?.getNote;
+        const showTimeRow = Boolean(displayTime || item.createdAt);
         const showExpiry =
             item.type === 'make_invoice' &&
             item.status === 'pending' &&
@@ -323,20 +381,27 @@ export default class NWCConnectionActivity extends React.Component<
                         />
                     </View>
 
-                    {displayTime && (
+                    {showTimeRow && (
                         <View style={styles.row}>
                             <ListItem.Subtitle
+                                right
                                 style={[
                                     styles.leftCellSecondary,
-                                    { color: themeColor('secondaryText') }
+                                    {
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }
                                 ]}
                             >
-                                {subtitle}
+                                {subtitleNode}
                             </ListItem.Subtitle>
                             <ListItem.Subtitle
                                 style={[
                                     styles.rightCellSecondary,
-                                    { color: themeColor('secondaryText') }
+                                    {
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }
                                 ]}
                             >
                                 <Text>{displayTimeShort}</Text>
@@ -349,7 +414,10 @@ export default class NWCConnectionActivity extends React.Component<
                             <ListItem.Subtitle
                                 style={[
                                     styles.leftCellSecondary,
-                                    { color: themeColor('secondaryText') }
+                                    {
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }
                                 ]}
                             >
                                 {localeString('views.Invoice.expiration')}
@@ -357,10 +425,15 @@ export default class NWCConnectionActivity extends React.Component<
                             <ListItem.Subtitle
                                 style={[
                                     styles.rightCellSecondary,
-                                    { color: themeColor('secondaryText') }
+                                    {
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }
                                 ]}
                             >
-                                {item.invoice?.formattedTimeUntilExpiry}
+                                <Text textBreakStrategy="highQuality">
+                                    {item.invoice?.formattedTimeUntilExpiry}
+                                </Text>
                             </ListItem.Subtitle>
                         </View>
                     )}
