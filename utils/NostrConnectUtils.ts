@@ -577,15 +577,23 @@ export default class NostrConnectUtils {
     static async buildNip47TransactionForLightningInvoiceLookup(
         paymentHash: string
     ): Promise<Nip47Transaction> {
-        let invoice = new Invoice();
+        let rawInvoice = new Invoice();
         try {
-            invoice = await BackendUtils.lookupInvoice({
+            rawInvoice = await BackendUtils.lookupInvoice({
                 r_hash: paymentHash!
             });
         } catch (error) {
             console.error('Failed to lookup invoice:', error);
             throw error;
         }
+        if (!rawInvoice || typeof rawInvoice !== 'object') {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                )
+            );
+        }
+        const invoice = new Invoice(rawInvoice);
         const now = Math.floor(Date.now() / 1000);
 
         const isExpired =
