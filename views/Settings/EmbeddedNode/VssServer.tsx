@@ -13,6 +13,7 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 import { DEFAULT_VSS_SERVER } from '../../../utils/LdkNodeUtils';
 
 interface VssServerProps {
@@ -58,7 +59,12 @@ export default class VssServer extends React.Component<
 
         const showReset = vssServer !== '' && vssServer !== DEFAULT_VSS_SERVER;
 
-        const hasUnsavedChanges = vssServer !== savedVssServer;
+        const vssServerTrimmed = vssServer.trim();
+        const showInvalidUrlError =
+            vssServerTrimmed !== '' && !UrlUtils.isValidUrl(vssServer);
+
+        const hasUnsavedChanges =
+            vssServer !== savedVssServer && !showInvalidUrlError;
 
         return (
             <Screen>
@@ -112,6 +118,21 @@ export default class VssServer extends React.Component<
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
+
+                        {showInvalidUrlError && (
+                            <Text
+                                style={{
+                                    color: themeColor('error'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 12,
+                                    marginTop: 4
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.invalidServerUrl'
+                                )}
+                            </Text>
+                        )}
 
                         <View style={{ marginTop: 10 }}>
                             <Text
