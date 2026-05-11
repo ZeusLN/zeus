@@ -100,21 +100,14 @@ interface ActivityListItemProps {
 const activityIconSize = 21;
 const layerIconSize = 18;
 
-const ActivityIcon = ({
-    name,
-    color,
-    accessibilityLabel
-}: {
-    name: string;
-    color: string;
-    accessibilityLabel: string;
-}) => (
+const ActivityIcon = ({ name, color }: { name: string; color: string }) => (
     <Icon
         name={name}
         size={activityIconSize}
         color={color}
         underlayColor="transparent"
-        accessibilityLabel={accessibilityLabel}
+        accessible={false}
+        importantForAccessibility="no"
     />
 );
 
@@ -160,6 +153,18 @@ const ActivityText = ({
     >
         {children}
     </Text>
+);
+
+const formatOrderState = (state: string) =>
+    state.toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
+
+const stateSubtitle = (state: string) => (
+    <ActivityText>
+        {localeString('general.label_value', {
+            label: localeString('general.state'),
+            value: formatOrderState(state)
+        })}
+    </ActivityText>
 );
 
 const ActivityListItem = observer(
@@ -452,18 +457,14 @@ const ActivityListItem = observer(
                 icon: 'account-tree',
                 color: themeColor('highlight')
             });
-            subTitle = `${localeString('general.state')}: ${item.state
-                .toLowerCase()
-                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
+            subTitle = stateSubtitle(item.state);
         } else if (item.model === 'LSPS7Order') {
             setTitle({
                 label: localeString('views.LSPS7.type'),
                 icon: 'account-tree',
                 color: themeColor('highlight')
             });
-            subTitle = `${localeString('general.state')}: ${item.state
-                .toLowerCase()
-                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
+            subTitle = stateSubtitle(item.state);
         }
 
         return (
@@ -490,7 +491,6 @@ const ActivityListItem = observer(
                                         ? themeColor('highlight')
                                         : activityIconColor
                                 }
-                                accessibilityLabel={displayNameLabel}
                             />
                             {showDisplayName && (
                                 <ListItem.Title

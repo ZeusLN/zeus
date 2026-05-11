@@ -159,6 +159,7 @@
     "general.skip": "Skip",
     "general.type": "Type",
     "general.label": "Label",
+    "general.label_value": "{{label}}: {{value}}",
     "general.noLabel": "No label",
     "general.used": "Used",
     "general.unused": "Unused",
