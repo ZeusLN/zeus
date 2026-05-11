@@ -8,17 +8,20 @@ import {
     TouchableOpacity,
     Modal
 } from 'react-native';
-import { Button, Icon, ListItem } from '@rneui/themed';
+import { Button, ButtonGroup, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore, {
+    ActivitySummaryGroupBy,
+    ActivitySummaryInterval,
     DEFAULT_FILTERS,
     Filter,
     SERVICES_CONFIG
@@ -36,6 +39,19 @@ import { SwapState } from '../../models/Swap';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
+
+const SUMMARY_INTERVALS: ActivitySummaryInterval[] = [
+    'hour',
+    'day',
+    'month',
+    'year'
+];
+
+const SUMMARY_GROUPS: ActivitySummaryGroupBy[] = [
+    'memo',
+    'destination',
+    'memoAndDestination'
+];
 
 interface ActivityFilterProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -300,6 +316,8 @@ export default class ActivityFilter extends React.Component<
             filters,
             setAmountFilter,
             setMaximumAmountFilter,
+            setActivitySummaryInterval,
+            setActivitySummaryGroupBy,
             setStartDateFilter,
             setEndDateFilter,
             clearStartDateFilter,
@@ -324,6 +342,9 @@ export default class ActivityFilter extends React.Component<
             zeusPay,
             minimumAmount,
             maximumAmount,
+            activitySummary,
+            activitySummaryInterval,
+            activitySummaryGroupBy,
             startDate,
             endDate,
             memo,
@@ -352,6 +373,7 @@ export default class ActivityFilter extends React.Component<
             lsps1State,
             lsps7State
         ]);
+        const groupStyles = getButtonGroupStyles();
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
@@ -661,6 +683,25 @@ export default class ActivityFilter extends React.Component<
                 value: memo,
                 type: 'TextInput',
                 condition: true
+            },
+            {
+                label: localeString('views.ActivitySummary.showSummaries'),
+                value: activitySummary,
+                var: 'activitySummary',
+                type: 'Toggle',
+                condition: true
+            },
+            {
+                label: localeString('views.ActivitySummary.interval'),
+                value: activitySummaryInterval,
+                type: 'SummaryInterval',
+                condition: activitySummary
+            },
+            {
+                label: localeString('views.ActivitySummary.groupBy'),
+                value: activitySummaryGroupBy,
+                type: 'SummaryGroupBy',
+                condition: activitySummary
             }
         ];
 
@@ -1421,6 +1462,74 @@ export default class ActivityFilter extends React.Component<
                                                         marginBottom: 0,
                                                         top: 0
                                                     }}
+                                                />
+                                            </View>
+                                        )}
+                                        {item.type === 'SummaryInterval' && (
+                                            <View style={{ flex: 1 }}>
+                                                <ButtonGroup
+                                                    onPress={(
+                                                        selectedIndex: number
+                                                    ) =>
+                                                        setActivitySummaryInterval(
+                                                            SUMMARY_INTERVALS[
+                                                                selectedIndex
+                                                            ]
+                                                        )
+                                                    }
+                                                    selectedIndex={SUMMARY_INTERVALS.indexOf(
+                                                        item.value
+                                                    )}
+                                                    buttons={SUMMARY_INTERVALS.map(
+                                                        (interval) =>
+                                                            localeString(
+                                                                `views.ActivitySummary.interval.${interval}`
+                                                            )
+                                                    )}
+                                                    selectedButtonStyle={
+                                                        groupStyles.selectedButtonStyle
+                                                    }
+                                                    containerStyle={{
+                                                        ...groupStyles.containerStyle,
+                                                        marginBottom: 0
+                                                    }}
+                                                    innerBorderStyle={
+                                                        groupStyles.innerBorderStyle
+                                                    }
+                                                />
+                                            </View>
+                                        )}
+                                        {item.type === 'SummaryGroupBy' && (
+                                            <View style={{ flex: 1 }}>
+                                                <ButtonGroup
+                                                    onPress={(
+                                                        selectedIndex: number
+                                                    ) =>
+                                                        setActivitySummaryGroupBy(
+                                                            SUMMARY_GROUPS[
+                                                                selectedIndex
+                                                            ]
+                                                        )
+                                                    }
+                                                    selectedIndex={SUMMARY_GROUPS.indexOf(
+                                                        item.value
+                                                    )}
+                                                    buttons={SUMMARY_GROUPS.map(
+                                                        (groupBy) =>
+                                                            localeString(
+                                                                `views.ActivitySummary.groupBy.${groupBy}`
+                                                            )
+                                                    )}
+                                                    selectedButtonStyle={
+                                                        groupStyles.selectedButtonStyle
+                                                    }
+                                                    containerStyle={{
+                                                        ...groupStyles.containerStyle,
+                                                        marginBottom: 0
+                                                    }}
+                                                    innerBorderStyle={
+                                                        groupStyles.innerBorderStyle
+                                                    }
                                                 />
                                             </View>
                                         )}

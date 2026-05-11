@@ -32,6 +32,9 @@ import {
     numberWithDecimals
 } from '../../utils/UnitsUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
+import ActivitySummaryUtils, {
+    ActivitySummary
+} from '../../utils/ActivitySummaryUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -64,6 +67,7 @@ interface ActivityState {
     loading: boolean;
     selectedPaymentForOrder: any;
     isCsvModalVisible: boolean;
+    expandedSummaryIds: Record<string, boolean>;
 }
 
 interface OrderItem {
@@ -451,6 +455,98 @@ const ActivityListItem = observer(
     }
 );
 
+const ActivitySummaryListItem = ({
+    summary,
+    expanded,
+    onPress
+}: {
+    summary: ActivitySummary;
+    expanded: boolean;
+    onPress: () => void;
+}) => (
+    <ListItem
+        containerStyle={{
+            borderBottomWidth: 0,
+            backgroundColor: 'transparent'
+        }}
+        onPress={onPress}
+    >
+        <ListItem.Content>
+            <View style={styles.row}>
+                <View style={{ ...styles.leftCell, ...styles.iconTextRow }}>
+                    <Icon
+                        name={expanded ? 'expand-less' : 'expand-more'}
+                        size={21}
+                        color={themeColor('highlight')}
+                        underlayColor="transparent"
+                        accessibilityLabel={localeString(
+                            'views.ActivitySummary.title'
+                        )}
+                    />
+                    <ListItem.Title
+                        style={{
+                            fontWeight: '600',
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                        numberOfLines={1}
+                    >
+                        {PrivacyUtils.sensitiveValue({
+                            input: summary.groupLabel,
+                            condenseAtLength: 100
+                        })?.toString()}
+                    </ListItem.Title>
+                </View>
+                <View style={styles.rightCell}>
+                    <Amount sats={summary.totalAmount} sensitive color="text" />
+                </View>
+            </View>
+
+            <View style={styles.row}>
+                <ListItem.Subtitle
+                    style={{
+                        ...styles.leftCell,
+                        color: themeColor('secondaryText'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {`${summary.intervalLabel} · ${
+                        summary.count
+                    } ${localeString(
+                        summary.count === 1
+                            ? 'views.ActivitySummary.payment'
+                            : 'views.ActivitySummary.payments'
+                    )}`}
+                </ListItem.Subtitle>
+            </View>
+
+            {expanded &&
+                summary.items.map((item: any, index: number) => (
+                    <View
+                        key={`${summary.id}-${index}`}
+                        style={styles.summaryDetailRow}
+                    >
+                        <Text
+                            style={{
+                                ...styles.summaryDetailText,
+                                flex: 1,
+                                textAlign: 'left'
+                            }}
+                            numberOfLines={1}
+                        >
+                            {item.getDisplayTimeShort}
+                        </Text>
+                        <Amount
+                            sats={Math.abs(Number(item.getAmount))}
+                            sensitive
+                            color="secondaryText"
+                        />
+                    </View>
+                ))}
+        </ListItem.Content>
+    </ListItem>
+);
+
 @inject(
     'ActivityStore',
     'FiatStore',
@@ -468,10 +564,11 @@ export default class Activity extends React.PureComponent<
     private invoicesListener: EmitterSubscription;
     private focusListener?: () => void;
 
-    state = {
+    state: ActivityState = {
         loading: false,
         selectedPaymentForOrder: null,
-        isCsvModalVisible: false
+        isCsvModalVisible: false,
+        expandedSummaryIds: {}
     };
 
     async componentDidMount() {
@@ -669,6 +766,15 @@ export default class Activity extends React.PureComponent<
         }
     };
 
+    handleSummaryPress = (summaryId: string) => {
+        this.setState((previousState) => ({
+            expandedSummaryIds: {
+                ...previousState.expandedSummaryIds,
+                [summaryId]: !previousState.expandedSummaryIds[summaryId]
+            }
+        }));
+    };
+
     render() {
         const {
             navigation,
@@ -679,8 +785,12 @@ export default class Activity extends React.PureComponent<
             SwapStore,
             route
         } = this.props;
-        const { loading, selectedPaymentForOrder, isCsvModalVisible } =
-            this.state;
+        const {
+            loading,
+            selectedPaymentForOrder,
+            isCsvModalVisible,
+            expandedSummaryIds
+        } = this.state;
 
         const { filteredActivity, getActivityAndFilter, filters } =
             ActivityStore;
@@ -689,6 +799,26 @@ export default class Activity extends React.PureComponent<
         const { fiat } = settings;
 
         const order = route.params?.order;
+        const activitySummaries = ActivitySummaryUtils.summarizeActivities(
+            filteredActivity,
+            filters
+        );
+        const listData =
+            filters.activitySummary && activitySummaries.length > 0
+                ? [
+                      ...activitySummaries.map((summary) => ({
+                          type: 'summary' as const,
+                          summary
+                      })),
+                      ...filteredActivity.map((item) => ({
+                          type: 'activity' as const,
+                          item
+                      }))
+                  ]
+                : filteredActivity.map((item) => ({
+                      type: 'activity' as const,
+                      item
+                  }));
 
         const MarkPaymentButton = () => (
             <Icon
@@ -848,20 +978,36 @@ export default class Activity extends React.PureComponent<
                     </View>
                 ) : filteredActivity?.length > 0 ? (
                     <FlatList
-                        data={filteredActivity}
-                        renderItem={({ item }: { item: any }) => (
-                            <ActivityListItem
-                                item={item}
-                                selectedPaymentForOrder={
-                                    selectedPaymentForOrder
-                                }
-                                onItemPress={this.handleItemPress}
-                                getRightTitleTheme={this.getRightTitleTheme}
-                                order={route.params?.order}
-                                swapStore={SwapStore}
-                            />
-                        )}
-                        keyExtractor={(item, index) => `${item.model}-${index}`}
+                        data={listData}
+                        renderItem={({ item }: { item: any }) =>
+                            item.type === 'summary' ? (
+                                <ActivitySummaryListItem
+                                    summary={item.summary}
+                                    expanded={
+                                        !!expandedSummaryIds[item.summary.id]
+                                    }
+                                    onPress={() =>
+                                        this.handleSummaryPress(item.summary.id)
+                                    }
+                                />
+                            ) : (
+                                <ActivityListItem
+                                    item={item.item}
+                                    selectedPaymentForOrder={
+                                        selectedPaymentForOrder
+                                    }
+                                    onItemPress={this.handleItemPress}
+                                    getRightTitleTheme={this.getRightTitleTheme}
+                                    order={route.params?.order}
+                                    swapStore={SwapStore}
+                                />
+                            )
+                        }
+                        keyExtractor={(item, index) =>
+                            item.type === 'summary'
+                                ? `summary-${item.summary.id}`
+                                : `${item.item.model}-${index}`
+                        }
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
@@ -907,11 +1053,32 @@ const styles = StyleSheet.create({
     },
     leftCell: {
         flexGrow: 0,
-        flexShrink: 1
+        flexShrink: 1,
+        minWidth: 0
     },
     rightCell: {
         flexGrow: 0,
         flexShrink: 1,
         textAlign: 'right'
+    },
+    iconTextRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        columnGap: 6,
+        minHeight: 24,
+        minWidth: 0
+    },
+    summaryDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        paddingTop: 6,
+        paddingLeft: 28,
+        columnGap: 10
+    },
+    summaryDetailText: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

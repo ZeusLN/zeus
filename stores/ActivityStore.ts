@@ -47,6 +47,12 @@ const createSwapStateRecord = (
 
 type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
+export type ActivitySummaryInterval = 'hour' | 'day' | 'month' | 'year';
+export type ActivitySummaryGroupBy =
+    | 'memo'
+    | 'destination'
+    | 'memoAndDestination';
+
 export interface Filter {
     [index: string]: any;
     lightning: boolean;
@@ -68,6 +74,9 @@ export interface Filter {
     circularRebalance: boolean;
     minimumAmount: number;
     maximumAmount?: number;
+    activitySummary: boolean;
+    activitySummaryInterval: ActivitySummaryInterval;
+    activitySummaryGroupBy: ActivitySummaryGroupBy;
     startDate?: Date;
     endDate?: Date;
     memo: string;
@@ -79,7 +88,7 @@ export interface Filter {
     lsps7State: Record<LSPOrderState, boolean>;
 }
 
-export const DEFAULT_FILTERS = {
+export const DEFAULT_FILTERS: Filter = {
     lightning: true,
     onChain: true,
     cashu: true,
@@ -101,6 +110,9 @@ export const DEFAULT_FILTERS = {
     circularRebalance: true,
     minimumAmount: 0,
     maximumAmount: undefined,
+    activitySummary: false,
+    activitySummaryInterval: 'day' as ActivitySummaryInterval,
+    activitySummaryGroupBy: 'memoAndDestination' as ActivitySummaryGroupBy,
     startDate: undefined,
     endDate: undefined,
     memo: '',
@@ -178,6 +190,10 @@ export default class ActivityStore {
             circularRebalance: true,
             minimumAmount: 0,
             maximumAmount: undefined,
+            activitySummary: false,
+            activitySummaryInterval: 'day' as ActivitySummaryInterval,
+            activitySummaryGroupBy:
+                'memoAndDestination' as ActivitySummaryGroupBy,
             startDate: undefined,
             endDate: undefined,
             memo: '',
@@ -203,6 +219,18 @@ export default class ActivityStore {
     @action
     public setMaximumAmountFilter = (filter: any) => {
         this.filters.maximumAmount = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setActivitySummaryInterval = (interval: ActivitySummaryInterval) => {
+        this.filters.activitySummaryInterval = interval;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setActivitySummaryGroupBy = (groupBy: ActivitySummaryGroupBy) => {
+        this.filters.activitySummaryGroupBy = groupBy;
         this.setFilters(this.filters);
     };
 
