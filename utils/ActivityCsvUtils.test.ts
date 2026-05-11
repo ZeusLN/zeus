@@ -141,6 +141,74 @@ describe('activityCsvUtils', () => {
             expect(result).toContain('"dest123","","","","","",""');
         });
 
+        it('preserves zero values in CSV output', async () => {
+            const mockPayments = [
+                {
+                    getDestination: 'dest123',
+                    getPaymentRequest: 'pay_req123',
+                    paymentHash: 'hash_pay1',
+                    getAmount: 0,
+                    getMemo: '',
+                    getNote: '',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockPayments,
+                CSV_KEYS.payment
+            );
+
+            expect(result).toContain(
+                '"dest123","pay_req123","hash_pay1","0","","","2024-02-09"'
+            );
+        });
+
+        it('preserves negative numeric values in CSV output', async () => {
+            const mockPayments = [
+                {
+                    getDestination: 'dest123',
+                    getPaymentRequest: 'pay_req123',
+                    paymentHash: 'hash_pay1',
+                    getAmount: -21,
+                    getMemo: '',
+                    getNote: '',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockPayments,
+                CSV_KEYS.payment
+            );
+
+            expect(result).toContain(
+                '"dest123","pay_req123","hash_pay1","-21","","","2024-02-09"'
+            );
+        });
+
+        it('escapes quotes and neutralizes spreadsheet formulas', async () => {
+            const mockPayments = [
+                {
+                    getDestination: 'dest123',
+                    getPaymentRequest: 'pay_req123',
+                    paymentHash: 'hash_pay1',
+                    getAmount: 1,
+                    getMemo: '=cmd',
+                    getNote: 'Merchant note: "Lightning payment"',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockPayments,
+                CSV_KEYS.payment
+            );
+
+            expect(result).toContain('"\'=cmd"');
+            expect(result).toContain('"Merchant note: ""Lightning payment"""');
+        });
+
         it('handles missing fields for Transaction CSV', async () => {
             const mockTransactions = [{ tx: 'txhash1', getAmount: 2000 }];
             const result = await convertActivityToCsv(
