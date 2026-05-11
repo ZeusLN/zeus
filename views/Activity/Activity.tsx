@@ -100,14 +100,21 @@ interface ActivityListItemProps {
 const activityIconSize = 21;
 const layerIconSize = 18;
 
-const ActivityIcon = ({ name, color }: { name: string; color: string }) => (
+const ActivityIcon = ({
+    name,
+    color,
+    accessibilityLabel
+}: {
+    name: string;
+    color: string;
+    accessibilityLabel: string;
+}) => (
     <Icon
         name={name}
         size={activityIconSize}
         color={color}
         underlayColor="transparent"
-        accessible={false}
-        importantForAccessibility="no"
+        accessibilityLabel={accessibilityLabel}
     />
 );
 
@@ -153,18 +160,6 @@ const ActivityText = ({
     >
         {children}
     </Text>
-);
-
-const formatOrderState = (state: string) =>
-    state.toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
-
-const stateSubtitle = (state: string) => (
-    <ActivityText>
-        {localeString('general.label_value', {
-            label: localeString('general.state'),
-            value: formatOrderState(state)
-        })}
-    </ActivityText>
 );
 
 const ActivityListItem = observer(
@@ -457,14 +452,26 @@ const ActivityListItem = observer(
                 icon: 'account-tree',
                 color: themeColor('highlight')
             });
-            subTitle = stateSubtitle(item.state);
+            subTitle = (
+                <ActivityText>
+                    {`${localeString('general.state')}: ${item.state
+                        .toLowerCase()
+                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                </ActivityText>
+            );
         } else if (item.model === 'LSPS7Order') {
             setTitle({
                 label: localeString('views.LSPS7.type'),
                 icon: 'account-tree',
                 color: themeColor('highlight')
             });
-            subTitle = stateSubtitle(item.state);
+            subTitle = (
+                <ActivityText>
+                    {`${localeString('general.state')}: ${item.state
+                        .toLowerCase()
+                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                </ActivityText>
+            );
         }
 
         return (
@@ -491,6 +498,7 @@ const ActivityListItem = observer(
                                         ? themeColor('highlight')
                                         : activityIconColor
                                 }
+                                accessibilityLabel={displayNameLabel}
                             />
                             {showDisplayName && (
                                 <ListItem.Title
