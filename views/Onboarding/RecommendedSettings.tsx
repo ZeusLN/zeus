@@ -185,7 +185,11 @@ export default class RecommendedSettings extends React.Component<
                     choosingPeers: false,
                     creatingWallet: false
                 }),
-            onSuccess: () => navigation.navigate('Wallet')
+            onSuccess: () =>
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Wallet' }]
+                })
         });
     };
 

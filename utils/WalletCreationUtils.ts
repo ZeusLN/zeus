@@ -39,6 +39,18 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
 
     const { setConnectingStatus, updateSettings, settings } = settingsStore;
 
+    // Refuse to create a new wallet if one already exists. Overwriting the
+    // `nodes` array would orphan the existing node directory and any funds it
+    // holds. Treat this as a successful no-op so callers route the user back
+    // to the Wallet view rather than into an error state.
+    if (settings?.nodes?.length) {
+        console.warn(
+            'createOnboardingWallet: existing node detected, skipping creation'
+        );
+        onSuccess();
+        return;
+    }
+
     const commonSettings = {
         privacy: {
             ...settings.privacy,
