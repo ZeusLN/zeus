@@ -45,11 +45,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import {
-    activityStore,
-    connectivityStore,
-    lightningAddressStore
-} from './Stores';
+import { activityStore, connectivityStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -4375,10 +4371,6 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
             await Storage.removeItem(`${lndDir}-cashu-seed`);
             await Storage.removeItem(`${lndDir}-cashu-randomizeMintSelection`);
-
-            if (lightningAddressStore.lightningAddressType === 'cashu') {
-                lightningAddressStore.deleteAddress();
-            }
 
             // Reset store state
             this.reset();
