@@ -107,6 +107,7 @@ const ActivityIcon = ({ name, color }: { name: string; color: string }) => (
         color={color}
         underlayColor="transparent"
         accessible={false}
+        accessibilityElementsHidden
         importantForAccessibility="no"
     />
 );
