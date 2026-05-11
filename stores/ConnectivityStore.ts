@@ -1,4 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
+import { Platform } from 'react-native';
 import NetInfo, {
     NetInfoState,
     NetInfoSubscription
@@ -9,9 +10,13 @@ import SettingsStore from './SettingsStore';
 const POLL_INTERVAL = 15000; // 15s
 const VERIFY_TIMEOUT_MS = 5000;
 const DEFAULT_REACHABILITY_HOST = 'mempool.space';
+const PLATFORM_REACHABILITY_URL =
+    Platform.OS === 'ios'
+        ? 'https://www.apple.com/library/test/success.html'
+        : 'https://www.google.com/generate_204';
 const FALLBACK_REACHABILITY_URLS = [
     'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo',
-    'https://cloudflare.com/cdn-cgi/trace'
+    PLATFORM_REACHABILITY_URL
 ];
 
 export default class ConnectivityStore {
