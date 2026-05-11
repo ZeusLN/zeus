@@ -45,7 +45,7 @@ const createSwapStateRecord = (
     }, {} as Record<SwapState, boolean>);
 };
 
-type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
+export type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
 export type ActivitySummaryInterval = 'hour' | 'day' | 'month' | 'year';
 export type ActivitySummaryGroupBy =

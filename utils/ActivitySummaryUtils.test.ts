@@ -11,7 +11,7 @@ jest.mock('../stores/Stores', () => ({
 
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
-import { Filter } from '../stores/ActivityStore';
+import { ActivityItem, Filter } from '../stores/ActivityStore';
 import ActivitySummaryUtils from './ActivitySummaryUtils';
 
 describe('ActivitySummaryUtils', () => {
@@ -42,7 +42,7 @@ describe('ActivitySummaryUtils', () => {
     };
 
     it('groups filtered lightning payments by memo, destination, and day', () => {
-        const activities: any[] = [
+        const activities: ActivityItem[] = [
             createPayment(
                 {
                     value: '100',
@@ -93,9 +93,8 @@ describe('ActivitySummaryUtils', () => {
             )
         ).toMatchObject({
             groupLabel: 'EV charging · dest-a',
-            direction: 'sent',
             count: 2,
-            totalAmount: 300,
+            totalAmount: -300,
             intervalLabel: '2026-01-02'
         });
         expect(
@@ -104,15 +103,14 @@ describe('ActivitySummaryUtils', () => {
             )
         ).toMatchObject({
             groupLabel: 'EV charging · dest-b',
-            direction: 'sent',
             count: 1,
-            totalAmount: 300,
+            totalAmount: -300,
             intervalLabel: '2026-01-02'
         });
     });
 
     it('groups payments by memo and hour', () => {
-        const activities: any[] = [
+        const activities: ActivityItem[] = [
             createPayment(
                 {
                     value: '25',
@@ -168,8 +166,50 @@ describe('ActivitySummaryUtils', () => {
         ).toMatchObject({
             groupLabel: 'Podcast stream',
             count: 2,
-            totalAmount: 75,
+            totalAmount: -75,
             intervalLabel: '2026-01-02 02:00'
+        });
+    });
+
+    it('nets sent payments against received paid invoices', () => {
+        const activities: ActivityItem[] = [
+            createPayment(
+                {
+                    value: '100',
+                    creation_date: (
+                        new Date(2026, 0, 2, 2, 0, 0).getTime() / 1000
+                    ).toString()
+                },
+                'Refundable stream'
+            ),
+            new Invoice({
+                memo: 'Refundable stream',
+                value: '100',
+                num_satoshis: '100',
+                state: 'settled',
+                settled_at: (
+                    new Date(2026, 0, 2, 2, 30, 0).getTime() / 1000
+                ).toString()
+            })
+        ];
+
+        const filter = {
+            activitySummary: true,
+            activitySummaryInterval: 'day',
+            activitySummaryGroupBy: 'memo'
+        } as Filter;
+
+        const summaries = ActivitySummaryUtils.summarizeActivities(
+            activities,
+            filter
+        );
+
+        expect(summaries).toHaveLength(1);
+        expect(summaries[0]).toMatchObject({
+            groupLabel: 'Refundable stream',
+            count: 2,
+            totalAmount: 0,
+            intervalLabel: '2026-01-02'
         });
     });
 

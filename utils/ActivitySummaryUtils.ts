@@ -4,13 +4,13 @@ import { localeString } from './LocaleUtils';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import {
+    ActivityItem,
     ActivitySummaryGroupBy,
     ActivitySummaryInterval,
     Filter
 } from '../stores/ActivityStore';
 
 type SummaryActivityItem = Invoice | Payment;
-type ActivitySummaryDirection = 'sent' | 'received';
 
 export interface ActivitySummary {
     id: string;
@@ -19,7 +19,6 @@ export interface ActivitySummary {
     intervalLabel: string;
     groupBy: ActivitySummaryGroupBy;
     groupLabel: string;
-    direction: ActivitySummaryDirection;
     memo?: string;
     destination?: string;
     count: number;
@@ -65,10 +64,6 @@ class ActivitySummaryUtils {
         return item instanceof Payment ? item.getDestination || '' : '';
     }
 
-    private getDirection(item: SummaryActivityItem): ActivitySummaryDirection {
-        return item instanceof Payment ? 'sent' : 'received';
-    }
-
     private getGroupLabel({
         memo,
         destination,
@@ -99,14 +94,12 @@ class ActivitySummaryUtils {
         intervalStart,
         groupBy,
         memo,
-        destination,
-        direction
+        destination
     }: {
         intervalStart: Date;
         groupBy: ActivitySummaryGroupBy;
         memo: string;
         destination: string;
-        direction: ActivitySummaryDirection;
     }): string {
         const grouping =
             groupBy === 'memo'
@@ -115,11 +108,11 @@ class ActivitySummaryUtils {
                 ? destination
                 : `${memo}:${destination}`;
 
-        return `${intervalStart.toISOString()}:${direction}:${groupBy}:${grouping}`;
+        return `${intervalStart.toISOString()}:${groupBy}:${grouping}`;
     }
 
     public summarizeActivities(
-        activities: any[],
+        activities: ActivityItem[],
         filter: Filter
     ): ActivitySummary[] {
         if (!filter.activitySummary) return [];
@@ -136,8 +129,10 @@ class ActivitySummaryUtils {
                 return;
             }
 
-            const amount = Number(item.getAmount);
-            if (!Number.isFinite(amount) || amount <= 0) return;
+            const itemAmount = Number(item.getAmount);
+            if (!Number.isFinite(itemAmount) || itemAmount === 0) return;
+
+            const amount = item instanceof Payment ? -itemAmount : itemAmount;
 
             const intervalStart = this.getIntervalStart(item.getDate, interval);
             const intervalLabel = this.getIntervalLabel(
@@ -146,13 +141,11 @@ class ActivitySummaryUtils {
             );
             const memo = this.getMemo(item);
             const destination = this.getDestination(item);
-            const direction = this.getDirection(item);
             const id = this.getSummaryId({
                 intervalStart,
                 groupBy,
                 memo,
-                destination,
-                direction
+                destination
             });
             const groupLabel = this.getGroupLabel({
                 memo,
@@ -175,7 +168,6 @@ class ActivitySummaryUtils {
                 intervalLabel,
                 groupBy,
                 groupLabel,
-                direction,
                 memo,
                 destination,
                 count: 1,

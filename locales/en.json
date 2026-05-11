@@ -1547,6 +1547,7 @@
     "views.ActivitySummary.noDestination": "No destination",
     "views.ActivitySummary.payment": "payment",
     "views.ActivitySummary.payments": "payments",
+    "views.ActivitySummary.subtitle": "{{date}} · {{count}} {{unit}}",
     "views.Activity.circularRebalance": "Circular channel rebalancing",
     "views.ActivityFilter.inTransit": "In transit payments",
     "views.ActivityFilter.isFailed": "Failed payments",

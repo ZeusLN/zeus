@@ -499,14 +499,7 @@ const ActivitySummaryListItem = ({
                     </ListItem.Title>
                 </View>
                 <View style={styles.rightCell}>
-                    <Amount
-                        sats={summary.totalAmount}
-                        sensitive
-                        negative={summary.direction === 'sent'}
-                        color={
-                            summary.direction === 'sent' ? 'warning' : 'success'
-                        }
-                    />
+                    <Amount sats={summary.totalAmount} sensitive color="text" />
                 </View>
             </View>
 
@@ -518,22 +511,20 @@ const ActivitySummaryListItem = ({
                         fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
-                    {`${localeString(
-                        summary.direction === 'sent'
-                            ? 'general.sent'
-                            : 'general.received'
-                    )} · ${summary.intervalLabel} · ${
-                        summary.count
-                    } ${localeString(
-                        summary.count === 1
-                            ? 'views.ActivitySummary.payment'
-                            : 'views.ActivitySummary.payments'
-                    )}`}
+                    {localeString('views.ActivitySummary.subtitle', {
+                        date: summary.intervalLabel,
+                        count: summary.count,
+                        unit: localeString(
+                            summary.count === 1
+                                ? 'views.ActivitySummary.payment'
+                                : 'views.ActivitySummary.payments'
+                        )
+                    })}
                 </ListItem.Subtitle>
             </View>
 
             {expanded &&
-                summary.items.map((item: any, index: number) => (
+                summary.items.map((item, index: number) => (
                     <View
                         key={`${summary.id}-${index}`}
                         style={styles.summaryDetailRow}
@@ -549,14 +540,13 @@ const ActivitySummaryListItem = ({
                             {item.getDisplayTimeShort}
                         </Text>
                         <Amount
-                            sats={Number(item.getAmount)}
-                            sensitive
-                            negative={item instanceof Payment}
-                            color={
+                            sats={
                                 item instanceof Payment
-                                    ? 'warning'
-                                    : 'secondaryText'
+                                    ? -Number(item.getAmount)
+                                    : Number(item.getAmount)
                             }
+                            sensitive
+                            color="secondaryText"
                         />
                     </View>
                 ))}
