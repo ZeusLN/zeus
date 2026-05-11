@@ -93,6 +93,7 @@ describe('ActivitySummaryUtils', () => {
             )
         ).toMatchObject({
             groupLabel: 'EV charging · dest-a',
+            direction: 'sent',
             count: 2,
             totalAmount: 300,
             intervalLabel: '2026-01-02'
@@ -103,6 +104,7 @@ describe('ActivitySummaryUtils', () => {
             )
         ).toMatchObject({
             groupLabel: 'EV charging · dest-b',
+            direction: 'sent',
             count: 1,
             totalAmount: 300,
             intervalLabel: '2026-01-02'

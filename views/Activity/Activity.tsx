@@ -45,6 +45,7 @@ import SwapStore from '../../stores/SwapStore';
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
 import Invoice from '../../models/Invoice';
+import Payment from '../../models/Payment';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
@@ -498,7 +499,14 @@ const ActivitySummaryListItem = ({
                     </ListItem.Title>
                 </View>
                 <View style={styles.rightCell}>
-                    <Amount sats={summary.totalAmount} sensitive color="text" />
+                    <Amount
+                        sats={summary.totalAmount}
+                        sensitive
+                        negative={summary.direction === 'sent'}
+                        color={
+                            summary.direction === 'sent' ? 'warning' : 'success'
+                        }
+                    />
                 </View>
             </View>
 
@@ -510,7 +518,11 @@ const ActivitySummaryListItem = ({
                         fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
-                    {`${summary.intervalLabel} · ${
+                    {`${localeString(
+                        summary.direction === 'sent'
+                            ? 'general.sent'
+                            : 'general.received'
+                    )} · ${summary.intervalLabel} · ${
                         summary.count
                     } ${localeString(
                         summary.count === 1
@@ -537,9 +549,14 @@ const ActivitySummaryListItem = ({
                             {item.getDisplayTimeShort}
                         </Text>
                         <Amount
-                            sats={Math.abs(Number(item.getAmount))}
+                            sats={Number(item.getAmount)}
                             sensitive
-                            color="secondaryText"
+                            negative={item instanceof Payment}
+                            color={
+                                item instanceof Payment
+                                    ? 'warning'
+                                    : 'secondaryText'
+                            }
                         />
                     </View>
                 ))}

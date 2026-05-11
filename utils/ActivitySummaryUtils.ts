@@ -10,6 +10,7 @@ import {
 } from '../stores/ActivityStore';
 
 type SummaryActivityItem = Invoice | Payment;
+type ActivitySummaryDirection = 'sent' | 'received';
 
 export interface ActivitySummary {
     id: string;
@@ -18,6 +19,7 @@ export interface ActivitySummary {
     intervalLabel: string;
     groupBy: ActivitySummaryGroupBy;
     groupLabel: string;
+    direction: ActivitySummaryDirection;
     memo?: string;
     destination?: string;
     count: number;
@@ -63,6 +65,10 @@ class ActivitySummaryUtils {
         return item instanceof Payment ? item.getDestination || '' : '';
     }
 
+    private getDirection(item: SummaryActivityItem): ActivitySummaryDirection {
+        return item instanceof Payment ? 'sent' : 'received';
+    }
+
     private getGroupLabel({
         memo,
         destination,
@@ -93,12 +99,14 @@ class ActivitySummaryUtils {
         intervalStart,
         groupBy,
         memo,
-        destination
+        destination,
+        direction
     }: {
         intervalStart: Date;
         groupBy: ActivitySummaryGroupBy;
         memo: string;
         destination: string;
+        direction: ActivitySummaryDirection;
     }): string {
         const grouping =
             groupBy === 'memo'
@@ -107,7 +115,7 @@ class ActivitySummaryUtils {
                 ? destination
                 : `${memo}:${destination}`;
 
-        return `${intervalStart.toISOString()}:${groupBy}:${grouping}`;
+        return `${intervalStart.toISOString()}:${direction}:${groupBy}:${grouping}`;
     }
 
     public summarizeActivities(
@@ -128,7 +136,7 @@ class ActivitySummaryUtils {
                 return;
             }
 
-            const amount = Math.abs(Number(item.getAmount));
+            const amount = Number(item.getAmount);
             if (!Number.isFinite(amount) || amount <= 0) return;
 
             const intervalStart = this.getIntervalStart(item.getDate, interval);
@@ -138,11 +146,13 @@ class ActivitySummaryUtils {
             );
             const memo = this.getMemo(item);
             const destination = this.getDestination(item);
+            const direction = this.getDirection(item);
             const id = this.getSummaryId({
                 intervalStart,
                 groupBy,
                 memo,
-                destination
+                destination,
+                direction
             });
             const groupLabel = this.getGroupLabel({
                 memo,
@@ -165,6 +175,7 @@ class ActivitySummaryUtils {
                 intervalLabel,
                 groupBy,
                 groupLabel,
+                direction,
                 memo,
                 destination,
                 count: 1,
