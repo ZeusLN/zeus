@@ -71,7 +71,7 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                 const nodes = [
                     {
                         implementation: 'ldk-node',
-                        embeddedLdkNetwork: 'mainnet',
+                        ldkNetwork: 'mainnet',
                         ldkNodeDir: nodeDir,
                         ldkMnemonic: response.mnemonic,
                         nickname: localeString('general.defaultNodeNickname')
