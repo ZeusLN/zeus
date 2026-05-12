@@ -83,9 +83,7 @@ export default class NWCSettings extends React.Component<
             await NostrWalletConnectStore.setPersistentNWCServiceEnabled(
                 !current
             );
-            this.setState({
-                persistentNWCServiceEnabled: !current
-            });
+            this.setState({ persistentNWCServiceEnabled: !current });
             restartNeeded();
         } catch (error) {
             console.error('Failed to toggle persistent NWC service:', error);
@@ -99,16 +97,13 @@ export default class NWCSettings extends React.Component<
 
     showPersistentNWCBackgroundInfo = () => {
         const { ModalStore } = this.props;
-        const isIos = Platform.OS === 'ios';
         ModalStore.toggleInfoModal({
             title: localeString(
                 'views.Settings.NostrWalletConnect.persistentNWCServiceInfoTitle'
             ),
             text: [
                 localeString(
-                    isIos
-                        ? 'views.Settings.NostrWalletConnect.persistentNWCServiceInfoIntroIOS'
-                        : 'views.Settings.NostrWalletConnect.persistentNWCServiceInfoIntroAndroid'
+                    'views.Settings.NostrWalletConnect.persistentNWCServiceInfoIntroAndroid'
                 ),
                 localeString(
                     'views.Settings.NostrWalletConnect.persistentNWCServiceInfoBattery'
@@ -221,70 +216,67 @@ export default class NWCSettings extends React.Component<
                                     </Text>
                                 </View>
                             )}
-                        <View style={{ marginTop: 20 }}>
-                            <View style={{ flexDirection: 'row' }}>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'flex-start'
-                                    }}
-                                >
-                                    <Text
+                        {Platform.OS === 'android' && (
+                            <View style={{ marginTop: 20 }}>
+                                <View style={{ flexDirection: 'row' }}>
+                                    <View
                                         style={{
-                                            color: themeColor('text'),
-                                            fontSize: 17,
-                                            flexShrink: 1
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-start'
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.persistentNWCService'
-                                        )}
-                                    </Text>
-                                    <Icon
-                                        name="info"
-                                        onPress={
-                                            this.showPersistentNWCBackgroundInfo
-                                        }
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={24}
-                                        containerStyle={{ marginLeft: 8 }}
-                                    />
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 17,
+                                                flexShrink: 1
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.persistentNWCService'
+                                            )}
+                                        </Text>
+                                        <Icon
+                                            name="info"
+                                            onPress={
+                                                this
+                                                    .showPersistentNWCBackgroundInfo
+                                            }
+                                            color={themeColor('text')}
+                                            underlayColor="transparent"
+                                            size={24}
+                                            containerStyle={{ marginLeft: 8 }}
+                                        />
+                                    </View>
+                                    <View style={{ alignSelf: 'center' }}>
+                                        <Switch
+                                            value={persistentNWCServiceEnabled}
+                                            onValueChange={
+                                                this.togglePersistentNWCService
+                                            }
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress ||
+                                                loading
+                                            }
+                                        />
+                                    </View>
                                 </View>
-                                <View
+                                <Text
                                     style={{
-                                        alignSelf: 'center'
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 14,
+                                        marginTop: 8,
+                                        lineHeight: 20
                                     }}
                                 >
-                                    <Switch
-                                        value={persistentNWCServiceEnabled}
-                                        onValueChange={
-                                            this.togglePersistentNWCService
-                                        }
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress ||
-                                            loading
-                                        }
-                                    />
-                                </View>
+                                    {localeString(
+                                        'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionAndroid'
+                                    )}
+                                </Text>
                             </View>
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontSize: 14,
-                                    marginTop: 8,
-                                    lineHeight: 20
-                                }}
-                            >
-                                {localeString(
-                                    Platform.OS === 'ios'
-                                        ? 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionIOS'
-                                        : 'views.Settings.NostrWalletConnect.persistentNWCServiceDescriptionAndroid'
-                                )}
-                            </Text>
-                        </View>
+                        )}
                     </ScrollView>
                 )}
             </Screen>
