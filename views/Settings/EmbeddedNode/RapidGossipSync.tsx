@@ -44,21 +44,21 @@ export default class RapidGossipSync extends React.Component<
         super(props);
 
         const { SettingsStore } = props;
-        const saved = SettingsStore.ldkRgsServer || '';
+        const { settings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const saved = settings.nodes?.[selectedNode]?.ldkRgsServer || '';
         const network =
             (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
             'mainnet';
         const servers = getRgsServersForNetwork(network);
         const presetUrls = servers.map((s) => s.value);
 
-        const isPreset = saved === '' || presetUrls.includes(saved);
+        const isPreset = saved !== '' && presetUrls.includes(saved);
 
         this.state = {
-            selectedValue: isPreset
-                ? saved || servers[0]?.value || ''
-                : CUSTOM_VALUE,
+            selectedValue: isPreset ? saved : CUSTOM_VALUE,
             customServer: isPreset ? '' : saved,
-            savedRgsServer: isPreset ? saved || servers[0]?.value || '' : saved
+            savedRgsServer: saved
         };
     }
 
@@ -112,11 +112,8 @@ export default class RapidGossipSync extends React.Component<
             customServerTrimmed !== '' &&
             !UrlUtils.isValidUrl(customServer);
         const hasUnsavedChanges =
-            effectiveServer !== savedRgsServer &&
-            !(isCustom && customServerTrimmed === '') &&
-            !showCustomUrlError;
-        const showReset =
-            effectiveServer !== '' && effectiveServer !== defaultServer;
+            effectiveServer !== savedRgsServer && !showCustomUrlError;
+        const showReset = effectiveServer !== defaultServer;
 
         return (
             <Screen>

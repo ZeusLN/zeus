@@ -44,7 +44,9 @@ export default class EsploraServer extends React.Component<
         super(props);
 
         const { SettingsStore } = props;
-        const saved = SettingsStore.ldkEsploraServer || '';
+        const { settings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const saved = settings.nodes?.[selectedNode]?.ldkEsploraServer || '';
         const network =
             (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
             'mainnet';
@@ -112,11 +114,10 @@ export default class EsploraServer extends React.Component<
             customServerTrimmed !== '' &&
             !UrlUtils.isValidUrl(customServer);
         const hasUnsavedChanges =
+            effectiveServer !== '' &&
             effectiveServer !== savedEsploraServer &&
-            !(isCustom && customServerTrimmed === '') &&
             !showCustomUrlError;
-        const showReset =
-            effectiveServer !== '' && effectiveServer !== defaultServer;
+        const showReset = effectiveServer !== defaultServer;
 
         return (
             <Screen>

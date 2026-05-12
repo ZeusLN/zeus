@@ -32,10 +32,15 @@ export default class VssServer extends React.Component<
     VssServerProps,
     VssServerState
 > {
-    state = {
-        vssServer: this.props.SettingsStore.ldkVssServer || '',
-        savedVssServer: this.props.SettingsStore.ldkVssServer || ''
-    };
+    state = (() => {
+        const { settings } = this.props.SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const saved = settings.nodes?.[selectedNode]?.ldkVssServer || '';
+        return {
+            vssServer: saved,
+            savedVssServer: saved
+        };
+    })();
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
@@ -57,7 +62,7 @@ export default class VssServer extends React.Component<
         const { navigation } = this.props;
         const { vssServer, savedVssServer } = this.state;
 
-        const showReset = vssServer !== '' && vssServer !== DEFAULT_VSS_SERVER;
+        const showReset = vssServer !== DEFAULT_VSS_SERVER;
 
         const vssServerTrimmed = vssServer.trim();
         const showInvalidUrlError =

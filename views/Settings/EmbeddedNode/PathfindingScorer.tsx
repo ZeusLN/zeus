@@ -32,10 +32,15 @@ export default class PathfindingScorer extends React.Component<
     PathfindingScorerProps,
     PathfindingScorerState
 > {
-    state = {
-        scorerUrl: this.props.SettingsStore.ldkScorerUrl || '',
-        savedScorerUrl: this.props.SettingsStore.ldkScorerUrl || ''
-    };
+    state = (() => {
+        const { settings } = this.props.SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const saved = settings.nodes?.[selectedNode]?.ldkScorerUrl || '';
+        return {
+            scorerUrl: saved,
+            savedScorerUrl: saved
+        };
+    })();
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
@@ -57,7 +62,7 @@ export default class PathfindingScorer extends React.Component<
         const { navigation } = this.props;
         const { scorerUrl, savedScorerUrl } = this.state;
 
-        const showReset = scorerUrl !== '' && scorerUrl !== DEFAULT_SCORER_URL;
+        const showReset = scorerUrl !== DEFAULT_SCORER_URL;
 
         const scorerUrlTrimmed = scorerUrl.trim();
         const showInvalidUrlError =
