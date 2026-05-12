@@ -12,6 +12,7 @@ import {
 import { Button, ListItem } from '@rneui/themed';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import SettingsStore from '../../../stores/SettingsStore';
+import ModalStore from '../../../stores/ModalStore';
 
 import { ConnectionActivity } from '../../../models/NWCConnection';
 import Invoice from '../../../models/Invoice';
@@ -50,6 +51,7 @@ interface ConnectionActivityProps {
     route: Route<'NWCConnectionActivity', { connectionId: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
 }
 
 interface ConnectionActivityState {
@@ -61,7 +63,7 @@ interface ConnectionActivityState {
     activeFilters: NWCFilterState;
 }
 
-@inject('NostrWalletConnectStore', 'SettingsStore')
+@inject('NostrWalletConnectStore', 'SettingsStore', 'ModalStore')
 @observer
 export default class NWCConnectionActivity extends React.Component<
     ConnectionActivityProps,
@@ -314,11 +316,21 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleActivityPress = (item: ConnectionActivity) => {
-        const isSent = item.type === 'pay_invoice';
+        const { ModalStore } = this.props;
 
-        if (isSent && item.status !== 'failed') {
+        if (item.status === 'failed') {
+            ModalStore.toggleInfoModal({
+                title: localeString('views.Payment.failedPayment'),
+                text: item.error
+                    ? [item.error]
+                    : [localeString('error.paymentFailed')]
+            });
+            return;
+        }
+
+        if (item.type === 'pay_invoice') {
             this.navigateToPaymentDetails(item);
-        } else if (item.type === 'make_invoice' && item.status !== 'failed') {
+        } else if (item.type === 'make_invoice') {
             this.navigateToInvoiceDetails(item);
         }
     };
@@ -348,10 +360,11 @@ export default class NWCConnectionActivity extends React.Component<
         const displayTimeShort =
             item.invoice?.getDisplayTimeShort ||
             item.payment?.getDisplayTimeShort ||
-            dateTimeUtils.listFormattedDate(
-                item.createdAt?.toString()!,
-                'HH:MM tt'
-            );
+            (item.createdAt
+                ? dateTimeUtils.listFormattedDateShort(
+                      item.createdAt.getTime() / 1000
+                  )
+                : '');
         const note = item.payment?.getNote || item.invoice?.getNote;
         const showTimeRow = Boolean(displayTime || item.createdAt);
         const showExpiry =
