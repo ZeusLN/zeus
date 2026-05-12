@@ -1385,6 +1385,7 @@
     "views.Settings.EmbeddedNode.EsploraServer.subtitle": "Esplora é uma API de exploração de blocos usada para dados on-chain. Seu nó a utiliza para sincronizar saldos de carteira, transmitir transações e monitorar o blockchain.",
     "views.Settings.EmbeddedNode.EsploraServer.serverUrl": "Esplora Server URL",
     "views.Settings.EmbeddedNode.defaultServer": "Servidor padrão",
+    "views.Settings.EmbeddedNode.invalidServerUrl": "Please enter a valid URL starting with http:// or https://",
     "views.Settings.EmbeddedNode.RapidGossipSync.title": "Rapid Gossip Sync",
     "views.Settings.EmbeddedNode.RapidGossipSync.subtitle": "O Rapid Gossip Sync (RGS) baixa dados de fofoca da rede Lightning compactados de um servidor, permitindo que seu nó aprenda rapidamente sobre o grafo da rede sem precisar sincronizar com outros nós. Isso possibilita uma busca de caminhos mais rápida para pagamentos.",
     "views.Settings.EmbeddedNode.RapidGossipSync.serverUrl": "RGS Server URL",

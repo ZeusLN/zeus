@@ -1385,6 +1385,7 @@
     "views.Settings.EmbeddedNode.EsploraServer.subtitle": "Esplora est une API d'exploration de blocs utilisée pour les données de la blockchain. Votre nœud l'utilise pour synchroniser les soldes des portefeuilles, diffuser les transactions et surveiller la blockchain.",
     "views.Settings.EmbeddedNode.EsploraServer.serverUrl": "Esplora Server URL",
     "views.Settings.EmbeddedNode.defaultServer": "Serveur par défaut",
+    "views.Settings.EmbeddedNode.invalidServerUrl": "Please enter a valid URL starting with http:// or https://",
     "views.Settings.EmbeddedNode.RapidGossipSync.title": "Rapid Gossip Sync",
     "views.Settings.EmbeddedNode.RapidGossipSync.subtitle": "Rapid Gossip Sync (RGS) télécharge les données de propagation du réseau Lightning compressées depuis un serveur, permettant ainsi à votre nœud de connaître rapidement le graphe du réseau sans synchronisation avec ses pairs. Ceci accélère la recherche de chemin pour les paiements.",
     "views.Settings.EmbeddedNode.RapidGossipSync.serverUrl": "RGS Server URL",
