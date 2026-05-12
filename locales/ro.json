@@ -1385,6 +1385,7 @@
     "views.Settings.EmbeddedNode.EsploraServer.subtitle": "Esplora este o API de explorare a blocurilor utilizată pentru datele din onchain. Nodul tău o folosește pentru a sincroniza soldurile portofelului, a difuza tranzacții și a monitoriza blockchain-ul.",
     "views.Settings.EmbeddedNode.EsploraServer.serverUrl": "Esplora Server URL",
     "views.Settings.EmbeddedNode.defaultServer": "Server implicit",
+    "views.Settings.EmbeddedNode.invalidServerUrl": "Please enter a valid URL starting with http:// or https://",
     "views.Settings.EmbeddedNode.RapidGossipSync.title": "Rapid Gossip Sync",
     "views.Settings.EmbeddedNode.RapidGossipSync.subtitle": "Rapid Gossip Sync (RGS) descarcă date comprimate despre gossip-urile rețelei Lightning de pe un server, permițând nodului dvs. să învețe rapid despre graficul rețelei fără a fi nevoie de sincronizare cu colegii. Acest lucru permite o găsire mai rapidă a căii pentru plăți.",
     "views.Settings.EmbeddedNode.RapidGossipSync.serverUrl": "RGS Server URL",
