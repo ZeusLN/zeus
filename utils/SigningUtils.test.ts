@@ -55,5 +55,14 @@ describe('SigningUtils', () => {
                 expect(ecdsaSignDERHex(h(hash), h(privKey))).toBe(derSig);
             }
         );
+
+        it.each(INVALID_KEYS)(
+            'throws on invalid private key ($name)',
+            ({ key }) => {
+                expect(() =>
+                    ecdsaSignDERHex(h(VECTORS[0].hash), key)
+                ).toThrow();
+            }
+        );
     });
 });
