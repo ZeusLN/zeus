@@ -156,6 +156,7 @@ export default class NostrWalletConnectStore {
     private appStateListener: AppStateSubscription | null = null;
     private androidLogListener: EmitterSubscription | null = null;
     private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
+    private resetInFlight: Promise<void> | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -191,9 +192,8 @@ export default class NostrWalletConnectStore {
         this.modalStore = modalStore;
         this.paymentsStore = paymentsStore;
 
-        // When a node switch begins (connecting flips to true), tear down the
-        // current service so initializeService() will fully reinitialize for
-        // the new node instead of being skipped by the isInitialized guard.
+        // Node switch: `reset(true)` clears `isInitialized` synchronously and exposes
+        // `resetInFlight` so `initializeService` waits for teardown before starting.
         reaction(
             () => this.settingsStore.connecting,
             (connecting) => {
@@ -207,6 +207,9 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeService = async () => {
+        if (this.resetInFlight) {
+            await this.resetInFlight;
+        }
         if (this.isInitialized) {
             console.log('NWC: skipping initialization - already initialized');
             return;
@@ -364,36 +367,50 @@ export default class NostrWalletConnectStore {
                 (Platform.OS === 'android' &&
                     this.persistentNWCServiceEnabled));
         if (!skipTeardown) {
-            console.log('NWC: resetting service');
-            await this.flushScheduledSave();
-            if (Platform.OS === 'ios') {
-                this.teardownIOSAppStateMonitor();
-                await this.stopIOSAudioKeepAlive();
-            }
-            if (this.androidReconnectionListener) {
-                this.androidReconnectionListener.remove();
-                this.androidReconnectionListener = null;
-            }
-            if (this.appStateListener) {
-                this.appStateListener.remove();
-                this.appStateListener = null;
-            }
-            if (this.androidLogListener) {
-                this.androidLogListener.remove();
-                this.androidLogListener = null;
-            }
-            this.error = false;
-            this.walletServiceKeys = null;
-            this.errorMessage = '';
-            this.waitingForConnection = false;
-            this.currentConnectionId = undefined;
-            this.connectionJustSucceeded = false;
-            this.lastConnectionAttempt = 0;
-            this.cashuEnabled = false;
-            this.nwcWalletServices.clear();
-            this.publishedRelays.clear();
             this.isInitialized = false;
-            await this.unsubscribeFromAllConnections();
+            const previousReset = this.resetInFlight;
+            const teardown = (async () => {
+                if (previousReset) {
+                    await previousReset;
+                }
+                console.log('NWC: resetting service');
+                await this.flushScheduledSave();
+                if (Platform.OS === 'ios') {
+                    this.teardownIOSAppStateMonitor();
+                    await this.stopIOSAudioKeepAlive();
+                }
+                if (this.androidReconnectionListener) {
+                    this.androidReconnectionListener.remove();
+                    this.androidReconnectionListener = null;
+                }
+                if (this.appStateListener) {
+                    this.appStateListener.remove();
+                    this.appStateListener = null;
+                }
+                if (this.androidLogListener) {
+                    this.androidLogListener.remove();
+                    this.androidLogListener = null;
+                }
+                this.error = false;
+                this.walletServiceKeys = null;
+                this.errorMessage = '';
+                this.waitingForConnection = false;
+                this.currentConnectionId = undefined;
+                this.connectionJustSucceeded = false;
+                this.lastConnectionAttempt = 0;
+                this.cashuEnabled = false;
+                this.nwcWalletServices.clear();
+                this.publishedRelays.clear();
+                await this.unsubscribeFromAllConnections();
+            })();
+            this.resetInFlight = teardown;
+            try {
+                await teardown;
+            } finally {
+                if (this.resetInFlight === teardown) {
+                    this.resetInFlight = null;
+                }
+            }
         }
         runInAction(() => {
             this.loading = false;
