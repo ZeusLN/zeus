@@ -18,7 +18,6 @@ import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import SwipeButton from '../components/SwipeButton';
-import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
 import Header from '../components/Header';
 import HopPicker from '../components/HopPicker';
@@ -82,7 +81,7 @@ interface InvoiceProps {
 }
 
 interface InvoiceState {
-    customAmount: string;
+    customAmount?: string;
     satAmount: string | number;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
@@ -190,6 +189,8 @@ export default class PaymentRequest extends React.Component<
         );
 
         this.setState({
+            customAmount: requestAmount ? undefined : '',
+            satAmount: requestAmount || '',
             feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
@@ -219,7 +220,7 @@ export default class PaymentRequest extends React.Component<
         });
     }
 
-    isAmountValidToSwap(): boolean {
+    isAmountValidToSwap(amount?: string | number): boolean {
         const { SwapStore, InvoicesStore } = this.props;
 
         const subInfo: any = SwapStore.subInfo;
@@ -239,10 +240,41 @@ export default class PaymentRequest extends React.Component<
         const minBN = new BigNumber(min);
         const maxBN = new BigNumber(max);
 
-        const input = this.calculateLimit(requestAmount || 0);
+        const input = this.calculateLimit(Number(amount || requestAmount || 0));
 
         return input.gte(minBN) && input.lte(maxBN);
     }
+
+    getSelectedPaymentAmount = (
+        satAmount: string | number,
+        requestAmount?: string | number | null
+    ): number => {
+        const hasSelectedAmount =
+            satAmount !== '' && satAmount !== undefined && satAmount !== null;
+        return Number(hasSelectedAmount ? satAmount : requestAmount || 0);
+    };
+
+    getPaymentAmountOverride = (
+        satAmount: string | number,
+        requestAmount?: string | number | null
+    ): string | undefined => {
+        const selectedPaymentAmount = this.getSelectedPaymentAmount(
+            satAmount,
+            requestAmount
+        );
+        if (!selectedPaymentAmount) return undefined;
+        if (!requestAmount) return selectedPaymentAmount.toString();
+        return selectedPaymentAmount > Number(requestAmount)
+            ? selectedPaymentAmount.toString()
+            : undefined;
+    };
+
+    isSelectedPaymentAmountValid = (
+        selectedPaymentAmount: number,
+        requestAmount?: string | number | null
+    ): boolean =>
+        selectedPaymentAmount > 0 &&
+        (!requestAmount || selectedPaymentAmount >= Number(requestAmount));
 
     bigCeil = (big: BigNumber): BigNumber => {
         return big.integerValue(BigNumber.ROUND_CEIL);
@@ -432,6 +464,20 @@ export default class PaymentRequest extends React.Component<
 
         const { paymentRequest, pay_req } = InvoicesStore;
         const { implementation } = SettingsStore;
+        const requestAmount = pay_req && pay_req.getRequestAmount;
+        const selectedPaymentAmount = this.getSelectedPaymentAmount(
+            satAmount,
+            requestAmount
+        );
+
+        if (
+            !this.isSelectedPaymentAmountValid(
+                selectedPaymentAmount,
+                requestAmount
+            )
+        ) {
+            return;
+        }
 
         const isCLightning: boolean = implementation === 'cln-rest';
 
@@ -460,7 +506,7 @@ export default class PaymentRequest extends React.Component<
         // Call sendPayment with the freshest values
         this.sendPayment({
             payment_request: paymentRequest,
-            amount: satAmount ? satAmount.toString() : undefined,
+            amount: this.getPaymentAmountOverride(satAmount, requestAmount),
             max_parts: enableMultiPathPayment ? maxParts : '16',
             max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
             fee_limit_sat: feeLimitSat,
@@ -489,6 +535,7 @@ export default class PaymentRequest extends React.Component<
             maxShardAmt,
             feeOption,
             customAmount,
+            satAmount,
             zaplockerToggle,
             settingsToggle,
             timeoutSeconds,
@@ -614,6 +661,17 @@ export default class PaymentRequest extends React.Component<
         const isLdkNode: boolean = implementation === 'ldk-node';
 
         const isNoAmountInvoice: boolean = !requestAmount;
+        const selectedPaymentAmount = this.getSelectedPaymentAmount(
+            satAmount,
+            requestAmount
+        );
+        const isPaymentAmountBelowInvoiceAmount =
+            !isNoAmountInvoice &&
+            selectedPaymentAmount < Number(requestAmount || 0);
+        const isPaymentAmountValid = this.isSelectedPaymentAmountValid(
+            selectedPaymentAmount,
+            requestAmount
+        );
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
 
@@ -647,7 +705,7 @@ export default class PaymentRequest extends React.Component<
                     onPress={() => {
                         const amountToSwap = isNoAmountInvoice
                             ? this.state.satAmount
-                            : requestAmount;
+                            : selectedPaymentAmount;
                         if (paymentRequest && amountToSwap) {
                             navigation.navigate('Swaps', {
                                 initialInvoice: paymentRequest,
@@ -764,35 +822,61 @@ export default class PaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                    {isNoAmountInvoice ? (
-                                        <AmountInput
-                                            amount={customAmount}
-                                            title={localeString(
-                                                'views.PaymentRequest.customAmt'
-                                            )}
-                                            onAmountChange={(
-                                                amount: string,
-                                                satAmount: string | number
-                                            ) => {
-                                                this.setState({
-                                                    customAmount: amount,
-                                                    satAmount
-                                                });
-                                            }}
-                                        />
-                                    ) : (
-                                        <View style={styles.center}>
-                                            <Amount
-                                                sats={requestAmount}
-                                                jumboText
-                                                toggleable
+                                    <AmountInput
+                                        amount={customAmount}
+                                        sats={
+                                            isNoAmountInvoice
+                                                ? undefined
+                                                : requestAmount
+                                        }
+                                        title={localeString(
+                                            'views.PaymentRequest.customAmt'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                customAmount: amount,
+                                                satAmount,
+                                                validAmountToSwap:
+                                                    this.isAmountValidToSwap(
+                                                        satAmount
+                                                    )
+                                            });
+                                        }}
+                                        error={
+                                            isPaymentAmountBelowInvoiceAmount
+                                        }
+                                    />
+                                    {!isNoAmountInvoice && (
+                                        <>
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.LightningAddressInfo.minimumAmount'
+                                                )}
+                                                value={
+                                                    <Amount
+                                                        sats={requestAmount}
+                                                        toggleable
+                                                    />
+                                                }
                                             />
-                                            <View style={{ top: 10 }}>
-                                                <Conversion
-                                                    sats={requestAmount}
-                                                />
-                                            </View>
-                                        </View>
+                                            {isPaymentAmountBelowInvoiceAmount && (
+                                                <View
+                                                    style={{
+                                                        paddingTop: 10,
+                                                        paddingBottom: 10
+                                                    }}
+                                                >
+                                                    <WarningMessage
+                                                        message={localeString(
+                                                            'views.PaymentRequest.amountBelowMinimum'
+                                                        )}
+                                                    />
+                                                </View>
+                                            )}
+                                        </>
                                     )}
                                 </>
 
@@ -1061,9 +1145,7 @@ export default class PaymentRequest extends React.Component<
 
                                 <FeeLimit
                                     satAmount={
-                                        isNoAmountInvoice
-                                            ? customAmount
-                                            : requestAmount || 0
+                                        selectedPaymentAmount || customAmount
                                     }
                                     onFeeLimitSatChange={(value: string) =>
                                         this.setState({
@@ -1577,8 +1659,9 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
-                            {requestAmount &&
-                            requestAmount >= slideToPayThreshold ? (
+                            {lightningReadyToSend &&
+                            isPaymentAmountValid &&
+                            selectedPaymentAmount >= slideToPayThreshold ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -1608,7 +1691,10 @@ export default class PaymentRequest extends React.Component<
                                                 : undefined
                                         }
                                         onPress={this.triggerPayment}
-                                        disabled={!lightningReadyToSend}
+                                        disabled={
+                                            !lightningReadyToSend ||
+                                            !isPaymentAmountValid
+                                        }
                                     />
                                 </View>
                             )}

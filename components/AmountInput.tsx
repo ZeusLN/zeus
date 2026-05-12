@@ -27,7 +27,7 @@ import NavigationService from '../NavigationService';
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
     amount?: string;
-    sats?: string;
+    sats?: string | number;
     locked?: boolean;
     title?: string;
     hideConversion?: boolean;
@@ -93,25 +93,39 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { amount, onAmountChange } = props;
+        const { amount, sats, forceUnit, onAmountChange } = props;
         let satAmount = '0';
-        if (amount)
-            satAmount = getSatAmount(amount, props.forceUnit).toString();
+        let displayAmount = amount || '';
+        if (amount !== undefined) {
+            satAmount = getSatAmount(amount, forceUnit).toString();
+        } else if (sats !== undefined) {
+            satAmount = sats.toString();
+            displayAmount = getAmount(sats, forceUnit);
+        }
 
-        onAmountChange(amount, satAmount);
+        onAmountChange(displayAmount, satAmount);
         this.state = {
             satAmount
         };
     }
 
     componentDidUpdate(prevProps: Readonly<AmountInputProps>): void {
-        const { amount, forceUnit, onAmountChange } = this.props;
-        if (amount !== prevProps.amount || forceUnit !== prevProps.forceUnit) {
+        const { amount, sats, forceUnit, onAmountChange } = this.props;
+        if (
+            amount !== prevProps.amount ||
+            sats !== prevProps.sats ||
+            forceUnit !== prevProps.forceUnit
+        ) {
             if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
                 const currentSatAmount = getSatAmount(amount || '', forceUnit);
                 this.setState({ satAmount: currentSatAmount });
 
                 onAmountChange(currentSatAmount.toString(), currentSatAmount);
+            } else if (amount === undefined && sats !== undefined) {
+                const satAmount = sats.toString();
+                if (satAmount !== this.state.satAmount.toString()) {
+                    this.setState({ satAmount });
+                }
             } else {
                 const satAmount = getSatAmount(amount || '', forceUnit);
                 if (satAmount !== this.state.satAmount) {
@@ -123,9 +137,10 @@ export default class AmountInput extends React.Component<
 
     onChangeUnits = () => {
         const { amount, onAmountChange, UnitsStore }: any = this.props;
+        const satAmount = this.state.satAmount || getSatAmount(amount || 0);
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(amount, this.props.forceUnit);
-        onAmountChange(amount, satAmount);
+        const displayAmount = getAmount(satAmount, this.props.forceUnit);
+        onAmountChange(displayAmount, satAmount);
         this.setState({ satAmount });
     };
 
@@ -300,7 +315,7 @@ export default class AmountInput extends React.Component<
     }
 }
 
-export { getSatAmount };
+export { getAmount, getSatAmount };
 
 const styles = StyleSheet.create({
     amountDisplay: {
