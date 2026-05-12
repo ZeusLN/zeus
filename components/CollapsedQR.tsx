@@ -285,7 +285,7 @@ export default class CollapsedQR extends React.Component<
                                         >
                                             <View
                                                 style={{
-                                                    ...StyleSheet.absoluteFillObject,
+                                                    ...StyleSheet.absoluteFill,
                                                     backgroundColor: 'black',
                                                     opacity: 0.6
                                                 }}
