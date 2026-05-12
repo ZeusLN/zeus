@@ -1385,6 +1385,7 @@
     "views.Settings.EmbeddedNode.EsploraServer.subtitle": "Esplora 是一个用于访问链上数据的区块浏览器 API。您的节点会使用它来同步钱包余额、广播交易以及监视区块链。",
     "views.Settings.EmbeddedNode.EsploraServer.serverUrl": "Esplora 服务器网址",
     "views.Settings.EmbeddedNode.defaultServer": "默认服务器",
+    "views.Settings.EmbeddedNode.invalidServerUrl": "Please enter a valid URL starting with http:// or https://",
     "views.Settings.EmbeddedNode.RapidGossipSync.title": "快速闲聊同步（Rapid Gossip Sync）",
     "views.Settings.EmbeddedNode.RapidGossipSync.subtitle": "快速闲聊同步（Rapid Gossip Sync）从服务器下载压缩的闪电网络闲聊数据，使您的节点无需与对等节点同步即可快速了解网络图。这使得支付路径查找更加快捷。",
     "views.Settings.EmbeddedNode.RapidGossipSync.serverUrl": "RGS 服务器网址",
