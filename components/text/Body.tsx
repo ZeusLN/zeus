@@ -11,6 +11,7 @@ export function Body({
     jumbo = false,
     defaultSize = false,
     fontSize: fontSizeOverride = undefined,
+    lineHeight = undefined,
     color = undefined,
     colorOverride = undefined,
     children,
@@ -24,6 +25,10 @@ export function Body({
     jumbo?: boolean;
     defaultSize?: boolean;
     fontSize?: number;
+    // Override the natural line height. Useful when a glyph (e.g. ₿) is
+    // missing from the bundled font and falls back to a system font with
+    // taller metrics, which would otherwise inflate row height.
+    lineHeight?: number;
     // These should only be keys available on the theme
     // TODO: enforce this with some global ThemeKey enum?
     colorOverride?: string;
@@ -63,6 +68,7 @@ export function Body({
                     : defaultSize
                     ? undefined
                     : 16,
+                lineHeight,
                 fontFamily:
                     bold || jumbo
                         ? 'PPNeueMontreal-Medium'
