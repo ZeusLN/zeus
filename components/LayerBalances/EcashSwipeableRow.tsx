@@ -16,7 +16,7 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import AutoPayUtils from '../../utils/AutoPayUtils';
+import QuickPayUtils from '../../utils/QuickPayUtils';
 
 import { cashuStore, settingsStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
@@ -234,33 +234,22 @@ export default class EcashSwipeableRow extends Component<
             this.handleLnurlRequest(lightning, lnurlParams, navigation);
             return;
         } else if (lightning) {
-            if (AutoPayUtils.shouldTryAutoPay(lightning)) {
-                try {
-                    await cashuStore.getPayReq(lightning);
+            await cashuStore.getPayReq(lightning);
 
-                    const autoPayProcessed =
-                        await AutoPayUtils.checkCashuAutoPayAndProcess(
-                            lightning,
-                            navigation,
-                            settingsStore,
-                            cashuStore
-                        );
-
-                    if (autoPayProcessed) {
-                        return;
-                    }
-
-                    navigation.navigate('CashuPaymentRequest', {});
-                    return;
-                } catch (error) {
-                    console.error(
-                        'Cashu auto-pay failed, falling back to manual ecash flow:',
-                        error
+            if (QuickPayUtils.shouldTryQuickPay(lightning)) {
+                const quickPayProcessed =
+                    await QuickPayUtils.checkCashuQuickPayAndProcess(
+                        lightning,
+                        navigation,
+                        settingsStore,
+                        cashuStore
                     );
+
+                if (quickPayProcessed) {
+                    return;
                 }
             }
 
-            cashuStore.getPayReq(lightning);
             navigation.navigate('CashuPaymentRequest', {});
         }
     };

@@ -19,7 +19,7 @@ import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import AutoPayUtils from '../../utils/AutoPayUtils';
+import QuickPayUtils from '../../utils/QuickPayUtils';
 
 import {
     modalStore,
@@ -340,23 +340,16 @@ export default class LightningSwipeableRow extends Component<
                 settings
             );
         } else if (lightning) {
-            if (AutoPayUtils.shouldTryAutoPay(lightning)) {
-                try {
-                    const result = await AutoPayUtils.checkAutoPayAndProcess(
-                        lightning,
-                        navigation,
-                        settingsStore,
-                        transactionsStore
-                    );
+            if (QuickPayUtils.shouldTryQuickPay(lightning)) {
+                const result = await QuickPayUtils.checkQuickPayAndProcess(
+                    lightning,
+                    navigation,
+                    settingsStore,
+                    transactionsStore
+                );
 
-                    if (result) {
-                        return;
-                    }
-                } catch (error) {
-                    console.error(
-                        'Auto-pay failed, falling back to manual flow:',
-                        error
-                    );
+                if (result) {
+                    return;
                 }
             }
 
