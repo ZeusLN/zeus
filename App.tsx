@@ -499,6 +499,11 @@ export default class App extends React.PureComponent {
                                                             route
                                                         }) => ({
                                                             headerShown: false,
+                                                            animationDuration:
+                                                                Platform.OS ===
+                                                                'android'
+                                                                    ? 300
+                                                                    : 350,
                                                             // Only override animation when explicitly provided - undefined breaks shared element transitions
                                                             ...((
                                                                 route.params as any
