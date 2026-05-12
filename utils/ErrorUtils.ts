@@ -16,6 +16,7 @@ const userFriendlyErrors: any = {
     FAILURE_REASON_ERROR: 'error.failureReasonError',
     FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
         'error.failureReasonIncorrectPaymentDetails',
+    'Payment details incorrect': 'error.failureReasonIncorrectPaymentDetails',
     FAILURE_REASON_INSUFFICIENT_BALANCE:
         'error.failureReasonInsufficientBalance',
     // LDK Node payment failure reasons
@@ -99,7 +100,7 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
 
     if (
         errorContext?.includes('Keysend') &&
-        errorMsg === 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
+        localeKey === 'error.failureReasonIncorrectPaymentDetails'
     ) {
         baseError +=
             ' ' +
