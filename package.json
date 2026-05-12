@@ -215,14 +215,21 @@
     "asn1.js/bn.js": "4.12.3",
     "bolt07/bn.js": "5.2.3",
     "bolt11/bn.js": "4.12.3",
+    "brace-expansion": "1.1.13",
     "browserify-rsa/bn.js": "5.2.3",
     "browserify-sign/bn.js": "5.2.3",
     "create-ecdh/bn.js": "4.12.3",
     "diffie-hellman/bn.js": "4.12.3",
     "elliptic/bn.js": "4.12.3",
+    "eslint-import-resolver-typescript/picomatch": "4.0.4",
     "miller-rabin/bn.js": "4.12.3",
+    "minimatch": "3.1.5",
     "pbkdf2": "3.1.5",
-    "public-encrypt/bn.js": "4.12.3"
+    "picomatch": "2.3.2",
+    "protobufjs-cli/brace-expansion": "2.0.3",
+    "public-encrypt/bn.js": "4.12.3",
+    "react-native-blob-util/minimatch": "10.2.5",
+    "tinyglobby/picomatch": "4.0.4"
   },
   "react-native": {
     "crypto": "react-native-crypto",
