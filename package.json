@@ -195,7 +195,7 @@
     "jest": "29.7.0",
     "pod-install": "0.1.38",
     "prettier": "2.4.1",
-    "protobufjs-cli": "1.1.1",
+    "protobufjs-cli": "1.2.1",
     "react-native-url-polyfill": "2.0.0",
     "react-test-renderer": "19.2.3",
     "rn-nodeify": "10.3.0",
