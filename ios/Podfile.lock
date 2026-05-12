@@ -2138,7 +2138,7 @@ PODS:
     - React-Core
   - RNFS (2.20.0):
     - React-Core
-  - RNGestureHandler (2.30.0):
+  - RNGestureHandler (2.31.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2943,7 +2943,7 @@ SPEC CHECKSUMS:
   RNDateTimePicker: 55fe7dabebbafb9b2fa04fda4f8fdb69e622f215
   RNDeviceInfo: 36d7f232bfe7c9b5c494cb7793230424ed32c388
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
-  RNGestureHandler: c84901d120acdae2f6f27b5889a7cf144e64e6ec
+  RNGestureHandler: 2ff61eac036eaf89f6818bf4ed9c39771a17d134
   RNKeychain: 6778b35b5bd067c322f8479526ac09b1d61f31d0
   RNReactNativeHapticFeedback: e619815ed88b0443b83d0ce7204c7c890a42f754
   RNReanimated: dfcbf2e197c0633102cdf9577b1645d5d2c09d73
