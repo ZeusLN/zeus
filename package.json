@@ -229,7 +229,8 @@
     "protobufjs-cli/brace-expansion": "2.0.3",
     "public-encrypt/bn.js": "4.12.3",
     "react-native-blob-util/minimatch": "10.2.5",
-    "tinyglobby/picomatch": "4.0.4"
+    "tinyglobby/picomatch": "4.0.4",
+    "underscore": "1.13.8"
   },
   "react-native": {
     "crypto": "react-native-crypto",
