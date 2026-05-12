@@ -353,7 +353,7 @@ export default class NWCConnectionDetails extends React.Component<
                                         style={styles.headerActionButton}
                                     >
                                         <ClockIcon
-                                            color={themeColor('bitcoin')}
+                                            color={themeColor('text')}
                                             width={30}
                                             height={30}
                                         />

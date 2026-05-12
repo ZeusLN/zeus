@@ -46,6 +46,7 @@ import NostrConnectUtils, {
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
+import Base64Utils from '../utils/Base64Utils';
 
 import NWCConnection, {
     BudgetRenewalType,
@@ -192,6 +193,19 @@ export default class NostrWalletConnectStore {
         this.lightningAddressStore = lightningAddressStore;
         this.modalStore = modalStore;
         this.paymentsStore = paymentsStore;
+
+        // When a node switch begins (connecting flips to true), tear down the
+        // current service so initializeService() will fully reinitialize for
+        // the new node instead of being skipped by the isInitialized guard.
+        reaction(
+            () => this.settingsStore.connecting,
+            (connecting) => {
+                if (connecting) {
+                    console.log('NWC: node switch - resetting service');
+                    void this.reset(true);
+                }
+            }
+        );
     }
 
     @action
@@ -202,7 +216,10 @@ export default class NostrWalletConnectStore {
         }
         await this.loadInitialSettings();
         const hasActiveConnections = this.activeConnections.length > 0;
-        if (!hasActiveConnections) return;
+        if (!hasActiveConnections) {
+            console.log('NWC: no active connections - skipping initialization');
+            return;
+        }
 
         runInAction(() => {
             this.error = false;
@@ -229,8 +246,8 @@ export default class NostrWalletConnectStore {
                 this.setupAppStateMonitoring();
                 this.setupAndroidLogListener();
             }
-            if (Platform.OS === 'ios' && this.persistentNWCServiceEnabled) {
-                // (iOS: AppState + silent audio session).
+            if (Platform.OS === 'ios') {
+                // Auto-start background keep-alive whenever at least one connection exists.
                 this.setupIOSAppStateMonitoring();
             }
             runInAction(() => {
@@ -338,11 +355,20 @@ export default class NostrWalletConnectStore {
         }
     };
 
-    // Skip full teardown while persistent background NWC is enabled (same flag on
-    // iOS and Android).
+    // Skip full teardown when not forcing a node switch and NWC should stay
+    // attached:
+    //   iOS — at least one active connection (`inactive` runs before background;
+    //   do not require `iosAudioKeepAliveActive`).
+    //   Android — persistent foreground service enabled.
     @action
-    public reset = async () => {
-        if (!this.persistentNWCServiceEnabled) {
+    public reset = async (forceReset = false) => {
+        const skipTeardown =
+            !forceReset &&
+            ((Platform.OS === 'ios' && this.activeConnections.length > 0) ||
+                (Platform.OS === 'android' &&
+                    this.persistentNWCServiceEnabled));
+        if (!skipTeardown) {
+            console.log('NWC: resetting service');
             await this.flushScheduledSave();
             if (Platform.OS === 'ios') {
                 this.teardownIOSAppStateMonitor();
@@ -520,6 +546,7 @@ export default class NostrWalletConnectStore {
             });
             await this.saveConnections();
             await this.subscribeToConnection(connection);
+            this.ensureIOSNWCBackgroundMonitoring();
             return connectionUrl;
         } catch (error: any) {
             throw error;
@@ -1501,7 +1528,11 @@ export default class NostrWalletConnectStore {
                     );
                 return { result, error: undefined };
             }
-            if (!request.payment_hash) {
+            const rHash =
+                request.payment_hash && request.payment_hash.includes('=')
+                    ? Base64Utils.base64ToHex(request.payment_hash)
+                    : request.payment_hash;
+            if (!rHash) {
                 return NostrConnectUtils.createNip47Error(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invoiceNotFound'
@@ -1511,7 +1542,7 @@ export default class NostrWalletConnectStore {
             }
             const result =
                 await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
-                    request.payment_hash
+                    rHash
                 );
             return { result, error: undefined };
         } catch (error) {
@@ -1696,7 +1727,11 @@ export default class NostrWalletConnectStore {
                 'stores.NostrWalletConnectStore.error.noPreimageReceived'
             )
         );
-        if (paymentError) {
+        if (
+            paymentError &&
+            paymentError.error &&
+            paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+        ) {
             await this.recordFailedPayment({
                 rawInvoice: request.invoice,
                 connection,
@@ -2619,14 +2654,12 @@ export default class NostrWalletConnectStore {
     // ─── iOS audio keep-alive (AVAudioSession + silent loop) ─────────────────
 
     /**
-     * iOS-only: registers AppState listener when `persistentNWCServiceEnabled`
+     * iOS-only: registers AppState listener when has `At least one active connection`
      * is on (same setting as Android’s foreground service). Starts silent audio
      * in background and re-subscribes relays when returning to foreground.
      */
     private setupIOSAppStateMonitoring(): void {
         if (Platform.OS !== 'ios') return;
-        if (!this.persistentNWCServiceEnabled) return;
-
         // Remove any stale listener before registering a new one
         this.teardownIOSAppStateMonitor();
 
@@ -2679,6 +2712,18 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    /**
+     * iOS: when the first NWC connection is created after a cold start that had
+     * none, `initializeService` bailed out early and never registered AppState /
+     * audio keep-alive. Call this after a connection is live so background works
+     * without restarting the app.
+     */
+    private ensureIOSNWCBackgroundMonitoring(): void {
+        if (Platform.OS !== 'ios') return;
+        if (this.activeConnections.length === 0) return;
+        if (!this.isServiceReady()) return;
+        this.setupIOSAppStateMonitoring();
+    }
     /**
      * Starts a silent AVAudioSession (.playback) backed by an AVAudioEngine
      * loop.  While active, iOS treats the app as a foreground-like audio
