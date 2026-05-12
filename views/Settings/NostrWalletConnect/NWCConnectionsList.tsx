@@ -426,6 +426,10 @@ export default class NWCConnectionsList extends React.Component<
         const { NostrWalletConnectStore, navigation, SettingsStore } =
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
+        const { settings } = SettingsStore;
+        const isNwcSettingsAvailable =
+            Platform.OS === 'android' ||
+            (BackendUtils.supportsCashuWallet() && settings.ecash.enableCashu);
         const { connectionsLoading, error } = this.state;
         const { settings } = SettingsStore;
         const isNwcSettingsAvailable =
@@ -476,7 +480,6 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-
                                 {isNwcSettingsAvailable && (
                                     <TouchableOpacity
                                         onPress={() =>
