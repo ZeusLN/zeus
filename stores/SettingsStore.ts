@@ -1915,7 +1915,10 @@ export default class SettingsStore {
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
-                this.settings = JSON.parse(modernSettings);
+                const parsedSettings = JSON.parse(modernSettings);
+                this.settings = parsedSettings;
+                await MigrationsUtils.migrateRgsDefaultToZeus(parsedSettings);
+                this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
 

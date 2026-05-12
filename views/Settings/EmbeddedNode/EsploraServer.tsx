@@ -14,6 +14,7 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 import {
     getDefaultEsploraServer,
     getEsploraServersForNetwork,
@@ -43,7 +44,9 @@ export default class EsploraServer extends React.Component<
         super(props);
 
         const { SettingsStore } = props;
-        const saved = SettingsStore.ldkEsploraServer || '';
+        const { settings } = SettingsStore;
+        const selectedNode = settings.selectedNode || 0;
+        const saved = settings.nodes?.[selectedNode]?.ldkEsploraServer || '';
         const network =
             (SettingsStore.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
             'mainnet';
@@ -104,11 +107,17 @@ export default class EsploraServer extends React.Component<
         ];
 
         const effectiveServer = this.getEffectiveServer();
+        const isCustom = selectedValue === CUSTOM_VALUE;
+        const customServerTrimmed = customServer.trim();
+        const showCustomUrlError =
+            isCustom &&
+            customServerTrimmed !== '' &&
+            !UrlUtils.isValidUrl(customServer);
         const hasUnsavedChanges =
+            effectiveServer !== '' &&
             effectiveServer !== savedEsploraServer &&
-            !(selectedValue === CUSTOM_VALUE && customServer.trim() === '');
-        const showReset =
-            effectiveServer !== '' && effectiveServer !== defaultServer;
+            !showCustomUrlError;
+        const showReset = effectiveServer !== defaultServer;
 
         return (
             <Screen>
@@ -159,19 +168,35 @@ export default class EsploraServer extends React.Component<
                         />
 
                         {selectedValue === CUSTOM_VALUE && (
-                            <TextInput
-                                value={customServer}
-                                placeholder={localeString(
-                                    'views.Settings.EmbeddedNode.EsploraServer.serverUrl'
+                            <>
+                                <TextInput
+                                    value={customServer}
+                                    placeholder={localeString(
+                                        'views.Settings.EmbeddedNode.EsploraServer.serverUrl'
+                                    )}
+                                    onChangeText={(text: string) => {
+                                        this.setState({
+                                            customServer: text
+                                        });
+                                    }}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                                {showCustomUrlError && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('error'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 12,
+                                            marginTop: 4
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.invalidServerUrl'
+                                        )}
+                                    </Text>
                                 )}
-                                onChangeText={(text: string) => {
-                                    this.setState({
-                                        customServer: text
-                                    });
-                                }}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
+                            </>
                         )}
 
                         <View style={{ marginTop: 10 }}>

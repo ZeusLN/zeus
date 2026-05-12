@@ -136,7 +136,6 @@ interface SeedRecoveryState {
     ldkMnemonic: string;
     ldkPassphrase: string;
     ldkNodeDir: string;
-    embeddedLdkNetwork: string;
     channelDbUri?: string;
     channelDbFileName?: string;
     olympusRestorePending: boolean;
@@ -189,7 +188,6 @@ export default class SeedRecovery extends React.PureComponent<
             ldkMnemonic: '',
             ldkPassphrase: '',
             ldkNodeDir: '',
-            embeddedLdkNetwork: 'mainnet',
             olympusRestorePending: false,
             embeddedLndIsSqlite: false
         };
@@ -244,8 +242,7 @@ export default class SeedRecovery extends React.PureComponent<
             network,
             implementation,
             restoreSwaps,
-            restoreRescueKey,
-            embeddedLdkNetwork: network
+            restoreRescueKey
         });
     }
 
@@ -431,7 +428,7 @@ export default class SeedRecovery extends React.PureComponent<
             nickname,
             photo,
             implementation: 'ldk-node',
-            embeddedLdkNetwork: network,
+            ldkNetwork: network,
             ldkNodeDir: nodeDir,
             ldkMnemonic: mnemonic,
             ldkPassphrase,
