@@ -211,7 +211,8 @@
     "@typescript-eslint/type-utils": "8.59.3",
     "@typescript-eslint/types": "8.59.3",
     "@typescript-eslint/typescript-estree": "8.59.3",
-    "@typescript-eslint/visitor-keys": "8.59.3"
+    "@typescript-eslint/visitor-keys": "8.59.3",
+    "pbkdf2": "3.1.5"
   },
   "react-native": {
     "crypto": "react-native-crypto",
