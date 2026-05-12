@@ -59,6 +59,10 @@ const NWC_TRAY_NOTIFICATION_KEYS = {
     outgoingTitle:
         'stores.NostrWalletConnectStore.paymentSentNotificationTitle',
     outgoingBody: 'stores.NostrWalletConnectStore.paymentSentNotificationBody',
+    outgoingFailedTitle:
+        'stores.NostrWalletConnectStore.paymentFailedNotificationTitle',
+    outgoingFailedBody:
+        'stores.NostrWalletConnectStore.paymentFailedNotificationBody',
     invoiceReadyTitle:
         'stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle',
     invoiceReadyBody:
@@ -66,6 +70,40 @@ const NWC_TRAY_NOTIFICATION_KEYS = {
     invoiceReadyBodyWithDescription:
         'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription'
 } as const;
+
+export const NWC_ACTIVITY_NOTIF_KEYS = {
+    action: 'zeusNwcAction',
+    connectionId: 'zeusNwcConnectionId',
+    failedActivityId: 'zeusNwcFailedActivityId',
+    openActivity: 'connection_activity'
+} as const;
+
+export type NwcActivityNotif = {
+    connectionId: string;
+    failedActivityId?: string;
+};
+
+function nonEmptyString(value: unknown): string | undefined {
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+export function parseNwcActivityNotif(
+    payload: unknown
+): NwcActivityNotif | null {
+    if (!payload || typeof payload !== 'object') return null;
+
+    const p = payload as Record<string, unknown>;
+    const k = NWC_ACTIVITY_NOTIF_KEYS;
+
+    if (p[k.action] !== k.openActivity) return null;
+
+    const connectionId = nonEmptyString(p[k.connectionId]);
+    if (!connectionId) return null;
+
+    const failedActivityId = nonEmptyString(p[k.failedActivityId]);
+    return failedActivityId
+        ? { connectionId, failedActivityId }
+        : { connectionId };
+}
 
 export const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 
@@ -1342,6 +1380,34 @@ export default class NostrConnectUtils {
         NostrConnectUtils.emitOsNotification(title, body);
     }
 
+    static notifyOutgoingNwcPaymentFailed(
+        amountSats: number,
+        connectionDisplayName: string,
+        connectionId: string,
+        failedActivityId: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(
+            NWC_TRAY_NOTIFICATION_KEYS.outgoingFailedTitle
+        );
+        const body = localeString(
+            NWC_TRAY_NOTIFICATION_KEYS.outgoingFailedBody,
+            {
+                amount: amountLabel,
+                unit,
+                connectionName: connectionDisplayName
+            }
+        );
+        const k = NWC_ACTIVITY_NOTIF_KEYS;
+        const extras: Record<string, string> = {
+            [k.action]: k.openActivity,
+            [k.connectionId]: connectionId,
+            [k.failedActivityId]: failedActivityId
+        };
+        NostrConnectUtils.emitOsNotification(title, body, extras);
+    }
+
     static notifyNwcInvoiceReady(
         amountSats: number,
         connectionDisplayName: string,
@@ -1373,18 +1439,19 @@ export default class NostrConnectUtils {
         NostrConnectUtils.emitOsNotification(title, body);
     }
 
-    private static emitOsNotification(title: string, body: string): void {
+    private static emitOsNotification(
+        title: string,
+        body: string,
+        extraPayload?: Record<string, string>
+    ): void {
+        const base = { title, body, ...extraPayload };
         if (Platform.OS === 'android') {
             // @ts-ignore:next-line
-            Notifications.postLocalNotification({
-                title,
-                body
-            });
+            Notifications.postLocalNotification(base);
         } else if (Platform.OS === 'ios') {
             // @ts-ignore:next-line
             Notifications.postLocalNotification({
-                title,
-                body,
+                ...base,
                 sound: 'chime.aiff'
             });
         }

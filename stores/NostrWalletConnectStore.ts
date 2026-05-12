@@ -2161,6 +2161,12 @@ export default class NostrWalletConnectStore {
 
             this.findAndUpdateConnection(connection);
         });
+        NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
+            amountSats,
+            connection.name,
+            connection.id,
+            id
+        );
     }
 
     // STORAGE OPERATIONS
