@@ -202,17 +202,27 @@
     "typescript": "5.7.3"
   },
   "resolutions": {
-    "@types/react": "19.1.1",
     "**/@types/react": "19.1.1",
+    "@types/react": "19.1.1",
     "@typescript-eslint/eslint-plugin": "8.59.3",
     "@typescript-eslint/parser": "8.59.3",
-    "@typescript-eslint/utils": "8.59.3",
     "@typescript-eslint/scope-manager": "8.59.3",
     "@typescript-eslint/type-utils": "8.59.3",
     "@typescript-eslint/types": "8.59.3",
     "@typescript-eslint/typescript-estree": "8.59.3",
+    "@typescript-eslint/utils": "8.59.3",
     "@typescript-eslint/visitor-keys": "8.59.3",
-    "pbkdf2": "3.1.5"
+    "asn1.js/bn.js": "4.12.3",
+    "bolt07/bn.js": "5.2.3",
+    "bolt11/bn.js": "4.12.3",
+    "browserify-rsa/bn.js": "5.2.3",
+    "browserify-sign/bn.js": "5.2.3",
+    "create-ecdh/bn.js": "4.12.3",
+    "diffie-hellman/bn.js": "4.12.3",
+    "elliptic/bn.js": "4.12.3",
+    "miller-rabin/bn.js": "4.12.3",
+    "pbkdf2": "3.1.5",
+    "public-encrypt/bn.js": "4.12.3"
   },
   "react-native": {
     "crypto": "react-native-crypto",
