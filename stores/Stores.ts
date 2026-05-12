@@ -28,6 +28,7 @@ import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
 import SweepStore from './SweepStore';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
+import SpliceStore from './SpliceStore';
 
 export const settingsStore = new SettingsStore();
 export const connectivityStore = new ConnectivityStore(settingsStore);
@@ -76,6 +77,7 @@ export const cashuStore = new CashuStore(
     modalStore
 );
 export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
+export const spliceStore = new SpliceStore(transactionsStore, channelsStore);
 export const activityStore = new ActivityStore(
     settingsStore,
     paymentsStore,
@@ -83,6 +85,7 @@ export const activityStore = new ActivityStore(
     transactionsStore,
     cashuStore,
     swapStore,
+    spliceStore,
     nodeInfoStore
 );
 export const lightningAddressStore = new LightningAddressStore(

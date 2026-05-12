@@ -20,6 +20,7 @@ import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
+import ChannelSplicingIcon from '../../assets/images/SVG/ChannelSplicing.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
@@ -480,46 +481,80 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         )}
 
-                    {selectedNode &&
-                        BackendUtils.supportsSweep() &&
-                        !isChannelMigrating && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
+                    {selectedNode && BackendUtils.supportsSplicing() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('SpliceOut')}
                             >
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('Sweep')}
+                                <View style={styles.icon}>
+                                    <ChannelSplicingIcon
+                                        fill={themeColor('text')}
+                                        width={28}
+                                        height={28}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
                                 >
-                                    <View style={styles.columnField}>
-                                        <View style={styles.icon}>
-                                            <SweepIcon
-                                                fill={themeColor('text')}
-                                                width={18}
-                                                height={18}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString('views.Sweep.title')}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
+                                    {localeString('views.Tools.splicing')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {BackendUtils.supportsSweep() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Sweep')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <SweepIcon
+                                            fill={themeColor('text')}
+                                            width={18}
+                                            height={18}
+                                        />
                                     </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Sweep.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode &&
                         BackendUtils.supportsOnchainSends() &&
