@@ -586,17 +586,11 @@ export default class NostrConnectUtils {
     }
 
     static async buildNip47TransactionForLightningInvoiceLookup(
-        paymentHash: string
+        r_hash: string
     ): Promise<Nip47Transaction> {
-        let rawInvoice = new Invoice();
-        try {
-            rawInvoice = await BackendUtils.lookupInvoice({
-                r_hash: paymentHash!
-            });
-        } catch (error) {
-            console.error('Failed to lookup invoice:', error);
-            throw error;
-        }
+        const rawInvoice = await BackendUtils.lookupInvoice({
+            r_hash
+        });
         if (!rawInvoice || typeof rawInvoice !== 'object') {
             throw new Error(
                 localeString(
@@ -621,7 +615,7 @@ export default class NostrConnectUtils {
             type: 'incoming',
             state,
             invoice: invoice.getPaymentRequest,
-            payment_hash: paymentHash || '',
+            payment_hash: invoice.getRHash || r_hash,
             amount: satsToMillisats(invoice.getAmount),
             description: invoice.getMemo,
             ...(invoice.isPaid && {
