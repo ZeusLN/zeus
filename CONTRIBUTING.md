@@ -272,6 +272,15 @@ If you're new to ZEUS:
 
 We appreciate all contributions, but please avoid trivial changes (typo fixes in comments, whitespace changes) as your first contribution. Focus on substantive improvements.
 
+### Proof of Work for First-Time Contributors
+
+First-time contributors submitting new features or UI changes **must include screenshot or video evidence demonstrating that the contribution works as described**. This evidence should be attached directly to the pull request description.
+
+- PRs that fail to provide this evidence will be closed within 24 hours.
+- Repeat offenders will be blocked from the repository.
+
+This requirement helps maintainers efficiently review contributions from new contributors and protects the project from low-effort or AI-generated submissions that have not been actually tested.
+
 ## Working on Issues
 
 **Note on issue assignment**: GitHub issue assignment is reserved for ZEUS team members. Instead of asking to be assigned an issue, simply leave a comment indicating that you've started working on it. This helps others know the issue is being addressed while keeping the process lightweight.
