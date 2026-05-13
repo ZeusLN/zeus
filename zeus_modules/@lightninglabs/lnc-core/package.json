@@ -60,5 +60,8 @@
   "directories": {
     "lib": "lib"
   },
+  "resolutions": {
+    "protobufjs": "7.5.8"
+  },
   "license": "MIT"
 }
