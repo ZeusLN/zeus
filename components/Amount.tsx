@@ -85,6 +85,13 @@ function AmountDisplay({
 
     const actualSymbol = unit === 'BTC' ? '₿' : symbol;
 
+    // PPNeueMontreal does not include the ₿ glyph (U+20BF), so RN falls
+    // back to the system font for that one character — and the system
+    // font has taller vertical metrics, which inflates row height.
+    // Pin the ₿ Body's lineHeight to match the rendered digit height.
+    const resolvedFontSize = fontSize ?? (jumboText ? 40 : 16);
+    const btcSymbolLineHeight = defaultTextSize ? undefined : resolvedFontSize;
+
     const Pending = () => {
         const icon = (
             <View
@@ -120,6 +127,7 @@ function AmountDisplay({
             secondary
             jumbo={jumboText}
             fontSize={fontSize}
+            lineHeight={actualSymbol === '₿' ? btcSymbolLineHeight : undefined}
             color={color}
             colorOverride={colorOverride}
             accessible={accessible}
