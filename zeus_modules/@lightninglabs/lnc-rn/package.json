@@ -87,7 +87,7 @@
     "protobufjs": "7.5.8",
     "fast-xml-parser": "5.7.0",
     "serialize-javascript": "7.0.5",
-    "minimatch": "9.0.5"
+    "minimatch": "9.0.7"
   },
   "license": "MIT"
 }
