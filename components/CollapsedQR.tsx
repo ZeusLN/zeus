@@ -235,9 +235,20 @@ export default class CollapsedQR extends React.Component<
 
         return (
             <React.Fragment>
-                {/* Temporary QR for sharing */}
+                {/* Temporary QR for sharing — positioned off-screen so Fabric
+                    doesn't render the 800px source QR over the visible UI when
+                    a zero-sized parent fails to clip its oversized child. */}
                 {tempQRRef && (
-                    <View style={{ height: 0, width: 0, overflow: 'hidden' }}>
+                    <View
+                        style={{
+                            position: 'absolute',
+                            left: -10000,
+                            top: -10000,
+                            width: 800,
+                            height: 800
+                        }}
+                        pointerEvents="none"
+                    >
                         <ForwardedQRCode
                             ref={tempQRRef}
                             value={value}
