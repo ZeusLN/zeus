@@ -3,11 +3,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
-import {
-    SATS_PER_BTC,
-    numberWithCommas,
-    numberWithDecimals
-} from '../utils/UnitsUtils';
+import { SATS_PER_BTC, numberWithCommas } from '../utils/UnitsUtils';
 
 interface CurrencyDisplayRules {
     symbol: string;
@@ -644,7 +640,7 @@ export default class FiatStore {
                 (entry) => entry.code === fiat
             )[0];
             const rate = (fiatEntry && fiatEntry.rate) || 0;
-            const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
+            const { symbol, space, rtl } = this.symbolLookup(
                 fiatEntry && fiatEntry.code
             );
 
@@ -653,13 +649,9 @@ export default class FiatStore {
                 .multipliedBy(SATS_PER_BTC)
                 .toFixed(0);
 
-            const formattedRate = separatorSwap
-                ? numberWithDecimals(rate)
-                : numberWithCommas(rate);
+            const formattedRate = numberWithCommas(rate);
 
-            const formattedMoscow = separatorSwap
-                ? numberWithDecimals(moscowTime)
-                : numberWithCommas(moscowTime);
+            const formattedMoscow = numberWithCommas(moscowTime);
 
             if (sats) {
                 return `${formattedMoscow} sats = 1 ${fiat}`;
@@ -726,10 +718,8 @@ export default class FiatStore {
     };
 
     public formatAmountForDisplay = (input: string | number) => {
-        const { symbol, space, rtl, separatorSwap } = this.getSymbol();
-        const amount = separatorSwap
-            ? numberWithDecimals(input)
-            : numberWithCommas(input);
+        const { symbol, space, rtl } = this.getSymbol();
+        const amount = numberWithCommas(input);
 
         if (rtl) return `${amount}${space ? ' ' : ''}${symbol}`;
         return `${symbol}${space ? ' ' : ''}${amount}`;

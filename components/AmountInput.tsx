@@ -11,6 +11,7 @@ import { getSatAmount } from '../utils/AmountUtils';
 import {
     SATS_PER_BTC,
     formatBitcoinWithSpaces,
+    normalizeNumberString,
     numberWithCommas
 } from '../utils/UnitsUtils';
 
@@ -50,8 +51,8 @@ const getAmount = (sats: string | number, forceUnit?: string) => {
     const { fiat } = settings;
     const units = forceUnit || unitsStore.units;
 
-    // replace , with . for unit separator
-    const value = sats ? sats.toString().replace(/,/g, '.') : '';
+    // Normalize any locale-specific separators to the app's canonical format.
+    const value = sats ? normalizeNumberString(sats) : '';
 
     const fiatEntry =
         fiat && fiatRates
@@ -72,7 +73,7 @@ const getAmount = (sats: string | number, forceUnit?: string) => {
             const { decimalPlaces } = fiatStore.getSymbol();
             const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
             amount = rate
-                ? new BigNumber(value.toString().replace(/,/g, '.'))
+                ? new BigNumber(normalizeNumberString(value))
                       .times(rate)
                       .div(SATS_PER_BTC)
                       .toNumber()

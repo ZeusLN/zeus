@@ -23,7 +23,7 @@ import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { numberWithCommas } from '../utils/UnitsUtils';
+import { normalizeNumberString, numberWithCommas } from '../utils/UnitsUtils';
 
 import Storage from '../storage';
 
@@ -173,22 +173,18 @@ export default class CurrencyConverterContent extends React.Component<
     };
 
     handleInputChange = (value: string, currency: string) => {
-        const sanitizedValue = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+        const sanitizedValue = value ? normalizeNumberString(value) : '';
 
         const { inputValues } = this.state;
         const FiatStore = this.props.FiatStore!;
         const fiatRates = FiatStore?.fiatRates || [];
 
-        const formatNumber = (value: string, currency: string) => {
-            if (currency === 'BTC') {
-                if (parseFloat(value) > 1) {
-                    return numberWithCommas(value);
-                } else {
-                    return value;
-                }
-            } else {
-                return numberWithCommas(value);
+        const formatNumber = (value: string) => {
+            if (value === '') {
+                return '';
             }
+
+            return numberWithCommas(value);
         };
 
         const convertedValues: { [key: string]: string } = { ...inputValues };
@@ -205,7 +201,7 @@ export default class CurrencyConverterContent extends React.Component<
             return;
         }
 
-        const formattedValue = formatNumber(sanitizedValue, currency);
+        const formattedValue = formatNumber(sanitizedValue);
         convertedValues[currency] = formattedValue;
 
         Object.keys(convertedValues).forEach((key) => {
@@ -275,7 +271,7 @@ export default class CurrencyConverterContent extends React.Component<
                     }
                 }
 
-                convertedValues[key] = formatNumber(convertedValue, key);
+                convertedValues[key] = formatNumber(convertedValue);
             }
         });
 

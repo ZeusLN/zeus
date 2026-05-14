@@ -25,6 +25,7 @@ import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 
@@ -420,9 +421,9 @@ export default class NWCConnectionDetails extends React.Component<
                                             keyValue={localeString(
                                                 'views.Settings.NostrWalletConnect.budget'
                                             )}
-                                            value={`${connection.maxAmountSats.toLocaleString()} ${localeString(
-                                                'general.sats'
-                                            )}${
+                                            value={`${numberWithCommas(
+                                                connection.maxAmountSats
+                                            )} ${localeString('general.sats')}${
                                                 connection.budgetRenewal !==
                                                 'never'
                                                     ? ` (${connection.budgetRenewal})`
@@ -437,7 +438,9 @@ export default class NWCConnectionDetails extends React.Component<
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.totalSpent'
                                                 )}
-                                                value={`${connection.totalSpendSats.toLocaleString()} ${localeString(
+                                                value={`${numberWithCommas(
+                                                    connection.totalSpendSats
+                                                )} ${localeString(
                                                     'general.sats'
                                                 )}`}
                                             />
@@ -446,7 +449,9 @@ export default class NWCConnectionDetails extends React.Component<
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.remainingBudget'
                                                 )}
-                                                value={`${connection.remainingBudget.toLocaleString()} ${localeString(
+                                                value={`${numberWithCommas(
+                                                    connection.remainingBudget
+                                                )} ${localeString(
                                                     'general.sats'
                                                 )}`}
                                             />
