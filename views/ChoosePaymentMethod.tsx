@@ -8,6 +8,11 @@ import bolt11 from 'bolt11';
 
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
+import {
+    buildPaymentMethodListRows,
+    isPaymentMethodListRowSelectable,
+    navigateForSelectedPaymentRow
+} from '../utils/ChoosePaymentMethodUtils';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
@@ -21,7 +26,7 @@ import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 
-import { feeStore, settingsStore } from '../stores/Stores';
+import { feeStore, settingsStore, syncStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -65,6 +70,8 @@ export default class ChoosePaymentMethod extends React.Component<
     private focusUnsubscribe?: () => void;
     private blurUnsubscribe?: () => void;
     private hasNavigatedAway = false;
+    private didReplaceWithSoleMethod = false;
+    private soleMethodReplaceBusy = false;
 
     state = {
         value: '',
@@ -94,6 +101,80 @@ export default class ChoosePaymentMethod extends React.Component<
             this.fetchOnchainFees(value);
         });
     }
+
+    componentDidUpdate() {
+        void this.replacePaymentMethodScreenIfSingleChoice();
+    }
+
+    private replacePaymentMethodScreenIfSingleChoice = async () => {
+        if (
+            this.didReplaceWithSoleMethod ||
+            this.soleMethodReplaceBusy ||
+            syncStore.isSyncing
+        ) {
+            return;
+        }
+
+        const { navigation, BalanceStore, CashuStore, UTXOsStore } = this.props;
+        const {
+            value,
+            satAmount,
+            lightning,
+            lightningAddress,
+            offer,
+            lnurlParams,
+            feeRate
+        } = this.state;
+
+        const satAmountNum =
+            satAmount !== '' && !isNaN(Number(satAmount))
+                ? Number(satAmount)
+                : undefined;
+
+        const rows = buildPaymentMethodListRows(
+            {
+                value,
+                lightning,
+                lightningAddress,
+                offer,
+                lnurlParams,
+                lightningBalance: BalanceStore!.lightningBalance,
+                onchainBalance: BalanceStore!.totalBlockchainBalance,
+                ecashBalance: CashuStore!.totalBalanceSats,
+                accounts: UTXOsStore!.accounts
+            },
+            satAmountNum
+        );
+
+        const selectableRows = rows.filter(isPaymentMethodListRowSelectable);
+
+        if (selectableRows.length !== 1) {
+            return;
+        }
+
+        this.soleMethodReplaceBusy = true;
+        this.didReplaceWithSoleMethod = true;
+
+        try {
+            await navigateForSelectedPaymentRow(
+                navigation,
+                selectableRows[0],
+                {
+                    lightning,
+                    lightningAddress,
+                    offer,
+                    lnurlParams,
+                    value,
+                    satAmount: satAmountNum,
+                    feeRate
+                },
+                { replace: true }
+            );
+        } catch {
+            this.didReplaceWithSoleMethod = false;
+            this.soleMethodReplaceBusy = false;
+        }
+    };
 
     componentWillUnmount() {
         this.focusUnsubscribe?.();

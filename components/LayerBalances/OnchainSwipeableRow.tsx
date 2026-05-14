@@ -5,7 +5,8 @@ import {
     Text,
     View,
     I18nManager,
-    TouchableOpacity
+    TouchableOpacity,
+    Alert
 } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +15,7 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import { navigateForSelectedPaymentRow } from '../../utils/ChoosePaymentMethodUtils';
 
 import { modalStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
@@ -169,12 +171,18 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     private sendToAddress = () => {
-        const { navigation, value, satAmount, feeRate } = this.props;
-        navigation.navigate('Send', {
-            destination: value,
-            satAmount,
-            fee: feeRate,
-            transactionType: 'On-chain'
+        const { navigation, value, satAmount, feeRate, account } = this.props;
+        const acct = account ?? 'default';
+        navigateForSelectedPaymentRow(
+            navigation,
+            {
+                layer: acct === 'default' ? 'On-chain' : acct,
+                account: acct
+            },
+            { value, satAmount, feeRate },
+            { replace: false }
+        ).catch((error) => {
+            Alert.alert(localeString('general.error'), error.message);
         });
     };
 
