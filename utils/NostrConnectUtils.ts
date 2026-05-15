@@ -1,9 +1,9 @@
-import type {
+import {
     Nip47NotificationType,
     Nip47SingleMethod,
     Nip47Transaction,
     Nip47ListTransactionsRequest
-} from '@getalby/sdk/dist/nwc/types';
+} from '@getalby/sdk';
 
 import {
     BudgetRenewalType,
