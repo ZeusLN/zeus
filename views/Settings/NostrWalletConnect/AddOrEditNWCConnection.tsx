@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
-import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
+import { Nip47SingleMethod } from '@getalby/sdk';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';

@@ -1,5 +1,5 @@
 import bolt11 from 'bolt11';
-import { webln } from '@getalby/sdk';
+import { NostrWebLNProvider } from '@getalby/sdk';
 
 import { settingsStore } from '../stores/Stores';
 
@@ -11,7 +11,7 @@ export default class NostrWalletConnect {
     initNWC = async () => {
         const { nostrWalletConnectUrl } = settingsStore;
 
-        this.nwc = new webln.NostrWebLNProvider({
+        this.nwc = new NostrWebLNProvider({
             nostrWalletConnectUrl
         });
 
