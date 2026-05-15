@@ -1385,7 +1385,7 @@
     "views.Settings.EmbeddedNode.EsploraServer.subtitle": "Esplora je API pro prohlížení bloků používané pro on-chain data. Váš uzel ho používá k synchronizaci zůstatků na peněžence, k odesílání transakcí a monitorování blockchainu.",
     "views.Settings.EmbeddedNode.EsploraServer.serverUrl": "URL serveru Esplora",
     "views.Settings.EmbeddedNode.defaultServer": "Výchozí server",
-    "views.Settings.EmbeddedNode.invalidServerUrl": "Please enter a valid URL starting with http:// or https://",
+    "views.Settings.EmbeddedNode.invalidServerUrl": "Zadejte prosím platnou URL začínající http:// nebo https://",
     "views.Settings.EmbeddedNode.RapidGossipSync.title": "Rapid Gossip Sync",
     "views.Settings.EmbeddedNode.RapidGossipSync.subtitle": "Rapid Gossip Sync (RGS) stahuje komprimovaná gossip data Lightningové sítě ze serveru, čímž vašemu uzlu umožňuje rychle si „osahat“ graf sítě, aniž by bylo potřeba provádět synchronizaci od peerů. Toto umožňuje rychlejší vyhledávání cest pro platby.",
     "views.Settings.EmbeddedNode.RapidGossipSync.serverUrl": "URL serveru RGS",
