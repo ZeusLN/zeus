@@ -18,6 +18,14 @@ import {
     settingsStore
 } from '../stores/Stores';
 
+export enum PaymentMethodLayer {
+    Lightning = 'Lightning',
+    LightningViaEcash = 'Lightning via ecash',
+    LightningAddress = 'Lightning address',
+    Offer = 'Offer',
+    OnChain = 'On-chain'
+}
+
 export type PaymentMethodListAccount = {
     name: string;
     balance: number;
@@ -49,7 +57,7 @@ export type PaymentMethodListRow = {
     satAmount?: number;
 };
 
-export type LockedPaymentMethodNavigationContext = {
+export type PaymentMethodNavigationContext = {
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
@@ -90,7 +98,7 @@ export function buildPaymentMethodListRows(
 
     if (lightning || lnurlParams) {
         rows.push({
-            layer: 'Lightning',
+            layer: PaymentMethodLayer.Lightning,
             subtitle: lightning ?? lnurlParams?.tag,
             balance: lightningBalance,
             disabled: false,
@@ -102,7 +110,7 @@ export function buildPaymentMethodListRows(
             settingsStore?.settings?.ecash?.enableCashu
         ) {
             rows.push({
-                layer: 'Lightning via ecash',
+                layer: PaymentMethodLayer.LightningViaEcash,
                 subtitle: lightning ?? lnurlParams?.tag,
                 balance: ecashBalance,
                 disabled: false,
@@ -113,7 +121,7 @@ export function buildPaymentMethodListRows(
 
     if (lightningAddress) {
         rows.push({
-            layer: 'Lightning address',
+            layer: PaymentMethodLayer.LightningAddress,
             subtitle: lightningAddress,
             balance: lightningBalance,
             disabled: false,
@@ -123,7 +131,7 @@ export function buildPaymentMethodListRows(
 
     if (offer) {
         rows.push({
-            layer: 'Offer',
+            layer: PaymentMethodLayer.Offer,
             subtitle: offer,
             disabled: !nodeInfoStore.supportsOffers,
             balance: lightningBalance,
@@ -133,7 +141,7 @@ export function buildPaymentMethodListRows(
 
     if (value && BackendUtils.supportsOnchainReceiving()) {
         rows.push({
-            layer: 'On-chain',
+            layer: PaymentMethodLayer.OnChain,
             subtitle: value,
             disabled: !BackendUtils.supportsOnchainSends(),
             balance: onchainBalance,
@@ -273,7 +281,7 @@ async function lightningLnAddress(
 }
 
 function navigateLightningRoute(
-    ctx: LockedPaymentMethodNavigationContext,
+    ctx: PaymentMethodNavigationContext,
     navigation: StackNav,
     useReplace: boolean
 ): Promise<void> {
@@ -306,7 +314,7 @@ function navigateLightningRoute(
 }
 
 function navigateEcashRoute(
-    ctx: LockedPaymentMethodNavigationContext,
+    ctx: PaymentMethodNavigationContext,
     navigation: StackNav,
     useReplace: boolean
 ): Promise<void> {
@@ -331,30 +339,33 @@ function navigateEcashRoute(
 export async function navigateForSelectedPaymentRow(
     navigation: StackNav,
     row: PaymentMethodListRow,
-    ctx: LockedPaymentMethodNavigationContext,
+    ctx: PaymentMethodNavigationContext,
     options: { replace: boolean }
 ): Promise<void> {
     const { replace } = options;
 
-    if (row.layer === 'Lightning' || row.layer === 'Offer') {
+    if (
+        row.layer === PaymentMethodLayer.Lightning ||
+        row.layer === PaymentMethodLayer.Offer
+    ) {
         await navigateLightningRoute(ctx, navigation, replace);
         return;
     }
-    if (row.layer === 'Lightning address') {
+    if (row.layer === PaymentMethodLayer.LightningAddress) {
         if (!ctx.lightningAddress) return;
         await lightningLnAddress(ctx.lightningAddress, navigation, replace);
         return;
     }
-    if (row.layer === 'Lightning via ecash') {
+    if (row.layer === PaymentMethodLayer.LightningViaEcash) {
         await navigateEcashRoute(ctx, navigation, replace);
         return;
     }
-    if (row.layer === 'On-chain' || row.account) {
+    if (row.layer === PaymentMethodLayer.OnChain || row.account) {
         go(navigation, replace, 'Send', {
             destination: ctx.value,
             satAmount: ctx.satAmount,
             fee: ctx.feeRate,
-            transactionType: 'On-chain'
+            transactionType: PaymentMethodLayer.OnChain
         });
     }
 }

@@ -15,7 +15,10 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { navigateForSelectedPaymentRow } from '../../utils/ChoosePaymentMethodUtils';
+import {
+    navigateForSelectedPaymentRow,
+    PaymentMethodLayer
+} from '../../utils/ChoosePaymentMethodUtils';
 
 import { modalStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
@@ -62,7 +65,10 @@ export default class OnchainSwipeableRow extends Component<
 
             if (text === localeString('general.receive')) {
                 navigation.navigate('Receive', {
-                    account: account === 'On-chain' ? 'default' : account,
+                    account:
+                        account === PaymentMethodLayer.OnChain
+                            ? 'default'
+                            : account,
                     autoGenerateOnChain: true,
                     forceOnChain: true
                 });
@@ -176,7 +182,7 @@ export default class OnchainSwipeableRow extends Component<
         navigateForSelectedPaymentRow(
             navigation,
             {
-                layer: acct === 'default' ? 'On-chain' : acct,
+                layer: acct === 'default' ? PaymentMethodLayer.OnChain : acct,
                 account: acct
             },
             { value, satAmount, feeRate },
