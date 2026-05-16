@@ -17,7 +17,10 @@ import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { navigateForSelectedPaymentRow } from '../../utils/ChoosePaymentMethodUtils';
+import {
+    navigateForSelectedPaymentRow,
+    PaymentMethodLayer
+} from '../../utils/ChoosePaymentMethodUtils';
 
 import { modalStore, nodeInfoStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
@@ -217,12 +220,12 @@ export default class LightningSwipeableRow extends Component<
         } = this.props;
 
         const row = clinkNoffer
-            ? { layer: 'CLINK' as const }
+            ? { layer: PaymentMethodLayer.Clink }
             : offer
-            ? { layer: 'Offer' as const }
+            ? { layer: PaymentMethodLayer.Offer }
             : lightningAddress
-            ? { layer: 'Lightning address' as const }
-            : { layer: 'Lightning' as const };
+            ? { layer: PaymentMethodLayer.LightningAddress }
+            : { layer: PaymentMethodLayer.Lightning };
 
         await navigateForSelectedPaymentRow(
             navigation,

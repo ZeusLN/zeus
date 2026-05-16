@@ -16,7 +16,10 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { navigateForSelectedPaymentRow } from '../../utils/ChoosePaymentMethodUtils';
+import {
+    navigateForSelectedPaymentRow,
+    PaymentMethodLayer
+} from '../../utils/ChoosePaymentMethodUtils';
 
 import SyncStore from '../../stores/SyncStore';
 
@@ -184,7 +187,7 @@ export default class EcashSwipeableRow extends Component<
         const { lightning, lnurlParams, navigation } = this.props;
         navigateForSelectedPaymentRow(
             navigation,
-            { layer: 'Lightning via ecash' },
+            { layer: PaymentMethodLayer.LightningViaEcash },
             { lightning, lnurlParams },
             { replace: false }
         ).catch((error) => {

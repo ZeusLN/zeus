@@ -19,7 +19,8 @@ import type {
 } from '../../utils/ChoosePaymentMethodUtils';
 import {
     buildPaymentMethodListRows,
-    hasInsufficientBalance
+    hasInsufficientBalance,
+    PaymentMethodLayer
 } from '../../utils/ChoosePaymentMethodUtils';
 
 import OnChainSvg from '../../components/SVG/OnChainSvg';
@@ -47,12 +48,13 @@ interface PaymentMethodListProps {
 I18nManager.allowRTL(false);
 
 const LAYER_LOCALE_MAP: Record<string, string> = {
-    Lightning: 'general.lightning',
-    'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
-    'Lightning address': 'general.lightningAddress',
-    Offer: 'views.Settings.Bolt12Offer',
-    CLINK: 'views.Settings.Noffer',
-    'On-chain': 'general.onchain'
+    [PaymentMethodLayer.Lightning]: 'general.lightning',
+    [PaymentMethodLayer.LightningViaEcash]:
+        'components.LayerBalances.lightningViaEcash',
+    [PaymentMethodLayer.LightningAddress]: 'general.lightningAddress',
+    [PaymentMethodLayer.Offer]: 'views.Settings.Bolt12Offer',
+    [PaymentMethodLayer.Clink]: 'views.Settings.Noffer',
+    [PaymentMethodLayer.OnChain]: 'general.onchain'
 };
 
 const getGradientColors = (): [string, string] => {
@@ -63,9 +65,14 @@ const getGradientColors = (): [string, string] => {
 };
 
 const LayerIcon = ({ layer }: { layer: string }) => {
-    if (layer === 'Lightning via ecash') return <EcashSvg />;
-    if (layer === 'On-chain') return <OnChainSvg />;
-    if (['Lightning', 'Lightning address', 'Offer', 'CLINK'].includes(layer))
+    if (layer === PaymentMethodLayer.LightningViaEcash) return <EcashSvg />;
+    if (layer === PaymentMethodLayer.OnChain) return <OnChainSvg />;
+    if (
+        layer === PaymentMethodLayer.Lightning ||
+        layer === PaymentMethodLayer.LightningAddress ||
+        layer === PaymentMethodLayer.Offer ||
+        layer === PaymentMethodLayer.Clink
+    )
         return <LightningSvg />;
     return <OnChainSvg />;
 };
@@ -167,7 +174,7 @@ const SwipeableRow = ({
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
     const rowDisabled = item.disabled || insufficient;
-    if (item.layer === 'Lightning') {
+    if (item.layer === PaymentMethodLayer.Lightning) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -181,7 +188,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Lightning address') {
+    if (item.layer === PaymentMethodLayer.LightningAddress) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -194,7 +201,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Lightning via ecash') {
+    if (item.layer === PaymentMethodLayer.LightningViaEcash) {
         return (
             <EcashSwipeableRow
                 navigation={navigation}
@@ -208,7 +215,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Offer') {
+    if (item.layer === PaymentMethodLayer.Offer) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -221,7 +228,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'CLINK') {
+    if (item.layer === PaymentMethodLayer.Clink) {
         // The row's balance/satAmount (when populated for Fixed noffers)
         // already reflects the larger of lightning and ecash, so the
         // standard insufficient-balance check is correct here. For
@@ -239,7 +246,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'On-chain' || item.account) {
+    if (item.layer === PaymentMethodLayer.OnChain || item.account) {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
