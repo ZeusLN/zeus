@@ -6,10 +6,7 @@ import fs from 'fs';
 export function patchJcenter() {
     console.log('Patching packages to remove jcenter()');
 
-    const packagesWithJcenter = [
-        'react-native-hce',
-        'react-native-securerandom'
-    ];
+    const packagesWithJcenter = ['react-native-hce'];
 
     for (const pkg of packagesWithJcenter) {
         const buildGradlePath = `./node_modules/${pkg}/android/build.gradle`;
