@@ -1696,6 +1696,8 @@
     "stores.NostrWalletConnectStore.sentCashuToken": "Sent Cashu token",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Lightning payment sent",
     "stores.NostrWalletConnectStore.paymentSentNotificationBody": "{{amount}} {{unit}} sent via {{connectionName}}.",
+    "stores.NostrWalletConnectStore.paymentFailedNotificationTitle": "Lightning payment failed",
+    "stores.NostrWalletConnectStore.paymentFailedNotificationBody": "{{amount}} {{unit}} could not be sent via {{connectionName}}.",
     "stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle": "Lightning invoice created",
     "stores.NostrWalletConnectStore.invoiceCreatedNotificationBody": "{{amount}} {{unit}} Lightning invoice created through {{connectionName}}.",
     "stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription": "{{amount}} {{unit}} Lightning invoice through {{connectionName}} · {{description}}",
