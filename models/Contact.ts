@@ -11,6 +11,7 @@ export default class Contact extends BaseModel {
     public lnAddress: Array<string>;
     public bolt12Address: Array<string>;
     public bolt12Offer: Array<string>;
+    public noffer: Array<string>;
     public onchainAddress: Array<string>;
     public pubkey: Array<string>;
     public cashuPubkey: Array<string>;
@@ -50,6 +51,7 @@ export default class Contact extends BaseModel {
             activeTypes.push('bolt12Address');
         if (!this.isAddressArrayEmpty(this.bolt12Offer))
             activeTypes.push('bolt12Offer');
+        if (!this.isAddressArrayEmpty(this.noffer)) activeTypes.push('noffer');
         if (!this.isAddressArrayEmpty(this.onchainAddress))
             activeTypes.push('onchainAddress');
         if (!this.isAddressArrayEmpty(this.pubkey)) activeTypes.push('pubkey');
@@ -82,6 +84,13 @@ export default class Contact extends BaseModel {
         return (
             this.isAddressArraySingle(this.bolt12Offer) &&
             this.isSingleAddressType('bolt12Offer')
+        );
+    }
+
+    @computed public get isSingleNoffer(): boolean {
+        return (
+            this.isAddressArraySingle(this.noffer) &&
+            this.isSingleAddressType('noffer')
         );
     }
 
@@ -118,6 +127,10 @@ export default class Contact extends BaseModel {
         return !this.isAddressArrayEmpty(this.bolt12Offer);
     }
 
+    @computed public get hasNoffer(): boolean {
+        return !this.isAddressArrayEmpty(this.noffer);
+    }
+
     @computed public get hasOnchainAddress(): boolean {
         return !this.isAddressArrayEmpty(this.onchainAddress);
     }
@@ -136,6 +149,7 @@ export default class Contact extends BaseModel {
             !this.hasLnAddress &&
             !this.hasBolt12Address &&
             !this.hasBolt12Offer &&
+            !this.hasNoffer &&
             !this.hasOnchainAddress &&
             !this.hasPubkey &&
             !this.hasNip05 &&
@@ -152,6 +166,9 @@ export default class Contact extends BaseModel {
             if (address && address !== '') count++;
         });
         this.bolt12Offer?.forEach((address) => {
+            if (address && address !== '') count++;
+        });
+        this.noffer?.forEach((address) => {
             if (address && address !== '') count++;
         });
         this.onchainAddress.forEach((address) => {

@@ -66,6 +66,7 @@ interface Contact {
     lnAddress: string[];
     bolt12Address: string[];
     bolt12Offer: string[];
+    noffer: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -83,6 +84,7 @@ interface AddContactState {
     lnAddress: string[];
     bolt12Address: string[];
     bolt12Offer: string[];
+    noffer: string[];
     onchainAddress: string[];
     nip05: string[];
     nostrNpub: string[];
@@ -96,6 +98,7 @@ interface AddContactState {
     isValidLightningAddress: boolean[];
     isValidBolt12Address: boolean[];
     isValidBolt12Offer: boolean[];
+    isValidNoffer: boolean[];
     isValidPubkey: boolean[];
     isValidCashuPubkey: boolean[];
     isValidOnchainAddress: boolean[];
@@ -174,6 +177,7 @@ export default class AddContact extends React.Component<
             lnAddress: [],
             bolt12Address: [],
             bolt12Offer: [],
+            noffer: [],
             onchainAddress: [],
             nip05: [],
             nostrNpub: [],
@@ -187,6 +191,7 @@ export default class AddContact extends React.Component<
             isValidLightningAddress: [],
             isValidBolt12Address: [],
             isValidBolt12Offer: [],
+            isValidNoffer: [],
             isValidPubkey: [],
             isValidCashuPubkey: [],
             isValidOnchainAddress: [],
@@ -352,6 +357,16 @@ export default class AddContact extends React.Component<
         }));
     };
 
+    onChangeNoffer = (text: string, index: number) => {
+        const isValid = AddressUtils.isValidNoffer(text);
+
+        this.setState((prevState) => ({
+            isValidNoffer: Object.assign([...prevState.isValidNoffer], {
+                [index]: isValid
+            })
+        }));
+    };
+
     onChangePubkey = (text: string, index: number) => {
         const isValid = AddressUtils.isValidLightningPubKey(text);
 
@@ -448,6 +463,9 @@ export default class AddContact extends React.Component<
                 ).fill(true),
                 isValidBolt12Offer: Array(
                     ContactStore.prefillContact.bolt12Offer?.length || 1
+                ).fill(true),
+                isValidNoffer: Array(
+                    ContactStore.prefillContact.noffer?.length || 1
                 ).fill(true),
                 isValidPubkey: Array(
                     ContactStore.prefillContact.pubkey?.length || 1
@@ -572,6 +590,7 @@ export default class AddContact extends React.Component<
             lnAddress,
             bolt12Address,
             bolt12Offer,
+            noffer,
             onchainAddress,
             nip05,
             nostrNpub,
@@ -580,6 +599,7 @@ export default class AddContact extends React.Component<
             isValidLightningAddress,
             isValidBolt12Address,
             isValidBolt12Offer,
+            isValidNoffer,
             isValidPubkey,
             isValidCashuPubkey,
             isValidOnchainAddress,
@@ -612,6 +632,16 @@ export default class AddContact extends React.Component<
                 isValidBolt12Offer,
                 this.onChangeBolt12Offer,
                 localeString('views.Settings.Bolt12Offer')
+            );
+        }
+        if (noffer?.length > 0) {
+            addFieldsToArray(
+                noffer,
+                'noffer',
+                <LightningBolt />,
+                isValidNoffer,
+                this.onChangeNoffer,
+                localeString('views.Settings.Noffer')
             );
         }
         if (pubkey?.length > 0) {
@@ -674,6 +704,7 @@ export default class AddContact extends React.Component<
             lnAddress,
             bolt12Address,
             bolt12Offer,
+            noffer,
             onchainAddress,
             nip05,
             nostrNpub,
@@ -686,6 +717,7 @@ export default class AddContact extends React.Component<
             isValidLightningAddress,
             isValidBolt12Address,
             isValidBolt12Offer,
+            isValidNoffer,
             isValidNIP05,
             isValidNpub,
             isValidPubkey,
@@ -740,6 +772,12 @@ export default class AddContact extends React.Component<
                 key: 'BOLT 12 offer',
                 translateKey: 'views.Settings.Bolt12Offer',
                 value: 'bolt12Offer',
+                icon: <LightningBolt />
+            },
+            {
+                key: 'CLINK noffer',
+                translateKey: 'views.Settings.Noffer',
+                value: 'noffer',
                 icon: <LightningBolt />
             },
             {
@@ -1055,6 +1093,8 @@ export default class AddContact extends React.Component<
                                     isValidBolt12Address.includes(false)) ||
                                 (bolt12Offer.length > 0 &&
                                     isValidBolt12Offer.includes(false)) ||
+                                (noffer.length > 0 &&
+                                    isValidNoffer.includes(false)) ||
                                 (pubkey.length > 0 &&
                                     isValidPubkey.includes(false)) ||
                                 (cashuPubkey.length > 0 &&
@@ -1075,6 +1115,9 @@ export default class AddContact extends React.Component<
                                     (bolt12Offer.length > 0 &&
                                         bolt12Offer[0] &&
                                         isValidBolt12Offer[0]) ||
+                                    (noffer.length > 0 &&
+                                        noffer[0] &&
+                                        isValidNoffer[0]) ||
                                     (onchainAddress.length > 0 &&
                                         onchainAddress[0] &&
                                         isValidOnchainAddress[0]) ||
