@@ -937,6 +937,7 @@
     "views.ClinkPay.errorUnsupportedFeature": "Unsupported feature requested",
     "views.ClinkPay.errorInvalidAmount": "Amount is outside the accepted range",
     "views.ClinkPay.invoiceFetchFailure": "Couldn't fetch invoice from CLINK service",
+    "views.ClinkPay.invoiceAmountMismatch": "Invoice amount does not match the offer",
     "views.SendingLightning.sending": "Sending Payment",
     "views.SendingLightning.success": "Payment successfully sent",
     "views.SendingLightning.paymentHash": "Payment Hash",

@@ -177,6 +177,26 @@ export default class ClinkPay extends React.Component<
             return;
         }
 
+        const requestedAmount =
+            priceType === NofferPriceType.Fixed ? undefined : Number(satAmount);
+        const mismatch = ClinkUtils.verifyBolt11MatchesOffer(
+            res.bolt11,
+            nofferData,
+            requestedAmount
+        );
+        if (mismatch) {
+            this.setState({ loading: false });
+            Alert.alert(
+                localeString('views.ClinkPay.title'),
+                `${localeString(
+                    'views.ClinkPay.invoiceAmountMismatch'
+                )} — ${mismatch}`,
+                [{ text: localeString('general.ok') }],
+                { cancelable: false }
+            );
+            return;
+        }
+
         try {
             await InvoicesStore.getPayReq(res.bolt11);
             this.setState({ loading: false });
