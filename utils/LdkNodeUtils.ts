@@ -431,6 +431,8 @@ export async function startLdkNodeWallet({
     return { vssError, esploraError, rgsError };
 }
 
+const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
+
 /**
  * Wait for the LDK Node native module to report a running node.
  *
@@ -440,8 +442,6 @@ export async function startLdkNodeWallet({
  * both that error and a transient `!isRunning` as retryable) so callers
  * can tolerate that race instead of surfacing it as a fatal startup error.
  */
-const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
-
 export async function waitForLdkNodeReady(
     timeoutMs: number = 60000
 ): Promise<void> {
