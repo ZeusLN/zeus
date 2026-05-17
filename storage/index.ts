@@ -25,11 +25,11 @@ class Storage {
         const stringValue =
             typeof value === 'string' ? value : JSON.stringify(value);
 
-        if (stringValue == null) {
-            console.error(
-                `Storage.setItem: cannot store null/undefined for key "${key}"`
-            );
-            return false;
+        // Keychain rejects empty/null passwords with EmptyParameterException.
+        // getItem returns `false` for both unset and empty values, so routing
+        // empty writes through removeItem preserves the observable semantics.
+        if (stringValue == null || stringValue === '') {
+            return this.removeItem(key);
         }
 
         const response = await Keychain.setInternetCredentials(
