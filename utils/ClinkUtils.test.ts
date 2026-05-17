@@ -131,9 +131,36 @@ describe('ClinkUtils', () => {
             expect(decoded.pubkey).toBe(pubkey);
             expect(decoded.relay).toBe(relay);
             expect(decoded.offer).toBe(offerId);
-            expect(decoded.priceType).toBeUndefined();
+            // Per spec: neither price nor type present -> Spontaneous
+            expect(decoded.priceType).toBe(NofferPriceType.Spontaneous);
             expect(decoded.price).toBeUndefined();
             expect(decoded.currency).toBeUndefined();
+        });
+
+        it('infers Fixed when price is present but pricing type is omitted', () => {
+            const noffer = buildNoffer({
+                pubkey,
+                relay,
+                offer: offerId,
+                price: 5000
+            });
+            const decoded = decodeNoffer(noffer);
+            expect(decoded.priceType).toBe(NofferPriceType.Fixed);
+            expect(decoded.price).toBe(5000);
+        });
+
+        it('infers Variable when currency is present but pricing type is omitted', () => {
+            const noffer = buildNoffer({
+                pubkey,
+                relay,
+                offer: offerId,
+                price: 250,
+                currency: 'USD'
+            });
+            const decoded = decodeNoffer(noffer);
+            // Per spec: currency present MUST mean Variable
+            expect(decoded.priceType).toBe(NofferPriceType.Variable);
+            expect(decoded.currency).toBe('USD');
         });
 
         it('decodes fixed-amount offers', () => {
