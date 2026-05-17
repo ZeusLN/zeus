@@ -215,11 +215,16 @@ const handleAnything = async (
     const network = getNetworkString();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    let { value, satAmount, lightning, offer }: any =
+    let { value, satAmount, lightning, offer, clinkNoffer }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
-        (value && lightning) || (value && offer) || (lightning && offer);
+        (value && lightning) ||
+        (value && offer) ||
+        (value && clinkNoffer) ||
+        (lightning && offer) ||
+        (lightning && clinkNoffer) ||
+        (offer && clinkNoffer);
 
     // ecash mode
     const ecash =
@@ -255,9 +260,16 @@ const handleAnything = async (
                 value,
                 satAmount,
                 lightning,
-                offer
+                offer,
+                clinkNoffer
             }
         ];
+    } else if (clinkNoffer) {
+        if (isClipboardValue) return true;
+        if (!AddressUtils.isValidNoffer(clinkNoffer)) {
+            throw new Error(localeString('utils.handleAnything.invalidNoffer'));
+        }
+        return ['ClinkPay', { noffer: clinkNoffer }];
     } else if (offer) {
         if (isClipboardValue) return true;
         return [
@@ -381,6 +393,9 @@ const handleAnything = async (
                 isValid: true
             }
         ];
+    } else if (!hasAt && AddressUtils.isValidNoffer(value)) {
+        if (isClipboardValue) return true;
+        return ['ClinkPay', { noffer: value }];
     } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
         const { host, port, rune, implementation, enableTor } =
