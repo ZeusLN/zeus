@@ -585,6 +585,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             hasLnAddress,
             hasBolt12Address,
             hasBolt12Offer,
+            hasNoffer,
             hasOnchainAddress,
             hasPubkey,
             hasMultiplePayableAddresses
@@ -597,6 +598,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (hasLnAddress) return item.lnAddress[0];
         if (hasBolt12Address) return item.bolt12Address[0];
         if (hasBolt12Offer) return item.bolt12Offer[0];
+        if (hasNoffer) return item.noffer[0];
         if (hasOnchainAddress) return item.onchainAddress[0];
         if (hasPubkey) return item.pubkey[0];
 
@@ -615,6 +617,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                         this.validateAddress(item.bolt12Address[0]);
                     } else if (contact.isSingleBolt12Offer) {
                         this.validateAddress(item.bolt12Offer[0]);
+                    } else if (contact.isSingleNoffer) {
+                        this.validateAddress(item.noffer[0]);
                     } else if (contact.isSingleOnchainAddress) {
                         this.validateAddress(item.onchainAddress[0]);
                     } else if (contact.isSinglePubkey) {
