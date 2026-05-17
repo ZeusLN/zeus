@@ -448,7 +448,7 @@ export default class App extends React.PureComponent {
                                 <StealthModeWrapper>
                                     <SafeAreaView
                                         style={{ flex: 1 }}
-                                        edges={['left', 'right']}
+                                        edges={['left', 'right', 'bottom']}
                                     >
                                         <Observer>
                                             {() => (
