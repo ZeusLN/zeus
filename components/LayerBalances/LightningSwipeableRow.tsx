@@ -38,6 +38,7 @@ interface LightningSwipeableRowProps {
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningAddress?: string;
     offer?: string;
+    clinkNoffer?: string;
     locked?: boolean;
     children: React.ReactNode;
     disabled?: boolean;
@@ -315,10 +316,20 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = async () => {
-        const { lightning, lightningAddress, offer, navigation, lnurlParams } =
-            this.props;
+        const {
+            lightning,
+            lightningAddress,
+            offer,
+            clinkNoffer,
+            navigation,
+            lnurlParams
+        } = this.props;
         const { settings } = settingsStore;
-        if (offer) {
+        if (clinkNoffer) {
+            this.props.navigation.navigate('ClinkPay', {
+                noffer: clinkNoffer
+            });
+        } else if (offer) {
             this.props.navigation.navigate('Send', {
                 destination: offer,
                 bolt12: offer,
@@ -349,6 +360,7 @@ export default class LightningSwipeableRow extends Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             locked,
             disabled,
             lnurlParams,
@@ -368,7 +380,14 @@ export default class LightningSwipeableRow extends Component<
                 </TouchableOpacity>
             );
         }
-        if (locked && (lightning || lightningAddress || offer || lnurlParams)) {
+        if (
+            locked &&
+            (lightning ||
+                lightningAddress ||
+                offer ||
+                clinkNoffer ||
+                lnurlParams)
+        ) {
             return (
                 <TouchableOpacity
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
@@ -390,7 +409,7 @@ export default class LightningSwipeableRow extends Component<
             >
                 <TouchableOpacity
                     onPress={() =>
-                        lightning || offer || lnurlParams
+                        lightning || offer || clinkNoffer || lnurlParams
                             ? this.fetchLnInvoice()
                             : this.open()
                     }

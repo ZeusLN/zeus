@@ -30,6 +30,7 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
+    clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
@@ -61,6 +62,7 @@ const LAYER_LOCALE_MAP: Record<string, string> = {
     'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
     'Lightning address': 'general.lightningAddress',
     Offer: 'views.Settings.Bolt12Offer',
+    CLINK: 'views.Settings.Noffer',
     'On-chain': 'general.onchain'
 };
 
@@ -74,7 +76,7 @@ const getGradientColors = (): [string, string] => {
 const LayerIcon = ({ layer }: { layer: string }) => {
     if (layer === 'Lightning via ecash') return <EcashSvg />;
     if (layer === 'On-chain') return <OnChainSvg />;
-    if (['Lightning', 'Lightning address', 'Offer'].includes(layer))
+    if (['Lightning', 'Lightning address', 'Offer', 'CLINK'].includes(layer))
         return <LightningSvg />;
     return <OnChainSvg />;
 };
@@ -166,6 +168,7 @@ const SwipeableRow = ({
     lightning,
     lightningAddress,
     offer,
+    clinkNoffer,
     lnurlParams
 }: {
     item: DataRow;
@@ -177,6 +180,7 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
+    clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
@@ -235,6 +239,19 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'CLINK') {
+        return (
+            <LightningSwipeableRow
+                navigation={navigation}
+                clinkNoffer={clinkNoffer}
+                locked={true}
+                disabled={rowDisabled}
+            >
+                <Row item={item} />
+            </LightningSwipeableRow>
+        );
+    }
+
     if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
@@ -263,6 +280,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams,
             lightningBalance,
             onchainBalance,
@@ -314,6 +332,16 @@ export default class PaymentMethodList extends Component<
             });
         }
 
+        if (clinkNoffer) {
+            DATA.push({
+                layer: 'CLINK',
+                subtitle: clinkNoffer,
+                disabled: false,
+                balance: lightningBalance,
+                satAmount
+            });
+        }
+
         // Only show on-chain balance for non-Lnbank accounts
         if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
@@ -353,6 +381,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams
         } = this.props;
         const satAmountNum =
@@ -380,6 +409,7 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
+                            clinkNoffer={clinkNoffer}
                             lnurlParams={lnurlParams}
                         />
                     )}
