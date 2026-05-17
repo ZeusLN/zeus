@@ -33,8 +33,7 @@ import NostrConnectUtils, {
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import NostrWalletConnectStore, {
-    DEFAULT_NOSTR_RELAYS,
-    Nip47SingleMethod
+    DEFAULT_NOSTR_RELAYS
 } from '../../../stores/NostrWalletConnectStore';
 import ModalStore from '../../../stores/ModalStore';
 

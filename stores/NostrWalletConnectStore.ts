@@ -1666,7 +1666,7 @@ export default class NostrWalletConnectStore {
     private async handleLightningPayInvoice(
         connection: NWCConnection,
         request: Nip47PayInvoiceRequest
-    ) {
+    ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
@@ -1775,7 +1775,7 @@ export default class NostrWalletConnectStore {
     private async handleCashuPayInvoice(
         connection: NWCConnection,
         request: Nip47PayInvoiceRequest
-    ) {
+    ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
         if (!this.isCashuConfigured) {
             const selectedMintUrl = this.cashuStore.selectedMintUrl;
             const errorMessage = !selectedMintUrl
@@ -2161,6 +2161,12 @@ export default class NostrWalletConnectStore {
 
             this.findAndUpdateConnection(connection);
         });
+        NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
+            amountSats,
+            connection.name,
+            connection.id,
+            id
+        );
     }
 
     // STORAGE OPERATIONS
