@@ -192,26 +192,26 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         loading: true
                                                     });
 
-                                                    await update({
-                                                        nwc_string:
-                                                            nwcConnectionString,
-                                                        address_type: 'nwc'
-                                                    }).then(
-                                                        async (response) => {
-                                                            if (
-                                                                response.success
-                                                            ) {
-                                                                navigation.popTo(
-                                                                    'LightningAddress'
-                                                                );
-                                                            } else {
-                                                                this.setState({
-                                                                    loading:
-                                                                        false
-                                                                });
-                                                            }
+                                                    try {
+                                                        const response =
+                                                            await update({
+                                                                nwc_string:
+                                                                    nwcConnectionString,
+                                                                address_type:
+                                                                    'nwc'
+                                                            });
+                                                        if (response.success) {
+                                                            navigation.popTo(
+                                                                'LightningAddress'
+                                                            );
+                                                            return;
                                                         }
-                                                    );
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    }
+                                                    this.setState({
+                                                        loading: false
+                                                    });
                                                 } else {
                                                     createNWC(
                                                         nwcConnectionString

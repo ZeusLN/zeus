@@ -554,7 +554,8 @@ export default class LightningAddressStore {
                     message: verification,
                     signature,
                     updates,
-                    address_type: this.lightningAddressType
+                    address_type:
+                        updates?.address_type || this.lightningAddressType
                 })
             );
 

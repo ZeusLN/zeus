@@ -206,14 +206,18 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                 this.setState({
                                                     loading: true
                                                 });
-                                                await update({
-                                                    mint_url: mintUrl,
-                                                    cashu_pubkey:
-                                                        CashuStore.cashuWallets[
-                                                            mintUrl
-                                                        ].pubkey,
-                                                    address_type: 'cashu'
-                                                }).then(async (response) => {
+                                                try {
+                                                    const response =
+                                                        await update({
+                                                            mint_url: mintUrl,
+                                                            cashu_pubkey:
+                                                                CashuStore
+                                                                    .cashuWallets[
+                                                                    mintUrl
+                                                                ].pubkey,
+                                                            address_type:
+                                                                'cashu'
+                                                        });
                                                     if (response.success) {
                                                         await deleteLocalHashes();
                                                         await updateSettings({
@@ -225,11 +229,13 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                         navigation.popTo(
                                                             'LightningAddress'
                                                         );
-                                                    } else {
-                                                        this.setState({
-                                                            loading: false
-                                                        });
+                                                        return;
                                                     }
+                                                } catch (e) {
+                                                    console.error(e);
+                                                }
+                                                this.setState({
+                                                    loading: false
                                                 });
                                             } else {
                                                 createCashu(mintUrl).then(
