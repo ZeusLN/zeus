@@ -159,6 +159,26 @@ export const decodeNoffer = (input: string): NofferData => {
         result.currency = utf8Decoder.decode(tlv[5][0]);
     }
 
+    // Normalize an omitted TLV 3 (pricing type) to the spec-defined default
+    // so downstream consumers see a single canonical type:
+    //   - currency present -> Variable (spec: "If [currency] is present,
+    //     pricing type 1 (Variable) MUST be used.")
+    //   - neither price nor type present -> Spontaneous (spec: "If neither
+    //     price (TLV 4) nor pricing type (TLV 3) is present, the offer SHOULD
+    //     be treated as type 2 (Spontaneous payment).")
+    //   - price present, type absent -> Fixed (not explicitly stated in spec;
+    //     the only consistent reading since Variable requires currency and
+    //     Spontaneous implies no price)
+    if (result.priceType === undefined) {
+        if (result.currency !== undefined) {
+            result.priceType = NofferPriceType.Variable;
+        } else if (result.price !== undefined) {
+            result.priceType = NofferPriceType.Fixed;
+        } else {
+            result.priceType = NofferPriceType.Spontaneous;
+        }
+    }
+
     return result;
 };
 
