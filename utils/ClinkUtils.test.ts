@@ -4,7 +4,12 @@ import { hexToBytes } from '@noble/hashes/utils';
 import ClinkUtils, {
     decodeNoffer,
     isValidNoffer,
-    NofferPriceType
+    NofferPriceType,
+    buildClinkRequestPayload,
+    isValidClinkResponseEvent,
+    isNofferSuccess,
+    CLINK_KIND,
+    CLINK_VERSION
 } from './ClinkUtils';
 
 const utf8Encoder = new global.TextEncoder();
@@ -218,10 +223,201 @@ describe('ClinkUtils', () => {
         });
     });
 
+    describe('buildClinkRequestPayload', () => {
+        const baseNoffer = {
+            pubkey,
+            relay,
+            offer: offerId
+        };
+
+        it('produces a minimal payload with just the offer id', () => {
+            const payload = buildClinkRequestPayload(baseNoffer, {});
+            expect(payload).toEqual({ offer: offerId });
+        });
+
+        it('includes all optional fields when provided', () => {
+            const payload = buildClinkRequestPayload(baseNoffer, {
+                amountSats: 1000,
+                description: 'coffee',
+                payerData: { name: 'satoshi' },
+                zap: '{"kind":9734}',
+                expiresInSeconds: 600
+            });
+            expect(payload).toEqual({
+                offer: offerId,
+                amount_sats: 1000,
+                description: 'coffee',
+                payer_data: { name: 'satoshi' },
+                zap: '{"kind":9734}',
+                expires_in_seconds: 600
+            });
+        });
+
+        it('requires amount_sats for spontaneous offers', () => {
+            expect(() =>
+                buildClinkRequestPayload(
+                    {
+                        ...baseNoffer,
+                        priceType: NofferPriceType.Spontaneous
+                    },
+                    {}
+                )
+            ).toThrow(/amount_sats required/);
+        });
+
+        it('requires amount_sats for variable offers', () => {
+            expect(() =>
+                buildClinkRequestPayload(
+                    {
+                        ...baseNoffer,
+                        priceType: NofferPriceType.Variable
+                    },
+                    { amountSats: 0 }
+                )
+            ).toThrow(/amount_sats required/);
+        });
+
+        it('does not require amount_sats for fixed offers', () => {
+            const payload = buildClinkRequestPayload(
+                {
+                    ...baseNoffer,
+                    priceType: NofferPriceType.Fixed,
+                    price: 5000
+                },
+                {}
+            );
+            expect(payload).toEqual({ offer: offerId });
+        });
+    });
+
+    describe('isValidClinkResponseEvent', () => {
+        const recipient = pubkey;
+        const requestId =
+            'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+        const baseEvent = {
+            kind: CLINK_KIND,
+            pubkey: recipient,
+            tags: [
+                ['p', 'payer-pubkey'],
+                ['e', requestId],
+                ['clink_version', CLINK_VERSION]
+            ],
+            content: 'encrypted'
+        };
+
+        it('accepts a structurally-valid response', () => {
+            expect(
+                isValidClinkResponseEvent(baseEvent, requestId, recipient)
+            ).toBe(true);
+        });
+
+        it('rejects events of the wrong kind', () => {
+            expect(
+                isValidClinkResponseEvent(
+                    { ...baseEvent, kind: 1 },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+
+        it('rejects events from a different author', () => {
+            expect(
+                isValidClinkResponseEvent(
+                    { ...baseEvent, pubkey: 'someone-else' },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+
+        it('rejects events with no matching e tag', () => {
+            expect(
+                isValidClinkResponseEvent(
+                    {
+                        ...baseEvent,
+                        tags: [
+                            ['p', 'payer-pubkey'],
+                            ['e', 'different-request-id'],
+                            ['clink_version', CLINK_VERSION]
+                        ]
+                    },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+
+        it('rejects events missing the clink_version tag', () => {
+            expect(
+                isValidClinkResponseEvent(
+                    {
+                        ...baseEvent,
+                        tags: [
+                            ['p', 'payer-pubkey'],
+                            ['e', requestId]
+                        ]
+                    },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+
+        it('rejects events with a mismatched clink_version value', () => {
+            expect(
+                isValidClinkResponseEvent(
+                    {
+                        ...baseEvent,
+                        tags: [
+                            ['p', 'payer-pubkey'],
+                            ['e', requestId],
+                            ['clink_version', '2']
+                        ]
+                    },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+
+        it('rejects malformed inputs', () => {
+            expect(isValidClinkResponseEvent(null, requestId, recipient)).toBe(
+                false
+            );
+            expect(
+                isValidClinkResponseEvent(
+                    { kind: CLINK_KIND, pubkey: recipient },
+                    requestId,
+                    recipient
+                )
+            ).toBe(false);
+        });
+    });
+
+    describe('isNofferSuccess', () => {
+        it('returns true for responses with a bolt11 string', () => {
+            expect(isNofferSuccess({ bolt11: 'lnbc1...' })).toBe(true);
+        });
+        it('returns false for error responses', () => {
+            expect(isNofferSuccess({ error: 'nope', code: 1 } as any)).toBe(
+                false
+            );
+        });
+    });
+
     describe('default export', () => {
-        it('exposes isValidNoffer and decodeNoffer', () => {
+        it('exposes the public API', () => {
             expect(typeof ClinkUtils.isValidNoffer).toBe('function');
             expect(typeof ClinkUtils.decodeNoffer).toBe('function');
+            expect(typeof ClinkUtils.requestInvoiceFromNoffer).toBe('function');
+            expect(typeof ClinkUtils.buildClinkRequestPayload).toBe('function');
+            expect(typeof ClinkUtils.isValidClinkResponseEvent).toBe(
+                'function'
+            );
+            expect(typeof ClinkUtils.isNofferSuccess).toBe('function');
+            expect(ClinkUtils.CLINK_KIND).toBe(21001);
+            expect(ClinkUtils.CLINK_VERSION).toBe('1');
             expect(ClinkUtils.NofferPriceType).toBe(NofferPriceType);
         });
     });
