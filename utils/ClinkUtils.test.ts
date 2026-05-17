@@ -8,6 +8,7 @@ import ClinkUtils, {
     buildClinkRequestPayload,
     isValidClinkResponseEvent,
     isNofferSuccess,
+    verifyBolt11MatchesOffer,
     CLINK_KIND,
     CLINK_VERSION
 } from './ClinkUtils';
@@ -406,6 +407,107 @@ describe('ClinkUtils', () => {
         });
     });
 
+    describe('verifyBolt11MatchesOffer', () => {
+        // Signed BOLT 11 test invoices (deterministic, generated via
+        // bolt11.encode + bolt11.sign with a fixed key — see test setup).
+        const invoice1000sat =
+            'lnbc10u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq8w3jhxaqxqrrsscqpfy9rcdxqs6sg3stye42sr3wr046005zrpeccrk2yvjexau2fw6vfh3fplnwyvswc8474g8t9rprevl42a50mf6sxqx796hmztzfyq2tqqaggcpw';
+        const invoiceAmountless =
+            'lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq8w3jhxaqxqrrsscqpf8mshkzdw6gscgeqgwf8q54x27hyf6hrqtmqur5eud2umrsavmzmsk6skc3adk6y6wj3tngd6f0qzh4py0fg0n63kfjdr3ekgy62p9ecprf5yqg';
+
+        const baseNoffer = {
+            pubkey,
+            relay,
+            offer: offerId
+        };
+
+        it('accepts a matching invoice for a fixed-price offer', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Fixed,
+                price: 1000
+            };
+            expect(verifyBolt11MatchesOffer(invoice1000sat, offer)).toBeNull();
+        });
+
+        it('rejects a mismatched invoice for a fixed-price offer', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Fixed,
+                price: 5000
+            };
+            const reason = verifyBolt11MatchesOffer(invoice1000sat, offer);
+            expect(reason).toMatch(/5000/);
+            expect(reason).toMatch(/1000/);
+        });
+
+        it('accepts a matching invoice for a spontaneous offer', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Spontaneous
+            };
+            expect(
+                verifyBolt11MatchesOffer(invoice1000sat, offer, 1000)
+            ).toBeNull();
+        });
+
+        it('rejects a mismatched invoice for a spontaneous offer', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Spontaneous
+            };
+            const reason = verifyBolt11MatchesOffer(invoice1000sat, offer, 500);
+            expect(reason).toMatch(/500/);
+            expect(reason).toMatch(/1000/);
+        });
+
+        it('accepts a matching invoice for a variable offer', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Variable,
+                price: 100,
+                currency: 'USD'
+            };
+            expect(
+                verifyBolt11MatchesOffer(invoice1000sat, offer, 1000)
+            ).toBeNull();
+        });
+
+        it('accepts an amountless invoice for spontaneous offers', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Spontaneous
+            };
+            // Edge case: service returned a 0-amount invoice expecting wallet
+            // to set it. Spec-compatible for spontaneous.
+            expect(
+                verifyBolt11MatchesOffer(invoiceAmountless, offer)
+            ).toBeNull();
+        });
+
+        it('rejects an amountless invoice for non-spontaneous offers', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Fixed,
+                price: 1000
+            };
+            expect(verifyBolt11MatchesOffer(invoiceAmountless, offer)).toMatch(
+                /amountless/
+            );
+        });
+
+        it('returns a friendly error on undecodable input', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Fixed,
+                price: 1000
+            };
+            expect(verifyBolt11MatchesOffer('not-a-bolt11', offer)).toMatch(
+                /decode/
+            );
+        });
+    });
+
     describe('default export', () => {
         it('exposes the public API', () => {
             expect(typeof ClinkUtils.isValidNoffer).toBe('function');
@@ -416,6 +518,7 @@ describe('ClinkUtils', () => {
                 'function'
             );
             expect(typeof ClinkUtils.isNofferSuccess).toBe('function');
+            expect(typeof ClinkUtils.verifyBolt11MatchesOffer).toBe('function');
             expect(ClinkUtils.CLINK_KIND).toBe(21001);
             expect(ClinkUtils.CLINK_VERSION).toBe('1');
             expect(ClinkUtils.NofferPriceType).toBe(NofferPriceType);

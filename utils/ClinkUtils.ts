@@ -1,5 +1,6 @@
 import { bech32 } from '@scure/base';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import Bolt11Utils from './Bolt11Utils';
 import {
     // @ts-ignore:next-line
     generatePrivateKey,
@@ -195,6 +196,47 @@ export const buildClinkRequestPayload = (
         payload.expires_in_seconds = params.expiresInSeconds;
     }
     return payload;
+};
+
+// Sanity-check that a service-returned invoice matches what the user
+// asked for. Defends against a malicious or buggy CLINK service silently
+// returning an invoice for the wrong amount. Returns null on success or a
+// human-readable reason string on mismatch.
+export const verifyBolt11MatchesOffer = (
+    invoice: string,
+    noffer: NofferData,
+    requestedAmountSats?: number
+): string | null => {
+    let invoiceSats: number | null;
+    try {
+        const decoded = Bolt11Utils.decode(invoice);
+        invoiceSats =
+            typeof decoded?.satoshis === 'number' ? decoded.satoshis : null;
+    } catch {
+        return 'could not decode service invoice';
+    }
+    if (invoiceSats === null || invoiceSats === undefined) {
+        // Invoice has no encoded amount — service expects the wallet to
+        // choose one. Acceptable only for spontaneous offers; otherwise
+        // it's a protocol violation.
+        if (noffer.priceType === NofferPriceType.Spontaneous) return null;
+        return 'service returned an amountless invoice';
+    }
+    if (noffer.priceType === NofferPriceType.Fixed && noffer.price) {
+        if (invoiceSats !== noffer.price) {
+            return `expected ${noffer.price} sats, invoice is for ${invoiceSats} sats`;
+        }
+        return null;
+    }
+    // For variable and spontaneous offers, compare against what the user
+    // requested. (For variable offers with a currency the user requested
+    // sats post-conversion, so a direct comparison is still appropriate.)
+    if (requestedAmountSats !== undefined && requestedAmountSats > 0) {
+        if (invoiceSats !== requestedAmountSats) {
+            return `expected ${requestedAmountSats} sats, invoice is for ${invoiceSats} sats`;
+        }
+    }
+    return null;
 };
 
 // Returns true only if the event is a structurally-valid CLINK response
@@ -405,6 +447,7 @@ const ClinkUtils = {
     isValidClinkResponseEvent,
     requestInvoiceFromNoffer,
     isNofferSuccess,
+    verifyBolt11MatchesOffer,
     NofferPriceType,
     NofferErrorCode,
     CLINK_KIND,
