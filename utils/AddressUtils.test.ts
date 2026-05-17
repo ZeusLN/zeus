@@ -178,6 +178,58 @@ describe('AddressUtils', () => {
                 value: '',
                 lightning: 'lnbcrt421fs1mmv3982skms'
             });
+
+            // CLINK noffer
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?noffer=noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+                )
+            ).toEqual({
+                value: '',
+                clinkNoffer:
+                    'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:?NOFFER=noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+                )
+            ).toEqual({
+                value: '',
+                clinkNoffer:
+                    'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?noffer=noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                clinkNoffer:
+                    'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+        });
+    });
+
+    describe('isValidNoffer', () => {
+        it('accepts well-formed noffer strings (regex check only)', () => {
+            expect(
+                AddressUtils.isValidNoffer(
+                    'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+                )
+            ).toBe(true);
+        });
+        it('rejects empty input and other bech32 prefixes', () => {
+            expect(AddressUtils.isValidNoffer('')).toBe(false);
+            expect(
+                AddressUtils.isValidNoffer(
+                    'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toBe(false);
+            expect(
+                AddressUtils.isValidNoffer(
+                    'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg'
+                )
+            ).toBe(false);
         });
     });
 
