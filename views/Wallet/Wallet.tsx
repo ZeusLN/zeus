@@ -60,6 +60,7 @@ import {
 import {
     startLdkNodeWallet,
     stopLdkNode,
+    waitForLdkNodeReady,
     DEFAULT_VSS_SERVER,
     DEFAULT_SCORER_URL
 } from '../../utils/LdkNodeUtils';
@@ -1152,6 +1153,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else if (implementation === 'ldk-node') {
             try {
+                console.log('[LDK startup] waiting for node to be ready');
+                await waitForLdkNodeReady();
                 console.log('[LDK startup] fetching node info');
                 await NodeInfoStore.getNodeInfo();
                 console.log('[LDK startup] fetching balance');

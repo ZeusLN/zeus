@@ -9,6 +9,7 @@ import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
 
 import { localeString } from './LocaleUtils';
+import { retry } from './SleepUtils';
 import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
 
 export type SupportedNetwork =
@@ -358,7 +359,15 @@ export async function startLdkNodeWallet({
     let nodeStarted = false;
 
     try {
-        await LdkNode.node.start();
+        await retry({
+            fn: () => LdkNode.node.start(),
+            maxRetries: 5,
+            delayMs: 500,
+            shouldRetry: (e: any) => {
+                const errMsg = e?.message || e?.toString?.() || String(e);
+                return errMsg.includes('Node not initialized');
+            }
+        });
         nodeStarted = true;
         console.log('LDK Node: Started successfully');
     } catch (e: any) {
@@ -372,6 +381,11 @@ export async function startLdkNodeWallet({
             // Node may still be running despite fee estimation failure —
             // attempt sync to detect RGS errors too
             nodeStarted = true;
+        } else {
+            // Surface non-fee-rate failures to the caller instead of
+            // returning silently — a phantom-success makes the downstream
+            // waitForLdkNodeReady timeout in 60s with a misleading error.
+            throw e;
         }
     }
 
@@ -418,6 +432,37 @@ export async function startLdkNodeWallet({
 }
 
 /**
+ * Wait for the LDK Node native module to report a running node.
+ *
+ * `buildNode` clears the native node reference up-front and rebuilds it on
+ * a background queue, so any call into the module during that window
+ * rejects with "Node not initialized". Retries `status()` calls (treating
+ * both that error and a transient `!isRunning` as retryable) so callers
+ * can tolerate that race instead of surfacing it as a fatal startup error.
+ */
+const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
+
+export async function waitForLdkNodeReady(
+    timeoutMs: number = 60000
+): Promise<void> {
+    await retry({
+        fn: async () => {
+            const status = await LdkNode.node.status();
+            if (!status.isRunning) throw new Error(LDK_NODE_NOT_RUNNING_YET);
+        },
+        maxRetries: Math.floor(timeoutMs / 500),
+        delayMs: 500,
+        shouldRetry: (e: any) => {
+            const errMsg = e?.message || e?.toString?.() || String(e);
+            return (
+                errMsg.includes('Node not initialized') ||
+                errMsg.includes(LDK_NODE_NOT_RUNNING_YET)
+            );
+        }
+    });
+}
+
+/**
  * Stop a running LDK Node
  */
 export async function stopLdkNode(): Promise<void> {
@@ -450,6 +495,7 @@ export default {
     generateMnemonic,
     createLdkNodeWallet,
     startLdkNodeWallet,
+    waitForLdkNodeReady,
     stopLdkNode,
     deleteLdkNodeWallet,
     ESPLORA_SERVERS_MAINNET,
