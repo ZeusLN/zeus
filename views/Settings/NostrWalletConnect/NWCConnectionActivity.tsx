@@ -48,7 +48,10 @@ export const NWC_DEFAULT_FILTERS: NWCFilterState = {
 
 interface ConnectionActivityProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'NWCConnectionActivity', { connectionId: string }>;
+    route: Route<
+        'NWCConnectionActivity',
+        { connectionId: string; failedActivityId?: string }
+    >;
     NostrWalletConnectStore: NostrWalletConnectStore;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
@@ -99,12 +102,15 @@ export default class NWCConnectionActivity extends React.Component<
                 this.state.activeFilters
             );
 
-            this.setState({
-                activity,
-                filteredActivity,
-                connectionName: name,
-                loading: false
-            });
+            this.setState(
+                {
+                    activity,
+                    filteredActivity,
+                    connectionName: name,
+                    loading: false
+                },
+                () => this.tryOpenFailedPaymentModalFromRoute()
+            );
         } catch (e: any) {
             this.setState({
                 error:
@@ -186,6 +192,45 @@ export default class NWCConnectionActivity extends React.Component<
         if (connectionId) {
             this.loadActivities(connectionId);
         }
+    };
+
+    componentDidUpdate(prevProps: ConnectionActivityProps) {
+        const prevFailed = prevProps.route.params?.failedActivityId;
+        const nextFailed = this.props.route.params?.failedActivityId;
+        if (
+            nextFailed &&
+            nextFailed !== prevFailed &&
+            !this.state.loading &&
+            this.state.activity.length > 0
+        ) {
+            this.tryOpenFailedPaymentModalFromRoute();
+        }
+    }
+
+    openFailedPaymentModal = (item: ConnectionActivity) => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Payment.failedPayment'),
+            text: item.error
+                ? [item.error]
+                : [localeString('error.paymentFailed')]
+        });
+    };
+
+    tryOpenFailedPaymentModalFromRoute = () => {
+        const failedActivityId = this.props.route.params?.failedActivityId;
+        if (!failedActivityId) return;
+
+        const item = this.state.activity.find(
+            (a) => a.id === failedActivityId && a.status === 'failed'
+        );
+        if (item) {
+            this.openFailedPaymentModal(item);
+        }
+
+        this.props.navigation.setParams({
+            failedActivityId: undefined
+        });
     };
 
     getAmountColor = (item: ConnectionActivity) => {
@@ -316,15 +361,8 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleActivityPress = (item: ConnectionActivity) => {
-        const { ModalStore } = this.props;
-
         if (item.status === 'failed') {
-            ModalStore.toggleInfoModal({
-                title: localeString('views.Payment.failedPayment'),
-                text: item.error
-                    ? [item.error]
-                    : [localeString('error.paymentFailed')]
-            });
+            this.openFailedPaymentModal(item);
             return;
         }
 

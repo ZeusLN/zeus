@@ -4,6 +4,8 @@ import { Notifications } from 'react-native-notifications';
 import DeviceInfo from 'react-native-device-info';
 
 import { lightningAddressStore, settingsStore } from './stores/Stores';
+import NavigationService from './NavigationService';
+import { parseNwcActivityNotif } from './utils/NostrConnectUtils';
 
 export default class PushNotificationManager extends React.Component<any, any> {
     async componentDidMount() {
@@ -32,6 +34,20 @@ export default class PushNotificationManager extends React.Component<any, any> {
 
         Notifications.registerRemoteNotifications();
     };
+
+    /** NWC local notifications may deep-link to connection activity (optional failed row). */
+    private goToNwcActivityFromNotif(
+        payload: Record<string, unknown> | undefined
+    ): void {
+        const link = parseNwcActivityNotif(payload);
+        if (!link) return;
+        NavigationService.navigateWhenReady('NWCConnectionActivity', {
+            connectionId: link.connectionId,
+            ...(link.failedActivityId && {
+                failedActivityId: link.failedActivityId
+            })
+        });
+    }
 
     registerNotificationEvents = () => {
         Notifications.events().registerNotificationReceivedForeground(
@@ -71,6 +87,7 @@ export default class PushNotificationManager extends React.Component<any, any> {
                 console.log(
                     `Notification opened with an action identifier: ${notification.identifier}`
                 );
+                this.goToNwcActivityFromNotif(notification.payload);
                 completion();
             }
         );
@@ -86,6 +103,7 @@ export default class PushNotificationManager extends React.Component<any, any> {
         Notifications.getInitialNotification()
             .then((notification) => {
                 console.log('Initial notification was:', notification || 'N/A');
+                this.goToNwcActivityFromNotif(notification?.payload);
             })
             .catch((err) =>
                 console.error('getInitialNotifiation() failed', err)
