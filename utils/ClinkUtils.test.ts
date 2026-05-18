@@ -376,7 +376,10 @@ describe('ClinkUtils', () => {
             ).toBe(false);
         });
 
-        it('rejects events missing the clink_version tag', () => {
+        it('accepts events missing the clink_version tag (Postel interop)', () => {
+            // Spec says services MUST include the tag; reference impl
+            // omits it. We accept lenient on receive but log a warning
+            // upstream so it's visible the service is non-compliant.
             expect(
                 isValidClinkResponseEvent(
                     {
@@ -389,7 +392,7 @@ describe('ClinkUtils', () => {
                     requestId,
                     recipient
                 )
-            ).toBe(false);
+            ).toBe(true);
         });
 
         it('rejects events with a mismatched clink_version value', () => {
