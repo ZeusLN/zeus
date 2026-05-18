@@ -274,26 +274,32 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     loading: true
                                                 });
 
-                                                const relays_sig = bytesToHex(
-                                                    schnorr.sign(
-                                                        hashjs
-                                                            .sha256()
-                                                            .update(
-                                                                JSON.stringify(
-                                                                    nostrRelays
-                                                                )
+                                                try {
+                                                    const relays_sig =
+                                                        bytesToHex(
+                                                            schnorr.sign(
+                                                                hashjs
+                                                                    .sha256()
+                                                                    .update(
+                                                                        JSON.stringify(
+                                                                            nostrRelays
+                                                                        )
+                                                                    )
+                                                                    .digest(
+                                                                        'hex'
+                                                                    ),
+                                                                nostrPrivateKey
                                                             )
-                                                            .digest('hex'),
-                                                        nostrPrivateKey
-                                                    )
-                                                );
-
-                                                await update({
-                                                    nostr_pk: nostrPublicKey,
-                                                    relays: nostrRelays,
-                                                    relays_sig,
-                                                    address_type: 'zaplocker'
-                                                }).then(async (response) => {
+                                                        );
+                                                    const response =
+                                                        await update({
+                                                            nostr_pk:
+                                                                nostrPublicKey,
+                                                            relays: nostrRelays,
+                                                            relays_sig,
+                                                            address_type:
+                                                                'zaplocker'
+                                                        });
                                                     if (response.success) {
                                                         await updateSettings({
                                                             lightningAddress: {
@@ -305,11 +311,13 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                         navigation.popTo(
                                                             'LightningAddress'
                                                         );
-                                                    } else {
-                                                        this.setState({
-                                                            loading: false
-                                                        });
+                                                        return;
                                                     }
+                                                } catch (e) {
+                                                    console.error(e);
+                                                }
+                                                this.setState({
+                                                    loading: false
                                                 });
                                             } else {
                                                 createZaplocker(
