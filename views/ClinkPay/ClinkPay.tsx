@@ -13,6 +13,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
+import CashuStore from '../../stores/CashuStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 
 import ClinkUtils, {
@@ -30,10 +31,12 @@ import { getAmountFromSats } from '../../utils/AmountUtils';
 interface ClinkPayProps {
     navigation: NativeStackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
+    CashuStore: CashuStore;
     route: Route<
         'ClinkPay',
         {
             noffer: string;
+            ecash?: boolean;
         }
     >;
 }
@@ -104,7 +107,7 @@ const errorCodeToLocaleKey = (code?: NofferErrorCode): string | null => {
     }
 };
 
-@inject('InvoicesStore')
+@inject('InvoicesStore', 'CashuStore')
 @observer
 export default class ClinkPay extends React.Component<
     ClinkPayProps,
@@ -151,7 +154,8 @@ export default class ClinkPay extends React.Component<
     }
 
     confirm = async () => {
-        const { navigation, InvoicesStore } = this.props;
+        const { navigation, InvoicesStore, CashuStore, route } = this.props;
+        const ecash = route.params?.ecash;
         const { nofferData, satAmount } = this.state;
         if (!nofferData) return;
 
@@ -231,9 +235,32 @@ export default class ClinkPay extends React.Component<
         }
 
         try {
-            await InvoicesStore.getPayReq(res.bolt11);
-            this.setState({ loading: false });
-            navigation.navigate('PaymentRequest');
+            if (ecash) {
+                // Load both stores so ChoosePaymentMethod can offer the
+                // Lightning and ecash routes side-by-side. Mirrors LnurlPay.
+                await Promise.all([
+                    InvoicesStore.getPayReq(res.bolt11),
+                    CashuStore.getPayReq(res.bolt11)
+                ]);
+                this.setState({ loading: false });
+                if (CashuStore.getPayReqError) {
+                    Alert.alert(
+                        localeString('views.ClinkPay.title'),
+                        CashuStore.getPayReqError,
+                        [{ text: localeString('general.ok') }],
+                        { cancelable: false }
+                    );
+                    return;
+                }
+                navigation.navigate('ChoosePaymentMethod', {
+                    lightning: res.bolt11,
+                    locked: true
+                });
+            } else {
+                await InvoicesStore.getPayReq(res.bolt11);
+                this.setState({ loading: false });
+                navigation.navigate('PaymentRequest');
+            }
         } catch (e: any) {
             this.setState({ loading: false });
             Alert.alert(
