@@ -34,6 +34,7 @@ interface RouteParams {
     lightning: string;
     lightningAddress: string;
     offer: string;
+    creq: string;
     lnurlParams: LNURLWithdrawParams | undefined;
 }
 
@@ -52,6 +53,7 @@ interface ChoosePaymentMethodState {
     lightning: string;
     lightningAddress: string;
     offer: string;
+    creq: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
 }
@@ -72,6 +74,7 @@ export default class ChoosePaymentMethod extends React.Component<
         lightning: '',
         lightningAddress: '',
         offer: '',
+        creq: '',
         lnurlParams: undefined,
         feeRate: ''
     };
@@ -117,6 +120,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
+            creq,
             lnurlParams
         } = params ?? {};
 
@@ -132,6 +136,7 @@ export default class ChoosePaymentMethod extends React.Component<
             ...(lightning && { lightning }),
             ...(lightningAddress && { lightningAddress }),
             ...(offer && { offer }),
+            ...(creq && { creq }),
             ...(lnurlParams && { lnurlParams })
         };
         if (Object.keys(stateUpdate).length > 0) {
@@ -220,6 +225,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
+            creq,
             lnurlParams,
             feeRate
         } = this.state;
@@ -299,6 +305,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightning={lightning}
                     lightningAddress={lightningAddress}
                     offer={offer}
+                    creq={creq}
                     lnurlParams={lnurlParams}
                     // balance data
                     lightningBalance={lightningBalance}
