@@ -11,15 +11,21 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import type {
+    PaymentMethodListAccount,
+    PaymentMethodListRow
+} from '../../utils/ChoosePaymentMethodUtils';
+import {
+    buildPaymentMethodListRows,
+    hasInsufficientBalance,
+    PaymentMethodLayer
+} from '../../utils/ChoosePaymentMethodUtils';
 
 import OnChainSvg from '../../components/SVG/OnChainSvg';
 import LightningSvg from '../../components/SVG/LightningSvg';
 import EcashSvg from '../../components/SVG/EcashSvg';
-
-import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface PaymentMethodListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -34,34 +40,19 @@ interface PaymentMethodListProps {
     lightningBalance?: number | string;
     onchainBalance?: number | string;
     ecashBalance?: number | string;
-    accounts?: Array<{
-        name: string;
-        balance: number;
-        XFP?: string;
-        watch_only?: boolean;
-        hidden?: boolean;
-    }>;
+    accounts?: PaymentMethodListAccount[];
 }
 
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
 
-type DataRow = {
-    layer: string;
-    subtitle?: string;
-    disabled?: boolean;
-    balance?: number | string;
-    account?: string;
-    hidden?: boolean;
-    satAmount?: number;
-};
-
 const LAYER_LOCALE_MAP: Record<string, string> = {
-    Lightning: 'general.lightning',
-    'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
-    'Lightning address': 'general.lightningAddress',
-    Offer: 'views.Settings.Bolt12Offer',
-    'On-chain': 'general.onchain'
+    [PaymentMethodLayer.Lightning]: 'general.lightning',
+    [PaymentMethodLayer.LightningViaEcash]:
+        'components.LayerBalances.lightningViaEcash',
+    [PaymentMethodLayer.LightningAddress]: 'general.lightningAddress',
+    [PaymentMethodLayer.Offer]: 'views.Settings.Bolt12Offer',
+    [PaymentMethodLayer.OnChain]: 'general.onchain'
 };
 
 const getGradientColors = (): [string, string] => {
@@ -72,21 +63,18 @@ const getGradientColors = (): [string, string] => {
 };
 
 const LayerIcon = ({ layer }: { layer: string }) => {
-    if (layer === 'Lightning via ecash') return <EcashSvg />;
-    if (layer === 'On-chain') return <OnChainSvg />;
-    if (['Lightning', 'Lightning address', 'Offer'].includes(layer))
+    if (layer === PaymentMethodLayer.LightningViaEcash) return <EcashSvg />;
+    if (layer === PaymentMethodLayer.OnChain) return <OnChainSvg />;
+    if (
+        layer === PaymentMethodLayer.Lightning ||
+        layer === PaymentMethodLayer.LightningAddress ||
+        layer === PaymentMethodLayer.Offer
+    )
         return <LightningSvg />;
     return <OnChainSvg />;
 };
 
-const hasInsufficientBalance = (
-    balance: number | string | undefined,
-    satAmount: number | undefined
-) =>
-    Number(balance) === 0 ||
-    (satAmount !== undefined && satAmount > Number(balance));
-
-const Row = ({ item }: { item: DataRow }) => {
+const Row = ({ item }: { item: PaymentMethodListRow }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
     const layerLabel = LAYER_LOCALE_MAP[item.layer]
         ? localeString(LAYER_LOCALE_MAP[item.layer])
@@ -168,7 +156,7 @@ const SwipeableRow = ({
     offer,
     lnurlParams
 }: {
-    item: DataRow;
+    item: PaymentMethodListRow;
     index: number;
     navigation: NativeStackNavigationProp<any, any>;
     value?: string;
@@ -181,7 +169,7 @@ const SwipeableRow = ({
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
     const rowDisabled = item.disabled || insufficient;
-    if (item.layer === 'Lightning') {
+    if (item.layer === PaymentMethodLayer.Lightning) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -195,7 +183,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Lightning address') {
+    if (item.layer === PaymentMethodLayer.LightningAddress) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -208,7 +196,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Lightning via ecash') {
+    if (item.layer === PaymentMethodLayer.LightningViaEcash) {
         return (
             <EcashSwipeableRow
                 navigation={navigation}
@@ -222,7 +210,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Offer') {
+    if (item.layer === PaymentMethodLayer.Offer) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -235,7 +223,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'On-chain' || item.account) {
+    if (item.layer === PaymentMethodLayer.OnChain || item.account) {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
@@ -257,93 +245,6 @@ export default class PaymentMethodList extends Component<
     PaymentMethodListProps,
     {}
 > {
-    private buildData = (satAmount: number | undefined): DataRow[] => {
-        const {
-            value,
-            lightning,
-            lightningAddress,
-            offer,
-            lnurlParams,
-            lightningBalance,
-            onchainBalance,
-            ecashBalance,
-            accounts
-        } = this.props;
-        let DATA: DataRow[] = [];
-
-        if (lightning || lnurlParams) {
-            DATA.push({
-                layer: 'Lightning',
-                subtitle: lightning ?? lnurlParams?.tag,
-                balance: lightningBalance,
-                disabled: false,
-                satAmount
-            });
-
-            if (
-                BackendUtils.supportsCashuWallet() &&
-                settingsStore?.settings?.ecash?.enableCashu
-            ) {
-                DATA.push({
-                    layer: 'Lightning via ecash',
-                    subtitle: lightning ?? lnurlParams?.tag,
-                    balance: ecashBalance,
-                    disabled: false,
-                    satAmount
-                });
-            }
-        }
-
-        if (lightningAddress) {
-            DATA.push({
-                layer: 'Lightning address',
-                subtitle: lightningAddress,
-                balance: lightningBalance,
-                disabled: false,
-                satAmount
-            });
-        }
-
-        if (offer) {
-            DATA.push({
-                layer: 'Offer',
-                subtitle: offer,
-                disabled: !nodeInfoStore.supportsOffers,
-                balance: lightningBalance,
-                satAmount
-            });
-        }
-
-        // Only show on-chain balance for non-Lnbank accounts
-        if (value && BackendUtils.supportsOnchainReceiving()) {
-            DATA.push({
-                layer: 'On-chain',
-                subtitle: value,
-                disabled: !BackendUtils.supportsOnchainSends(),
-                balance: onchainBalance,
-                account: 'default',
-                satAmount
-            });
-
-            if (accounts && accounts.length > 0) {
-                accounts.forEach((account) => {
-                    if (!account.hidden && !account.watch_only) {
-                        DATA.push({
-                            layer: account.name,
-                            subtitle: value ?? account.XFP,
-                            disabled: false,
-                            balance: account.balance,
-                            account: account.name,
-                            hidden: account.hidden,
-                            satAmount
-                        });
-                    }
-                });
-            }
-        }
-        return DATA;
-    };
-
     render() {
         const {
             navigation,
@@ -353,13 +254,27 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
-            lnurlParams
+            lnurlParams,
+            accounts
         } = this.props;
         const satAmountNum =
             satAmount !== undefined && !isNaN(Number(satAmount))
                 ? Number(satAmount)
                 : undefined;
-        const DATA = this.buildData(satAmountNum);
+        const DATA = buildPaymentMethodListRows(
+            {
+                value,
+                lightning,
+                lightningAddress,
+                offer,
+                lnurlParams,
+                lightningBalance: this.props.lightningBalance,
+                onchainBalance: this.props.onchainBalance,
+                ecashBalance: this.props.ecashBalance,
+                accounts
+            },
+            satAmountNum
+        );
         return (
             <View style={{ flex: 1 }}>
                 <FlatList
