@@ -76,6 +76,27 @@ export type NofferResponse = NofferSuccess | NofferError;
 export const isNofferSuccess = (r: NofferResponse): r is NofferSuccess =>
     typeof (r as NofferSuccess).bolt11 === 'string';
 
+// Structured error thrown from requestInvoiceFromNoffer so the view layer
+// can map `code` to a localized string instead of surfacing English to
+// users. `detail` carries additional context (e.g. relay rejection reason).
+export type ClinkRequestErrorCode =
+    | 'NO_RELAYS'
+    | 'ONION_NOT_SUPPORTED'
+    | 'RELAY_CONNECT_FAILED'
+    | 'RELAY_REJECTED_PUBLISH'
+    | 'TIMEOUT';
+
+export class ClinkRequestError extends Error {
+    code: ClinkRequestErrorCode;
+    detail?: string;
+    constructor(code: ClinkRequestErrorCode, detail?: string) {
+        super(detail ? `${code}: ${detail}` : code);
+        this.name = 'ClinkRequestError';
+        this.code = code;
+        this.detail = detail;
+    }
+}
+
 const utf8Decoder = new global.TextDecoder('utf-8');
 
 const parseTLV = (data: Uint8Array): Record<number, Uint8Array[]> => {
@@ -261,9 +282,15 @@ export const verifyBolt11MatchesOffer = (
 
 // Returns true only if the event is a structurally-valid CLINK response
 // addressed to this request: correct kind, author = expected recipient,
-// references our request id via `e` tag, and carries the mandatory
-// `clink_version` tag. Does NOT verify signature or decrypt content —
-// those are separate steps in the request flow.
+// references our request id via `e` tag, and (if present) carries a
+// compatible `clink_version` tag. Does NOT verify signature or decrypt
+// content — those are separate steps in the request flow.
+//
+// Spec says services MUST include `clink_version` and clients SHOULD
+// reject events lacking it. In practice the reference implementation
+// (and others) omit it; we treat "missing" as "compatible" for interop
+// (Postel's law), but reject events that present an explicit wrong
+// version since that's a real incompatibility.
 export const isValidClinkResponseEvent = (
     event: any,
     requestId: string,
@@ -279,7 +306,7 @@ export const isValidClinkResponseEvent = (
     const versionTag = tags.find(
         (t) => Array.isArray(t) && t[0] === 'clink_version'
     );
-    if (!versionTag || versionTag[1] !== CLINK_VERSION) return false;
+    if (versionTag && versionTag[1] !== CLINK_VERSION) return false;
     return true;
 };
 
@@ -299,10 +326,17 @@ const sendAndAwaitResponse = (opts: {
         conversationKey,
         timeoutMs
     } = opts;
+    const log = (msg: string, extra?: any) =>
+        extra !== undefined
+            ? console.log(`[CLINK ${relayUrl}] ${msg}`, extra)
+            : console.log(`[CLINK ${relayUrl}] ${msg}`);
+
     return new Promise((resolve, reject) => {
         const relay = relayInit(relayUrl);
         let resolved = false;
         let sub: any;
+        let eventsSeen = 0;
+        let eventsRejected = 0;
         const cleanup = () => {
             try {
                 sub?.unsub();
@@ -314,75 +348,137 @@ const sendAndAwaitResponse = (opts: {
         const timeout = setTimeout(() => {
             if (resolved) return;
             resolved = true;
+            log(
+                `request timed out after ${timeoutMs}ms (saw ${eventsSeen} events, rejected ${eventsRejected})`
+            );
             cleanup();
-            reject(new Error('CLINK request timed out'));
+            reject(new ClinkRequestError('TIMEOUT'));
         }, timeoutMs);
+
+        relay.on('notice', (msg: string) => log('relay NOTICE:', msg));
+        relay.on('error', () => log('relay error event fired'));
+        relay.on('disconnect', () => log('relay disconnected'));
+
+        log(`request id=${event.id} payer=${payerPkHex.slice(0, 8)}…`);
 
         relay
             .connect()
             .then(() => {
+                log('connected');
+                // Drop `#e` from the wire filter — some relays don't
+                // pre-index it. Client-side check still enforces it
+                // (isValidClinkResponseEvent). `since` is widened to 60s
+                // to absorb clock skew between phone and relay.
                 sub = relay.sub([
                     {
                         kinds: [CLINK_KIND],
                         '#p': [payerPkHex],
-                        '#e': [event.id],
                         authors: [recipientPkHex],
-                        since: Math.floor(Date.now() / 1000) - 5
+                        since: Math.floor(Date.now() / 1000) - 60
                     }
                 ]);
+                log('subscribed', {
+                    kind: CLINK_KIND,
+                    p: payerPkHex,
+                    author: recipientPkHex
+                });
+
+                sub.on('eose', () => log('relay sent EOSE'));
 
                 sub.on('event', (ev: any) => {
                     if (resolved) return;
+                    eventsSeen++;
                     if (
                         !isValidClinkResponseEvent(ev, event.id, recipientPkHex)
                     ) {
+                        eventsRejected++;
+                        log('event rejected (structural mismatch)', {
+                            id: ev.id,
+                            kind: ev.kind,
+                            author: ev.pubkey,
+                            tags: ev.tags
+                        });
                         return;
+                    }
+                    const hasVersionTag = (
+                        Array.isArray(ev.tags) ? ev.tags : []
+                    ).some(
+                        (t: any) => Array.isArray(t) && t[0] === 'clink_version'
+                    );
+                    if (!hasVersionTag) {
+                        log(
+                            'WARN: service response missing clink_version tag (spec violation, accepting for interop)'
+                        );
                     }
                     let valid = false;
                     try {
                         valid = verifySignature(ev);
-                    } catch {}
+                    } catch (e) {
+                        log('verifySignature threw:', e);
+                    }
                     if (!valid) {
-                        console.warn('CLINK response signature invalid');
+                        eventsRejected++;
+                        log('event rejected (bad signature)', { id: ev.id });
                         return;
                     }
                     let plaintext: string;
                     try {
                         plaintext = nip44.decrypt(ev.content, conversationKey);
                     } catch (e) {
-                        console.warn('CLINK response decrypt failed:', e);
+                        eventsRejected++;
+                        log('event rejected (nip44 decrypt failed):', e);
                         return;
                     }
                     let parsed: NofferResponse;
                     try {
                         parsed = JSON.parse(plaintext);
                     } catch (e) {
-                        console.warn('CLINK response not valid JSON:', e);
+                        eventsRejected++;
+                        log('event rejected (plaintext not JSON):', e);
                         return;
                     }
+                    log('response accepted', parsed);
                     resolved = true;
                     clearTimeout(timeout);
                     cleanup();
                     resolve(parsed);
                 });
 
-                // Publish after subscribing so we don't miss a fast reply
-                try {
-                    relay.publish(event);
-                } catch (e) {
-                    if (resolved) return;
-                    resolved = true;
-                    clearTimeout(timeout);
-                    cleanup();
-                    reject(e);
-                }
+                // Publish AFTER subscribing so we don't miss a fast reply.
+                // Await the publish so a relay-level rejection (OK false:
+                // rate-limited / blocked / auth-required / etc.) surfaces
+                // instead of silently timing out.
+                relay.publish(event).then(
+                    () => log('publish OK'),
+                    (err: any) => {
+                        log(
+                            `publish REJECTED by relay: ${err?.message ?? err}`
+                        );
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+                        cleanup();
+                        reject(
+                            new ClinkRequestError(
+                                'RELAY_REJECTED_PUBLISH',
+                                err?.message ?? String(err)
+                            )
+                        );
+                    }
+                );
             })
-            .catch((e: unknown) => {
+            .catch((e: any) => {
+                log('connect failed:', e);
                 if (resolved) return;
                 resolved = true;
                 clearTimeout(timeout);
                 cleanup();
-                reject(e);
+                reject(
+                    new ClinkRequestError(
+                        'RELAY_CONNECT_FAILED',
+                        e?.message ?? (e ? String(e) : undefined)
+                    )
+                );
             });
     });
 };
@@ -403,15 +499,13 @@ export const requestInvoiceFromNoffer = async (
         (r, i, arr) => !!r && arr.indexOf(r) === i
     );
     if (relays.length === 0) {
-        throw new Error('no relays available for CLINK request');
+        throw new ClinkRequestError('NO_RELAYS');
     }
     // WebSocket-over-Tor is not currently supported by the relay layer.
     // Refuse onion relays explicitly rather than silently leaking traffic.
     const onion = relays.find((r) => /\.onion(:\d+)?(\/|$)/i.test(r));
     if (onion) {
-        throw new Error(
-            `CLINK over .onion relays is not yet supported (${onion})`
-        );
+        throw new ClinkRequestError('ONION_NOT_SUPPORTED', onion);
     }
 
     const payload = buildClinkRequestPayload(noffer, params);
@@ -468,6 +562,7 @@ const ClinkUtils = {
     requestInvoiceFromNoffer,
     isNofferSuccess,
     verifyBolt11MatchesOffer,
+    ClinkRequestError,
     NofferPriceType,
     NofferErrorCode,
     CLINK_KIND,

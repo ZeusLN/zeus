@@ -16,6 +16,7 @@ import Screen from '../../components/Screen';
 import InvoicesStore from '../../stores/InvoicesStore';
 
 import ClinkUtils, {
+    ClinkRequestError,
     NofferData,
     NofferPriceType,
     NofferErrorCode,
@@ -52,6 +53,38 @@ const truncatePubkey = (pubkeyHex: string): string => {
     } catch {
         return `${pubkeyHex.slice(0, 8)}…${pubkeyHex.slice(-6)}`;
     }
+};
+
+// Map a thrown ClinkRequestError to a localized message. Falls back to
+// errorToUserFriendly for anything else.
+const localizeRequestError = (e: any): string => {
+    if (e instanceof ClinkRequestError) {
+        switch (e.code) {
+            case 'NO_RELAYS':
+                return localeString('views.ClinkPay.errorNoRelays');
+            case 'ONION_NOT_SUPPORTED':
+                return e.detail
+                    ? `${localeString(
+                          'views.ClinkPay.errorOnionNotSupported'
+                      )} (${e.detail})`
+                    : localeString('views.ClinkPay.errorOnionNotSupported');
+            case 'RELAY_CONNECT_FAILED':
+                return e.detail
+                    ? `${localeString(
+                          'views.ClinkPay.errorRelayConnectFailed'
+                      )} — ${e.detail}`
+                    : localeString('views.ClinkPay.errorRelayConnectFailed');
+            case 'RELAY_REJECTED_PUBLISH':
+                return e.detail
+                    ? `${localeString(
+                          'views.ClinkPay.errorRelayRejectedPublish'
+                      )}: ${e.detail}`
+                    : localeString('views.ClinkPay.errorRelayRejectedPublish');
+            case 'TIMEOUT':
+                return localeString('views.ClinkPay.errorTimeout');
+        }
+    }
+    return errorToUserFriendly(e);
 };
 
 const errorCodeToLocaleKey = (code?: NofferErrorCode): string | null => {
@@ -154,7 +187,7 @@ export default class ClinkPay extends React.Component<
             this.setState({ loading: false });
             Alert.alert(
                 localeString('views.ClinkPay.title'),
-                errorToUserFriendly(e),
+                localizeRequestError(e),
                 [{ text: localeString('general.ok') }],
                 { cancelable: false }
             );
