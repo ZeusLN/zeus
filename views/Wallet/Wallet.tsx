@@ -1705,7 +1705,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarShowLabel: false,
                                         tabBarStyle: {
                                             paddingBottom: 12,
-                                            height: 65
+                                            height:
+                                                Platform.OS === 'android'
+                                                    ? 55
+                                                    : 45
                                         },
                                         // Disable top safe area - WalletHeader handles it
                                         safeAreaInsets: { top: 0 },
