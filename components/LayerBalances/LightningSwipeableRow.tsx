@@ -19,12 +19,14 @@ import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import QuickPayUtils from '../../utils/QuickPayUtils';
 
 import {
     modalStore,
     invoicesStore,
     nodeInfoStore,
-    settingsStore
+    settingsStore,
+    transactionsStore
 } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
@@ -337,8 +339,21 @@ export default class LightningSwipeableRow extends Component<
                 navigation,
                 settings
             );
-        } else {
-            invoicesStore.getPayReq(lightning ?? '');
+        } else if (lightning) {
+            if (QuickPayUtils.shouldTryQuickPay(lightning)) {
+                const result = await QuickPayUtils.checkQuickPayAndProcess(
+                    lightning,
+                    navigation,
+                    settingsStore,
+                    transactionsStore
+                );
+
+                if (result) {
+                    return;
+                }
+            }
+
+            invoicesStore.getPayReq(lightning);
             navigation.navigate('PaymentRequest', {});
         }
     };
