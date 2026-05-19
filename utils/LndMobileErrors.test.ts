@@ -113,6 +113,11 @@ describe('LndMobileErrors classification', () => {
     it('identifies transient RPC errors', () => {
         expect(isTransientRpcError('rpc connection closed by peer')).toBe(true);
         expect(isTransientRpcError('macaroon store is locked')).toBe(true);
+        expect(
+            isTransientRpcError(
+                'rpc error: code = Unknown desc = wallet locked, unlock it to enable full RPC access'
+            )
+        ).toBe(true);
         expect(isTransientRpcError('folder missing')).toBe(false);
     });
 

@@ -173,6 +173,7 @@ const TRANSIENT_RPC_ERROR_CODES: LndErrorCode[] = [
     LndErrorCode.RPC_CONNECTION_CLOSED,
     LndErrorCode.RPC_NOT_READY,
     LndErrorCode.MACAROON_STORE_LOCKED,
+    LndErrorCode.WALLET_LOCKED,
     LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
 ];
 

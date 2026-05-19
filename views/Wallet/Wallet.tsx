@@ -1833,7 +1833,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                               loggedIn &&
                                               implementation
                                             ? BackendUtils.isLocalWallet()
-                                                ? isInExpressGraphSync
+                                                ? SettingsStore.embeddedLndLoadingMsg
+                                                    ? SettingsStore.embeddedLndLoadingMsg.replace(
+                                                          'Zeus',
+                                                          'ZEUS'
+                                                      )
+                                                    : isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'
                                                       ).replace('Zeus', 'ZEUS')

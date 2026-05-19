@@ -1659,6 +1659,7 @@ export default class SettingsStore {
     @observable public embeddedLndStarted: boolean = false;
     @observable public walletJustCreated: boolean = false;
     @observable public lndFolderMissing: boolean = false;
+    @observable public embeddedLndLoadingMsg: string | undefined;
     // Embedded LDK Node
     @observable public ldkNodeDir?: string;
     @observable public ldkMnemonic?: string;
@@ -2204,6 +2205,11 @@ export default class SettingsStore {
     public setLoginStatus = (status = false) => (this.loggedIn = status);
 
     @action
+    public setEmbeddedLndLoadingMsg = (message?: string) => {
+        this.embeddedLndLoadingMsg = message;
+    };
+
+    @action
     public setConnectingStatus = (status = false) => {
         // reset error on reconnect
         if (status) {
@@ -2213,6 +2219,8 @@ export default class SettingsStore {
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;
+        } else {
+            this.embeddedLndLoadingMsg = undefined;
         }
         this.connecting = status;
         return this.connecting;
