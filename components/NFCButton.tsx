@@ -3,11 +3,7 @@ import { Platform, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { checkNfcEnabled } from '../utils/NFCUtils';
 
-import {
-    HCESession,
-    NFCTagType4,
-    NFCTagType4NDEFContentType
-} from 'react-native-hce';
+const HCE = require('react-native-hce');
 
 import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 
@@ -73,19 +69,40 @@ export default class NFCButton extends React.Component<
     };
 
     startSimulation = async () => {
-        const tag = new NFCTagType4({
-            type: NFCTagType4NDEFContentType.Text,
-            content: this.props.value,
-            writable: false
-        });
-        this.simulation = await HCESession.getInstance();
-        await this.simulation.setApplication(tag);
-        await this.simulation.setEnabled(true);
+        const TagType4 = HCE.NFCTagType4;
+        const Session = HCE.HCESession || HCE.default;
+        const ndefType = HCE.NFCTagType4NDEFContentType?.Text || 'text';
+
+        let tag;
+        try {
+            tag = new TagType4({
+                type: ndefType,
+                content: this.props.value,
+                writable: false
+            });
+        } catch {
+            const contentType = HCE.NFCContentType?.Text || 'text';
+            tag = new TagType4(contentType, this.props.value);
+        }
+
+        if (typeof Session.getInstance === 'function') {
+            this.simulation = await Session.getInstance();
+            await this.simulation.setApplication(tag);
+            await this.simulation.setEnabled(true);
+            return;
+        }
+
+        this.simulation = new Session(tag);
+        await this.simulation.start();
     };
 
     stopSimulation = async () => {
         if (this.simulation) {
-            await this.simulation.setEnabled(false);
+            if (typeof this.simulation.setEnabled === 'function') {
+                await this.simulation.setEnabled(false);
+            } else if (typeof this.simulation.terminate === 'function') {
+                await this.simulation.terminate();
+            }
         }
     };
 

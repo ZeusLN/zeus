@@ -247,6 +247,12 @@ interface AddressGroup {
     addresses: Address[];
 }
 
+const getLastDerivationPathIndex = (path: string): number => {
+    const segments = path.split('/');
+    const last = segments[segments.length - 1];
+    return Number(last);
+};
+
 @inject('UTXOsStore')
 @observer
 export default class OnChainAddresses extends React.Component<
@@ -357,16 +363,16 @@ export default class OnChainAddresses extends React.Component<
                 accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) =>
-                            Number(a.derivation_path.split('/').at(-1)) -
-                            Number(b.derivation_path.split('/').at(-1))
+                            getLastDerivationPathIndex(a.derivation_path) -
+                            getLastDerivationPathIndex(b.derivation_path)
                     )
                 );
             } else if (sortBy === SortBy.creationTimeDescending) {
                 accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) =>
-                            Number(b.derivation_path.split('/').at(-1)) -
-                            Number(a.derivation_path.split('/').at(-1))
+                            getLastDerivationPathIndex(b.derivation_path) -
+                            getLastDerivationPathIndex(a.derivation_path)
                     )
                 );
             } else if (sortBy === SortBy.balanceAscending) {
