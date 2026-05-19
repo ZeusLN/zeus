@@ -95,6 +95,9 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                     ...commonSettings
                 });
 
+                // Node is already built — tell Wallet.tsx to skip re-init
+                settingsStore.walletJustCreated = true;
+
                 setConnectingStatus(true);
                 onSuccess();
             } else {
