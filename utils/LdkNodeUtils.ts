@@ -64,6 +64,13 @@ export const RGS_SERVERS_TESTNET: EsploraServer[] = [
 // Default pathfinding scores server
 export const DEFAULT_SCORER_URL = 'https://scores.zeusln.com/latest.bin';
 
+// Native-module error string emitted while `buildNode` is still rebuilding
+// the node reference on its background queue
+const LDK_NODE_NOT_INITIALIZED = 'Node not initialized';
+
+// Local sentinel for the gap between the node existing and reporting running
+const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
+
 /**
  * Get the storage directory path for LDK Node data
  */
@@ -365,7 +372,7 @@ export async function startLdkNodeWallet({
             delayMs: 500,
             shouldRetry: (e: any) => {
                 const errMsg = e?.message || e?.toString?.() || String(e);
-                return errMsg.includes('Node not initialized');
+                return errMsg.includes(LDK_NODE_NOT_INITIALIZED);
             }
         });
         nodeStarted = true;
@@ -431,8 +438,6 @@ export async function startLdkNodeWallet({
     return { vssError, esploraError, rgsError };
 }
 
-const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
-
 /**
  * Wait for the LDK Node native module to report a running node.
  *
@@ -455,7 +460,7 @@ export async function waitForLdkNodeReady(
         shouldRetry: (e: any) => {
             const errMsg = e?.message || e?.toString?.() || String(e);
             return (
-                errMsg.includes('Node not initialized') ||
+                errMsg.includes(LDK_NODE_NOT_INITIALIZED) ||
                 errMsg.includes(LDK_NODE_NOT_RUNNING_YET)
             );
         }
