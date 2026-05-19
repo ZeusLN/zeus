@@ -128,6 +128,7 @@ export const createRefundTransaction = async ({
     privateKey,
     servicePubKey,
     feeRate,
+    minerFee,
     timeoutBlockHeight,
     destinationAddress,
     lockupAddress,
@@ -142,6 +143,7 @@ export const createRefundTransaction = async ({
     privateKey: string;
     servicePubKey: string;
     feeRate: number;
+    minerFee: number;
     timeoutBlockHeight: number;
     destinationAddress: string;
     lockupAddress: string;
@@ -158,6 +160,7 @@ export const createRefundTransaction = async ({
             privateKey,
             servicePubKey,
             feeRate,
+            minerFee,
             timeoutBlockHeight,
             destinationAddress,
             lockupAddress,

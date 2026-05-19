@@ -2356,6 +2356,8 @@
     "views.Swaps.uncooperative": "Uncooperative refund",
     "views.Swaps.infoText": "It is recommended you only attempt an uncooperative refund if the service provider is not operational.",
     "views.Swaps.initiateRefund": "Initiate Refund",
+    "views.Swaps.feeRate": "Fee Rate",
+    "views.Swaps.minerFee": "Miner Fee",
     "views.Swaps.networkFee": "Network fee",
     "views.Swaps.serviceFee": "Service fee",
     "views.Swaps.missingAmount": "Please enter an amount",
