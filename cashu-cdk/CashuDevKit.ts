@@ -37,6 +37,14 @@ const { CashuDevKitModule } = NativeModules as unknown as {
  */
 function mapCDKError(error: any): CDKError {
     const message = error?.message || String(error);
+    const normalizedMessage = message.toLowerCase();
+
+    if (
+        normalizedMessage.includes('11000') &&
+        normalizedMessage.includes('quote amount not as requested')
+    ) {
+        return { type: CDKErrorType.MultiMintQuoteRejected, message };
+    }
 
     if (
         message.includes('Insufficient funds') ||
@@ -184,7 +192,14 @@ class CashuDevKit {
     async getBalances(): Promise<Record<string, number>> {
         try {
             const json = await CashuDevKitModule.getBalances();
-            return JSON.parse(json);
+            const parsed = JSON.parse(json) as Record<string, string | number>;
+
+            return Object.fromEntries(
+                Object.entries(parsed).map(([mintUrl, balance]) => [
+                    mintUrl,
+                    Number(balance)
+                ])
+            );
         } catch (error) {
             throw mapCDKError(error);
         }
@@ -427,6 +442,56 @@ class CashuDevKit {
     async melt(mintUrl: string, quoteId: string): Promise<CDKMelted> {
         try {
             const json = await CashuDevKitModule.melt(mintUrl, quoteId);
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    /**
+     * Execute MPP melt (pay Lightning invoice using multi-path payments)
+     * Uses the CDK's high-level melt which handles quote creation,
+     * proof selection, and partial payment in one call.
+     * @param bolt11 - BOLT11 invoice to pay
+     * @param options - Melt options including MPP amount
+     * @param maxFee - Maximum fee in sats (0 for no limit)
+     */
+    async meltMpp(
+        bolt11: string,
+        options?: any,
+        maxFee: number = 0
+    ): Promise<CDKMelted> {
+        try {
+            const json = await CashuDevKitModule.meltMpp(
+                bolt11,
+                options ? JSON.stringify(options) : undefined,
+                maxFee
+            );
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    /**
+     * Execute a partial melt from a specific mint.
+     * Creates its own melt quote directly with the mint API
+     * to get the actual fee, then sends all proofs.
+     * @param mintUrl - The mint to melt from
+     * @param bolt11 - The BOLT11 invoice to pay
+     * @param mppAmountMsat - Partial amount in millisats for this mint
+     */
+    async meltPartial(
+        mintUrl: string,
+        bolt11: string,
+        mppAmountMsat: number
+    ): Promise<CDKMelted> {
+        try {
+            const json = await CashuDevKitModule.meltPartial(
+                mintUrl,
+                bolt11,
+                mppAmountMsat
+            );
             return JSON.parse(json);
         } catch (error) {
             throw mapCDKError(error);

@@ -68,6 +68,57 @@ class CashuDevKitModule: RCTEventEmitter {
     return .p2pk(pubkey: pubkey, conditions: conditions)
   }
 
+    private func readPositiveUInt64(from json: [String: Any], key: String) -> UInt64 {
+        guard let raw = json[key] else {
+            return 0
+        }
+
+        if raw is Bool {
+            return 0
+        }
+
+        if let number = raw as? NSNumber {
+            let value = number.int64Value
+            return value > 0 ? UInt64(value) : 0
+        }
+
+        if let string = raw as? String,
+           let value = UInt64(string),
+           value > 0 {
+            return value
+        }
+
+        return 0
+    }
+
+    private func parseMeltOptions(from optionsJson: String?) -> MeltOptions? {
+        guard
+            let json = optionsJson,
+            let data = json.data(using: .utf8),
+            let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        if let mpp = parsed["mpp"] as? [String: Any] {
+            let amount = readPositiveUInt64(from: mpp, key: "amount")
+            if amount > 0 {
+                return .mpp(amount: Amount(value: amount))
+            }
+        }
+
+        if let amountless = parsed["amountless"] as? [String: Any] {
+            let amountMsat = readPositiveUInt64(from: amountless, key: "amount_msat")
+            if amountMsat > 0 {
+                return .amountless(
+                    amountMsat: Amount(value: amountMsat)
+                )
+            }
+        }
+
+        return nil
+    }
+
     /// Returns the initialized wallet or rejects with NO_WALLET error
     private func getInitializedWallet(reject: @escaping RCTPromiseRejectBlock) -> MultiMintWallet? {
         guard isInitialized, let wallet = wallet else {
@@ -761,7 +812,12 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let url = MintUrl(url: mintUrl)
-                let quote = try await wallet.meltQuote(mintUrl: url, request: request, options: nil)
+                let options = parseMeltOptions(from: optionsJson)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: request,
+                    options: options
+                )
                 resolve(encodeToJson(encodeMeltQuote(quote)))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
@@ -808,6 +864,79 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject(code, message, error)
             } catch {
                 reject("MELT_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(meltMpp:optionsJson:maxFee:resolver:rejecter:)
+    func meltMpp(_ bolt11: String, optionsJson: String?, maxFee: NSNumber,
+                 resolve: @escaping RCTPromiseResolveBlock,
+                 reject: @escaping RCTPromiseRejectBlock) {
+        guard let wallet = getInitializedWallet(reject: reject) else { return }
+
+        Task {
+            do {
+                let options = parseMeltOptions(from: optionsJson)
+                let fee = maxFee.uint64Value > 0 ? Amount(value: maxFee.uint64Value) : nil
+                let melted = try await wallet.melt(bolt11: bolt11, options: options, maxFee: fee)
+                resolve(encodeToJson(encodeMelted(melted)))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("MELT_MPP_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(meltPartial:bolt11:mppAmountMsat:resolver:rejecter:)
+    func meltPartial(_ mintUrl: String, bolt11: String, mppAmountMsat: NSNumber,
+                     resolve: @escaping RCTPromiseResolveBlock,
+                     reject: @escaping RCTPromiseRejectBlock) {
+        guard let wallet = getInitializedWallet(reject: reject) else { return }
+
+        Task {
+            do {
+                let url = MintUrl(url: mintUrl)
+                let mppAmount = Amount(value: mppAmountMsat.uint64Value)
+
+                // Step 1: Create melt quote via CDK with MPP options
+                let options = MeltOptions.mpp(amount: mppAmount)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: bolt11,
+                    options: options
+                )
+
+                // Step 2: Select proofs via CDK and execute melt
+                // Try meltProofs with all proofs from this mint —
+                // the mint knows the MPP partial amount from the quote
+                let allProofs = try await wallet.listProofs()
+                let normalizedUrl = mintUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                var mintProofs: [Proof] = []
+                for (key, proofs) in allProofs {
+                    let normalizedKey = key.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    if normalizedKey == normalizedUrl {
+                        mintProofs = proofs
+                        break
+                    }
+                }
+
+                guard !mintProofs.isEmpty else {
+                    reject("NO_PROOFS", "No proofs found for mint \(mintUrl)", nil)
+                    return
+                }
+
+                // Step 3: Try CDK's meltProofs first (keeps proof DB in sync)
+                let melted = try await wallet.meltProofs(
+                    mintUrl: url,
+                    quoteId: quote.id,
+                    proofs: mintProofs
+                )
+
+                resolve(encodeToJson(encodeMelted(melted)))
+            } catch {
+                reject("MELT_PARTIAL_ERROR", error.localizedDescription, error)
             }
         }
     }
@@ -1201,7 +1330,12 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let url = MintUrl(url: mintUrl)
-                let quote = try await wallet.meltQuote(mintUrl: url, request: request, options: nil)
+                let options = parseMeltOptions(from: optionsJson)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: request,
+                    options: options
+                )
                 resolve(encodeToJson(encodeMeltQuote(quote)))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
