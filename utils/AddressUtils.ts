@@ -29,10 +29,13 @@ const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* BIP-21 */
 const bip21Uri =
-    /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO)=([^&]*)))*))?/;
+    /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*)))*))?/;
 
 /* BOLT 12 */
 const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+
+/* CLINK noffer — Nostr Offer (https://github.com/shocknet/clink) */
+const noffer = /^(?:noffer1[02-9ac-hj-np-z]{6,}|NOFFER1[02-9AC-HJ-NP-Z]{6,})$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
@@ -83,7 +86,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let satAmount, lightning, offer;
+    let satAmount, lightning, offer, clinkNoffer;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -110,23 +113,32 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         offer = result.lno || result.LNO;
     }
 
-    return [value, satAmount, lightning, offer];
+    if (result.noffer || result.NOFFER) {
+        clinkNoffer = result.noffer || result.NOFFER;
+    }
+
+    return [value, satAmount, lightning, offer, clinkNoffer];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, satAmount, lightning, offer;
+        let value, satAmount, lightning, offer, clinkNoffer;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
-            const [parsedValue, parsedSatAmount, parsedLightning, parsedOffer] =
-                bitcoinQrParser(
-                    input,
-                    input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
-                );
+            const [
+                parsedValue,
+                parsedSatAmount,
+                parsedLightning,
+                parsedOffer,
+                parsedClinkNoffer
+            ] = bitcoinQrParser(
+                input,
+                input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
+            );
             value = parsedValue;
 
             if (parsedSatAmount) {
@@ -140,6 +152,10 @@ class AddressUtils {
             if (parsedOffer) {
                 offer = parsedOffer;
             }
+
+            if (parsedClinkNoffer) {
+                clinkNoffer = parsedClinkNoffer;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -150,7 +166,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, satAmount, lightning, offer };
+        return { value, satAmount, lightning, offer, clinkNoffer };
     };
 
     processLNDHubAddress = (input: string) => {
@@ -197,6 +213,7 @@ class AddressUtils {
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
     isValidLightningOffer = (input: string) => lnOffer.test(input);
+    isValidNoffer = (input: string) => noffer.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 

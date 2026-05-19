@@ -34,6 +34,7 @@ interface RouteParams {
     lightning: string;
     lightningAddress: string;
     offer: string;
+    clinkNoffer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
 }
 
@@ -52,6 +53,7 @@ interface ChoosePaymentMethodState {
     lightning: string;
     lightningAddress: string;
     offer: string;
+    clinkNoffer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
 }
@@ -72,6 +74,7 @@ export default class ChoosePaymentMethod extends React.Component<
         lightning: '',
         lightningAddress: '',
         offer: '',
+        clinkNoffer: '',
         lnurlParams: undefined,
         feeRate: ''
     };
@@ -117,6 +120,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams
         } = params ?? {};
 
@@ -132,6 +136,7 @@ export default class ChoosePaymentMethod extends React.Component<
             ...(lightning && { lightning }),
             ...(lightningAddress && { lightningAddress }),
             ...(offer && { offer }),
+            ...(clinkNoffer && { clinkNoffer }),
             ...(lnurlParams && { lnurlParams })
         };
         if (Object.keys(stateUpdate).length > 0) {
@@ -173,8 +178,14 @@ export default class ChoosePaymentMethod extends React.Component<
         const { BalanceStore, CashuStore } = this.props;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats: ecashBalance } = CashuStore!;
-        const { value, lightning, lightningAddress, offer, lnurlParams } =
-            this.state;
+        const {
+            value,
+            lightning,
+            lightningAddress,
+            offer,
+            clinkNoffer,
+            lnurlParams
+        } = this.state;
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
@@ -193,7 +204,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning ||
             lnurlParams ||
             lightningAddress ||
-            offer
+            offer ||
+            clinkNoffer
         );
         const hasOnchainPayment =
             !!value && BackendUtils.supportsOnchainReceiving();
@@ -220,6 +232,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams,
             feeRate
         } = this.state;
@@ -233,7 +246,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning ||
             lnurlParams ||
             lightningAddress ||
-            offer
+            offer ||
+            clinkNoffer
         );
         const hasOnchainPayment =
             !!value && BackendUtils.supportsOnchainReceiving();
@@ -299,6 +313,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightning={lightning}
                     lightningAddress={lightningAddress}
                     offer={offer}
+                    clinkNoffer={clinkNoffer}
                     lnurlParams={lnurlParams}
                     // balance data
                     lightningBalance={lightningBalance}
