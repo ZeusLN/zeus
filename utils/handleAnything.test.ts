@@ -52,11 +52,26 @@ jest.mock('./BackendUtils', () => ({
 
 let mockIsValidCashuToken = false;
 let mockDecodedCashuToken = {};
-jest.mock('./CashuUtils', () => ({
-    isValidCashuToken: () => mockIsValidCashuToken,
-    isValidCashuTokenAsync: () => Promise.resolve(mockIsValidCashuToken),
-    decodeCashuTokenAsync: () => Promise.resolve(mockDecodedCashuToken)
+jest.mock('../cashu-cdk', () => ({
+    __esModule: true,
+    default: {
+        isValidToken: jest.fn(),
+        decodeToken: jest.fn()
+    }
 }));
+jest.mock('./CashuUtils', () => {
+    const actual = jest.requireActual('./CashuUtils').default;
+    return {
+        __esModule: true,
+        default: {
+            ...actual,
+            isValidCashuToken: () => mockIsValidCashuToken,
+            isValidCashuTokenAsync: () =>
+                Promise.resolve(mockIsValidCashuToken),
+            decodeCashuTokenAsync: () => Promise.resolve(mockDecodedCashuToken)
+        }
+    };
+});
 
 const mockProcessLndConnectUrl = jest.fn();
 const mockProcessCLNRestConnectUrl = jest.fn();
@@ -1549,10 +1564,11 @@ describe('handleAnything', () => {
         });
     });
 
-    // IMPORTANT: zeusln.com/e/ URLs must be checked BEFORE the lnurl block in handleAnything,
-    // because findlnurl() from js-lnurl can match patterns in Cashu tokens that look like bech32 lnurls.
-    // These tests verify the correct route is returned when findlnurl might otherwise match.
-    describe('zeusln.com ecash gift URLs', () => {
+    // IMPORTANT: web-wrapped Cashu token URLs must be checked BEFORE the lnurl block in
+    // handleAnything, because findlnurl() from js-lnurl can match bech32-like patterns
+    // inside Cashu tokens. These tests verify the correct route is returned when
+    // findlnurl might otherwise match, across multiple known web wrappers.
+    describe('web-wrapped cashu URLs', () => {
         const validCashuToken =
             'cashuBo2FteCJodHRwczovL21pbnQubWluaWJpdHMuY2FzaC9CaXRjb2luYXVjc2F0YXSComFpSAAQeTfbDMhlYXCCpGFhCGFzeEAxOWQ3YmRiNTIwMzRmOWQ5OGQwZTU5OTEwM2FkMTlmZTAyODc1ODQ2MThlYmViYTFkNzExM2FiMjI4MDM0YjNlYWNYIQI5u9Nss3cyYXJoLTwRMY4qgCNL7-J7EtBFnGOIeq6tcWFko2FlWCBYlzHfzFSuLuI31zvZGHme0QGeeEjNoGhIs6l2fbbHH2FzWCA2ecAUKZWjtQagWP7wOUVRgsHYlyOG7CUhUFdQjUed2GFyWCC67afI6qoB6bISgCWK24JOdD_-gxUyaSrgfrZJmHsBh6RhYQRhc3hANWYzMGRlMDA1NjVkYTRhZDg2Yzk1MzljYzYzMGE3NTBlYWU2OTJiY2Q5ODgwMWI0OTI0NDA1ZDAxN2UzNGE5MWFjWCECN8hTvJgIFBwN0QY3prfyf4z7BxPVLBPptzKcnb_OupNhZKNhZVggcx4XGwTyM4riizWgckD44KUJQtKHUGGjHIJHFKdPE31hc1ggqASxqD7ZTbA59c7SAHgQvLdLq_xYLL2rAVr2ziIGfkRhclgg-bTi6nbDj8Mdq9rnKhAGgrQ4w6ihk9pvu9xUommg6V-iYWlIAFAFUPBJQUZhcIGkYWEEYXN4QDBlMzhhZWIxYzIxMTk1N2U5Njg4YTdlY2YzNzQ4Y2E2MTA0MDMzNmZjZWJmMzE4M2EwMDAwOWFiYzJiMjcxNWFhY1ghAu0yuRBFejZTitq8LJufeiB2CUAEk-pHTIWqYtFcqtCSYWSjYWVYIDhNUWOMw2xaCZT4Ob8bdV5CxkErkHh-m2XUUqCKZS3WYXNYIBUltNlKIUTrHi4M1Z8SL3l3_EPp-5eOPltdS648bpVGYXJYIFZdUQc6c-waYIhOMSS_-cS19HiHZn4xZe4s65dGN8u5';
 
@@ -1739,6 +1755,62 @@ describe('handleAnything', () => {
 
             // http:// should not match the https:// pattern
             await expect(handleAnything(url)).rejects.toThrow();
+        });
+
+        it.each([
+            {
+                name: 'wallet.cashu.me',
+                url: `https://wallet.cashu.me/?token=${validCashuToken}`
+            },
+            {
+                name: 'wallet.nutstash.app',
+                url: `https://wallet.nutstash.app/#${validCashuToken}`
+            },
+            {
+                name: 'arbitrary web wrapper',
+                url: `https://example.com/redeem/${validCashuToken}`
+            }
+        ])('should route to CashuToken for $name URL', async ({ url }) => {
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 16 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+
+            const result = await handleAnything(url);
+
+            expect(result).toEqual([
+                'CashuToken',
+                {
+                    token: validCashuToken,
+                    decoded: expect.any(Object)
+                }
+            ]);
+        });
+
+        it('should return true for arbitrary web wrapper URL from clipboard', async () => {
+            const url = `https://example.com/redeem/${validCashuToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 16 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+
+            const result = await handleAnything(url, undefined, true);
+
+            expect(result).toBe(true);
         });
     });
 });

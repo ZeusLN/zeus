@@ -4,7 +4,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
-import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
+import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -731,9 +731,14 @@ const handleAnything = async (
                     { cancelable: false }
                 );
             });
-    } else if (value.startsWith(ZEUS_ECASH_GIFT_URL)) {
-        // Handle zeusln.com ecash gift URLs - check before lnurl to avoid false matches
-        const cashuToken = value.replace(ZEUS_ECASH_GIFT_URL, '');
+    } else if (
+        /^https:\/\//i.test(value) &&
+        (value.includes('cashuA') || value.includes('cashuB'))
+    ) {
+        // Handle web-wrapped cashu tokens (zeusln.com/e/, wallet.cashu.me/?token=,
+        // wallet.nutstash.app/#, etc.). Must run before lnurl: findlnurl can match
+        // bech32-like substrings inside cashu tokens and misroute the input.
+        const cashuToken = CashuUtils.extractTokenString(value);
         if (CashuUtils.isValidCashuToken(cashuToken)) {
             if (isClipboardValue) return true;
             const cdkToken = await CashuUtils.decodeCashuTokenAsync(cashuToken);
