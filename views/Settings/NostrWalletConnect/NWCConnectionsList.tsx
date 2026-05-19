@@ -24,6 +24,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -414,6 +415,12 @@ export default class NWCConnectionsList extends React.Component<
                     !SettingsStore.settings?.ecash?.enableCashu)
             );
         const HeaderIconSize = shouldReduceIconSize ? 24 : 30;
+        const { settings } = SettingsStore;
+        const isNwcSettingsAvailable =
+            Platform.OS === 'android' ||
+            (BackendUtils.supportsCashuWallet() &&
+                !!settings?.ecash?.enableCashu) ||
+            !!settings?.lightningAddress?.enabled;
         return (
             <Screen>
                 <Header
@@ -473,13 +480,7 @@ export default class NWCConnectionsList extends React.Component<
                                     </TouchableOpacity>
                                 )}
 
-                                {!(
-                                    Platform.OS === 'ios' &&
-                                    (SettingsStore.implementation !==
-                                        'embedded-lnd' ||
-                                        !SettingsStore.settings?.ecash
-                                            ?.enableCashu)
-                                ) && (
+                                {isNwcSettingsAvailable && (
                                     <TouchableOpacity
                                         onPress={() =>
                                             navigation.navigate('NWCSettings')
