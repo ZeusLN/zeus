@@ -7,8 +7,6 @@ import {
 } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 
-import { generateSecureRandom } from 'react-native-securerandom';
-
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
@@ -1269,7 +1267,8 @@ export async function createLndWallet({
         };
     }
 
-    const random = await generateSecureRandom(32);
+    const random = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(random);
     const randomBase64 = Base64Utils.bytesToBase64(random);
 
     const isRestore = walletPassphrase || seedMnemonic;
