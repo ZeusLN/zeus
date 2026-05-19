@@ -1,6 +1,8 @@
-import { getPhoto, getPresetName } from './PhotoUtils';
+import { getPhoto, getPresetName, photoExists } from './PhotoUtils';
+const mockExists = jest.fn();
 jest.mock('react-native-fs', () => ({
-    DocumentDirectoryPath: 'docpath'
+    DocumentDirectoryPath: 'docpath',
+    exists: (...args: any[]) => mockExists(...args)
 }));
 jest.mock('react-native', () => ({
     Image: {
@@ -93,6 +95,42 @@ describe('PhotoUtils', () => {
                     ).toEqual(`zeusillustration${i}${suffix}`);
                 }
             }
+        });
+    });
+
+    describe('photoExists', () => {
+        beforeEach(() => {
+            mockExists.mockReset();
+        });
+
+        it('returns false for undefined or empty values', async () => {
+            expect(await photoExists(undefined)).toBe(false);
+            expect(await photoExists('')).toBe(false);
+            expect(mockExists).not.toHaveBeenCalled();
+        });
+
+        it('returns true for non-rnfs values without hitting the filesystem', async () => {
+            expect(await photoExists('preset://lnd')).toBe(true);
+            expect(await photoExists('file://something.jpg')).toBe(true);
+            expect(await photoExists('https://example.com/x.jpg')).toBe(true);
+            expect(mockExists).not.toHaveBeenCalled();
+        });
+
+        it('returns true when the rnfs:// file exists on disk', async () => {
+            mockExists.mockResolvedValueOnce(true);
+            expect(await photoExists('rnfs://photo_123.png')).toBe(true);
+            expect(mockExists).toHaveBeenCalledWith('docpath/photo_123.png');
+        });
+
+        it('returns false when the rnfs:// file is missing', async () => {
+            mockExists.mockResolvedValueOnce(false);
+            expect(await photoExists('rnfs://missing.png')).toBe(false);
+            expect(mockExists).toHaveBeenCalledWith('docpath/missing.png');
+        });
+
+        it('returns false when RNFS.exists throws', async () => {
+            mockExists.mockRejectedValueOnce(new Error('permission denied'));
+            expect(await photoExists('rnfs://err.png')).toBe(false);
         });
     });
 });

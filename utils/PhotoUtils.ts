@@ -75,4 +75,15 @@ const getPresetName = (assetUri: string): string => {
         .toLowerCase();
 };
 
-export { getPhoto, getPresetName };
+const photoExists = async (photo: string | undefined): Promise<boolean> => {
+    if (!photo) return false;
+    if (!photo.startsWith('rnfs://')) return true;
+    const fileName = photo.replace('rnfs://', '');
+    try {
+        return await RNFS.exists(`${RNFS.DocumentDirectoryPath}/${fileName}`);
+    } catch {
+        return false;
+    }
+};
+
+export { getPhoto, getPresetName, photoExists };

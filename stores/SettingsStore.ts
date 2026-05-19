@@ -8,6 +8,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
+import { photoExists } from '../utils/PhotoUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
     DEFAULT_SCORER_URL,
@@ -1942,6 +1943,8 @@ export default class SettingsStore {
                 }
             }
 
+            await this.cleanupMissingNodePhotos();
+
             this.updateNodeProperties(this.settings);
         } catch (error) {
             console.error('Could not load settings', error);
@@ -1951,6 +1954,32 @@ export default class SettingsStore {
         }
 
         return this.settings;
+    };
+
+    // Custom wallet photos are stored as files in DocumentDirectoryPath and
+    // referenced by `rnfs://<filename>`. The file is supposed to be device-local, so a
+    // reference can point to a missing file.
+    // Clear those references so the UI falls back to
+    // the default identicon instead of rendering a broken image.
+    private cleanupMissingNodePhotos = async () => {
+        const nodes = this.settings?.nodes;
+        if (!Array.isArray(nodes) || nodes.length === 0) return;
+
+        let changed = false;
+        for (const node of nodes) {
+            if (!node?.photo?.startsWith('rnfs://')) continue;
+            const exists = await photoExists(node.photo);
+            if (!exists) {
+                runInAction(() => {
+                    node.photo = undefined;
+                });
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await Storage.setItem(STORAGE_KEY, this.settings);
+        }
     };
 
     public async setSettings(settings: any) {
