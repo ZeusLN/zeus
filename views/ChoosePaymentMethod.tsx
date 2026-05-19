@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
-import bolt11 from 'bolt11';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
@@ -102,7 +102,7 @@ export default class ChoosePaymentMethod extends React.Component<
 
     private decodeSatAmount(lightning: string): string | undefined {
         try {
-            const decoded = bolt11.decode(lightning);
+            const decoded = Bolt11Utils.decode(lightning);
             const invoice = new Invoice(decoded);
             return invoice?.getRequestAmount?.toString() ?? undefined;
         } catch {
