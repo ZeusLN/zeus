@@ -18,6 +18,13 @@ interface FilterOption {
     value: boolean;
 }
 
+const FILTER_OPTION_LOCALE_KEYS: Record<string, string> = {
+    online: 'general.online',
+    offline: 'general.offline',
+    announced: 'views.Wallet.Channels.announced',
+    unannounced: 'views.Wallet.Channels.unannounced'
+};
+
 @inject('ChannelsStore')
 @observer
 export class FilterOptions extends React.PureComponent<FilterOptionsProps> {
@@ -72,7 +79,7 @@ export class FilterOptions extends React.PureComponent<FilterOptionsProps> {
         >
             <View>
                 <Body small bold color={item.value ? 'highlight' : 'text'}>
-                    {localeString(`views.Wallet.Channels.${item.name}`)}
+                    {localeString(FILTER_OPTION_LOCALE_KEYS[item.name])}
                 </Body>
             </View>
         </TouchableHighlight>
