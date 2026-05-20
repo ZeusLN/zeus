@@ -484,9 +484,21 @@ export default class NostrWalletConnectStore {
             if (!this.walletServiceKeys?.privateKey) {
                 await this.loadWalletServiceKeys();
             }
-            const { nodeInfo } = this.nodeInfoStore;
-            const nodePubkey = nodeInfo.nodeId;
+            if (
+                BackendUtils.supportsNodeInfo() &&
+                !this.getCurrentWalletPubkey()
+            ) {
+                await this.nodeInfoStore.getNodeInfo();
+            }
+            const nodePubkey = this.getCurrentWalletPubkey();
             const { implementation } = this.settingsStore;
+            if (!nodePubkey) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                    )
+                );
+            }
 
             if (!this.nwcWalletServices.has(params.relayUrl)) {
                 this.nwcWalletServices.set(
@@ -707,6 +719,37 @@ export default class NostrWalletConnectStore {
             return { success: false };
         }
     };
+    /** Stable node pubkey used to scope NWC connections to the active node/account. */
+    private getCurrentWalletPubkey(): string {
+        const nodeId = this.nodeInfoStore.nodeInfo?.nodeId;
+        if (nodeId) return nodeId;
+
+        const { implementation, lndhubUrl, username } = this.settingsStore;
+        if (implementation === 'lndhub' && lndhubUrl && username) {
+            return `lndhub:${lndhubUrl}:${username}`;
+        }
+        return '';
+    }
+
+    private connectionBelongsToCurrentWallet(
+        connection: Pick<NWCConnectionData, 'nodePubkey' | 'implementation'>
+    ): boolean {
+        const currentNodePubkey = this.getCurrentWalletPubkey();
+        if (!currentNodePubkey || !connection.nodePubkey) {
+            return false;
+        }
+        return (
+            connection.implementation === this.settingsStore.implementation &&
+            connection.nodePubkey === currentNodePubkey
+        );
+    }
+
+    private hasWalletContext(): boolean {
+        return Boolean(
+            this.settingsStore.implementation && this.getCurrentWalletPubkey()
+        );
+    }
+
     @action
     public loadConnections = async () => {
         try {
@@ -714,18 +757,9 @@ export default class NostrWalletConnectStore {
             if (connectionsData) {
                 const connections = JSON.parse(connectionsData);
                 runInAction(() => {
-                    const { nodeInfo } = this.nodeInfoStore;
-                    const { implementation } = this.settingsStore;
-                    const currentNodeId = nodeInfo?.nodeId;
-                    const currentImpl = implementation;
-                    const hasNodeContext =
-                        Boolean(currentNodeId) && Boolean(currentImpl);
-
-                    const filtered = hasNodeContext
-                        ? connections.filter(
-                              (c: NWCConnectionData) =>
-                                  c.nodePubkey === currentNodeId &&
-                                  c.implementation === currentImpl
+                    const filtered = this.hasWalletContext()
+                        ? connections.filter((c: NWCConnectionData) =>
+                              this.connectionBelongsToCurrentWallet(c)
                           )
                         : [];
 
@@ -788,15 +822,9 @@ export default class NostrWalletConnectStore {
             const allConnections: any[] = existingData
                 ? JSON.parse(existingData)
                 : [];
-            const { nodeInfo } = this.nodeInfoStore;
-            const { implementation } = this.settingsStore;
-            const currentNodeId = nodeInfo?.nodeId;
             const filteredExisting = allConnections.filter(
-                (c: any) =>
-                    !(
-                        c.nodePubkey === currentNodeId &&
-                        c.implementation === implementation
-                    )
+                (c: NWCConnectionData) =>
+                    !this.connectionBelongsToCurrentWallet(c)
             );
             const mergedConnections = [
                 ...filteredExisting,
@@ -832,14 +860,8 @@ export default class NostrWalletConnectStore {
         connectionId?: string;
         connectionName?: string;
     }): { connection: NWCConnection | undefined; index: number } => {
-        const { nodeInfo } = this.nodeInfoStore;
-        const { implementation } = this.settingsStore;
-        const currentNodeId = nodeInfo?.nodeId;
         const index = this.connections.findIndex((c) => {
-            const matchesBase =
-                c.nodePubkey === currentNodeId &&
-                c.implementation === implementation;
-            if (!matchesBase) return false;
+            if (!this.connectionBelongsToCurrentWallet(c)) return false;
             if (connectionId) return c.id === connectionId;
             if (connectionName) return c.name === connectionName;
             return false;
@@ -2388,27 +2410,15 @@ export default class NostrWalletConnectStore {
     }
     @computed
     public get activeConnections(): NWCConnection[] {
-        const { nodeInfo } = this.nodeInfoStore;
-        const { implementation } = this.settingsStore;
-        const currentNodeId = nodeInfo?.nodeId;
         return this.connections.filter(
-            (c) =>
-                c.isActive &&
-                c.nodePubkey === currentNodeId &&
-                c.implementation === implementation
+            (c) => c.isActive && this.connectionBelongsToCurrentWallet(c)
         );
     }
 
     @computed
     public get expiredConnections(): NWCConnection[] {
-        const { nodeInfo } = this.nodeInfoStore;
-        const { implementation } = this.settingsStore;
-        const currentNodeId = nodeInfo?.nodeId;
         return this.connections.filter(
-            (c) =>
-                c.isExpired &&
-                c.nodePubkey === currentNodeId &&
-                c.implementation === implementation
+            (c) => c.isExpired && this.connectionBelongsToCurrentWallet(c)
         );
     }
 
