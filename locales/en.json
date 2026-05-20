@@ -1713,6 +1713,7 @@
     "stores.NostrWalletConnectStore.invoiceCreatedNotificationBody": "{{amount}} {{unit}} Lightning invoice created through {{connectionName}}.",
     "stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription": "{{amount}} {{unit}} Lightning invoice through {{connectionName}} · {{description}}",
     "stores.NostrWalletConnectStore.error.failedToInitializeService": "Failed to initialize service",
+    "stores.NostrWalletConnectStore.error.walletIdentityUnavailable": "Wallet identity unavailable. Connect to your wallet and try again.",
     "stores.NostrWalletConnectStore.error.failedToStartService": "Failed to start service",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "Connection name already exists",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Connection not found",
