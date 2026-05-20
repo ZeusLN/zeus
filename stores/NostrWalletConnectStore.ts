@@ -1747,11 +1747,16 @@ export default class NostrWalletConnectStore {
 
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
+        const paymentHash = this.transactionsStore.payment_hash;
 
-        await this.paymentsStore.getPayments();
-        const payment = this.paymentsStore.payments.find(
-            (p) => p.getPaymentRequest === request.invoice
+        const payments: Payment[] = await this.paymentsStore.getPayments();
+
+        const payment = payments.find(
+            (p) =>
+                p.getPaymentRequest === request.invoice ||
+                (paymentHash && p.paymentHash === paymentHash)
         );
+
         if (payment) {
             await this.finalizePayment({
                 id: request.invoice,
