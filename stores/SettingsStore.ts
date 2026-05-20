@@ -400,6 +400,7 @@ export const INTERFACE_KEYS: {
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'Remote', value: '', isHeader: true },
     { key: 'LND (REST)', value: 'lnd' },
+    { key: 'LDK Server', value: 'ldk-server' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
     { key: 'Nostr Wallet Connect', value: 'nostr-wallet-connect' },
@@ -409,6 +410,7 @@ export const INTERFACE_KEYS: {
 export type Implementations =
     | 'embedded-lnd'
     | 'ldk-node'
+    | 'ldk-server'
     | 'lnd'
     | 'lightning-node-connect'
     | 'cln-rest'

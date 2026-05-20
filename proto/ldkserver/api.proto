@@ -1,0 +1,979 @@
+syntax = "proto3";
+package api;
+
+import 'types.proto';
+import 'events.proto';
+
+// Retrieve the latest node info like `node_id`, `current_best_block` etc.
+// See more:
+// - https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.node_id
+// - https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.status
+message GetNodeInfoRequest {
+}
+
+// The response for the `GetNodeInfo` RPC. On failure, a gRPC error status is returned.
+message GetNodeInfoResponse {
+
+  // The hex-encoded `node-id` or public key for our own lightning node.
+  string node_id = 1;
+
+  // The best block to which our Lightning wallet is currently synced.
+  //
+  // Should be always set, will never be `None`.
+  types.BestBlock current_best_block = 3;
+
+  // The timestamp, in seconds since start of the UNIX epoch, when we last successfully synced our Lightning wallet to
+  // the chain tip.
+  //
+  // Will be `None` if the wallet hasn't been synced yet.
+  optional uint64 latest_lightning_wallet_sync_timestamp = 4;
+
+  // The timestamp, in seconds since start of the UNIX epoch, when we last successfully synced our on-chain
+  // wallet to the chain tip.
+  //
+  // Will be `None` if the wallet hasn’t been synced since the node was initialized.
+  optional uint64 latest_onchain_wallet_sync_timestamp = 5;
+
+  // The timestamp, in seconds since start of the UNIX epoch, when we last successfully update our fee rate cache.
+  //
+  // Will be `None` if the cache hasn’t been updated since the node was initialized.
+  optional uint64 latest_fee_rate_cache_update_timestamp = 6;
+
+  // The timestamp, in seconds since start of the UNIX epoch, when the last rapid gossip sync (RGS) snapshot we
+  // successfully applied was generated.
+  //
+  // Will be `None` if RGS isn’t configured or the snapshot hasn’t been updated since the node was initialized.
+  optional uint64 latest_rgs_snapshot_timestamp = 7;
+
+  // The timestamp, in seconds since start of the UNIX epoch, when we last broadcasted a node announcement.
+  //
+  // Will be `None` if we have no public channels or we haven’t broadcasted since the node was initialized.
+  optional uint64  latest_node_announcement_broadcast_timestamp = 8;
+
+  // The addresses the node is currently listening on for incoming connections.
+  //
+  // Will be empty if the node is not listening on any addresses.
+  repeated string listening_addresses = 9;
+
+  // The addresses the node announces to the network.
+  //
+  // Will be empty if no announcement addresses are configured.
+  repeated string announcement_addresses = 10;
+
+  // The node alias, if configured.
+  //
+  // Will be `None` if no alias is configured.
+  optional string node_alias = 11;
+
+  // The node URIs that can be used to connect to this node, in the format `node_id@address`.
+  //
+  // These are constructed from the announcement addresses and the node's public key.
+  // Will be empty if no announcement addresses are configured.
+  repeated string node_uris = 12;
+
+  // The Bitcoin network the node is running on (e.g., "bitcoin", "testnet", "signet", "regtest").
+  types.Network network = 13;
+}
+
+// Retrieve a new on-chain funding address.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.OnchainPayment.html#method.new_address
+message OnchainReceiveRequest {
+}
+
+// The response for the `OnchainReceive` RPC. On failure, a gRPC error status is returned.
+message OnchainReceiveResponse {
+
+  // A Bitcoin on-chain address.
+  string address = 1;
+}
+
+// Send an on-chain payment to the given address.
+message OnchainSendRequest {
+
+  // The address to send coins to.
+  string address = 1;
+
+  // The amount in satoshis to send.
+  // While sending the specified amount, we will respect any on-chain reserve we need to keep,
+  // i.e., won't allow to cut into `total_anchor_channels_reserve_sats`.
+  // See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.OnchainPayment.html#method.send_to_address
+  optional uint64 amount_sats = 2;
+
+  // If set, the amount_sats field should be unset.
+  // It indicates that node will send full balance to the specified address.
+  //
+  // Please note that when send_all is used this operation will **not** retain any on-chain reserves,
+  // which might be potentially dangerous if you have open Anchor channels for which you can't trust
+  // the counterparty to spend the Anchor output after channel closure.
+  // See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.OnchainPayment.html#method.send_all_to_address
+  optional bool send_all = 3;
+
+  // If `fee_rate_sat_per_vb` is set it will be used on the resulting transaction. Otherwise we'll retrieve
+  // a reasonable estimate from BitcoinD.
+  optional uint64 fee_rate_sat_per_vb = 4;
+}
+
+// The response for the `OnchainSend` RPC. On failure, a gRPC error status is returned.
+message OnchainSendResponse {
+
+  // The transaction ID of the broadcasted transaction.
+  string txid = 1;
+}
+
+// Return a BOLT11 payable invoice that can be used to request and receive a payment
+// for the given amount, if specified.
+// The inbound payment will be automatically claimed upon arrival.
+// See more:
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive_variable_amount
+message Bolt11ReceiveRequest {
+
+  // The amount in millisatoshi to send. If unset, a "zero-amount" or variable-amount invoice is returned.
+  optional uint64 amount_msat = 1;
+
+  // An optional description to attach along with the invoice.
+  // Will be set in the description field of the encoded payment request.
+  types.Bolt11InvoiceDescription description = 2;
+
+  // Invoice expiry time in seconds.
+  uint32 expiry_secs = 3;
+}
+
+// The response for the `Bolt11Receive` RPC. On failure, a gRPC error status is returned.
+message Bolt11ReceiveResponse {
+
+  // An invoice for a payment within the Lightning Network.
+  // With the details of the invoice, the sender has all the data necessary to send a payment
+  // to the recipient.
+  string invoice = 1;
+
+  // The hex-encoded 32-byte payment hash.
+  string payment_hash = 2;
+
+  // The hex-encoded 32-byte payment secret.
+  string payment_secret = 3;
+}
+
+// Return a BOLT11 payable invoice for a given payment hash.
+// The inbound payment will NOT be automatically claimed upon arrival.
+// Instead, the payment will need to be manually claimed by calling `Bolt11ClaimForHash`
+// or manually failed by calling `Bolt11FailForHash`.
+// See more:
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive_for_hash
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive_variable_amount_for_hash
+message Bolt11ReceiveForHashRequest {
+
+  // The amount in millisatoshi to receive. If unset, a "zero-amount" or variable-amount invoice is returned.
+  optional uint64 amount_msat = 1;
+
+  // An optional description to attach along with the invoice.
+  // Will be set in the description field of the encoded payment request.
+  types.Bolt11InvoiceDescription description = 2;
+
+  // Invoice expiry time in seconds.
+  uint32 expiry_secs = 3;
+
+  // The hex-encoded 32-byte payment hash to use for the invoice.
+  string payment_hash = 4;
+}
+
+// The response for the `Bolt11ReceiveForHash` RPC. On failure, a gRPC error status is returned.
+message Bolt11ReceiveForHashResponse {
+
+  // An invoice for a payment within the Lightning Network.
+  // With the details of the invoice, the sender has all the data necessary to send a payment
+  // to the recipient.
+  string invoice = 1;
+}
+
+// Manually claim a payment for a given payment hash with the corresponding preimage.
+// This should be used to claim payments created via `Bolt11ReceiveForHash`.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.claim_for_hash
+message Bolt11ClaimForHashRequest {
+
+  // The hex-encoded 32-byte payment hash.
+  // If provided, it will be used to verify that the preimage matches.
+  optional string payment_hash = 1;
+
+  // The amount in millisatoshi that is claimable.
+  // If not provided, skips amount verification.
+  optional uint64 claimable_amount_msat = 2;
+
+  // The hex-encoded 32-byte payment preimage.
+  string preimage = 3;
+}
+
+// The response for the `Bolt11ClaimForHash` RPC. On failure, a gRPC error status is returned.
+message Bolt11ClaimForHashResponse {}
+
+// Manually fail a payment for a given payment hash.
+// This should be used to reject payments created via `Bolt11ReceiveForHash`.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.fail_for_hash
+message Bolt11FailForHashRequest {
+
+  // The hex-encoded 32-byte payment hash.
+  string payment_hash = 1;
+}
+
+// The response for the `Bolt11FailForHash` RPC. On failure, a gRPC error status is returned.
+message Bolt11FailForHashResponse {}
+
+// Return a BOLT11 payable invoice that can be used to request and receive a payment via an
+// LSPS2 just-in-time channel.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive_via_jit_channel
+message Bolt11ReceiveViaJitChannelRequest {
+
+  // The amount in millisatoshi to request.
+  uint64 amount_msat = 1;
+
+  // An optional description to attach along with the invoice.
+  // Will be set in the description field of the encoded payment request.
+  types.Bolt11InvoiceDescription description = 2;
+
+  // Invoice expiry time in seconds.
+  uint32 expiry_secs = 3;
+
+  // Optional upper bound for the total fee an LSP may deduct when opening the JIT channel.
+  optional uint64 max_total_lsp_fee_limit_msat = 4;
+}
+
+// The response for the `Bolt11ReceiveViaJitChannel` RPC. On failure, a gRPC error status is returned.
+message Bolt11ReceiveViaJitChannelResponse {
+
+  // An invoice for a payment within the Lightning Network.
+  string invoice = 1;
+}
+
+// Return a variable-amount BOLT11 invoice that can be used to receive a payment via an LSPS2
+// just-in-time channel.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.receive_variable_amount_via_jit_channel
+message Bolt11ReceiveVariableAmountViaJitChannelRequest {
+
+  // An optional description to attach along with the invoice.
+  // Will be set in the description field of the encoded payment request.
+  types.Bolt11InvoiceDescription description = 1;
+
+  // Invoice expiry time in seconds.
+  uint32 expiry_secs = 2;
+
+  // Optional upper bound for the proportional fee, in parts-per-million millisatoshis, that an
+  // LSP may deduct when opening the JIT channel.
+  optional uint64 max_proportional_lsp_fee_limit_ppm_msat = 3;
+}
+
+// The response for the `Bolt11ReceiveVariableAmountViaJitChannel` RPC. On failure, a gRPC error status is returned.
+message Bolt11ReceiveVariableAmountViaJitChannelResponse {
+
+  // An invoice for a payment within the Lightning Network.
+  string invoice = 1;
+}
+
+
+// Send a payment for a BOLT11 invoice.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt11Payment.html#method.send
+message Bolt11SendRequest {
+
+  // An invoice for a payment within the Lightning Network.
+  string invoice = 1;
+
+  // Set this field when paying a so-called "zero-amount" invoice, i.e., an invoice that leaves the
+  // amount paid to be determined by the user.
+  // This operation will fail if the amount specified is less than the value required by the given invoice.
+  optional uint64 amount_msat = 2;
+
+  // Configuration options for payment routing and pathfinding.
+  optional types.RouteParametersConfig route_parameters = 3;
+
+}
+
+// The response for the `Bolt11Send` RPC. On failure, a gRPC error status is returned.
+message Bolt11SendResponse {
+
+  // An identifier used to uniquely identify a payment in hex-encoded form.
+  string payment_id = 1;
+}
+
+// Returns a BOLT12 offer for the given amount, if specified.
+//
+// See more:
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt12Payment.html#method.receive
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt12Payment.html#method.receive_variable_amount
+message Bolt12ReceiveRequest {
+
+  // An optional description to attach along with the offer.
+  // Will be set in the description field of the encoded offer.
+  string description = 1;
+
+  // The amount in millisatoshi to send. If unset, a "zero-amount" or variable-amount offer is returned.
+  optional uint64 amount_msat = 2;
+
+  // Offer expiry time in seconds.
+  optional uint32 expiry_secs = 3;
+
+  // If set, it represents the number of items requested, can only be set for fixed-amount offers.
+  optional uint64 quantity = 4;
+}
+
+// The response for the `Bolt12Receive` RPC. On failure, a gRPC error status is returned.
+message Bolt12ReceiveResponse {
+
+  // An offer for a payment within the Lightning Network.
+  // With the details of the offer, the sender has all the data necessary to send a payment
+  // to the recipient.
+  string offer = 1;
+
+  // The hex-encoded offer id.
+  string offer_id = 2;
+}
+
+// Send a payment for a BOLT12 offer.
+// See more:
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt12Payment.html#method.send
+// - https://docs.rs/ldk-node/latest/ldk_node/payment/struct.Bolt12Payment.html#method.send_using_amount
+message Bolt12SendRequest {
+
+  // An offer for a payment within the Lightning Network.
+  string offer = 1;
+
+  // Set this field when paying a so-called "zero-amount" offer, i.e., an offer that leaves the
+  // amount paid to be determined by the user.
+  // This operation will fail if the amount specified is less than the value required by the given offer.
+  optional uint64 amount_msat = 2;
+
+  // If set, it represents the number of items requested.
+  optional uint64 quantity = 3;
+
+  // If set, it will be seen by the recipient and reflected back in the invoice.
+  optional string payer_note = 4;
+
+  // Configuration options for payment routing and pathfinding.
+  optional types.RouteParametersConfig route_parameters = 5;
+}
+
+// The response for the `Bolt12Send` RPC. On failure, a gRPC error status is returned.
+message Bolt12SendResponse {
+
+  // An identifier used to uniquely identify a payment in hex-encoded form.
+  string payment_id = 1;
+}
+
+// Send a spontaneous payment, also known as "keysend", to a node.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.SpontaneousPayment.html#method.send
+message SpontaneousSendRequest {
+  // The amount in millisatoshis to send.
+  uint64 amount_msat = 1;
+
+  // The hex-encoded public key of the node to send the payment to.
+  string node_id = 2;
+
+  // Configuration options for payment routing and pathfinding.
+  optional types.RouteParametersConfig route_parameters = 3;
+}
+
+// The response for the `SpontaneousSend` RPC. On failure, a gRPC error status is returned.
+message SpontaneousSendResponse {
+  // An identifier used to uniquely identify a payment in hex-encoded form.
+  string payment_id = 1;
+}
+
+// Creates a new outbound channel to the given remote node.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.connect_open_channel
+message OpenChannelRequest {
+
+  // The hex-encoded public key of the node to open a channel with.
+  string node_pubkey = 1;
+
+  // An address which can be used to connect to a remote peer.
+  // It can be of type IPv4:port, IPv6:port, OnionV3:port or hostname:port
+  string address = 2;
+
+  // The amount of satoshis the caller is willing to commit to the channel.
+  uint64 channel_amount_sats = 3;
+
+  // The amount of satoshis to push to the remote side as part of the initial commitment state.
+  optional uint64 push_to_counterparty_msat = 4;
+
+  // The channel configuration to be used for opening this channel. If unset, default ChannelConfig is used.
+  optional types.ChannelConfig channel_config = 5;
+
+  // Whether the channel should be public.
+  bool announce_channel = 6;
+
+  // Allow the counterparty to spend all its channel balance. This cannot be set together with `announce_channel`.
+  bool disable_counterparty_reserve = 7;
+}
+
+// The response for the `OpenChannel` RPC. On failure, a gRPC error status is returned.
+message OpenChannelResponse {
+
+  // The local channel id of the created channel that user can use to refer to channel.
+  string user_channel_id = 1;
+}
+
+// Increases the channel balance by the given amount.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.splice_in
+message SpliceInRequest {
+
+  // The local `user_channel_id` of the channel.
+  string user_channel_id = 1;
+
+  // The hex-encoded public key of the channel's counterparty node.
+  string counterparty_node_id = 2;
+
+  // The amount of sats to splice into the channel.
+  uint64 splice_amount_sats = 3;
+}
+
+// The response for the `SpliceIn` RPC. On failure, a gRPC error status is returned.
+message SpliceInResponse {}
+
+// Decreases the channel balance by the given amount.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.splice_out
+message SpliceOutRequest {
+
+  // The local `user_channel_id` of this channel.
+  string user_channel_id = 1;
+
+  // The hex-encoded public key of the channel's counterparty node.
+  string counterparty_node_id = 2;
+
+  // A Bitcoin on-chain address to send the spliced-out funds.
+  //
+  // If not set, an address from the node's on-chain wallet will be used.
+  optional string address = 3;
+
+  // The amount of sats to splice out of the channel.
+  uint64 splice_amount_sats = 4;
+}
+
+// The response for the `SpliceOut` RPC. On failure, a gRPC error status is returned.
+message SpliceOutResponse {
+
+  // The Bitcoin on-chain address where the funds will be sent.
+  string address = 1;
+}
+
+// Update the config for a previously opened channel.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.update_channel_config
+message UpdateChannelConfigRequest {
+
+  // The local `user_channel_id` of this channel.
+  string user_channel_id = 1;
+
+  // The hex-encoded public key of the counterparty node to update channel config with.
+  string counterparty_node_id = 2;
+
+  // The updated channel configuration settings for a channel.
+  types.ChannelConfig channel_config = 3;
+}
+
+// The response for the `UpdateChannelConfig` RPC. On failure, a gRPC error status is returned.
+message UpdateChannelConfigResponse {
+}
+
+// Closes the channel specified by given request.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.close_channel
+message CloseChannelRequest {
+
+  // The local `user_channel_id` of this channel.
+  string user_channel_id = 1;
+
+  // The hex-encoded public key of the node to close a channel with.
+  string counterparty_node_id = 2;
+}
+
+// The response for the `CloseChannel` RPC. On failure, a gRPC error status is returned.
+message CloseChannelResponse {}
+
+// Force closes the channel specified by given request.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.force_close_channel
+message ForceCloseChannelRequest {
+  // The local `user_channel_id` of this channel.
+  string user_channel_id = 1;
+  // The hex-encoded public key of the node to close a channel with.
+  string counterparty_node_id = 2;
+  // The reason for force-closing.
+  optional string force_close_reason = 3;
+}
+
+// The response for the `ForceCloseChannel` RPC. On failure, a gRPC error status is returned.
+message ForceCloseChannelResponse {}
+
+// Returns a list of known channels.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.list_channels
+message ListChannelsRequest {}
+
+// The response for the `ListChannels` RPC. On failure, a gRPC error status is returned.
+message ListChannelsResponse {
+
+  // List of channels.
+  repeated types.Channel channels = 1;
+}
+
+// Returns payment details for a given payment_id.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.payment
+message GetPaymentDetailsRequest {
+  // An identifier used to uniquely identify a payment in hex-encoded form.
+  string payment_id = 1;
+}
+
+// The response for the `GetPaymentDetails` RPC. On failure, a gRPC error status is returned.
+message GetPaymentDetailsResponse {
+  // Represents a payment.
+  // Will be `None` if payment doesn't exist.
+  types.Payment payment = 1;
+}
+
+// Retrieves list of all payments.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.list_payments
+message ListPaymentsRequest {
+  // `page_token` is a pagination token.
+  //
+  // To query for the first page, `page_token` must not be specified.
+  //
+  // For subsequent pages, use the value that was returned as `next_page_token` in the previous
+  // page's response.
+  optional types.PageToken page_token = 1;
+}
+
+// The response for the `ListPayments` RPC. On failure, a gRPC error status is returned.
+message ListPaymentsResponse {
+  // List of payments.
+  repeated types.Payment payments = 1;
+
+  // `next_page_token` is a pagination token, used to retrieve the next page of results.
+  // Use this value to query for next-page of paginated operation, by specifying
+  // this value as the `page_token` in the next request.
+  //
+  // If `next_page_token` is `None`, then the "last page" of results has been processed and
+  // there is no more data to be retrieved.
+  //
+  // If `next_page_token` is not `None`, it does not necessarily mean that there is more data in the
+  // result set. The only way to know when you have reached the end of the result set is when
+  // `next_page_token` is `None`.
+  //
+  // **Caution**: Clients must not assume a specific number of records to be present in a page for
+  // paginated response.
+  optional types.PageToken next_page_token = 2;
+}
+
+// Retrieves list of all forwarded payments.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/enum.Event.html#variant.PaymentForwarded
+message ListForwardedPaymentsRequest {
+  // `page_token` is a pagination token.
+  //
+  // To query for the first page, `page_token` must not be specified.
+  //
+  // For subsequent pages, use the value that was returned as `next_page_token` in the previous
+  // page's response.
+  optional types.PageToken page_token = 1;
+}
+
+// The response for the `ListForwardedPayments` RPC. On failure, a gRPC error status is returned.
+message ListForwardedPaymentsResponse {
+  // List of forwarded payments.
+  repeated types.ForwardedPayment forwarded_payments = 1;
+
+  // `next_page_token` is a pagination token, used to retrieve the next page of results.
+  // Use this value to query for next-page of paginated operation, by specifying
+  // this value as the `page_token` in the next request.
+  //
+  // If `next_page_token` is `None`, then the "last page" of results has been processed and
+  // there is no more data to be retrieved.
+  //
+  // If `next_page_token` is not `None`, it does not necessarily mean that there is more data in the
+  // result set. The only way to know when you have reached the end of the result set is when
+  // `next_page_token` is `None`.
+  //
+  // **Caution**: Clients must not assume a specific number of records to be present in a page for
+  // paginated response.
+  optional types.PageToken next_page_token = 2;
+}
+
+// Sign a message with the node's secret key.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.sign_message
+message SignMessageRequest {
+  // The message to sign, as raw bytes.
+  bytes message = 1;
+}
+
+// The response for the `SignMessage` RPC. On failure, a gRPC error status is returned.
+message SignMessageResponse {
+  // The signature of the message, as a zbase32-encoded string.
+  string signature = 1;
+}
+
+// Verify a signature against a message and public key.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.verify_signature
+message VerifySignatureRequest {
+  // The message that was signed, as raw bytes.
+  bytes message = 1;
+
+  // The signature to verify, as a zbase32-encoded string.
+  string signature = 2;
+
+  // The hex-encoded public key of the signer.
+  string public_key = 3;
+}
+
+// The response for the `VerifySignature` RPC. On failure, a gRPC error status is returned.
+message VerifySignatureResponse {
+  // Whether the signature is valid.
+  bool valid = 1;
+}
+
+// Export the pathfinding scores used by the router.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.export_pathfinding_scores
+message ExportPathfindingScoresRequest {}
+
+// The response for the `ExportPathfindingScores` RPC. On failure, a gRPC error status is returned.
+message ExportPathfindingScoresResponse {
+  // The serialized pathfinding scores data.
+  bytes scores = 1;
+}
+
+// Retrieves an overview of all known balances.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.list_balances
+message GetBalancesRequest {}
+
+// The response for the `GetBalances` RPC. On failure, a gRPC error status is returned.
+message GetBalancesResponse {
+  // The total balance of our on-chain wallet.
+  uint64 total_onchain_balance_sats = 1;
+
+  // The currently spendable balance of our on-chain wallet.
+  //
+  // This includes any sufficiently confirmed funds, minus `total_anchor_channels_reserve_sats`.
+  uint64 spendable_onchain_balance_sats = 2;
+
+  // The share of our total balance that we retain as an emergency reserve to (hopefully) be
+  // able to spend the Anchor outputs when one of our channels is closed.
+  uint64 total_anchor_channels_reserve_sats = 3;
+
+  // The total balance that we would be able to claim across all our Lightning channels.
+  //
+  // Note this excludes balances that we are unsure if we are able to claim (e.g., as we are
+  // waiting for a preimage or for a timeout to expire). These balances will however be included
+  // as `MaybePreimageClaimableHTLC` and `MaybeTimeoutClaimableHTLC` in `lightning_balances`.
+  uint64 total_lightning_balance_sats = 4;
+
+  // A detailed list of all known Lightning balances that would be claimable on channel closure.
+  //
+  // Note that less than the listed amounts are spendable over lightning as further reserve
+  // restrictions apply. Please refer to `Channel::outbound_capacity_msat` and
+  // Channel::next_outbound_htlc_limit_msat as returned by `ListChannels`
+  // for a better approximation of the spendable amounts.
+  repeated types.LightningBalance lightning_balances = 5;
+
+  // A detailed list of balances currently being swept from the Lightning to the on-chain
+  // wallet.
+  //
+  // These are balances resulting from channel closures that may have been encumbered by a
+  // delay, but are now being claimed and useable once sufficiently confirmed on-chain.
+  //
+  // Note that, depending on the sync status of the wallets, swept balances listed here might or
+  // might not already be accounted for in `total_onchain_balance_sats`.
+  repeated types.PendingSweepBalance pending_balances_from_channel_closures = 6;
+}
+
+// Connect to a peer on the Lightning Network.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.connect
+message ConnectPeerRequest {
+  // The hex-encoded public key of the node to connect to.
+  string node_pubkey = 1;
+
+  // An address which can be used to connect to a remote peer.
+  // It can be of type IPv4:port, IPv6:port, OnionV3:port or hostname:port
+  string address = 2;
+
+  // Whether to persist the peer connection, i.e., whether the peer will be re-connected on
+  // restart.
+  bool persist = 3;
+}
+
+// The response for the `ConnectPeer` RPC. On failure, a gRPC error status is returned.
+message ConnectPeerResponse {}
+
+// Disconnect from a peer and remove it from the peer store.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.disconnect
+message DisconnectPeerRequest {
+  // The hex-encoded public key of the node to disconnect from.
+  string node_pubkey = 1;
+}
+
+// The response for the `DisconnectPeer` RPC. On failure, a gRPC error status is returned.
+message DisconnectPeerResponse {}
+
+// Returns a list of peers.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/struct.Node.html#method.list_peers
+message ListPeersRequest {}
+
+// The response for the `ListPeers` RPC. On failure, a gRPC error status is returned.
+message ListPeersResponse {
+
+  // List of peers.
+  repeated types.Peer peers = 1;
+}
+
+// Returns a list of all known short channel IDs in the network graph.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/graph/struct.NetworkGraph.html#method.list_channels
+message GraphListChannelsRequest {}
+
+// The response for the `GraphListChannels` RPC. On failure, a gRPC error status is returned.
+message GraphListChannelsResponse {
+  // List of short channel IDs known to the network graph.
+  repeated uint64 short_channel_ids = 1;
+}
+
+// Returns information on a channel with the given short channel ID from the network graph.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/graph/struct.NetworkGraph.html#method.channel
+message GraphGetChannelRequest {
+  // The short channel ID to look up.
+  uint64 short_channel_id = 1;
+}
+
+// The response for the `GraphGetChannel` RPC. On failure, a gRPC error status is returned.
+message GraphGetChannelResponse {
+  // The channel information.
+  types.GraphChannel channel = 1;
+}
+
+// Returns a list of all known node IDs in the network graph.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/graph/struct.NetworkGraph.html#method.list_nodes
+message GraphListNodesRequest {}
+
+// The response for the `GraphListNodes` RPC. On failure, a gRPC error status is returned.
+message GraphListNodesResponse {
+  // List of hex-encoded node IDs known to the network graph.
+  repeated string node_ids = 1;
+}
+
+// Send a payment given a BIP 21 URI or BIP 353 Human-Readable Name.
+//
+// This method parses the provided URI string and attempts to send the payment. If the URI
+// has an offer and/or invoice, it will try to pay the offer first followed by the invoice.
+// If they both fail, the on-chain payment will be paid.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/payment/struct.UnifiedPayment.html#method.send
+message UnifiedSendRequest {
+
+  // A BIP 21 URI or BIP 353 Human-Readable Name to pay.
+  string uri = 1;
+
+  // The amount in millisatoshis to send. Required for "zero-amount" or variable-amount URIs.
+  optional uint64 amount_msat = 2;
+
+  // Configuration options for payment routing and pathfinding.
+  optional types.RouteParametersConfig route_parameters = 3;
+}
+
+// The response for the `UnifiedSend` RPC. On failure, a gRPC error status is returned.
+message UnifiedSendResponse {
+
+  oneof payment_result {
+
+    // An on-chain payment was made. Contains the transaction ID.
+    string txid = 1;
+
+    // A BOLT11 payment was made. Contains the payment ID in hex-encoded form.
+    string bolt11_payment_id = 2;
+
+    // A BOLT12 payment was made. Contains the payment ID in hex-encoded form.
+    string bolt12_payment_id = 3;
+  }
+}
+
+// Returns information on a node with the given ID from the network graph.
+// See more: https://docs.rs/ldk-node/latest/ldk_node/graph/struct.NetworkGraph.html#method.node
+message GraphGetNodeRequest {
+  // The hex-encoded node ID to look up.
+  string node_id = 1;
+}
+
+// The response for the `GraphGetNode` RPC. On failure, a gRPC error status is returned.
+message GraphGetNodeResponse {
+  // The node information.
+  types.GraphNode node = 1;
+}
+
+// Decode a BOLT11 invoice and return its parsed fields.
+// This does not require a running node — it only parses the invoice string.
+message DecodeInvoiceRequest {
+  // The BOLT11 invoice string to decode.
+  string invoice = 1;
+}
+
+// The response for the `DecodeInvoice` RPC. On failure, a gRPC error status is returned.
+message DecodeInvoiceResponse {
+  // The hex-encoded public key of the destination node.
+  string destination = 1;
+
+  // The hex-encoded 32-byte payment hash.
+  string payment_hash = 2;
+
+  // The amount in millisatoshis, if specified in the invoice.
+  optional uint64 amount_msat = 3;
+
+  // The creation timestamp in seconds since the UNIX epoch.
+  uint64 timestamp = 4;
+
+  // The invoice expiry time in seconds.
+  uint64 expiry = 5;
+
+  // The invoice description, if a direct description was provided.
+  optional string description = 6;
+
+  // The hex-encoded SHA-256 hash of the description, if a description hash was used.
+  optional string description_hash = 14;
+
+  // The fallback on-chain address, if any.
+  optional string fallback_address = 7;
+
+  // The minimum final CLTV expiry delta.
+  uint64 min_final_cltv_expiry_delta = 8;
+
+  // The hex-encoded 32-byte payment secret.
+  string payment_secret = 9;
+
+  // Route hints for finding a path to the payee.
+  repeated types.Bolt11RouteHint route_hints = 10;
+
+  // Feature bits advertised in the invoice, keyed by bit number.
+  map<uint32, types.Bolt11Feature> features = 11;
+
+  // The currency or network (e.g., "bitcoin", "testnet", "signet", "regtest").
+  string currency = 12;
+
+  // The payment metadata, hex-encoded. Only present if the invoice includes payment metadata.
+  optional string payment_metadata = 13;
+
+  // Whether the invoice has expired.
+  bool is_expired = 15;
+}
+
+// Decode a BOLT12 offer and return its parsed fields.
+// This does not require a running node — it only parses the offer string.
+message DecodeOfferRequest {
+  // The BOLT12 offer string to decode.
+  string offer = 1;
+}
+
+// The response for the `DecodeOffer` RPC. On failure, a gRPC error status is returned.
+message DecodeOfferResponse {
+  // The hex-encoded offer ID.
+  string offer_id = 1;
+
+  // The description of the offer, if any.
+  optional string description = 2;
+
+  // The issuer of the offer, if any.
+  optional string issuer = 3;
+
+  // The amount, if specified.
+  types.OfferAmount amount = 4;
+
+  // The hex-encoded public key used by the issuer to sign invoices, if any.
+  optional string issuer_signing_pubkey = 5;
+
+  // The absolute expiry time in seconds since the UNIX epoch, if any.
+  optional uint64 absolute_expiry = 6;
+
+  // The supported quantity of items.
+  types.OfferQuantity quantity = 7;
+
+  // Blinded paths to the offer recipient.
+  repeated types.BlindedPath paths = 8;
+
+  // Feature bits advertised in the offer, keyed by bit number.
+  map<uint32, types.Bolt11Feature> features = 9;
+
+  // Supported blockchain networks (e.g., "bitcoin", "testnet", "signet", "regtest").
+  repeated string chains = 10;
+
+  // The metadata, hex-encoded, if any.
+  optional string metadata = 11;
+
+  // Whether the offer has expired.
+  bool is_expired = 12;
+}
+
+// Subscribe to a stream of server events.
+message SubscribeEventsRequest {}
+
+service LightningNode {
+  // Retrieve the latest node info.
+  rpc GetNodeInfo(GetNodeInfoRequest) returns (GetNodeInfoResponse);
+  // Retrieve an overview of all known balances.
+  rpc GetBalances(GetBalancesRequest) returns (GetBalancesResponse);
+  // Retrieve a new on-chain funding address.
+  rpc OnchainReceive(OnchainReceiveRequest) returns (OnchainReceiveResponse);
+  // Send an on-chain payment to the given address.
+  rpc OnchainSend(OnchainSendRequest) returns (OnchainSendResponse);
+  // Return a BOLT11 payable invoice.
+  rpc Bolt11Receive(Bolt11ReceiveRequest) returns (Bolt11ReceiveResponse);
+  // Return a BOLT11 payable invoice for a given payment hash.
+  rpc Bolt11ReceiveForHash(Bolt11ReceiveForHashRequest) returns (Bolt11ReceiveForHashResponse);
+  // Manually claim a payment for a given payment hash.
+  rpc Bolt11ClaimForHash(Bolt11ClaimForHashRequest) returns (Bolt11ClaimForHashResponse);
+  // Manually fail a payment for a given payment hash.
+  rpc Bolt11FailForHash(Bolt11FailForHashRequest) returns (Bolt11FailForHashResponse);
+  // Return a BOLT11 invoice for receiving via a JIT channel.
+  rpc Bolt11ReceiveViaJitChannel(Bolt11ReceiveViaJitChannelRequest) returns (Bolt11ReceiveViaJitChannelResponse);
+  // Return a variable-amount BOLT11 invoice for receiving via a JIT channel.
+  rpc Bolt11ReceiveVariableAmountViaJitChannel(Bolt11ReceiveVariableAmountViaJitChannelRequest) returns (Bolt11ReceiveVariableAmountViaJitChannelResponse);
+  // Send a payment for a BOLT11 invoice.
+  rpc Bolt11Send(Bolt11SendRequest) returns (Bolt11SendResponse);
+  // Return a BOLT12 offer.
+  rpc Bolt12Receive(Bolt12ReceiveRequest) returns (Bolt12ReceiveResponse);
+  // Send a payment for a BOLT12 offer.
+  rpc Bolt12Send(Bolt12SendRequest) returns (Bolt12SendResponse);
+  // Send a spontaneous payment (keysend).
+  rpc SpontaneousSend(SpontaneousSendRequest) returns (SpontaneousSendResponse);
+  // Create a new outbound channel.
+  rpc OpenChannel(OpenChannelRequest) returns (OpenChannelResponse);
+  // Splice funds into a channel.
+  rpc SpliceIn(SpliceInRequest) returns (SpliceInResponse);
+  // Splice funds out of a channel.
+  rpc SpliceOut(SpliceOutRequest) returns (SpliceOutResponse);
+  // Update the config for a channel.
+  rpc UpdateChannelConfig(UpdateChannelConfigRequest) returns (UpdateChannelConfigResponse);
+  // Close a channel cooperatively.
+  rpc CloseChannel(CloseChannelRequest) returns (CloseChannelResponse);
+  // Force close a channel.
+  rpc ForceCloseChannel(ForceCloseChannelRequest) returns (ForceCloseChannelResponse);
+  // List known channels.
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  // Get payment details by payment ID.
+  rpc GetPaymentDetails(GetPaymentDetailsRequest) returns (GetPaymentDetailsResponse);
+  // List all payments.
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+  // List all forwarded payments.
+  rpc ListForwardedPayments(ListForwardedPaymentsRequest) returns (ListForwardedPaymentsResponse);
+  // Connect to a peer.
+  rpc ConnectPeer(ConnectPeerRequest) returns (ConnectPeerResponse);
+  // Disconnect from a peer.
+  rpc DisconnectPeer(DisconnectPeerRequest) returns (DisconnectPeerResponse);
+  // List peers.
+  rpc ListPeers(ListPeersRequest) returns (ListPeersResponse);
+  // Sign a message with the node's secret key.
+  rpc SignMessage(SignMessageRequest) returns (SignMessageResponse);
+  // Verify a signature against a message and public key.
+  rpc VerifySignature(VerifySignatureRequest) returns (VerifySignatureResponse);
+  // Export the pathfinding scores used by the router.
+  rpc ExportPathfindingScores(ExportPathfindingScoresRequest) returns (ExportPathfindingScoresResponse);
+  // Send a payment given a BIP 21 URI or BIP 353 Human-Readable Name.
+  rpc UnifiedSend(UnifiedSendRequest) returns (UnifiedSendResponse);
+  // Decode a BOLT11 invoice and return its parsed fields.
+  rpc DecodeInvoice(DecodeInvoiceRequest) returns (DecodeInvoiceResponse);
+  // Decode a BOLT12 offer and return its parsed fields.
+  rpc DecodeOffer(DecodeOfferRequest) returns (DecodeOfferResponse);
+  // List all known short channel IDs in the network graph.
+  rpc GraphListChannels(GraphListChannelsRequest) returns (GraphListChannelsResponse);
+  // Get channel info from the network graph by short channel ID.
+  rpc GraphGetChannel(GraphGetChannelRequest) returns (GraphGetChannelResponse);
+  // List all known node IDs in the network graph.
+  rpc GraphListNodes(GraphListNodesRequest) returns (GraphListNodesResponse);
+  // Get node info from the network graph by node ID.
+  rpc GraphGetNode(GraphGetNodeRequest) returns (GraphGetNodeResponse);
+  // Subscribe to a stream of server events.
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream events.EventEnvelope);
+}
