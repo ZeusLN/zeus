@@ -83,10 +83,10 @@ import {
     deleteNodeDataDirectoryWithRetry
 } from '../../utils/DataClearUtils';
 import {
-    optimizeNeutrinoPeers,
     createLndWallet,
     stopLnd
 } from '../../utils/LndMobileUtils';
+import { optimizeNeutrinoPeers } from '../../utils/NeutrinoPeersUtils';
 import {
     createLdkNodeWallet,
     stopLdkNode,
@@ -1354,7 +1354,7 @@ export default class WalletConfiguration extends React.Component<
             }
         }
 
-        await optimizeNeutrinoPeers(network === 'Testnet');
+        await optimizeNeutrinoPeers(network?.toLowerCase?.() === 'testnet');
 
         const lndDir = uuidv4();
 
