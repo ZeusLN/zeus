@@ -24,10 +24,11 @@ import SettingsStore, {
 } from '../../../../stores/SettingsStore';
 
 import {
+    bitcoinP2pPort,
     optimizeNeutrinoPeers,
     pingPeer,
     NEUTRINO_PING_THRESHOLD_MS
-} from '../../../../utils/LndMobileUtils';
+} from '../../../../utils/NeutrinoPeersUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
@@ -96,6 +97,8 @@ export default class NeutrinoPeers extends React.Component<
             loading
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+
+        const p2pPort = bitcoinP2pPort(embeddedLndNetwork === 'Testnet');
 
         const mainnetPeersChanged =
             embeddedLndNetwork === 'Mainnet' &&
@@ -288,7 +291,9 @@ export default class NeutrinoPeers extends React.Component<
 
                                                         const result =
                                                             await pingPeer(
-                                                                addPeer
+                                                                addPeer,
+                                                                undefined,
+                                                                p2pPort
                                                             );
                                                         if (result.reachable) {
                                                             this.setState({
@@ -411,7 +416,9 @@ export default class NeutrinoPeers extends React.Component<
 
                                                                     const result =
                                                                         await pingPeer(
-                                                                            item
+                                                                            item,
+                                                                            undefined,
+                                                                            p2pPort
                                                                         );
                                                                     if (
                                                                         result.reachable
@@ -534,31 +541,33 @@ export default class NeutrinoPeers extends React.Component<
                             </View>
                         </ScrollView>
                     </View>
-                    {embeddedLndNetwork === 'Mainnet' && (
-                        <View style={{ marginBottom: 10, marginTop: 10 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
-                                )}
-                                onPress={async () => {
-                                    this.setState({
-                                        loading: true
-                                    });
-                                    await optimizeNeutrinoPeers();
-                                    const { getSettings } = SettingsStore;
-                                    const settings = await getSettings();
-                                    this.setState({
-                                        loading: false,
-                                        neutrinoPeers:
-                                            settings.neutrinoPeersMainnet
-                                    });
+                    <View style={{ marginBottom: 10, marginTop: 10 }}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
+                            )}
+                            onPress={async () => {
+                                this.setState({
+                                    loading: true
+                                });
+                                await optimizeNeutrinoPeers(
+                                    embeddedLndNetwork === 'Testnet'
+                                );
+                                const { getSettings } = SettingsStore;
+                                const settings = await getSettings();
+                                this.setState({
+                                    loading: false,
+                                    neutrinoPeers:
+                                        embeddedLndNetwork === 'Testnet'
+                                            ? settings.neutrinoPeersTestnet
+                                            : settings.neutrinoPeersMainnet
+                                });
 
-                                    restartNeeded();
-                                }}
-                                tertiary
-                            />
-                        </View>
-                    )}
+                                restartNeeded();
+                            }}
+                            tertiary
+                        />
+                    </View>
                     {(dontAllowOtherPeers ||
                         mainnetPeersChanged ||
                         testnetPeersChanged) && (
