@@ -162,12 +162,7 @@ export default class NWCConnectionQR extends React.Component<
                         paddingHorizontal: 15
                     }}
                 >
-                    <CollapsedQR
-                        value={nostrUrl}
-                        hideText={true}
-                        expanded
-                        iconOnly={true}
-                    />
+                    <CollapsedQR value={nostrUrl} hideText={true} expanded />
 
                     {NostrWalletConnectStore.waitingForConnection && (
                         <View style={[styles.loadingContainer]}>

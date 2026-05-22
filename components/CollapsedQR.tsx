@@ -117,9 +117,7 @@ interface CollapsedQRProps {
     collapseText?: string;
     copyText?: string;
     copyValue?: string;
-    iconContainerStyle?: any;
     showSpeed?: boolean;
-    iconOnly?: boolean;
     hideText?: boolean;
     expanded?: boolean;
     textBottom?: boolean;
@@ -177,8 +175,6 @@ export default class CollapsedQR extends React.Component<
             copyText,
             copyValue,
             collapseText,
-            iconContainerStyle,
-            iconOnly,
             hideText,
             expanded,
             textBottom,
@@ -437,13 +433,7 @@ export default class CollapsedQR extends React.Component<
                         onPress={() => this.toggleCollapse()}
                     />
                 )}
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                        gap: showSpeed ? 8 : 40
-                    }}
-                >
+                <View style={[styles.actionRow, { gap: showSpeed ? 8 : 40 }]}>
                     {showSpeed && (
                         <QRSpeedMeterButton
                             showOptions={showSpeedOptions}
@@ -452,26 +442,18 @@ export default class CollapsedQR extends React.Component<
                                     showSpeedOptions: !showSpeedOptions
                                 })
                             }
-                            iconOnly={iconOnly}
+                            iconOnly
                         />
                     )}
                     <CopyButton
-                        iconContainerStyle={
-                            !showSpeed ? iconContainerStyle : undefined
-                        }
                         copyValue={copyValue || value}
                         title={copyText}
-                        iconOnly={iconOnly}
+                        iconOnly
                     />
                     <ShareButton
-                        iconContainerStyle={
-                            supportsNFC && !showSpeed
-                                ? iconContainerStyle
-                                : undefined
-                        }
                         value={copyValue || value}
                         qrRef={tempQRRef}
-                        iconOnly={iconOnly}
+                        iconOnly
                         onPress={handleShare}
                         onShareComplete={() =>
                             this.setState({ tempQRRef: null })
@@ -479,10 +461,7 @@ export default class CollapsedQR extends React.Component<
                         onShareGiftLink={onShareGiftLink}
                     />
                     {supportsNFC && (
-                        <NFCButton
-                            value={copyValue || value}
-                            iconOnly={iconOnly}
-                        />
+                        <NFCButton value={copyValue || value} iconOnly />
                     )}
                 </View>
                 {showSpeedOptions && onQRAnimationSpeedChange && showSpeed && (
@@ -545,6 +524,13 @@ export default class CollapsedQR extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    actionRow: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20
+    },
     value: {
         marginBottom: 15,
         paddingHorizontal: 20,

@@ -114,7 +114,6 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         satAmount={satAmount}
                         displayAmount
                         labelBottom={labelBottom ? label || value : undefined}
-                        iconOnly={true}
                         nfcSupported={nfcSupported}
                     />
                 </ScrollView>

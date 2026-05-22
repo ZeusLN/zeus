@@ -77,7 +77,6 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
                 <CollapsedQR
                     value={getDisplayValue()}
                     copyValue={getCopyValue()}
-                    iconOnly
                     showSpeed={
                         isBcurSelected || (isBbqrSelected && isMultiFrame)
                     }
