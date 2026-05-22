@@ -6,8 +6,12 @@ import Screen from '../../components/Screen';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from '../../components/SuccessErrorMessage';
 
-import { LSPOrderState } from '../../models/LSP';
+import { LSPOrderState, isOrderFree } from '../../models/LSP';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -27,6 +31,9 @@ export default class LSPS7OrderResponse extends React.Component<
         const { orderResponse, orderView, navigation } = this.props;
         const payment = orderResponse?.payment;
         const channel = orderResponse?.channel;
+        // An order is free when the LSP omits every payment option — see
+        // `isOrderFree` for the full definition.
+        const isFreeOrder = isOrderFree(payment);
 
         return (
             <Screen>
@@ -306,7 +313,25 @@ export default class LSPS7OrderResponse extends React.Component<
                             </>
                         )}
                         {orderResponse?.order_state === LSPOrderState.CREATED &&
-                            orderView && (
+                            orderView &&
+                            isFreeOrder && (
+                                <SuccessMessage
+                                    message={localeString(
+                                        'views.LSPS7.freeExtension'
+                                    )}
+                                />
+                            )}
+                        {orderResponse?.order_state ===
+                            LSPOrderState.FAILED && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.LSPS7.extensionFailed'
+                                )}
+                            />
+                        )}
+                        {orderResponse?.order_state === LSPOrderState.CREATED &&
+                            orderView &&
+                            !isFreeOrder && (
                                 <>
                                     {(payment.bolt11?.invoice ||
                                         payment.lightning_invoice ||
