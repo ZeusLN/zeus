@@ -237,6 +237,7 @@ export default class OpenChannel extends React.Component<
         );
 
         this.setState({
+            channelDestination: 'Custom',
             node_pubkey_string: pubkey,
             host,
             suggestImport: ''
