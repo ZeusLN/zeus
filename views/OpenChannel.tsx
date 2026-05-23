@@ -201,14 +201,20 @@ export default class OpenChannel extends React.Component<
         const olympusPubkey = lspConfig.lsps1Pubkey;
         const olympusHost = lspConfig.lsps1Host;
 
+        const resolvedPubkey = node_pubkey_string
+            ? node_pubkey_string
+            : olympusPubkey;
+        const resolvedHost = node_pubkey_string ? host : olympusHost;
+
         this.setState({
             channelDestination: node_pubkey_string
                 ? 'Custom'
                 : 'Olympus by ZEUS',
-            node_pubkey_string: node_pubkey_string
-                ? node_pubkey_string
-                : olympusPubkey,
-            host: node_pubkey_string ? host : olympusHost
+            node_pubkey_string: resolvedPubkey,
+            host: resolvedHost,
+            isNodePubkeyValid:
+                ValidationUtils.validateNodePubkey(resolvedPubkey),
+            isNodeHostValid: ValidationUtils.validateNodeHost(resolvedHost)
         });
     }
 
@@ -240,7 +246,9 @@ export default class OpenChannel extends React.Component<
             channelDestination: 'Custom',
             node_pubkey_string: pubkey,
             host,
-            suggestImport: ''
+            suggestImport: '',
+            isNodePubkeyValid: ValidationUtils.validateNodePubkey(pubkey),
+            isNodeHostValid: ValidationUtils.validateNodeHost(host)
         });
 
         Clipboard.setString('');
