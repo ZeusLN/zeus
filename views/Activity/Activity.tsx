@@ -40,6 +40,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+import EcashSvg from '../../components/SVG/EcashSvg';
+import LightningSvg from '../../components/SVG/LightningSvg';
+import OnChainSvg from '../../components/SVG/OnChainSvg';
 
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
@@ -49,6 +52,11 @@ import CashuToken from '../../models/CashuToken';
 import { SwapType } from '../../models/Swap';
 
 import { LSPOrderState } from '../../models/LSP';
+import {
+    getActivityAmountTheme,
+    getActivityListItemPresentation,
+    ActivityListItemPresentation
+} from '../../utils/ActivityListItemUtils';
 
 interface ActivityProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -94,6 +102,121 @@ interface ActivityListItemProps {
     swapStore: SwapStore;
 }
 
+const activityIconSize = 21;
+const layerIconSize = 18;
+
+const ActivityIcon = ({ name, color }: { name: string; color: string }) => (
+    <Icon
+        name={name}
+        size={activityIconSize}
+        color={color}
+        underlayColor="transparent"
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+    />
+);
+
+const LayerIcon = ({
+    layer
+}: {
+    layer: ActivityListItemPresentation['layer'];
+}) => {
+    if (layer === 'lightning') {
+        return (
+            <LightningSvg
+                width={layerIconSize}
+                height={layerIconSize}
+                circle={false}
+            />
+        );
+    }
+
+    if (layer === 'onchain') {
+        return (
+            <OnChainSvg
+                width={layerIconSize}
+                height={layerIconSize}
+                circle={false}
+            />
+        );
+    }
+
+    if (layer === 'cashu') {
+        return (
+            <EcashSvg
+                width={layerIconSize}
+                height={layerIconSize}
+                circle={false}
+            />
+        );
+    }
+
+    return (
+        <Icon
+            name={layer === 'swap' ? 'sync-alt' : 'account-balance-wallet'}
+            size={layerIconSize}
+            color={themeColor('secondaryText')}
+            underlayColor="transparent"
+            importantForAccessibility="no"
+            accessibilityElementsHidden
+        />
+    );
+};
+
+const ActivityText = ({
+    children,
+    italic = false
+}: {
+    children: React.ReactNode;
+    italic?: boolean;
+}) => (
+    <Text
+        style={{
+            color: themeColor('secondaryText'),
+            fontFamily: 'PPNeueMontreal-Book',
+            fontStyle: italic ? 'italic' : 'normal'
+        }}
+    >
+        {children}
+    </Text>
+);
+
+const LayerSubtitle = ({
+    presentation,
+    detail,
+    status
+}: {
+    presentation: ActivityListItemPresentation;
+    detail?: string;
+    status?: string;
+}) => {
+    const privateDetail = detail
+        ? PrivacyUtils.sensitiveValue({
+              input: detail,
+              condenseAtLength: 100
+          })?.toString()
+        : undefined;
+    const accessibilityLabel = [presentation.layerLabel, status, privateDetail]
+        .filter(Boolean)
+        .join(': ');
+
+    return (
+        <View
+            style={styles.iconTextRow}
+            accessibilityLabel={accessibilityLabel}
+        >
+            <LayerIcon layer={presentation.layer} />
+            {status ? <ActivityText>{status}</ActivityText> : null}
+            {privateDetail ? (
+                <>
+                    <ActivityText>:</ActivityText>
+                    <ActivityText italic>{privateDetail}</ActivityText>
+                </>
+            ) : null}
+        </View>
+    );
+};
+
 const ActivityListItem = observer(
     ({
         item,
@@ -104,152 +227,60 @@ const ActivityListItem = observer(
         swapStore
     }: ActivityListItemProps) => {
         const note = item.getNote;
-        let displayName = item.model;
-        let subTitle = item.model;
+        const presentation = getActivityListItemPresentation(item);
+        const displayName = presentation.title;
+        const displayNameLabel =
+            presentation.directionLabel === presentation.title
+                ? presentation.title
+                : `${presentation.directionLabel}: ${presentation.title}`;
+        let subTitle: React.ReactNode = item.model;
 
         if (item instanceof Invoice) {
-            displayName = item.isPaid
-                ? item.is_amp
-                    ? localeString('views.Activity.youReceivedAmp')
-                    : localeString('views.Activity.youReceived')
-                : item.isExpired
-                ? localeString('views.Activity.expiredRequested')
-                : item.is_amp
-                ? localeString('views.Activity.requestedPaymentAmp')
-                : localeString('views.Activity.requestedPayment');
             const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
             subTitle = (
-                <Text>
-                    {item.isPaid
-                        ? localeString('general.lightning')
-                        : localeString('views.PaymentRequest.title')}
-                    {keysendMessageOrMemo ? ': ' : ''}
-                    {keysendMessageOrMemo ? (
-                        <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue({
-                                input: keysendMessageOrMemo,
-                                condenseAtLength: 100
-                            })?.toString()}
-                        </Text>
-                    ) : (
-                        ''
-                    )}
-                </Text>
+                <LayerSubtitle
+                    presentation={presentation}
+                    detail={keysendMessageOrMemo}
+                />
             );
         } else if (item instanceof CashuToken) {
-            displayName = item.pendingClaim
-                ? localeString('cashu.offlinePending.title')
-                : item.received
-                ? localeString('views.Activity.youReceived')
-                : item.spent
-                ? localeString('views.Activity.youSent')
-                : localeString('general.unspent');
             const memo = item.getMemo;
             subTitle = (
-                <Text>
-                    {localeString('cashu.token')}
-                    {memo ? ': ' : ''}
-                    {memo ? (
-                        <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue({
-                                input: memo,
-                                condenseAtLength: 100
-                            })?.toString()}
-                        </Text>
-                    ) : (
-                        ''
-                    )}
-                </Text>
+                <LayerSubtitle presentation={presentation} detail={memo} />
             );
         } else if (item instanceof CashuInvoice) {
-            displayName = item.isPaid
-                ? localeString('views.Activity.youReceived')
-                : item.isExpired
-                ? localeString('views.Activity.expiredRequested')
-                : localeString('views.Activity.requestedPayment');
             const memo = item.getMemo;
             subTitle = (
-                <Text>
-                    {item.isPaid
-                        ? localeString('general.cashu')
-                        : localeString('views.Cashu.CashuInvoice.title')}
-                    {memo ? ': ' : ''}
-                    {memo ? (
-                        <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue({
-                                input: memo,
-                                condenseAtLength: 100
-                            })?.toString()}
-                        </Text>
-                    ) : (
-                        ''
-                    )}
-                </Text>
+                <LayerSubtitle presentation={presentation} detail={memo} />
             );
         } else if (item instanceof CashuPayment) {
-            displayName = item.isFailed
-                ? localeString('views.Cashu.CashuPayment.failedPayment')
-                : item.isInTransit
-                ? localeString('views.Cashu.CashuPayment.inTransitPayment')
-                : localeString('views.Activity.youSent');
             const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
             subTitle = (
-                <Text>
-                    {localeString('general.cashu')}
-                    {keysendMessageOrMemo ? ': ' : ''}
-                    {keysendMessageOrMemo ? (
-                        <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue({
-                                input: keysendMessageOrMemo,
-                                condenseAtLength: 100
-                            })?.toString()}
-                        </Text>
-                    ) : (
-                        ''
-                    )}
-                </Text>
+                <LayerSubtitle
+                    presentation={presentation}
+                    detail={keysendMessageOrMemo}
+                />
             );
         } else if (item.model === localeString('views.Payment.title')) {
-            displayName = item.isFailed
-                ? localeString('views.Payment.failedPayment')
-                : item.isInTransit
-                ? localeString('views.Payment.inTransitPayment')
-                : localeString('views.Activity.youSent');
             const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
             subTitle = (
-                <Text>
-                    {localeString('general.lightning')}
-                    {keysendMessageOrMemo ? ': ' : ''}
-                    {keysendMessageOrMemo ? (
-                        <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue({
-                                input: keysendMessageOrMemo,
-                                condenseAtLength: 100
-                            })?.toString()}
-                        </Text>
-                    ) : (
-                        ''
-                    )}
-                </Text>
+                <LayerSubtitle
+                    presentation={presentation}
+                    detail={keysendMessageOrMemo}
+                />
             );
         } else if (item.model === localeString('general.transaction')) {
-            displayName =
-                item.getAmount == 0
-                    ? localeString('views.Activity.channelOperation')
-                    : !item.getAmount.toString().includes('-')
-                    ? localeString('views.Activity.youReceived')
-                    : localeString('views.Activity.youSent');
-            subTitle =
-                item.num_confirmations == 0
-                    ? `${localeString('general.onchain')}: ${localeString(
-                          'general.unconfirmed'
-                      )}`
-                    : localeString('general.onchain');
+            subTitle = (
+                <LayerSubtitle
+                    presentation={presentation}
+                    status={
+                        item.num_confirmations == 0
+                            ? localeString('general.unconfirmed')
+                            : undefined
+                    }
+                />
+            );
         } else if (item.model === localeString('views.Swaps.title')) {
-            displayName =
-                item.type === SwapType.Submarine
-                    ? localeString('views.Swaps.submarine')
-                    : localeString('views.Swaps.reverse');
             subTitle = (
                 <Text>
                     {item?.imported
@@ -273,15 +304,23 @@ const ActivityListItem = observer(
                 </Text>
             );
         } else if (item.model === 'LSPS1Order') {
-            displayName = localeString('views.LSPS1.type');
-            subTitle = `${localeString('general.state')}: ${item.state
-                .toLowerCase()
-                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
+            subTitle = (
+                <LayerSubtitle
+                    presentation={presentation}
+                    status={`${localeString('general.state')}: ${item.state
+                        .toLowerCase()
+                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                />
+            );
         } else if (item.model === 'LSPS7Order') {
-            displayName = localeString('views.LSPS7.type');
-            subTitle = `${localeString('general.state')}: ${item.state
-                .toLowerCase()
-                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
+            subTitle = (
+                <LayerSubtitle
+                    presentation={presentation}
+                    status={`${localeString('general.state')}: ${item.state
+                        .toLowerCase()
+                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                />
+            );
         }
 
         return (
@@ -294,19 +333,36 @@ const ActivityListItem = observer(
             >
                 <ListItem.Content>
                     <View style={styles.row}>
-                        <ListItem.Title
+                        <View
                             style={{
                                 ...styles.leftCell,
-                                fontWeight: '600',
-                                color:
+                                ...styles.iconTextRow
+                            }}
+                            accessibilityLabel={displayNameLabel}
+                        >
+                            <ActivityIcon
+                                name={presentation.directionIcon}
+                                color={
                                     item === selectedPaymentForOrder
                                         ? themeColor('highlight')
-                                        : themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {displayName}
-                        </ListItem.Title>
+                                        : themeColor(
+                                              presentation.directionColor
+                                          )
+                                }
+                            />
+                            <ListItem.Title
+                                style={{
+                                    fontWeight: '600',
+                                    color:
+                                        item === selectedPaymentForOrder
+                                            ? themeColor('highlight')
+                                            : themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {displayName}
+                            </ListItem.Title>
+                        </View>
 
                         <View
                             style={{
@@ -353,19 +409,14 @@ const ActivityListItem = observer(
                     </View>
 
                     <View style={styles.row}>
-                        <ListItem.Subtitle
-                            right
+                        <View
                             style={{
                                 ...styles.leftCell,
-                                color:
-                                    item === selectedPaymentForOrder
-                                        ? themeColor('highlight')
-                                        : themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                ...styles.iconTextRow
                             }}
                         >
                             {subTitle}
-                        </ListItem.Subtitle>
+                        </View>
 
                         <ListItem.Subtitle
                             style={{
@@ -547,6 +598,9 @@ export default class Activity extends React.PureComponent<
     // TODO this feels like an odd place to do all this deciding
     // TODO on-chain has "-" sign but lightning doesn't?
     getRightTitleTheme = (item: any) => {
+        const activityAmountTheme = getActivityAmountTheme(item);
+        if (activityAmountTheme !== 'text') return activityAmountTheme;
+
         if (item.getAmount == 0) return 'secondaryText';
 
         if (item.model === localeString('general.transaction')) {
@@ -913,5 +967,12 @@ const styles = StyleSheet.create({
         flexGrow: 0,
         flexShrink: 1,
         textAlign: 'right'
+    },
+    iconTextRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        columnGap: 6,
+        minHeight: 24,
+        minWidth: 0
     }
 });
