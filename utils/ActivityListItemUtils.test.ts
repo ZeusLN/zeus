@@ -1,6 +1,14 @@
 jest.mock('dateformat', () => ({}));
 jest.mock('./LocaleUtils', () => ({
-    localeString: (s: string) => s
+    localeString: (
+        s: string,
+        substitutions?: { [key: string]: string | number }
+    ) => {
+        if (!substitutions) return s;
+        return `${s}:${Object.entries(substitutions)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(',')}`;
+    }
 }));
 jest.mock('../stores/Stores', () => ({
     notesStore: {
@@ -12,8 +20,12 @@ import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
 import {
+    formatActivityLabelValue,
     getActivityAmountTheme,
-    getActivityListItemPresentation
+    getActivityListItemPresentation,
+    getActivityStateLabel,
+    getActivityTitleAccessibilityLabel,
+    getLayerSubtitleAccessibilityLabel
 } from './ActivityListItemUtils';
 
 describe('ActivityListItemUtils', () => {
@@ -80,5 +92,43 @@ describe('ActivityListItemUtils', () => {
         expect(presentation.directionIcon).toBe('error-outline');
         expect(presentation.directionColor).toBe('secondaryText');
         expect(getActivityAmountTheme(failedPayment)).toBe('secondaryText');
+    });
+
+    it('falls back to an unknown neutral presentation for missing activity rows', () => {
+        const presentation = getActivityListItemPresentation(undefined);
+
+        expect(presentation.title).toBe('general.unknown');
+        expect(presentation.directionLabel).toBe('general.unknown');
+        expect(presentation.directionIcon).toBe('receipt');
+        expect(presentation.directionColor).toBe('secondaryText');
+        expect(getActivityAmountTheme(undefined)).toBe('text');
+    });
+
+    it('formats title, subtitle, and state accessibility labels through localized templates', () => {
+        const payment = new Payment({
+            value: '2500',
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000001'
+        });
+        const presentation = getActivityListItemPresentation(payment);
+
+        expect(getActivityTitleAccessibilityLabel(presentation)).toBe(
+            'views.Activity.accessibility.titleWithDirection:direction=views.Activity.youSent,title=views.Payment.title'
+        );
+        expect(
+            getLayerSubtitleAccessibilityLabel({
+                layerLabel: presentation.layerLabel,
+                status: 'general.unconfirmed',
+                detail: 'memo'
+            })
+        ).toBe(
+            'views.Activity.accessibility.subtitleWithLayer:layer=general.lightning,status=general.unconfirmed,detail=memo'
+        );
+        expect(formatActivityLabelValue('general.status', 'Pending')).toBe(
+            'views.Activity.labelValue:label=general.status,value=Pending'
+        );
+        expect(getActivityStateLabel('IN_PROGRESS')).toBe(
+            'views.Activity.labelValue:label=general.state,value=In progress'
+        );
     });
 });

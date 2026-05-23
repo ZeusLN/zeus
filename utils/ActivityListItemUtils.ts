@@ -24,6 +24,12 @@ export interface ActivityListItemPresentation {
     layerLabel?: string;
 }
 
+interface LayerSubtitleAccessibilityInput {
+    layerLabel?: string;
+    status?: string;
+    detail?: string;
+}
+
 const incoming = {
     directionIcon: 'call-received',
     directionColor: 'success' as const
@@ -49,9 +55,84 @@ const failed = {
     directionColor: 'secondaryText' as const
 };
 
+const unknownPresentation = (): ActivityListItemPresentation => ({
+    title: localeString('general.unknown'),
+    directionLabel: localeString('general.unknown'),
+    ...neutral
+});
+
+export const formatActivityLabelValue = (
+    label: string,
+    value: string
+): string =>
+    localeString('views.Activity.labelValue', {
+        label,
+        value
+    });
+
+export const getActivityStateLabel = (state: string): string =>
+    formatActivityLabelValue(
+        localeString('general.state'),
+        state
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/^\w/, (c: string) => c.toUpperCase())
+    );
+
+export const getActivityTitleAccessibilityLabel = ({
+    directionLabel,
+    title
+}: ActivityListItemPresentation): string =>
+    directionLabel === title
+        ? title
+        : localeString('views.Activity.accessibility.titleWithDirection', {
+              direction: directionLabel,
+              title
+          });
+
+export const getLayerSubtitleAccessibilityLabel = ({
+    layerLabel,
+    status,
+    detail
+}: LayerSubtitleAccessibilityInput): string | undefined => {
+    if (layerLabel && status && detail) {
+        return localeString('views.Activity.accessibility.subtitleWithLayer', {
+            layer: layerLabel,
+            status,
+            detail
+        });
+    }
+
+    if (layerLabel && detail) {
+        return localeString(
+            'views.Activity.accessibility.subtitleWithLayerDetail',
+            {
+                layer: layerLabel,
+                detail
+            }
+        );
+    }
+
+    if (layerLabel && status) {
+        return localeString(
+            'views.Activity.accessibility.subtitleWithLayerStatus',
+            {
+                layer: layerLabel,
+                status
+            }
+        );
+    }
+
+    return layerLabel || status || detail;
+};
+
 export function getActivityListItemPresentation(
     item: any
 ): ActivityListItemPresentation {
+    if (!item) {
+        return unknownPresentation();
+    }
+
     if (item instanceof Invoice) {
         if (item.isPaid) {
             const directionLabel = item.is_amp
@@ -240,7 +321,12 @@ export function getActivityListItemPresentation(
         };
     }
 
-    if (item.model === localeString('views.Swaps.title')) {
+    const model =
+        typeof item.model === 'string'
+            ? item.model
+            : localeString('general.unknown');
+
+    if (model === localeString('views.Swaps.title')) {
         const directionLabel =
             item.type === SwapType.Submarine
                 ? localeString('views.Swaps.submarine')
@@ -255,9 +341,9 @@ export function getActivityListItemPresentation(
         };
     }
 
-    if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
+    if (model === 'LSPS1Order' || model === 'LSPS7Order') {
         const title =
-            item.model === 'LSPS1Order'
+            model === 'LSPS1Order'
                 ? localeString('views.LSPS1.type')
                 : localeString('views.LSPS7.type');
         return {
@@ -281,8 +367,8 @@ export function getActivityListItemPresentation(
     }
 
     return {
-        title: item.model,
-        directionLabel: item.model,
+        title: model,
+        directionLabel: model,
         ...neutral
     };
 }
@@ -296,6 +382,8 @@ export function getActivityAmountTheme(
     | 'success'
     | 'warning'
     | 'warningReserve' {
+    if (!item) return 'text';
+
     if (
         (item instanceof Payment || item instanceof CashuPayment) &&
         item.isFailed

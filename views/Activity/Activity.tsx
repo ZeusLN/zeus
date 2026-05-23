@@ -53,9 +53,13 @@ import { SwapType } from '../../models/Swap';
 
 import { LSPOrderState } from '../../models/LSP';
 import {
+    formatActivityLabelValue,
     getActivityAmountTheme,
+    getActivityStateLabel,
     getActivityListItemPresentation,
-    ActivityListItemPresentation
+    ActivityListItemPresentation,
+    getActivityTitleAccessibilityLabel,
+    getLayerSubtitleAccessibilityLabel
 } from '../../utils/ActivityListItemUtils';
 
 interface ActivityProps {
@@ -196,9 +200,11 @@ const LayerSubtitle = ({
               condenseAtLength: 100
           })?.toString()
         : undefined;
-    const accessibilityLabel = [presentation.layerLabel, status, privateDetail]
-        .filter(Boolean)
-        .join(': ');
+    const accessibilityLabel = getLayerSubtitleAccessibilityLabel({
+        layerLabel: presentation.layerLabel,
+        status,
+        detail: privateDetail
+    });
 
     return (
         <View
@@ -226,13 +232,13 @@ const ActivityListItem = observer(
         order,
         swapStore
     }: ActivityListItemProps) => {
+        if (!item) return null;
+
         const note = item.getNote;
         const presentation = getActivityListItemPresentation(item);
         const displayName = presentation.title;
         const displayNameLabel =
-            presentation.directionLabel === presentation.title
-                ? presentation.title
-                : `${presentation.directionLabel}: ${presentation.title}`;
+            getActivityTitleAccessibilityLabel(presentation);
         let subTitle: React.ReactNode = item.model;
 
         if (item instanceof Invoice) {
@@ -296,9 +302,10 @@ const ActivityListItem = observer(
                     {item?.status && (
                         <>
                             {'\n'}
-                            {`${localeString(
-                                'general.status'
-                            )}: ${swapStore.formatStatus(item.status)}`}
+                            {formatActivityLabelValue(
+                                localeString('general.status'),
+                                swapStore.formatStatus(item.status)
+                            )}
                         </>
                     )}
                 </Text>
@@ -307,18 +314,14 @@ const ActivityListItem = observer(
             subTitle = (
                 <LayerSubtitle
                     presentation={presentation}
-                    status={`${localeString('general.state')}: ${item.state
-                        .toLowerCase()
-                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                    status={getActivityStateLabel(item.state)}
                 />
             );
         } else if (item.model === 'LSPS7Order') {
             subTitle = (
                 <LayerSubtitle
                     presentation={presentation}
-                    status={`${localeString('general.state')}: ${item.state
-                        .toLowerCase()
-                        .replace(/^\w/, (c: string) => c.toUpperCase())}`}
+                    status={getActivityStateLabel(item.state)}
                 />
             );
         }
