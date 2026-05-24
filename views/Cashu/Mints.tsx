@@ -423,7 +423,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                             {
                                                                 mint: cloneDeep(
                                                                     mintInfo
-                                                                )
+                                                                ),
+                                                                isMultiMintView:
+                                                                    multiMintEnabled
                                                             }
                                                         );
                                                     }}
