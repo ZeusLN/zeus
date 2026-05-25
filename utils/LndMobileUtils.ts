@@ -19,10 +19,10 @@ import { importChannelDb } from './ChannelMigrationUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
-    ELndMobileStatusCodes,
     gossipSync,
     cancelGossipSync,
-    checkLndFolderExists
+    checkLndFolderExists,
+    isLndAlreadyRunning
 } from '../lndmobile/index';
 
 import { settingsStore, syncStore } from '../stores/Stores';
@@ -528,7 +528,7 @@ function waitForSubscribeStateEOF(): {
  *   reports "already started" but Java checkStatus says not running (state mismatch).
  */
 export async function stopLnd(forceStop = false) {
-    const { checkStatus, stopLnd } = lndMobile.index;
+    const { stopLnd } = lndMobile.index;
 
     const runWithExpectedErrorHandling = async <T>(
         fn: () => Promise<T>,
@@ -552,23 +552,7 @@ export async function stopLnd(forceStop = false) {
 
     try {
         if (!forceStop) {
-            // Check if LND is currently running
-            const status = await runWithExpectedErrorHandling(
-                () => checkStatus(),
-                'checkStatus'
-            );
-
-            if (!status) {
-                log.d(
-                    'LND status check returned expected error - already stopped'
-                );
-                settingsStore.embeddedLndStarted = false;
-                return;
-            }
-
-            const isRunning =
-                (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
-                ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+            const isRunning = await isLndAlreadyRunning();
 
             log.d(`LND running status: ${isRunning}`);
 
@@ -578,7 +562,7 @@ export async function stopLnd(forceStop = false) {
                 return;
             }
         } else {
-            log.d('Force stop: skipping status check (Go state mismatch)');
+            log.d('Skipping LND status check during force stop');
         }
         setLndLoadingStatus(LND_LOADING_STATUS.stoppingBeforeRestart);
         // Register before stop/kill so we do not miss an early SubscribeState EOF.
@@ -600,17 +584,7 @@ export async function stopLnd(forceStop = false) {
                 throw stopError;
             }
         }
-        const killResult = await runWithExpectedErrorHandling(
-            () => NativeModules.LndMobileTools.killLnd(),
-            'killLnd'
-        );
-        if (killResult === null) {
-            log.d(
-                'killLnd returned expected error - LND may already be stopped'
-            );
-        }
         // Wait for Go to close the gRPC server (EOF), with a cap — native can omit EOF
-        // while JS would otherwise await forever.
         log.d('Waiting for LND shutdown confirmation (SubscribeState EOF)...');
         const eofOrTimeout = await Promise.race([
             shutdownWaiter.promise.then(() => 'eof' as const),
@@ -623,9 +597,18 @@ export async function stopLnd(forceStop = false) {
         ]);
         if (eofOrTimeout === 'timeout') {
             log.w(
-                `SubscribeState EOF not received within ${LND_SHUTDOWN_EOF_TIMEOUT_MS}ms; proceeding after killLnd`
+                `SubscribeState EOF not received within ${LND_SHUTDOWN_EOF_TIMEOUT_MS}ms; releasing native LND state`
             );
             shutdownWaiter.cancel();
+            const killResult = await runWithExpectedErrorHandling(
+                () => NativeModules.LndMobileTools.killLnd(),
+                'killLnd'
+            );
+            if (killResult === null) {
+                log.d(
+                    'killLnd returned expected error while releasing stuck LND state'
+                );
+            }
         } else {
             log.d('LND shutdown confirmed (SubscribeState EOF)');
         }
