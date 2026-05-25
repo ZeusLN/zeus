@@ -218,10 +218,24 @@ open class Lnd {
     do {
       let stopRequest = Lnrpc_StopRequest()
       let payload = try stopRequest.serializedData()
-      LndmobileStopDaemon(payload, LndmobileCallback(method: "stopLnd", callback: callback))
+      LndmobileStopDaemon(
+        payload,
+        LndmobileCallback(method: "stopLnd", callback: { (data, error) in
+          self.lndStarted = false
+          callback(data, error)
+        })
+      )
     } catch let error {
+      self.lndStarted = false
       callback(nil, error)
     }
+  }
+
+  /// Last-resort cleanup when SubscribeState EOF never arrives (JS timeout path).
+  /// Only resets tracking so a restart can subscribe again.
+  func releaseStuckLndState() {
+    activeStreams.removeAll { $0 == "SubscribeState" }
+    lndStarted = false
   }
 
   func initWallet(_ seed: [String], password: String, recoveryWindow: Int32, channelsBackupsBase64: String, callback: @escaping Callback) {
