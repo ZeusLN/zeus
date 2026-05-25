@@ -583,6 +583,7 @@ export interface ILndMobileInjections {
             privateKey,
             servicePubKey,
             feeRate,
+            minerFee,
             timeoutBlockHeight,
             destinationAddress,
             lockupAddress,
@@ -597,6 +598,7 @@ export interface ILndMobileInjections {
             privateKey: string;
             servicePubKey: string;
             feeRate: number;
+            minerFee: number;
             timeoutBlockHeight: number;
             destinationAddress: string;
             lockupAddress: string;

@@ -6,6 +6,8 @@ import { Route } from '@react-navigation/native';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createRefundTransaction } = lndMobile.swaps;
 
+import { ButtonGroup } from '@rneui/themed';
+
 import Button from '../../components/Button';
 
 import Header from '../../components/Header';
@@ -15,6 +17,7 @@ import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 import AddressInput from '../../components/AddressInput';
 import {
     ErrorMessage,
@@ -25,6 +28,10 @@ import { Row } from '../../components/layout/Row';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import {
+    buttonTextStyle,
+    getButtonGroupStyles
+} from '../../utils/buttonGroupStyles';
 
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -51,7 +58,9 @@ interface RefundSwapProps {
 
 interface RefundSwapState {
     destinationAddress: string;
-    fee: string;
+    feeRate: string;
+    minerFee: string;
+    selectedFeeIndex: number;
     error: string;
     swapData: Swap;
     loading: boolean;
@@ -69,7 +78,9 @@ export default class RefundSwap extends React.Component<
 > {
     state = {
         destinationAddress: '',
-        fee: '',
+        feeRate: '',
+        minerFee: '',
+        selectedFeeIndex: 0,
         error: '',
         loading: false,
         swapData: this.props.route.params.swapData,
@@ -81,11 +92,13 @@ export default class RefundSwap extends React.Component<
 
     createRefundTransaction = async (
         swapData: Swap,
-        fee: any,
+        feeRate: string,
+        minerFee: string,
         destinationAddress: string
     ): Promise<void> => {
         const { SwapStore } = this.props;
-        const { uncooperative } = this.state;
+        const { uncooperative, selectedFeeIndex } = this.state;
+        const isMinerFeeMode = selectedFeeIndex === 1;
 
         try {
             const txid = await createRefundTransaction({
@@ -96,7 +109,8 @@ export default class RefundSwap extends React.Component<
                 transactionHex: swapData.lockupTransaction?.hex,
                 privateKey: swapData.refundPrivateKey!,
                 servicePubKey: swapData.servicePubKey!,
-                feeRate: Number(fee),
+                feeRate: !isMinerFeeMode ? Number(feeRate) : 0,
+                minerFee: isMinerFeeMode ? Number(minerFee) : 0,
                 timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
                 lockupAddress: swapData.effectiveLockupAddress!,
@@ -140,7 +154,9 @@ export default class RefundSwap extends React.Component<
     render() {
         const { navigation, SwapStore, InvoicesStore } = this.props;
         const {
-            fee,
+            feeRate,
+            minerFee,
+            selectedFeeIndex,
             destinationAddress,
             swapData,
             error,
@@ -151,6 +167,9 @@ export default class RefundSwap extends React.Component<
             rawToggle
         } = this.state;
 
+        const isValidMinerFee =
+            Number(minerFee) > 0 && Number.isInteger(Number(minerFee));
+
         const rawDetails = {
             endpoint: swapData.endpoint.replace('/v2', ''),
             swapId: swapData.id,
@@ -159,7 +178,8 @@ export default class RefundSwap extends React.Component<
             transactionHex: swapData.lockupTransaction?.hex,
             privateKey: swapData.refundPrivateKey,
             servicePubKey: swapData.servicePubKey,
-            feeRate: Number(fee),
+            feeRate: selectedFeeIndex === 0 ? Number(feeRate) : 0,
+            minerFee: selectedFeeIndex === 1 ? Number(minerFee) : 0,
             timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
             destinationAddress,
             lockupAddress: swapData.effectiveLockupAddress,
@@ -282,21 +302,96 @@ export default class RefundSwap extends React.Component<
                             />
                         )}
                     </View>
-                    <Text
-                        style={{
-                            color: themeColor('secondaryText'),
-                            marginTop: 10
-                        }}
-                    >
-                        {localeString('views.Send.feeSatsVbyte')}
-                    </Text>
-                    <OnchainFeeInput
-                        fee={fee}
-                        onChangeFee={(text: string) =>
-                            this.setState({ fee: text, error: '' })
+                    <ButtonGroup
+                        onPress={(index: number) =>
+                            this.setState({
+                                selectedFeeIndex: index,
+                                error: ''
+                            })
                         }
-                        navigation={navigation}
+                        selectedIndex={selectedFeeIndex}
+                        buttons={[
+                            {
+                                element: () => (
+                                    <Text
+                                        style={{
+                                            ...buttonTextStyle,
+                                            color:
+                                                selectedFeeIndex === 0
+                                                    ? themeColor('background')
+                                                    : themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Swaps.feeRate')}
+                                    </Text>
+                                )
+                            },
+                            {
+                                element: () => (
+                                    <Text
+                                        style={{
+                                            ...buttonTextStyle,
+                                            color:
+                                                selectedFeeIndex === 1
+                                                    ? themeColor('background')
+                                                    : themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Swaps.minerFee')}
+                                    </Text>
+                                )
+                            }
+                        ]}
+                        selectedButtonStyle={
+                            getButtonGroupStyles().selectedButtonStyle
+                        }
+                        containerStyle={{
+                            ...getButtonGroupStyles().containerStyle,
+                            marginTop: 14
+                        }}
+                        innerBorderStyle={
+                            getButtonGroupStyles().innerBorderStyle
+                        }
                     />
+                    {selectedFeeIndex === 0 ? (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.Send.feeSatsVbyte')}
+                            </Text>
+                            <OnchainFeeInput
+                                fee={feeRate}
+                                onChangeFee={(text: string) =>
+                                    this.setState({ feeRate: text, error: '' })
+                                }
+                                navigation={navigation}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {`${localeString(
+                                    'views.Swaps.minerFee'
+                                )} (${localeString('general.sats')})`}
+                            </Text>
+                            <TextInput
+                                value={minerFee}
+                                onChangeText={(text: string) =>
+                                    this.setState({ minerFee: text, error: '' })
+                                }
+                                keyboardType="numeric"
+                                placeholder="0"
+                                error={!!minerFee && !isValidMinerFee}
+                            />
+                        </>
+                    )}
                     <Row>
                         <Text
                             style={{
@@ -395,7 +490,8 @@ export default class RefundSwap extends React.Component<
                             try {
                                 await this.createRefundTransaction(
                                     swapData,
-                                    fee,
+                                    feeRate,
+                                    minerFee,
                                     destinationAddress
                                 );
 
@@ -413,7 +509,8 @@ export default class RefundSwap extends React.Component<
                         disabled={
                             !destinationAddress ||
                             this.state.loading ||
-                            fetchingAddress
+                            fetchingAddress ||
+                            (selectedFeeIndex === 1 && !isValidMinerFee)
                         }
                     />
                 </View>
