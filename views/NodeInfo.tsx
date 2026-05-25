@@ -99,7 +99,6 @@ export default class NodeInfo extends React.Component<
                             }}
                         >
                             <CollapsedQR
-                                iconOnly
                                 value={uri}
                                 copyText={localeString(
                                     'views.NodeInfo.copyUri'

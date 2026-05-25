@@ -94,7 +94,6 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             hideText={route.params?.fromContactDetailsView && index === 0}
             textBottom
             truncateLongValue
-            iconOnly={true}
             valueStyle={
                 route.params?.fromContactDetailsView
                     ? { fontSize: 18 }

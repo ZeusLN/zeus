@@ -88,12 +88,14 @@ export default class RawTxHex extends React.PureComponent<
                     style={{ padding: 15 }}
                     contentContainerStyle={{ alignItems: 'center' }}
                 >
-                    <CollapsedQR
-                        value={value}
-                        textBottom
-                        hideText={hideText}
-                        logo={logo}
-                    />
+                    <View style={{ marginBottom: 15, width: '100%' }}>
+                        <CollapsedQR
+                            value={value}
+                            textBottom
+                            hideText={hideText}
+                            logo={logo}
+                        />
+                    </View>
                     <Button
                         title={localeString(
                             'views.RawTxHex.broadcastToMempoolSpace'

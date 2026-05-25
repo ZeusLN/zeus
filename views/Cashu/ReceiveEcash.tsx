@@ -677,7 +677,6 @@ export default class ReceiveEcash extends React.Component<
                                                         copyValue={
                                                             lightningAddress
                                                         }
-                                                        iconOnly={true}
                                                         expanded
                                                         textBottom
                                                         hideText
@@ -713,7 +712,6 @@ export default class ReceiveEcash extends React.Component<
                                                         copyValue={
                                                             lnInvoiceCopyValue
                                                         }
-                                                        iconOnly={true}
                                                         expanded
                                                         textBottom
                                                         truncateLongValue
