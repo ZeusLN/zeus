@@ -406,8 +406,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             // Only stop for definitive failures; otherwise fall through
             // to regular tag scanning (e.g. technology mismatch, plain NDEF tag)
             const stopErrors = [
-                'NFC not enabled',
-                'No compatible mint with sufficient balance'
+                localeString('utils.NFCUtils.nfcNotEnabled'),
+                localeString('views.Cashu.CREQPayment.noCompatibleMint')
             ];
             if (stopErrors.includes(result.error)) {
                 this.setState({ error_msg: result.error });

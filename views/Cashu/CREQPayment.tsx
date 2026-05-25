@@ -65,7 +65,9 @@ export default class CREQPayment extends React.Component<
 
         const amount = creqParams.amount;
         if (!amount) {
-            this.setState({ error: 'CREQ has no amount specified' });
+            this.setState({
+                error: localeString('views.Cashu.CREQPayment.noAmount')
+            });
             return;
         }
 
@@ -73,7 +75,7 @@ export default class CREQPayment extends React.Component<
         const mintUrl = this.getCompatibleMint();
         if (!mintUrl) {
             this.setState({
-                error: 'No compatible mint with sufficient balance'
+                error: localeString('views.Cashu.CREQPayment.noCompatibleMint')
             });
             return;
         }
@@ -94,7 +96,9 @@ export default class CREQPayment extends React.Component<
         } catch (e: any) {
             this.setState({
                 loading: false,
-                error: e.message || 'Failed to create token'
+                error:
+                    e.message ||
+                    localeString('views.Cashu.CREQPayment.failedToCreateToken')
             });
         }
     };
@@ -108,7 +112,9 @@ export default class CREQPayment extends React.Component<
         this.setState({
             writingNfc: false,
             success,
-            error: success ? '' : 'Failed to write token via NFC'
+            error: success
+                ? ''
+                : localeString('views.Cashu.CREQPayment.failedToWriteToken')
         });
     };
 

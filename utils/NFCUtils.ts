@@ -13,6 +13,7 @@ import {
     findCompatibleMint,
     CREQParams
 } from './CREQUtils';
+import { localeString } from './LocaleUtils';
 
 export function decodeNdefTextPayload(data: Uint8Array): string | null {
     if (data.length === 0) return '';
@@ -332,7 +333,10 @@ export async function payViaNfcTap(
     | { success: false; error: string }
 > {
     if (!(await checkNfcEnabled(modalStore)))
-        return { success: false, error: 'NFC not enabled' };
+        return {
+            success: false,
+            error: localeString('utils.NFCUtils.nfcNotEnabled')
+        };
 
     try {
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
@@ -343,12 +347,18 @@ export async function payViaNfcTap(
         await selectNdefApp();
         const text = await readNdefText();
         if (!text || !isCREQ(text)) {
-            return { success: false, error: 'No CREQ found on tag' };
+            return {
+                success: false,
+                error: localeString('utils.NFCUtils.noCreqOnTag')
+            };
         }
 
         const creqParams = decodeCREQ(text);
         if (!creqParams.amount) {
-            return { success: false, error: 'CREQ has no amount' };
+            return {
+                success: false,
+                error: localeString('utils.NFCUtils.creqNoAmount')
+            };
         }
 
         // 2. Find a compatible mint and create token
@@ -361,7 +371,7 @@ export async function payViaNfcTap(
         if (!mintUrl) {
             return {
                 success: false,
-                error: 'No compatible mint with sufficient balance'
+                error: localeString('views.Cashu.CREQPayment.noCompatibleMint')
             };
         }
 
@@ -377,7 +387,10 @@ export async function payViaNfcTap(
         return { success: true, creqParams };
     } catch (e: any) {
         console.warn('payViaNfcTap error:', e);
-        return { success: false, error: e.message || 'NFC payment failed' };
+        return {
+            success: false,
+            error: e.message || localeString('utils.NFCUtils.nfcPaymentFailed')
+        };
     } finally {
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);

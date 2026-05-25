@@ -17,6 +17,13 @@ jest.mock('react-native-nfc-manager', () => ({
     Ndef: { text: { decodePayload: () => {} } }
 }));
 
+// LocaleUtils transitively loads Stores → backends → react-native-blob-util,
+// which fails in the Jest environment. Stub it — these tests only exercise
+// pure NDEF helpers that don't call localeString.
+jest.mock('./LocaleUtils', () => ({
+    localeString: (s: string) => s
+}));
+
 import { decodeNdefTextPayload, buildNdefTextMessage } from './NFCUtils';
 
 // NDEF Text Record payload structure:
