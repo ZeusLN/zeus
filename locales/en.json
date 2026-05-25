@@ -924,7 +924,6 @@
     "views.Send.payBolt12.specifyAmount": "Amount must be specified",
     "views.Send.payBolt12.offersNotSupported": "Backend does not support BOLT 12",
     "views.ClinkPay.title": "Pay CLINK Offer",
-    "views.ClinkPay.confirm": "Confirm",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
     "views.ClinkPay.specifyAmount": "Amount must be specified for this offer",
     "views.ClinkPay.fixedAmount": "Fixed amount",

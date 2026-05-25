@@ -374,9 +374,7 @@ export default class ClinkPay extends React.Component<
 
                             <View style={styles.button}>
                                 <Button
-                                    title={localeString(
-                                        'views.ClinkPay.confirm'
-                                    )}
+                                    title={localeString('general.confirm')}
                                     onPress={() => this.confirm()}
                                     disabled={
                                         loading ||
