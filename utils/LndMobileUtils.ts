@@ -73,7 +73,7 @@ const GEN_SEED_RETRY_DELAY_MS = 500; // Delay between genSeed retry attempts (ms
 const MAX_LND_START_RETRIES = 10; // Maximum retries for LND start
 const LND_READY_TIMEOUT_MS = 60000; // Max wait for LND to reach ready state (wallet/RPC)
 /** Max wait for SubscribeState EOF after stop/kill; avoids hanging if native never signals EOF. */
-const LND_SHUTDOWN_EOF_TIMEOUT_MS = 60000;
+const LND_SHUTDOWN_EOF_TIMEOUT_MS = 120000;
 
 export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
@@ -490,6 +490,13 @@ function waitForSubscribeStateEOF(): {
                         'SubscribeState EOF received — LND daemon fully stopped'
                     );
                     settle();
+                } else if (
+                    isLndError(err, LndErrorCode.RPC_CONNECTION_CLOSED)
+                ) {
+                    log.d(
+                        'SubscribeState stream closed (RPC) — shutdown confirmed'
+                    );
+                    settle();
                 }
             }
         );
@@ -588,8 +595,6 @@ export async function stopLnd(forceStop = false) {
                 'killLnd returned expected error - LND may already be stopped'
             );
         }
-        settingsStore.embeddedLndStarted = false;
-
         // Wait for Go to close the gRPC server (EOF), with a cap — native can omit EOF
         // while JS would otherwise await forever.
         log.d('Waiting for LND shutdown confirmation (SubscribeState EOF)...');
@@ -610,6 +615,7 @@ export async function stopLnd(forceStop = false) {
         } else {
             log.d('LND shutdown confirmed (SubscribeState EOF)');
         }
+        settingsStore.embeddedLndStarted = false;
     } catch (error) {
         shutdownWaiter?.cancel();
         const errorMessage = getErrorMessage(error);
