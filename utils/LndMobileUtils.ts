@@ -69,8 +69,10 @@ const LND_RETRY_DELAY_MS = 3000; // Base delay between LND start retry attempts
 const GEN_SEED_STOP_DELAY_MS = 3000; // Delay after stopping LND before wallet creation restart attempts
 const GEN_SEED_MAX_RETRIES = 10; // Max retries when LND unlocks too quickly during wallet creation
 const GEN_SEED_RETRY_DELAY_MS = 500; // Delay between genSeed retry attempts (ms)
-const MAX_START_LND_RETRIES = 10; // Maximum start attempts for LND
+const MAX_LND_START_RETRIES = 10; // Maximum retries for LND start
 const LND_READY_TIMEOUT_MS = 60000; // Max wait for LND to reach ready state (wallet/RPC)
+/** Max wait for SubscribeState EOF after stop/kill; avoids hanging if native never signals EOF. */
+const LND_SHUTDOWN_EOF_TIMEOUT_MS = 60000;
 
 export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
@@ -464,9 +466,10 @@ function waitForSubscribeStateEOF(): {
     let settled = false;
     let listener: ReturnType<typeof LndMobileEventEmitter.addListener> | null =
         null;
+    let settle: () => void = () => {};
 
     const promise = new Promise<void>((resolve) => {
-        const settle = () => {
+        settle = () => {
             if (settled) return;
             settled = true;
             listener?.remove();
@@ -493,11 +496,7 @@ function waitForSubscribeStateEOF(): {
 
     return {
         promise,
-        cancel: () => {
-            settled = true;
-            listener?.remove();
-            listener = null;
-        }
+        cancel: () => settle()
     };
 }
 
@@ -590,10 +589,26 @@ export async function stopLnd(forceStop = false) {
         }
         settingsStore.embeddedLndStarted = false;
 
-        // Wait for Go to close the gRPC server (EOF).
+        // Wait for Go to close the gRPC server (EOF), with a cap — native can omit EOF
+        // while JS would otherwise await forever.
         log.d('Waiting for LND shutdown confirmation (SubscribeState EOF)...');
-        await shutdownWaiter.promise;
-        log.d('LND shutdown confirmed (SubscribeState EOF)');
+        const eofOrTimeout = await Promise.race([
+            shutdownWaiter.promise.then(() => 'eof' as const),
+            new Promise<'timeout'>((resolve) =>
+                setTimeout(
+                    () => resolve('timeout'),
+                    LND_SHUTDOWN_EOF_TIMEOUT_MS
+                )
+            )
+        ]);
+        if (eofOrTimeout === 'timeout') {
+            log.w(
+                `SubscribeState EOF not received within ${LND_SHUTDOWN_EOF_TIMEOUT_MS}ms; proceeding after killLnd`
+            );
+            shutdownWaiter.cancel();
+        } else {
+            log.d('LND shutdown confirmed (SubscribeState EOF)');
+        }
     } catch (error) {
         shutdownWaiter?.cancel();
         const errorMessage = getErrorMessage(error);
@@ -707,75 +722,26 @@ async function startLndWithRetry({
 }) {
     const startArgs = { args: '', lndDir, isTorEnabled, isTestnet };
 
-    try {
-        await startLnd(startArgs);
-        return;
-    } catch (error: unknown) {
-        const errorMessage = getErrorMessage(error);
-
-        if (
-            matchesLndErrorCode(errorMessage, LndErrorCode.LND_FOLDER_MISSING)
-        ) {
-            throw createLndError(LndErrorCode.LND_FOLDER_MISSING);
-        }
-        if (
-            matchesLndErrorCode(errorMessage, LndErrorCode.LND_ALREADY_RUNNING)
-        ) {
-            log.d('LND already started - force stop');
-            await stopLnd(true);
-            await retryStartLnd({
-                startLnd,
-                startArgs,
-                walletPassword,
-                unlockWallet
-            });
-            return;
-        }
-
-        log.w('Error starting LND, attempting retry', [error]);
-        await retryStartLnd({
-            startLnd,
-            startArgs,
-            walletPassword,
-            unlockWallet
-        });
-    }
-}
-
-async function retryStartLnd({
-    startLnd,
-    startArgs,
-    walletPassword,
-    unlockWallet
-}: {
-    startLnd: (opts: {
-        args: string;
-        lndDir: string;
-        isTorEnabled: boolean;
-        isTestnet: boolean;
-    }) => Promise<unknown>;
-    startArgs: {
-        args: string;
-        lndDir: string;
-        isTorEnabled: boolean;
-        isTestnet: boolean;
-    };
-    walletPassword: string;
-    unlockWallet: (password: string) => Promise<void>;
-}) {
-    for (let attempt = 1; attempt <= MAX_START_LND_RETRIES; attempt++) {
+    for (let attempt = 1; attempt <= MAX_LND_START_RETRIES; attempt++) {
         try {
             if (attempt > 1) {
                 await sleep(LND_RETRY_DELAY_MS);
             }
             await startLnd(startArgs);
-            log.d('LND started successfully after retry');
+            if (attempt > 1) {
+                log.d('LND started successfully after retry');
+            }
             return;
-        } catch (retryError: unknown) {
-            const msg = getErrorMessage(retryError);
+        } catch (error: unknown) {
+            const msg = getErrorMessage(error);
 
             if (matchesLndErrorCode(msg, LndErrorCode.LND_FOLDER_MISSING)) {
                 throw createLndError(LndErrorCode.LND_FOLDER_MISSING);
+            }
+            if (matchesLndErrorCode(msg, LndErrorCode.LND_ALREADY_RUNNING)) {
+                log.d(`LND already running (attempt ${attempt}) — force stop`);
+                await stopLnd(true);
+                continue;
             }
             if (matchesLndErrorCode(msg, LndErrorCode.WALLET_LOCKED)) {
                 log.d('Wallet is locked, attempting to unlock');
@@ -789,18 +755,13 @@ async function retryStartLnd({
                 }
                 return;
             }
-            if (matchesLndErrorCode(msg, LndErrorCode.LND_ALREADY_RUNNING)) {
-                log.d(`LND still running (attempt ${attempt}) - force stop`);
-                await stopLnd(true);
-                continue;
-            }
 
-            log.w(`Retry attempt ${attempt}/${MAX_START_LND_RETRIES} failed`, [
-                retryError
+            log.w(`Retry attempt ${attempt}/${MAX_LND_START_RETRIES} failed`, [
+                error
             ]);
-            if (attempt === MAX_START_LND_RETRIES) {
+            if (attempt === MAX_LND_START_RETRIES) {
                 log.e(
-                    `LND failed to start after ${MAX_START_LND_RETRIES} attempts`
+                    `LND failed to start after ${MAX_LND_START_RETRIES} attempts`
                 );
                 throw createLndError(LndErrorCode.LND_START_FAILED);
             }
@@ -918,14 +879,7 @@ async function waitForLndReady({
 
                         case lnrpc.WalletState.SERVER_ACTIVE:
                             log.d('Server is active');
-                            try {
-                                await handleRpcReady('SERVER_ACTIVE');
-                            } catch (e: any) {
-                                log.e(
-                                    'RPC ready check failed (SERVER_ACTIVE)',
-                                    [e]
-                                );
-                            }
+                            await handleRpcReady('SERVER_ACTIVE');
                             settle(() => resolve(true));
                             break;
 
@@ -1060,7 +1014,7 @@ async function restartLndForWalletCreation(
                 });
                 await readyPromise;
             },
-            maxRetries: MAX_START_LND_RETRIES,
+            maxRetries: MAX_LND_START_RETRIES,
             delayMs: 0,
             shouldRetry: (e) =>
                 matchesLndErrorCode(
@@ -1071,7 +1025,7 @@ async function restartLndForWalletCreation(
                 log.d(
                     `Restarting LND for wallet creation (attempt ${
                         attempt + 1
-                    }/${MAX_START_LND_RETRIES})`
+                    }/${MAX_LND_START_RETRIES})`
                 );
                 await stopLnd();
                 await sleep(GEN_SEED_STOP_DELAY_MS + attempt * 1000);
