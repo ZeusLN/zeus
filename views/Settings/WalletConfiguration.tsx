@@ -798,6 +798,8 @@ export default class WalletConfiguration extends React.Component<
         } catch (error) {
             console.error('Error deleting wallet:', error);
             this.setState({ deletingWallet: false });
+        } finally {
+            this.setState({ deletingWallet: false });
         }
     };
 
@@ -3154,7 +3156,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                     onPress={this.handleDeletePress}
                                     warning
-                                    disabled={loading}
+                                    disabled={loading || deletingWallet}
                                 />
                             </View>
                         )}
