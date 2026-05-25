@@ -72,14 +72,27 @@ const GEN_SEED_MAX_RETRIES = 10; // Max retries when LND unlocks too quickly dur
 const GEN_SEED_RETRY_DELAY_MS = 500; // Delay between genSeed retry attempts (ms)
 const MAX_LND_START_RETRIES = 10; // Maximum retries for LND start
 const LND_READY_TIMEOUT_MS = 60000; // Max wait for LND to reach ready state (wallet/RPC)
-/** Max wait for SubscribeState EOF after stop/kill; avoids hanging if native never signals EOF. */
-const LND_SHUTDOWN_EOF_TIMEOUT_MS = 120000;
+const LND_SHUTDOWN_EOF_TIMEOUT_MS = 120000; // Max wait for SubscribeState EOF after stop/kill; avoids hanging if native never signals EOF
 
 export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 export const NEUTRINO_PING_OPTIMAL_MS = 200;
 export const NEUTRINO_PING_LAX_MS = 500;
 export const NEUTRINO_PING_THRESHOLD_MS = 1000;
 const NEUTRINO_PING_CONCURRENCY = 3;
+
+export const LND_LOADING_STATUS = {
+    stoppingBeforeRestart: 'utils.LndMobileUtils.loading.stoppingBeforeRestart',
+    startingRpc: 'utils.LndMobileUtils.loading.startingRpc',
+    waitingForRpc: 'utils.LndMobileUtils.loading.waitingForRpc'
+} as const;
+
+export function setLndLoadingStatus(
+    localeKey: typeof LND_LOADING_STATUS[keyof typeof LND_LOADING_STATUS] | null
+) {
+    settingsStore.setEmbeddedLndLoadingMsg(
+        localeKey ? localeString(localeKey) : undefined
+    );
+}
 
 // Fetch-based latency check that runs entirely on the JS thread,
 // avoiding the native thread race condition in react-native-ping.
@@ -567,6 +580,7 @@ export async function stopLnd(forceStop = false) {
         } else {
             log.d('Force stop: skipping status check (Go state mismatch)');
         }
+        setLndLoadingStatus(LND_LOADING_STATUS.stoppingBeforeRestart);
         // Register before stop/kill so we do not miss an early SubscribeState EOF.
         shutdownWaiter = waitForSubscribeStateEOF();
         // Initiate graceful shutdown - both can throw; continue even if one fails
@@ -616,11 +630,13 @@ export async function stopLnd(forceStop = false) {
             log.d('LND shutdown confirmed (SubscribeState EOF)');
         }
         settingsStore.embeddedLndStarted = false;
+        setLndLoadingStatus(null);
     } catch (error) {
         shutdownWaiter?.cancel();
         const errorMessage = getErrorMessage(error);
         if (isStopLndExpectedError(errorMessage)) {
             log.d(`LND stop completed with expected state: ${errorMessage}`);
+            setLndLoadingStatus(null);
             return;
         }
         log.e('Error stopping LND', [error]);
@@ -799,6 +815,7 @@ async function waitForLndReady({
     let unlockAttempted = false;
 
     const handleRpcReady = async (context: string) => {
+        setLndLoadingStatus(LND_LOADING_STATUS.waitingForRpc);
         await waitForRpcReady();
         if (walletPassword && !syncStore.isSyncing) {
             log.d('Starting sync');
@@ -883,6 +900,7 @@ async function waitForLndReady({
                             log.d(
                                 'Wallet unlocked - waiting for RPC to become active'
                             );
+                            setLndLoadingStatus(LND_LOADING_STATUS.startingRpc);
                             break;
 
                         case lnrpc.WalletState.RPC_ACTIVE:
