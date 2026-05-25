@@ -118,20 +118,11 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void killLnd(Promise promise) {
-    boolean result = killLndProcess();
-    promise.resolve(result);
-  }
-
-  private boolean killLndProcess() {
-    String packageName = getReactApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getCurrentActivity().getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        Process.killProcess(p.pid);
-        return true;
-      }
-    }
-    return false;
+    // LND runs in-process; reset native tracking after a failed EOF wait (see LndMobileService).
+    Intent releaseIntent = new Intent(getReactApplicationContext(), LndMobileService.class);
+    releaseIntent.setAction("app.zeusln.zeus.android.intent.action.RELEASE_LND_STATE");
+    getReactApplicationContext().startService(releaseIntent);
+    promise.resolve(true);
   }
 
   @ReactMethod

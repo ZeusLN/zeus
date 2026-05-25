@@ -1,6 +1,5 @@
 package app.zeusln.zeus;
 
-import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -371,6 +370,8 @@ public class LndMobileService extends Service {
 
     @Override
     public void onError(Exception e) {
+      streamsStarted.remove(method);
+
       Message msg = Message.obtain(null, MSG_GRPC_STREAM_RESULT, 0, 0);
 
       Bundle bundle = new Bundle();
@@ -416,7 +417,7 @@ public class LndMobileService extends Service {
       bundle.putString("method", "SubscribeState");
       Message msg = Message.obtain(null, MSG_GRPC_STREAM_RESULT, 0, 0);
       msg.setData(bundle);
-      sendToClient(recipient, msg);
+      sendToClients(msg);
     }
 
     @Override
@@ -617,6 +618,9 @@ public class LndMobileService extends Service {
         stopForeground(STOP_FOREGROUND_REMOVE);
         isNotificationActive = false;
         stopSelf();
+        return START_NOT_STICKY;
+      } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.RELEASE_LND_STATE")) {
+        releaseStuckLndState();
         return START_NOT_STICKY;
       } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.GRACEFUL_STOP")) {
         Handler handler = new Handler(Looper.getMainLooper(), msg -> {
@@ -822,27 +826,13 @@ public class LndMobileService extends Service {
     }
   }
 
-  private boolean checkLndProcessExists() {
-    String packageName = getApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean killLndProcess() {
-    String packageName = getApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        Process.killProcess(p.pid);
-        return true;
-      }
-    }
-    return false;
+  /**
+   * Last-resort cleanup when SubscribeState EOF never arrives (JS timeout path).
+   * LND runs in the app process; this resets native flags so restart can subscribe again.
+   */
+  private void releaseStuckLndState() {
+    streamsStarted.remove("SubscribeState");
+    lndStarted = false;
   }
 
   private void stopLnd(Messenger recipient, int request) {
