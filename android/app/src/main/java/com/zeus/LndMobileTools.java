@@ -568,19 +568,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void checkLndProcessExist(Promise promise) {
-    String packageName = getReactApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getReactApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        promise.resolve(true);
-        return;
-      }
-    }
-    promise.resolve(false);
-  }
-
-  @ReactMethod
   public void deleteTLSCerts(Promise promise) {
     String tlsKeyFilename = getReactApplicationContext().getFilesDir().toString() + "/tls.key";
     File tlsKeyFile = new File(tlsKeyFilename);
