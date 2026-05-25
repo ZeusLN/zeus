@@ -28,6 +28,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
+import Accordion from '../../components/Accordion';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
@@ -41,8 +42,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
-import CaretDown from '../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 import Gear from '../../assets/images/SVG/Gear.svg';
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
@@ -60,9 +59,6 @@ interface LightningAddressProps {
 
 interface LightningAddressState {
     hasZeusLspChannel: boolean;
-    prosConsCashu: boolean;
-    prosConsZaplocker: boolean;
-    prosConsRemote: boolean;
 }
 
 @inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore')
@@ -73,16 +69,14 @@ export default class LightningAddress extends React.Component<
 > {
     private pan: Animated.ValueXY;
     private panResponder: PanResponderInstance;
+    private scrollViewRef = React.createRef<ScrollView>();
 
     isInitialFocus = true;
 
     constructor(props: LightningAddressProps) {
         super(props);
         this.state = {
-            hasZeusLspChannel: false,
-            prosConsCashu: false,
-            prosConsZaplocker: false,
-            prosConsRemote: false
+            hasZeusLspChannel: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -141,12 +135,7 @@ export default class LightningAddress extends React.Component<
 
     render() {
         const { navigation, LightningAddressStore, SettingsStore } = this.props;
-        const {
-            hasZeusLspChannel,
-            prosConsCashu,
-            prosConsZaplocker,
-            prosConsRemote
-        } = this.state;
+        const { hasZeusLspChannel } = this.state;
         const {
             status,
             redeemAllOpenPaymentsZaplocker,
@@ -488,7 +477,10 @@ export default class LightningAddress extends React.Component<
                                             marginRight: 5
                                         }}
                                     >
-                                        <ScrollView style={{ margin: 10 }}>
+                                        <ScrollView
+                                            ref={this.scrollViewRef}
+                                            style={{ margin: 10 }}
+                                        >
                                             <Text
                                                 style={{
                                                     ...styles.explainer,
@@ -564,56 +556,36 @@ export default class LightningAddress extends React.Component<
                                                         )}
                                                     </Text>
 
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            this.setState({
-                                                                prosConsCashu:
-                                                                    !prosConsCashu
-                                                            });
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.prosConsToggle
-                                                            }
-                                                        >
-                                                            <Row justify="space-between">
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.explainer,
-                                                                        fontWeight:
-                                                                            'bold',
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'zeuspay.intro.prosAndCons'
-                                                                    )}
-                                                                </Text>
-                                                                {prosConsCashu ? (
-                                                                    <CaretDown
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                ) : (
-                                                                    <CaretRight
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
+                                                    <Accordion
+                                                        id="lightning-address-pros-cons-ecash"
+                                                        title={localeString(
+                                                            'zeuspay.intro.prosAndCons'
+                                                        )}
+                                                        headerLayout="form"
+                                                        embedded
+                                                        scrollRef={
+                                                            this.scrollViewRef
+                                                        }
+                                                        headerStyle={
+                                                            styles.prosConsToggle
+                                                        }
+                                                        renderFormTitle={() => (
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.explainer,
+                                                                    fontWeight:
+                                                                        'bold',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'zeuspay.intro.prosAndCons'
                                                                 )}
-                                                            </Row>
-                                                        </View>
-                                                    </TouchableOpacity>
-
-                                                    {prosConsCashu && (
+                                                            </Text>
+                                                        )}
+                                                    >
                                                         <View
                                                             style={
                                                                 styles.prosCons
@@ -694,7 +666,7 @@ export default class LightningAddress extends React.Component<
                                                                 </View>
                                                             </Row>
                                                         </View>
-                                                    )}
+                                                    </Accordion>
                                                     <Row>
                                                         <View
                                                             style={{
@@ -795,56 +767,36 @@ export default class LightningAddress extends React.Component<
                                                         )}
                                                     </Text>
 
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            this.setState({
-                                                                prosConsZaplocker:
-                                                                    !prosConsZaplocker
-                                                            });
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.prosConsToggle
-                                                            }
-                                                        >
-                                                            <Row justify="space-between">
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.explainer,
-                                                                        fontWeight:
-                                                                            'bold',
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'zeuspay.intro.prosAndCons'
-                                                                    )}
-                                                                </Text>
-                                                                {prosConsZaplocker ? (
-                                                                    <CaretDown
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                ) : (
-                                                                    <CaretRight
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
+                                                    <Accordion
+                                                        id="lightning-address-pros-cons-zaplocker"
+                                                        title={localeString(
+                                                            'zeuspay.intro.prosAndCons'
+                                                        )}
+                                                        headerLayout="form"
+                                                        embedded
+                                                        scrollRef={
+                                                            this.scrollViewRef
+                                                        }
+                                                        headerStyle={
+                                                            styles.prosConsToggle
+                                                        }
+                                                        renderFormTitle={() => (
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.explainer,
+                                                                    fontWeight:
+                                                                        'bold',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'zeuspay.intro.prosAndCons'
                                                                 )}
-                                                            </Row>
-                                                        </View>
-                                                    </TouchableOpacity>
-
-                                                    {prosConsZaplocker && (
+                                                            </Text>
+                                                        )}
+                                                    >
                                                         <View
                                                             style={
                                                                 styles.prosCons
@@ -937,7 +889,7 @@ export default class LightningAddress extends React.Component<
                                                                 </View>
                                                             </Row>
                                                         </View>
-                                                    )}
+                                                    </Accordion>
 
                                                     <Row>
                                                         <View
@@ -1041,56 +993,36 @@ export default class LightningAddress extends React.Component<
                                                         )}
                                                     </Text>
 
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            this.setState({
-                                                                prosConsRemote:
-                                                                    !prosConsRemote
-                                                            });
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.prosConsToggle
-                                                            }
-                                                        >
-                                                            <Row justify="space-between">
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.explainer,
-                                                                        fontWeight:
-                                                                            'bold',
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'zeuspay.intro.prosAndCons'
-                                                                    )}
-                                                                </Text>
-                                                                {prosConsRemote ? (
-                                                                    <CaretDown
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
-                                                                ) : (
-                                                                    <CaretRight
-                                                                        fill={themeColor(
-                                                                            'text'
-                                                                        )}
-                                                                        width="20"
-                                                                        height="20"
-                                                                    />
+                                                    <Accordion
+                                                        id="lightning-address-pros-cons-remote"
+                                                        title={localeString(
+                                                            'zeuspay.intro.prosAndCons'
+                                                        )}
+                                                        headerLayout="form"
+                                                        embedded
+                                                        scrollRef={
+                                                            this.scrollViewRef
+                                                        }
+                                                        headerStyle={
+                                                            styles.prosConsToggle
+                                                        }
+                                                        renderFormTitle={() => (
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.explainer,
+                                                                    fontWeight:
+                                                                        'bold',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'zeuspay.intro.prosAndCons'
                                                                 )}
-                                                            </Row>
-                                                        </View>
-                                                    </TouchableOpacity>
-
-                                                    {prosConsRemote && (
+                                                            </Text>
+                                                        )}
+                                                    >
                                                         <View
                                                             style={
                                                                 styles.prosCons
@@ -1159,7 +1091,7 @@ export default class LightningAddress extends React.Component<
                                                                 </View>
                                                             </Row>
                                                         </View>
-                                                    )}
+                                                    </Accordion>
                                                     <Row>
                                                         <View
                                                             style={{

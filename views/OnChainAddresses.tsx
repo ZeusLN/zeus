@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     FlatList,
     TouchableHighlight,
@@ -20,7 +20,6 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { Body } from '../components/text/Body';
 import DropdownSetting from '../components/DropdownSetting';
-import { Row } from '../components/layout/Row';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import AddressUtils from '../utils/AddressUtils';
@@ -33,158 +32,147 @@ import NavigationService from '../NavigationService';
 
 import Add from '../assets/images/SVG/Add.svg';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
+
+import Accordion, { AnimatedRotateWrapper } from '../components/Accordion';
 
 const AddressGroup = (props: any) => {
     const { addressGroup, selectionMode, selectedAddress, onAddressSelected } =
         props;
-    const [isCollapsed, setCollapsed] = useState(false);
+    const accordionId = `${addressGroup.accountName}-${addressGroup.addressType}`;
+    const accordionTitle = `${
+        addressGroup.accountName
+    }, ${AddressUtils.snakeToHumanReadable(addressGroup.addressType)}`;
+
     return (
-        <React.Fragment
-            key={`${addressGroup.accountName}-${addressGroup.addressType}`}
-        >
-            <ListItem
-                containerStyle={{
-                    borderTopWidth: 2,
-                    borderBottomWidth: 1,
-                    borderColor: themeColor('secondaryText'),
-                    backgroundColor: 'transparent'
-                }}
-            >
-                <ListItem.Content>
-                    <Row>
-                        <TouchableOpacity
+        <Accordion
+            id={accordionId}
+            title={accordionTitle}
+            defaultOpen
+            embedded
+            renderHeader={(_isOpen, isExpanded) => (
+                <ListItem
+                    containerStyle={{
+                        borderTopWidth: 2,
+                        borderBottomWidth: 1,
+                        borderColor: themeColor('secondaryText'),
+                        backgroundColor: 'transparent'
+                    }}
+                >
+                    <AnimatedRotateWrapper isExpanded={isExpanded}>
+                        <CaretDown
+                            fill={themeColor('text')}
+                            width="30"
+                            height="30"
+                            style={{ marginRight: 10 }}
+                        />
+                    </AnimatedRotateWrapper>
+                    <ListItem.Content>
+                        <ListItem.Title
                             style={{
-                                flex: 1,
-                                flexDirection: 'row'
+                                color: themeColor('text'),
+                                fontSize: 14
                             }}
-                            onPress={() => setCollapsed(!isCollapsed)}
                         >
-                            <Row>
-                                {!isCollapsed ? (
-                                    <CaretDown
-                                        fill={themeColor('text')}
-                                        width="30"
-                                        height="30"
-                                        style={{ marginRight: 10 }}
-                                    />
-                                ) : (
-                                    <CaretRight
-                                        fill={themeColor('text')}
-                                        width="30"
-                                        height="30"
-                                        style={{ marginRight: 10 }}
-                                    />
-                                )}
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 14
-                                    }}
-                                >
-                                    {localeString('general.accountName')}:{' '}
-                                    {addressGroup.accountName + '\n'}
-                                    {localeString('general.addressType')}:{' '}
-                                    {AddressUtils.snakeToHumanReadable(
-                                        addressGroup.addressType
+                            {localeString('general.accountName')}:{' '}
+                            {addressGroup.accountName + '\n'}
+                            {localeString('general.addressType')}:{' '}
+                            {AddressUtils.snakeToHumanReadable(
+                                addressGroup.addressType
+                            )}
+                            {' \n'}
+                            {localeString('general.count')}:{' '}
+                            {addressGroup.addresses.length}
+                            {addressGroup.changeAddresses &&
+                                '\n' +
+                                    localeString(
+                                        'views.OnChainAddresses.changeAddresses'
                                     )}
-                                    {' \n'}
-                                    {localeString('general.count')}:{' '}
-                                    {addressGroup.addresses.length}
-                                    {addressGroup.changeAddresses &&
-                                        '\n' +
-                                            localeString(
-                                                'views.OnChainAddresses.changeAddresses'
-                                            )}
-                                </ListItem.Title>
-                            </Row>
-                        </TouchableOpacity>
-                        {!selectionMode && (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    NavigationService.navigate('Receive', {
-                                        account: addressGroup.accountName,
-                                        addressType: addressGroup.addressType,
-                                        selectedIndex: 2,
-                                        autoGenerateOnChain: true,
-                                        autoGenerateChange:
-                                            !!addressGroup.changeAddresses,
-                                        hideRightHeaderComponent: true,
-                                        forceOnChain: true
-                                    })
-                                }
-                                accessibilityLabel={localeString(
-                                    'views.OnChainAddresses.createAddress'
-                                )}
-                            >
-                                <Add
-                                    fill={themeColor('text')}
-                                    width="30"
-                                    height="30"
-                                    style={{ alignSelf: 'center' }}
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </Row>
-                </ListItem.Content>
-            </ListItem>
-            {!isCollapsed &&
-                addressGroup.addresses.map((address: Address) => {
-                    const isSelected =
-                        selectionMode && address.address === selectedAddress;
-                    return (
-                        <ListItem
-                            key={`address-${address.address}`}
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: isSelected
-                                    ? themeColor('secondary')
-                                    : 'transparent'
-                            }}
-                            onPress={() => {
-                                if (selectionMode) {
-                                    // Only update local selection, don't call callback yet
-                                    onAddressSelected(address.address);
-                                } else {
-                                    const addressStr = address.address;
-                                    NavigationService.navigate('QR', {
-                                        value: `bitcoin:${
-                                            addressStr ===
-                                            addressStr.toLowerCase()
-                                                ? address.address.toUpperCase()
-                                                : address.address
-                                        }`,
-                                        copyValue: addressStr
-                                    });
-                                }
-                            }}
+                        </ListItem.Title>
+                    </ListItem.Content>
+                    {!selectionMode && (
+                        <TouchableOpacity
+                            onPress={() =>
+                                NavigationService.navigate('Receive', {
+                                    account: addressGroup.accountName,
+                                    addressType: addressGroup.addressType,
+                                    selectedIndex: 2,
+                                    autoGenerateOnChain: true,
+                                    autoGenerateChange:
+                                        !!addressGroup.changeAddresses,
+                                    hideRightHeaderComponent: true,
+                                    forceOnChain: true
+                                })
+                            }
+                            accessibilityLabel={localeString(
+                                'views.OnChainAddresses.createAddress'
+                            )}
                         >
-                            <ListItem.Content>
-                                <Amount
-                                    sats={address.balance}
-                                    sensitive
-                                    colorOverride={
-                                        isSelected
-                                            ? themeColor('highlight')
-                                            : undefined
-                                    }
-                                />
-                                <ListItem.Subtitle
-                                    right
-                                    style={{
-                                        color: isSelected
-                                            ? themeColor('highlight')
-                                            : themeColor('secondaryText'),
-                                        fontSize: 14
-                                    }}
-                                >
-                                    {address.address}
-                                </ListItem.Subtitle>
-                            </ListItem.Content>
-                        </ListItem>
-                    );
-                })}
-        </React.Fragment>
+                            <Add
+                                fill={themeColor('text')}
+                                width="30"
+                                height="30"
+                                style={{ alignSelf: 'center' }}
+                            />
+                        </TouchableOpacity>
+                    )}
+                </ListItem>
+            )}
+        >
+            {addressGroup.addresses.map((address: Address) => {
+                const isSelected =
+                    selectionMode && address.address === selectedAddress;
+                return (
+                    <ListItem
+                        key={`address-${address.address}`}
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: isSelected
+                                ? themeColor('secondary')
+                                : 'transparent'
+                        }}
+                        onPress={() => {
+                            if (selectionMode) {
+                                // Only update local selection, don't call callback yet
+                                onAddressSelected(address.address);
+                            } else {
+                                const addressStr = address.address;
+                                NavigationService.navigate('QR', {
+                                    value: `bitcoin:${
+                                        addressStr === addressStr.toLowerCase()
+                                            ? address.address.toUpperCase()
+                                            : address.address
+                                    }`,
+                                    copyValue: addressStr
+                                });
+                            }
+                        }}
+                    >
+                        <ListItem.Content>
+                            <Amount
+                                sats={address.balance}
+                                sensitive
+                                colorOverride={
+                                    isSelected
+                                        ? themeColor('highlight')
+                                        : undefined
+                                }
+                            />
+                            <ListItem.Subtitle
+                                right
+                                style={{
+                                    color: isSelected
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
+                                    fontSize: 14
+                                }}
+                            >
+                                {address.address}
+                            </ListItem.Subtitle>
+                        </ListItem.Content>
+                    </ListItem>
+                );
+            })}
+        </Accordion>
     );
 };
 

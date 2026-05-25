@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-    View,
-    StyleSheet,
-    ScrollView,
-    Text,
-    Platform,
-    TouchableOpacity
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +9,7 @@ import Slider from '@react-native-community/slider';
 import { Nip47SingleMethod } from '@getalby/sdk';
 
 import Screen from '../../../components/Screen';
+import Accordion from '../../../components/Accordion';
 import Header from '../../../components/Header';
 import { Body } from '../../../components/text/Body';
 import Button from '../../../components/Button';
@@ -42,8 +36,6 @@ import NWCConnection, {
     PermissionType,
     TimeUnit
 } from '../../../models/NWCConnection';
-
-import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
 
 interface AddOrEditNWCConnectionProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -73,8 +65,6 @@ interface AddOrEditNWCConnectionState {
     customExpiryUnit: TimeUnit;
     budgetValue: number;
     maxBudgetLimit: number;
-    showAdvancedSettings: boolean;
-    showCustomPermissions: boolean;
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -102,13 +92,12 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue: null,
             customExpiryUnit: NostrConnectUtils.TIME_UNITS[1],
             budgetValue: 0,
-            maxBudgetLimit: 0,
-            showAdvancedSettings: false,
-            showCustomPermissions: false
+            maxBudgetLimit: 0
         };
     }
 
     private unsubscribeFocus?: () => void;
+    private scrollViewRef = React.createRef<ScrollView>();
 
     loadData = async () => {
         const { route, NostrWalletConnectStore } = this.props;
@@ -191,9 +180,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
-                maxBudgetLimit: Math.max(0, maxBudgetLimit),
-                showAdvancedSettings: false,
-                showCustomPermissions: false
+                maxBudgetLimit: Math.max(0, maxBudgetLimit)
             });
         }
     };
@@ -321,7 +308,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             this.updateStateWithChangeTracking({
                 selectedPermissionType: null,
                 selectedPermissions: [],
-                showCustomPermissions: false,
                 budgetValue: 0
             });
             return;
@@ -339,7 +325,6 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.updateStateWithChangeTracking({
             selectedPermissionType: permissionType,
             selectedPermissions: permissions,
-            showCustomPermissions: false,
             ...(shouldResetBudget && { budgetValue: 0 })
         });
     };
@@ -680,32 +665,20 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionTypeItem = (permissionType: PermissionOption) => {
-        const { selectedPermissionType, showCustomPermissions } = this.state;
+        const { selectedPermissionType } = this.state;
         const isCustom = permissionType.key === PermissionType.Custom;
-
-        let isSelected: boolean;
-        if (isCustom) {
-            isSelected = showCustomPermissions;
-        } else {
-            isSelected = selectedPermissionType === permissionType.key;
-        }
 
         if (isCustom) {
             return (
-                <View key={permissionType.key} style={{ marginTop: 20 }}>
-                    <TouchableOpacity
-                        onPress={() => {
-                            this.setState({
-                                showCustomPermissions: !showCustomPermissions
-                            });
-                        }}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                        }}
-                    >
-                        <View style={{ flex: 1 }}>
+                <Accordion
+                    headerLayout="form"
+                    key={`nwc-custom-${String(selectedPermissionType)}`}
+                    id="nwc-custom-permissions"
+                    title={permissionType.title}
+                    containerStyle={{ marginTop: 20 }}
+                    scrollRef={this.scrollViewRef}
+                    renderFormTitle={() => (
+                        <>
                             <Text
                                 style={{
                                     color: themeColor('text'),
@@ -726,25 +699,34 @@ export default class AddOrEditNWCConnection extends React.Component<
                             >
                                 {permissionType.description}
                             </Text>
+                        </>
+                    )}
+                    headerStyle={{ marginBottom: 0 }}
+                >
+                    <View style={{ marginTop: 8 }}>
+                        <View
+                            style={[
+                                styles.sectionTitleContainer,
+                                { marginHorizontal: 0 }
+                            ]}
+                        >
+                            <Body bold>
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.authorizeAppTo'
+                                )}
+                            </Body>
                         </View>
-                        <View style={{ marginLeft: 10 }}>
-                            <ForwardIcon
-                                stroke={themeColor('text')}
-                                style={{
-                                    transform: [
-                                        {
-                                            rotate: isSelected
-                                                ? '90deg'
-                                                : '0deg'
-                                        }
-                                    ]
-                                }}
-                            />
+                        <View>
+                            {NostrConnectUtils.getAvailablePermissions().map(
+                                this.renderPermissionItem
+                            )}
                         </View>
-                    </TouchableOpacity>
-                </View>
+                    </View>
+                </Accordion>
             );
         }
+
+        const isSelected = selectedPermissionType === permissionType.key;
 
         return (
             <View
@@ -790,10 +772,8 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionItem = (permission: IndividualPermissionOption) => {
-        const { selectedPermissions, showCustomPermissions } = this.state;
+        const { selectedPermissions } = this.state;
         const isSelected = selectedPermissions.includes(permission.key);
-
-        if (!showCustomPermissions) return null;
 
         return (
             <View
@@ -873,7 +853,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             error,
             loading,
             maxBudgetLimit,
-            showAdvancedSettings,
             showCustomExpiryInput,
             customExpiryValue,
             customExpiryUnit,
@@ -947,6 +926,7 @@ export default class AddOrEditNWCConnection extends React.Component<
 
                 <View style={styles.mainContainer}>
                     <ScrollView
+                        ref={this.scrollViewRef}
                         style={styles.scrollContainer}
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
@@ -1151,26 +1131,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         </View>
 
-                        {/* Individual Permissions (only when custom section is expanded) */}
-                        {this.state.showCustomPermissions && (
-                            <View style={styles.section}>
-                                <View style={styles.sectionTitleContainer}>
-                                    <Body bold>
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.authorizeAppTo'
-                                        )}
-                                    </Body>
-                                </View>
-                                <View style={{ marginHorizontal: 15 }}>
-                                    {NostrConnectUtils.getAvailablePermissions().map(
-                                        this.renderPermissionItem
-                                    )}
-                                </View>
-                            </View>
-                        )}
-
                         {NostrConnectUtils.hasPaymentPermissions(
-                            selectedPermissions
+                            this.state.selectedPermissions
                         ) && (
                             <View style={{ marginTop: 10 }}>
                                 <View style={styles.sectionTitleContainer}>
@@ -1324,143 +1286,65 @@ export default class AddOrEditNWCConnection extends React.Component<
 
                         {/* Advanced Settings */}
                         <View style={styles.section}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    this.setState({
-                                        showAdvancedSettings:
-                                            !showAdvancedSettings
-                                    });
-                                }}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginHorizontal: 15,
-                                    paddingVertical: 10
+                            <Accordion
+                                headerLayout="form"
+                                id="nwc-advanced-settings"
+                                title={localeString('general.advancedSettings')}
+                                scrollRef={this.scrollViewRef}
+                                renderFormTitle={() => (
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 17,
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontWeight: '400'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'general.advancedSettings'
+                                        )}
+                                    </Text>
+                                )}
+                                headerStyle={{
+                                    paddingHorizontal: 15,
+                                    paddingVertical: 10,
+                                    marginBottom: 0
                                 }}
                             >
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontWeight: '400'
-                                    }}
-                                >
-                                    {localeString('general.advancedSettings')}
-                                </Text>
-                                <ForwardIcon
-                                    stroke={themeColor('text')}
-                                    style={{
-                                        transform: [
-                                            {
-                                                rotate: this.state
-                                                    .showAdvancedSettings
-                                                    ? '90deg'
-                                                    : '0deg'
-                                            }
-                                        ]
-                                    }}
-                                />
-                            </TouchableOpacity>
-
-                            {showAdvancedSettings && (
-                                <>
-                                    {/* Budget Renewal */}
-                                    {NostrConnectUtils.hasPaymentPermissions(
-                                        selectedPermissions
-                                    ) && (
-                                        <View
-                                            style={[
-                                                styles.renewalContainer,
-                                                { marginTop: 10 }
-                                            ]}
-                                        >
-                                            <View
-                                                style={
-                                                    styles.sectionTitleContainer
-                                                }
-                                            >
-                                                <Body bold>
-                                                    {localeString(
-                                                        'views.Settings.NostrWalletConnect.budgetRenewal'
-                                                    )}
-                                                </Body>
-                                            </View>
-                                            <ButtonGroup
-                                                onPress={(
-                                                    selectedIndex: number
-                                                ) => {
-                                                    this.updateStateWithChangeTracking(
-                                                        {
-                                                            selectedBudgetRenewalIndex:
-                                                                selectedIndex
-                                                        }
-                                                    );
-                                                }}
-                                                selectedIndex={
-                                                    selectedBudgetRenewalIndex
-                                                }
-                                                buttons={budgetRenewalButtons}
-                                                selectedButtonStyle={{
-                                                    backgroundColor:
-                                                        themeColor('highlight'),
-                                                    borderRadius: 8
-                                                }}
-                                                containerStyle={{
-                                                    backgroundColor:
-                                                        themeColor('secondary'),
-                                                    borderRadius: 8,
-                                                    borderColor:
-                                                        themeColor('secondary'),
-                                                    marginHorizontal: 10,
-                                                    marginTop: 10,
-                                                    height: 40
-                                                }}
-                                                innerBorderStyle={{
-                                                    color: themeColor(
-                                                        'secondary'
-                                                    )
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-
-                                    {/* Connection Expiration (for all permission types) */}
-                                    <View style={styles.section}>
+                                {/* Budget Renewal */}
+                                {NostrConnectUtils.hasPaymentPermissions(
+                                    selectedPermissions
+                                ) && (
+                                    <View
+                                        style={[
+                                            styles.renewalContainer,
+                                            { marginTop: 10 }
+                                        ]}
+                                    >
                                         <View
                                             style={styles.sectionTitleContainer}
                                         >
                                             <Body bold>
                                                 {localeString(
-                                                    'views.Settings.NostrWalletConnect.connectionExpiration'
+                                                    'views.Settings.NostrWalletConnect.budgetRenewal'
                                                 )}
                                             </Body>
                                         </View>
-                                        <View
-                                            style={
-                                                styles.sectionDescriptionContainer
-                                            }
-                                        >
-                                            <Body small color="secondaryText">
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.connectionExpirationDescription'
-                                                )}
-                                            </Body>
-                                        </View>
-
                                         <ButtonGroup
                                             onPress={(
                                                 selectedIndex: number
                                             ) => {
-                                                this.selectExpiryPreset(
-                                                    selectedIndex
+                                                this.updateStateWithChangeTracking(
+                                                    {
+                                                        selectedBudgetRenewalIndex:
+                                                            selectedIndex
+                                                    }
                                                 );
                                             }}
                                             selectedIndex={
-                                                selectedExpiryPresetIndex
+                                                selectedBudgetRenewalIndex
                                             }
-                                            buttons={expiryPresetButtons}
+                                            buttons={budgetRenewalButtons}
                                             selectedButtonStyle={{
                                                 backgroundColor:
                                                     themeColor('highlight'),
@@ -1480,70 +1364,122 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                 color: themeColor('secondary')
                                             }}
                                         />
+                                    </View>
+                                )}
 
-                                        {/* Custom Expiry Input */}
-                                        {showCustomExpiryInput && (
+                                {/* Connection Expiration (for all permission types) */}
+                                <View style={styles.section}>
+                                    <View style={styles.sectionTitleContainer}>
+                                        <Body bold>
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.connectionExpiration'
+                                            )}
+                                        </Body>
+                                    </View>
+                                    <View
+                                        style={
+                                            styles.sectionDescriptionContainer
+                                        }
+                                    >
+                                        <Body small color="secondaryText">
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.connectionExpirationDescription'
+                                            )}
+                                        </Body>
+                                    </View>
+
+                                    <ButtonGroup
+                                        onPress={(selectedIndex: number) => {
+                                            this.selectExpiryPreset(
+                                                selectedIndex
+                                            );
+                                        }}
+                                        selectedIndex={
+                                            selectedExpiryPresetIndex
+                                        }
+                                        buttons={expiryPresetButtons}
+                                        selectedButtonStyle={{
+                                            backgroundColor:
+                                                themeColor('highlight'),
+                                            borderRadius: 8
+                                        }}
+                                        containerStyle={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 8,
+                                            borderColor:
+                                                themeColor('secondary'),
+                                            marginHorizontal: 10,
+                                            marginTop: 10,
+                                            height: 40
+                                        }}
+                                        innerBorderStyle={{
+                                            color: themeColor('secondary')
+                                        }}
+                                    />
+
+                                    {/* Custom Expiry Input */}
+                                    {showCustomExpiryInput && (
+                                        <View
+                                            style={{
+                                                marginHorizontal: 10,
+                                                marginTop: 10
+                                            }}
+                                        >
                                             <View
                                                 style={{
-                                                    marginHorizontal: 10,
-                                                    marginTop: 10
+                                                    flexDirection: 'row',
+                                                    gap: 8
                                                 }}
                                             >
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        gap: 8
-                                                    }}
-                                                >
-                                                    <TextInput
-                                                        placeholder={'1-999'}
-                                                        value={customExpiryValue?.toString()}
-                                                        onChangeText={
-                                                            this
-                                                                .handleCustomExpiryValueChange
+                                                <TextInput
+                                                    placeholder={'1-999'}
+                                                    value={customExpiryValue?.toString()}
+                                                    onChangeText={
+                                                        this
+                                                            .handleCustomExpiryValueChange
+                                                    }
+                                                    keyboardType="numeric"
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <View style={{ flex: 1 }}>
+                                                    <DropdownSetting
+                                                        selectedValue={
+                                                            customExpiryUnit
                                                         }
-                                                        keyboardType="numeric"
-                                                        style={{ flex: 1 }}
-                                                    />
-                                                    <View style={{ flex: 1 }}>
-                                                        <DropdownSetting
-                                                            selectedValue={
-                                                                customExpiryUnit
-                                                            }
-                                                            values={NostrConnectUtils.TIME_UNITS.map(
-                                                                (unit) => ({
-                                                                    key: unit,
-                                                                    value: unit
-                                                                })
-                                                            )}
-                                                            onValueChange={(
-                                                                value: string
-                                                            ) => {
-                                                                const newExpiryDate =
-                                                                    NostrConnectUtils.getExpiryDateFromPreset(
-                                                                        selectedExpiryPresetIndex,
-                                                                        customExpiryValue ||
-                                                                            undefined,
-                                                                        value as TimeUnit
-                                                                    );
-
-                                                                this.updateStateWithChangeTracking(
-                                                                    {
-                                                                        customExpiryUnit:
-                                                                            value as TimeUnit,
-                                                                        expiresAt:
-                                                                            newExpiryDate
-                                                                    }
+                                                        values={NostrConnectUtils.TIME_UNITS.map(
+                                                            (unit) => ({
+                                                                key: unit,
+                                                                value: unit
+                                                            })
+                                                        )}
+                                                        onValueChange={(
+                                                            value: string
+                                                        ) => {
+                                                            const newExpiryDate =
+                                                                NostrConnectUtils.getExpiryDateFromPreset(
+                                                                    selectedExpiryPresetIndex,
+                                                                    customExpiryValue ||
+                                                                        undefined,
+                                                                    value as TimeUnit
                                                                 );
-                                                            }}
-                                                        />
-                                                    </View>
+
+                                                            this.updateStateWithChangeTracking(
+                                                                {
+                                                                    customExpiryUnit:
+                                                                        value as TimeUnit,
+                                                                    expiresAt:
+                                                                        newExpiryDate
+                                                                }
+                                                            );
+                                                        }}
+                                                    />
                                                 </View>
                                             </View>
-                                        )}
-                                    </View>
-                                </>
-                            )}
+                                        </View>
+                                    )}
+                                </View>
+                            </Accordion>
                         </View>
                     </ScrollView>
 
