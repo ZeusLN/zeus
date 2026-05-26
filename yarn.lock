@@ -3659,13 +3659,6 @@
   dependencies:
     base64-js "*"
 
-"@types/bn.js@^4.11.3":
-  version "4.11.6"
-  resolved "https://registry.yarnpkg.com/@types/bn.js/-/bn.js-4.11.6.tgz#c306c70d9358aaea33cd4eda092a742b9505967c"
-  integrity sha512-pqr857jrp2kPuO9uRjZ3PwnJTjoQy+fcdxvBTvHm6dkmEL9q+hDD/2j/0ELOBPtPnS8LjCX0gI9nbl8lVkadpg==
-  dependencies:
-    "@types/node" "*"
-
 "@types/create-hash@1.2.2":
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/@types/create-hash/-/create-hash-1.2.2.tgz#e87247083df8478f6b83655592bde0d709028235"
@@ -4561,7 +4554,7 @@ bech32@2.0.0, bech32@^2.0.0:
   resolved "https://registry.yarnpkg.com/bech32/-/bech32-2.0.0.tgz#078d3686535075c8c79709f054b1b226a133b355"
   integrity sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==
 
-bech32@^1.1.2, bech32@^1.1.4:
+bech32@^1.1.4:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/bech32/-/bech32-1.1.4.tgz#e38c9f37bf179b8eb16ae3a772b40c356d4832e9"
   integrity sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==
@@ -4611,18 +4604,6 @@ bitcoinjs-lib@6.1.5:
   version "6.1.5"
   resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-6.1.5.tgz#3b03509ae7ddd80a440f10fc38c4a97f0a028d8c"
   integrity sha512-yuf6xs9QX/E8LWE2aMJPNd0IxGofwfuVOiYdNUESkc+2bHHVKjhJd8qewqapeoolh9fihzHGoDCB5Vkr57RZCQ==
-  dependencies:
-    "@noble/hashes" "^1.2.0"
-    bech32 "^2.0.0"
-    bip174 "^2.1.1"
-    bs58check "^3.0.1"
-    typeforce "^1.11.3"
-    varuint-bitcoin "^1.1.2"
-
-bitcoinjs-lib@^6.0.0:
-  version "6.1.7"
-  resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-6.1.7.tgz#0f98dec1333d658574eefa455295668cfae38bb0"
-  integrity sha512-tlf/r2DGMbF7ky1MgUqXHzypYHakkEnm0SZP23CJKIqNY/5uNAnMbFhMJdhjrL/7anfb/U8+AlpdjPWjPnAalg==
   dependencies:
     "@noble/hashes" "^1.2.0"
     bech32 "^2.0.0"
@@ -4689,20 +4670,6 @@ bolt07@1.9.4:
   integrity sha512-zt+PZPoD8DN/ZaqqKen0B/NiAvWOgbPkj1/XS39CcAdwqGQSW9KG8Cf28m7fzFw+amZAvgG+jzRA1rGj/lDdwA==
   dependencies:
     bn.js "5.2.1"
-
-bolt11@1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/bolt11/-/bolt11-1.4.1.tgz#4363041b8c9f477b7f42c12d96e771fec39a00f1"
-  integrity sha512-jR0Y+MO+CK2at1Cg5mltLJ+6tdOwNKoTS/DJOBDdzVkQ+R9D6UgZMayTWOsuzY7OgV1gEqlyT5Tzk6t6r4XcNQ==
-  dependencies:
-    "@types/bn.js" "^4.11.3"
-    bech32 "^1.1.2"
-    bitcoinjs-lib "^6.0.0"
-    bn.js "^4.11.8"
-    create-hash "^1.2.0"
-    lodash "^4.17.11"
-    safe-buffer "^5.1.1"
-    secp256k1 "^4.0.2"
 
 boolbase@^1.0.0:
   version "1.0.0"

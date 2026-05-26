@@ -1,10 +1,10 @@
 import { computed } from 'mobx';
-import bolt11 from 'bolt11';
 
 import Payment from './Payment';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { Proof } from './CashuToken';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 // Quote structure used in meltResponse
 export interface MeltQuote {
@@ -82,11 +82,7 @@ export default class CashuPayment extends Payment {
         const payReq = this.payment_request || this.bolt11;
         if (payReq) {
             try {
-                const decoded: any = bolt11.decode(payReq);
-                for (let i = 0; i < decoded.tags.length; i++) {
-                    const tag = decoded.tags[i];
-                    if (tag.tagName === 'description') return tag.data;
-                }
+                return Bolt11Utils.decode(payReq).description;
             } catch {}
         }
         return undefined;
