@@ -164,11 +164,13 @@ export default class LSPS1OrderResponse extends React.Component<
                         {/* Legacy format */}
                         {payment && !payment.bolt11 && !payment.onchain && (
                             <>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Payment.title'
-                                    )}
-                                />
+                                {!isFreeOrder && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Payment.title'
+                                        )}
+                                    />
+                                )}
                                 {payment?.state && (
                                     <KeyValue
                                         keyValue={localeString('general.state')}
@@ -326,7 +328,7 @@ export default class LSPS1OrderResponse extends React.Component<
                             <>
                                 <KeyValue
                                     keyValue={localeString(
-                                        'iews.LSPS1.onchainPayment'
+                                        'views.LSPS1.onchainPayment'
                                     )}
                                 />
                                 {payment?.onchain.fee_total_sat && (
@@ -443,7 +445,6 @@ export default class LSPS1OrderResponse extends React.Component<
                             </>
                         )}
                         {orderResponse?.order_state === LSPOrderState.CREATED &&
-                            orderView &&
                             isFreeOrder && (
                                 <SuccessMessage
                                     message={localeString(

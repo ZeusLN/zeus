@@ -161,11 +161,13 @@ export default class LSPS7OrderResponse extends React.Component<
                         {/* BOLT11 */}
                         {payment && payment.bolt11 && (
                             <>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.LSPS1.bolt11Payment'
-                                    )}
-                                />
+                                {!isFreeOrder && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS1.bolt11Payment'
+                                        )}
+                                    />
+                                )}
                                 {payment?.bolt11.state && (
                                     <KeyValue
                                         keyValue={localeString('general.state')}
@@ -231,11 +233,13 @@ export default class LSPS7OrderResponse extends React.Component<
                         {/* On-chain */}
                         {payment && payment.onchain && (
                             <>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'iews.LSPS1.onchainPayment'
-                                    )}
-                                />
+                                {!isFreeOrder && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'iews.LSPS1.onchainPayment'
+                                        )}
+                                    />
+                                )}
                                 {payment?.onchain.fee_total_sat && (
                                     <KeyValue
                                         keyValue={localeString(
@@ -313,7 +317,6 @@ export default class LSPS7OrderResponse extends React.Component<
                             </>
                         )}
                         {orderResponse?.order_state === LSPOrderState.CREATED &&
-                            orderView &&
                             isFreeOrder && (
                                 <SuccessMessage
                                     message={localeString(

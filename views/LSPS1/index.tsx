@@ -30,6 +30,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { isOrderFree } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -183,6 +184,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     (info?.min_funding_confirms_within_blocks).toString()
             });
         }
+
+        const { createOrderResponse } = this.props.LSPStore;
+        const result = createOrderResponse?.result || createOrderResponse;
+
+        if (result?.order_id && isOrderFree(result?.payment)) {
+            this.saveOrder();
+        }
     }
 
     subscribeToCustomMessages() {
@@ -243,6 +251,46 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
     };
 
+    saveOrder = async (): Promise<void> => {
+        const { LSPStore, NodeInfoStore } = this.props;
+        const { createOrderResponse } = LSPStore;
+        const result = createOrderResponse?.result || createOrderResponse;
+        const orderId = result?.order_id;
+        if (!orderId) return;
+
+        try {
+            const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
+            const responseArray: any[] = responseArrayString
+                ? JSON.parse(responseArrayString)
+                : [];
+
+            const exists = responseArray.some((response: any) => {
+                const stored = JSON.parse(response);
+                const storedId =
+                    stored.order?.order_id || stored.order?.result?.order_id;
+                return storedId === orderId;
+            });
+            if (exists) return;
+
+            const orderData: Order | any = { order: createOrderResponse };
+            orderData.clientPubkey = NodeInfoStore.nodeInfo.nodeId;
+            if (BackendUtils.supportsLSPS1native()) {
+                orderData.native = true;
+            } else if (BackendUtils.supportsLSPScustomMessage()) {
+                orderData.peer = LSPStore.getLSPSPubkey();
+                orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
+            }
+            if (BackendUtils.supportsLSPS1rest()) {
+                orderData.endpoint = LSPStore.getLSPS1Rest();
+            }
+            orderData.service = 'LSPS1';
+            responseArray.push(JSON.stringify(orderData));
+            await Storage.setItem(LSPS_ORDERS_KEY, responseArray);
+        } catch (error) {
+            console.error('Error saving LSPS1 order:', error);
+        }
+    };
+
     updateExpirationIndex = (expirationIndex: number) => {
         if (expirationIndex === 0) {
             this.setState({
@@ -284,6 +332,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             getInfoData;
         const result = createOrderResponse?.result || createOrderResponse;
         const payment = result?.payment;
+        const isFreeOrder = isOrderFree(payment);
 
         const HistoryBtn = () => (
             <TouchableOpacity
@@ -1137,143 +1186,46 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 </ScrollView>
                             )}
                         </ScrollView>
-                        <View style={{ marginTop: 10 }}>
-                            <Button
-                                title={
-                                    Object.keys(createOrderResponse).length == 0
-                                        ? `${localeString(
-                                              'views.LSPS1.createOrder'
-                                          )}`
-                                        : `${localeString(
-                                              'views.LSPS1.makePayment'
-                                          )}`
-                                }
-                                onPress={() => {
-                                    if (
+                        {(Object.keys(createOrderResponse).length === 0 ||
+                            !isFreeOrder) && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={
                                         Object.keys(createOrderResponse)
-                                            .length === 0
-                                    ) {
+                                            .length == 0
+                                            ? `${localeString(
+                                                  'views.LSPS1.createOrder'
+                                              )}`
+                                            : `${localeString(
+                                                  'views.LSPS1.makePayment'
+                                              )}`
+                                    }
+                                    onPress={() => {
                                         if (
-                                            BackendUtils.supportsLSPS1native()
+                                            Object.keys(createOrderResponse)
+                                                .length === 0
                                         ) {
-                                            LSPStore.lsps1CreateOrderNative(
-                                                this.state
-                                            );
-                                        } else if (
-                                            BackendUtils.supportsLSPS1rest()
-                                        ) {
-                                            LSPStore.lsps1CreateOrderREST(
-                                                this.state
-                                            );
-                                        } else if (
-                                            BackendUtils.supportsLSPScustomMessage()
-                                        ) {
-                                            LSPStore.lsps1CreateOrderCustomMessage(
-                                                this.state
-                                            );
-                                        }
-                                    } else {
-                                        const orderId = result.order_id;
-
-                                        // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        Storage.getItem(LSPS_ORDERS_KEY)
-                                            .then((responseArrayString) => {
-                                                let responseArray = [];
-                                                if (responseArrayString) {
-                                                    responseArray =
-                                                        JSON.parse(
-                                                            responseArrayString
-                                                        );
-                                                }
-
-                                                // Check if the order_id already exists in the stored responses
-                                                const existingResponseIndex =
-                                                    responseArray.findIndex(
-                                                        (response: any) => {
-                                                            const currentOrderId =
-                                                                JSON.parse(
-                                                                    response
-                                                                ).order
-                                                                    ?.order_id ||
-                                                                JSON.parse(
-                                                                    response
-                                                                ).order?.result
-                                                                    ?.order_id;
-                                                            return (
-                                                                currentOrderId ===
-                                                                orderId
-                                                            );
-                                                        }
-                                                    );
-
-                                                if (
-                                                    existingResponseIndex === -1
-                                                ) {
-                                                    const orderData:
-                                                        | Order
-                                                        | any = {
-                                                        order: createOrderResponse
-                                                    };
-
-                                                    orderData.clientPubkey =
-                                                        this.props.NodeInfoStore.nodeInfo.nodeId;
-
-                                                    if (
-                                                        BackendUtils.supportsLSPS1native()
-                                                    ) {
-                                                        orderData.native = true;
-                                                    } else if (
-                                                        BackendUtils.supportsLSPScustomMessage()
-                                                    ) {
-                                                        orderData.peer =
-                                                            LSPStore.getLSPSPubkey();
-                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
-                                                    }
-                                                    if (
-                                                        BackendUtils.supportsLSPS1rest()
-                                                    ) {
-                                                        orderData.endpoint =
-                                                            LSPStore.getLSPS1Rest();
-                                                    }
-
-                                                    orderData.service = 'LSPS1';
-
-                                                    console.log(orderData);
-
-                                                    // Serialize the orderData object into a JSON string
-                                                    const serializedResponse =
-                                                        JSON.stringify(
-                                                            orderData
-                                                        );
-
-                                                    // Append the serialized response to the array
-                                                    responseArray.push(
-                                                        serializedResponse
-                                                    );
-
-                                                    // Save the updated array back to encrypted storage
-                                                    Storage.setItem(
-                                                        LSPS_ORDERS_KEY,
-                                                        responseArray
-                                                    )
-                                                        .then(() => {
-                                                            console.log(
-                                                                'Response saved successfully.'
-                                                            );
-                                                        })
-                                                        .catch((error) =>
-                                                            console.error(
-                                                                'Error saving order response:',
-                                                                error
-                                                            )
-                                                        );
-                                                } else {
-                                                    console.log(
-                                                        'Response with same order_id already exists. Skipping save.'
-                                                    );
-                                                }
-
-                                                // Navigate to payment
+                                            if (
+                                                BackendUtils.supportsLSPS1native()
+                                            ) {
+                                                LSPStore.lsps1CreateOrderNative(
+                                                    this.state
+                                                );
+                                            } else if (
+                                                BackendUtils.supportsLSPS1rest()
+                                            ) {
+                                                LSPStore.lsps1CreateOrderREST(
+                                                    this.state
+                                                );
+                                            } else if (
+                                                BackendUtils.supportsLSPScustomMessage()
+                                            ) {
+                                                LSPStore.lsps1CreateOrderCustomMessage(
+                                                    this.state
+                                                );
+                                            }
+                                        } else {
+                                            this.saveOrder().then(() => {
                                                 handleAnything(
                                                     payment.bolt11?.invoice ||
                                                         payment.lightning_invoice ||
@@ -1284,19 +1236,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         props
                                                     );
                                                 });
-                                            })
-                                            .catch((error) =>
-                                                console.error(
-                                                    'Error retrieving order responses:',
-                                                    error
-                                                )
-                                            );
-                                    }
-                                }}
-                                containerStyle={{ paddingBottom: 10 }}
-                                secondary
-                            />
-                        </View>
+                                            });
+                                        }
+                                    }}
+                                    containerStyle={{ paddingBottom: 10 }}
+                                    secondary
+                                />
+                            </View>
+                        )}
                     </>
                 )}
 
