@@ -118,13 +118,30 @@ describe('CashuUtils', () => {
             expect(CashuUtils.isValidCashuToken('notavalidtoken')).toBe(false);
         });
 
-        it('accepts any token with cashuA/cashuB prefix (prefix check only)', () => {
+        it('accepts tokens with a sufficient base64url-shaped payload', () => {
             expect(CashuUtils.isValidCashuToken('cashuAinvalidpayload')).toBe(
                 true
             );
             expect(CashuUtils.isValidCashuToken('cashuBinvalidpayload')).toBe(
                 true
             );
+        });
+
+        it('rejects tokens whose payload is too short after the prefix', () => {
+            expect(CashuUtils.isValidCashuToken('cashuA')).toBe(false);
+            expect(CashuUtils.isValidCashuToken('cashuB')).toBe(false);
+            expect(CashuUtils.isValidCashuToken('cashuAshort')).toBe(false);
+            expect(CashuUtils.isValidCashuToken('cashuBshort')).toBe(false);
+        });
+
+        it('rejects tokens with non-base64url characters after the prefix', () => {
+            expect(CashuUtils.isValidCashuToken('cashuA!!!!!!!!!!')).toBe(
+                false
+            );
+            expect(
+                CashuUtils.isValidCashuToken('cashuB?invalid=value&more')
+            ).toBe(false);
+            expect(CashuUtils.isValidCashuToken('cashuAfrica')).toBe(false);
         });
 
         it('rejects null/undefined', () => {

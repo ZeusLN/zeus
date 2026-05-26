@@ -83,9 +83,9 @@ class CashuUtils {
             return false;
         }
 
-        return (
-            cleanToken.startsWith('cashuA') || cleanToken.startsWith('cashuB')
-        );
+        // Structural shape check: cashuA/cashuB prefix + base64url body.
+        // Cryptographic validation lives in isValidCashuTokenAsync (CDK).
+        return /^cashu[AB][0-9A-Za-z_-]{10,}$/.test(cleanToken);
     };
 
     isValidCashuTokenAsync = async (token: string): Promise<boolean> => {

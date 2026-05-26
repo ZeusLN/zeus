@@ -733,11 +733,13 @@ const handleAnything = async (
             });
     } else if (
         /^https:\/\//i.test(value) &&
-        (value.includes('cashuA') || value.includes('cashuB'))
+        /cashu[AB][0-9A-Za-z_-]{10,}/.test(value)
     ) {
         // Handle web-wrapped cashu tokens (zeusln.com/e/, wallet.cashu.me/?token=,
         // wallet.nutstash.app/#, etc.). Must run before lnurl: findlnurl can match
-        // bech32-like substrings inside cashu tokens and misroute the input.
+        // bech32-like substrings inside cashu tokens and misroute the input. The
+        // base64url shape gate avoids consuming URLs that incidentally contain
+        // the literal "cashuA"/"cashuB" substring (e.g. "?ref=cashuAfrica").
         const cashuToken = CashuUtils.extractTokenString(value);
         if (CashuUtils.isValidCashuToken(cashuToken)) {
             if (isClipboardValue) return true;
