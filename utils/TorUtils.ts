@@ -78,17 +78,32 @@ const doTorRequest = async (
             throw new Error(`Unsupported method: ${method}`);
     }
 
-    if (response?.error) {
+    if (response.error) {
         throw new Error(response.error);
     }
 
-    if (response?.body) {
+    let parsedBody: any;
+    if (response.body) {
         try {
-            return JSON.parse(response.body);
+            parsedBody = JSON.parse(response.body);
         } catch {
-            return response.body;
+            parsedBody = response.body;
         }
     }
+
+    if (response.status_code >= 300) {
+        const message =
+            (parsedBody &&
+                typeof parsedBody === 'object' &&
+                (parsedBody.error?.message ||
+                    parsedBody.message ||
+                    parsedBody.error)) ||
+            (typeof parsedBody === 'string' && parsedBody) ||
+            `HTTP ${response.status_code}`;
+        throw new Error(message);
+    }
+
+    return parsedBody;
 };
 
 const restartTor = async () => {
