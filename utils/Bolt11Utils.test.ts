@@ -13,6 +13,11 @@ const BOLT11_SPEC_FIXTURE =
 const BOLT11_SPEC_PAYEE =
     '03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad';
 
+// BOLT11 spec reference vector with no amount
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const NO_AMOUNT_FIXTURE =
+    'lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap2r09nt4ndd0unm3z9u5t48y6ucv4r5sg7lk98c77ctvjczkspk5qprc90gx';
+
 describe('decode', () => {
     it('correctly decodes a valid payment request', () => {
         const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
@@ -89,6 +94,22 @@ describe('decode', () => {
 
         expect(decoded.destination).toBe(BOLT11_SPEC_PAYEE);
         expect(decoded.payeeNodeKey).toBe(BOLT11_SPEC_PAYEE);
+    });
+
+    it('returns null amount fields for a no-amount invoice', () => {
+        const decoded = Bolt11Utils.decode(NO_AMOUNT_FIXTURE);
+
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.millisatoshis).toBeNull();
+        expect(decoded.num_satoshis).toBe('0');
+        expect(decoded.num_msat).toBe('0');
+    });
+
+    it('still decodes payment_hash and timestamp for a no-amount invoice', () => {
+        const decoded = Bolt11Utils.decode(NO_AMOUNT_FIXTURE);
+
+        expect(decoded.payment_hash).toMatch(/^[0-9a-f]{64}$/);
+        expect(decoded.timestamp).toBeGreaterThan(0);
     });
 
     it('preserves the legacy sections array for back-compat', () => {
