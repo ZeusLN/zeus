@@ -266,33 +266,6 @@ async function writeNdefText(token: string): Promise<void> {
 // --- Public NFC operations ---
 
 /**
- * Read a CREQ payment request from an NFC Type 4 tag via IsoDep APDUs.
- * Works on both Android and iOS.
- */
-export async function readCREQFromTag(
-    modalStore: ModalStore
-): Promise<{ creqParams: CREQParams; creqString: string } | undefined> {
-    if (!(await checkNfcEnabled(modalStore))) return undefined;
-
-    try {
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
-
-        await NfcManager.requestTechnology(NfcTech.IsoDep);
-        await selectNdefApp();
-        const text = await readNdefText();
-        if (!text || !isCREQ(text)) return undefined;
-
-        return { creqParams: decodeCREQ(text), creqString: text };
-    } catch (e) {
-        console.warn('readCREQFromTag error:', e);
-        return undefined;
-    } finally {
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
-        NfcManager.cancelTechnologyRequest().catch(() => 0);
-    }
-}
-
-/**
  * Write a Cashu token to an NFC Type 4 tag via IsoDep UPDATE BINARY APDUs.
  * The tag must already be writable (merchant HCE with writable=true).
  */
