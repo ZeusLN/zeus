@@ -12,8 +12,9 @@ import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
 import Touchable from './Touchable';
-import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import { getDecimalSeparator } from '../utils/UnitsUtils';
 
 import DeleteKey from '../assets/images/SVG/DeleteKey.svg';
 
@@ -171,10 +172,7 @@ export default function PinPad({
                                     : DEFAULT_SIZE
                             }}
                         >
-                            {unitsStore.units === 'fiat' &&
-                            fiatStore.getSymbol().separatorSwap
-                                ? ','
-                                : '.'}
+                            {getDecimalSeparator()}
                         </Text>
                     </Touchable>
                 ) : (
