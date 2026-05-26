@@ -36,14 +36,10 @@ import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import handleAnything from '../../utils/handleAnything';
 
-import Storage from '../../storage';
-
-import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import LSPStore from '../../stores/LSPStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-
-import { LSPOrderResponse as Order } from './OrdersPane';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -70,6 +66,7 @@ interface LSPS1State {
 export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     listener: any;
     private scrollViewRef = React.createRef<ScrollView>();
+    private lastSavedOrderId: string | null = null;
     constructor(props: LSPS1Props) {
         super(props);
         this.state = {
@@ -185,11 +182,18 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             });
         }
 
-        const { createOrderResponse } = this.props.LSPStore;
+        const { LSPStore } = this.props;
+        const { createOrderResponse } = LSPStore;
         const result = createOrderResponse?.result || createOrderResponse;
+        const orderId = result?.order_id;
 
-        if (result?.order_id && isOrderFree(result?.payment)) {
-            this.saveOrder();
+        if (
+            orderId &&
+            orderId !== this.lastSavedOrderId &&
+            isOrderFree(result?.payment)
+        ) {
+            this.lastSavedOrderId = orderId;
+            LSPStore.saveOrderToHistory(createOrderResponse, 'LSPS1');
         }
     }
 
@@ -248,46 +252,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             );
         } catch (err) {
             console.log(err);
-        }
-    };
-
-    saveOrder = async (): Promise<void> => {
-        const { LSPStore, NodeInfoStore } = this.props;
-        const { createOrderResponse } = LSPStore;
-        const result = createOrderResponse?.result || createOrderResponse;
-        const orderId = result?.order_id;
-        if (!orderId) return;
-
-        try {
-            const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
-            const responseArray: any[] = responseArrayString
-                ? JSON.parse(responseArrayString)
-                : [];
-
-            const exists = responseArray.some((response: any) => {
-                const stored = JSON.parse(response);
-                const storedId =
-                    stored.order?.order_id || stored.order?.result?.order_id;
-                return storedId === orderId;
-            });
-            if (exists) return;
-
-            const orderData: Order | any = { order: createOrderResponse };
-            orderData.clientPubkey = NodeInfoStore.nodeInfo.nodeId;
-            if (BackendUtils.supportsLSPS1native()) {
-                orderData.native = true;
-            } else if (BackendUtils.supportsLSPScustomMessage()) {
-                orderData.peer = LSPStore.getLSPSPubkey();
-                orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
-            }
-            if (BackendUtils.supportsLSPS1rest()) {
-                orderData.endpoint = LSPStore.getLSPS1Rest();
-            }
-            orderData.service = 'LSPS1';
-            responseArray.push(JSON.stringify(orderData));
-            await Storage.setItem(LSPS_ORDERS_KEY, responseArray);
-        } catch (error) {
-            console.error('Error saving LSPS1 order:', error);
         }
     };
 
@@ -1225,7 +1189,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 );
                                             }
                                         } else {
-                                            this.saveOrder().then(() => {
+                                            LSPStore.saveOrderToHistory(
+                                                createOrderResponse,
+                                                'LSPS1'
+                                            ).then(() => {
                                                 handleAnything(
                                                     payment.bolt11?.invoice ||
                                                         payment.lightning_invoice ||

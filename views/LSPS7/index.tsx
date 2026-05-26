@@ -29,14 +29,10 @@ import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import handleAnything from '../../utils/handleAnything';
 
-import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import LSPStore from '../../stores/LSPStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-
-import { LSPOrderResponse as Order } from '../LSPS1/OrdersPane';
-
-import Storage from '../../storage';
 
 interface LSPS7Props {
     LSPStore: LSPStore;
@@ -69,6 +65,7 @@ interface LSPS7State {
 export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     listener: any;
     private scrollViewRef = React.createRef<ScrollView>();
+    private lastSavedOrderId: string | null = null;
     constructor(props: LSPS7Props) {
         super(props);
 
@@ -109,52 +106,22 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     }
 
     componentDidUpdate(_prevProps: LSPS7Props) {
-        const { createExtensionOrderResponse } = this.props.LSPStore;
-        const result =
-            createExtensionOrderResponse?.result ||
-            createExtensionOrderResponse;
-
-        if (result?.order_id && isOrderFree(result?.payment)) {
-            this.saveOrder();
-        }
-    }
-
-    saveOrder = async (): Promise<void> => {
-        const { LSPStore, NodeInfoStore } = this.props;
+        const { LSPStore } = this.props;
         const { createExtensionOrderResponse } = LSPStore;
         const result =
             createExtensionOrderResponse?.result ||
             createExtensionOrderResponse;
         const orderId = result?.order_id;
-        if (!orderId) return;
 
-        try {
-            const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
-            const responseArray: any[] = responseArrayString
-                ? JSON.parse(responseArrayString)
-                : [];
-
-            const exists = responseArray.some((response: any) => {
-                const stored = JSON.parse(response);
-                const storedId =
-                    stored.order?.order_id || stored.order?.result?.order_id;
-                return storedId === orderId;
-            });
-            if (exists) return;
-
-            const orderData: Order | any = {
-                order: createExtensionOrderResponse
-            };
-            orderData.clientPubkey = NodeInfoStore.nodeInfo?.nodeId;
-            orderData.peer = LSPStore.getLSPSPubkey();
-            orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
-            orderData.service = 'LSPS7';
-            responseArray.push(JSON.stringify(orderData));
-            await Storage.setItem(LSPS_ORDERS_KEY, responseArray);
-        } catch (error) {
-            console.error('Error saving LSPS7 order:', error);
+        if (
+            orderId &&
+            orderId !== this.lastSavedOrderId &&
+            isOrderFree(result?.payment)
+        ) {
+            this.lastSavedOrderId = orderId;
+            LSPStore.saveOrderToHistory(createExtensionOrderResponse, 'LSPS7');
         }
-    };
+    }
 
     updateExpirationIndex = (expirationIndex: number) => {
         if (expirationIndex === 0) {
@@ -682,7 +649,10 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 this.state
                                             );
                                         } else {
-                                            this.saveOrder().then(() => {
+                                            LSPStore.saveOrderToHistory(
+                                                createExtensionOrderResponse,
+                                                'LSPS7'
+                                            ).then(() => {
                                                 handleAnything(
                                                     payment.bolt11?.invoice ||
                                                         payment.lightning_invoice ||

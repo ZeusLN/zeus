@@ -16,6 +16,8 @@ import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
+import Storage from '../storage';
+
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
 export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
 
@@ -129,6 +131,51 @@ export default class LSPStore {
     @action
     public clearLSPS7Order = () => {
         this.createExtensionOrderResponse = {};
+    };
+
+    public saveOrderToHistory = async (
+        orderResponse: any,
+        service: 'LSPS1' | 'LSPS7'
+    ): Promise<void> => {
+        const result = orderResponse?.result || orderResponse;
+        const orderId = result?.order_id;
+        if (!orderId) return;
+
+        try {
+            const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
+            const responseArray: any[] = responseArrayString
+                ? JSON.parse(responseArrayString)
+                : [];
+
+            const exists = responseArray.some((response: any) => {
+                const stored = JSON.parse(response);
+                const storedId =
+                    stored.order?.order_id || stored.order?.result?.order_id;
+                return storedId === orderId;
+            });
+            if (exists) return;
+
+            const orderData: any = {
+                order: orderResponse,
+                clientPubkey: this.nodeInfoStore.nodeInfo?.nodeId,
+                service
+            };
+
+            if (service === 'LSPS1' && BackendUtils.supportsLSPS1native()) {
+                orderData.native = true;
+            } else if (BackendUtils.supportsLSPScustomMessage()) {
+                orderData.peer = this.getLSPSPubkey();
+                orderData.uri = `${this.getLSPSPubkey()}@${this.getLSPSHost()}`;
+            }
+            if (service === 'LSPS1' && BackendUtils.supportsLSPS1rest()) {
+                orderData.endpoint = this.getLSPS1Rest();
+            }
+
+            responseArray.push(JSON.stringify(orderData));
+            await Storage.setItem(LSPS_ORDERS_KEY, responseArray);
+        } catch (error) {
+            console.error(`Error saving ${service} order:`, error);
+        }
     };
 
     private getLspConfig = () =>
