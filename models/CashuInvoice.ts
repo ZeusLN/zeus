@@ -71,18 +71,7 @@ export default class CashuInvoice extends BaseModel {
 
     @computed public get getMemo(): string | undefined {
         if (this.fromCDK) return this.cdkMemo;
-        let memo;
-        for (let i = 0; i < this.decoded?.tags.length; i++) {
-            const tag = this.decoded?.tags[i];
-            switch (tag.tagName) {
-                case 'description':
-                    memo = tag.data;
-                    break;
-            }
-        }
-        if (typeof memo === 'string') return memo;
-        if (Array.isArray(memo)) return memo[0];
-        return undefined;
+        return this.decoded?.description;
     }
 
     @computed public get isPaid(): boolean {

@@ -1,5 +1,4 @@
 import { computed } from 'mobx';
-import bolt11 from 'bolt11';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
 
@@ -76,8 +75,7 @@ export default class Payment extends BaseModel {
         const pay_req = this.getPaymentRequest;
         if (pay_req) {
             try {
-                const decoded = bolt11.decode(pay_req);
-                return decoded.payeeNodeKey;
+                return Bolt11Utils.decode(pay_req).destination;
             } catch {
                 return undefined;
             }
@@ -116,11 +114,7 @@ export default class Payment extends BaseModel {
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
             try {
-                const decoded: any = bolt11.decode(this.getPaymentRequest);
-                for (let i = 0; i < decoded.tags.length; i++) {
-                    const tag = decoded.tags[i];
-                    if (tag.tagName === 'description') return tag.data;
-                }
+                return Bolt11Utils.decode(this.getPaymentRequest).description;
             } catch (e) {
                 console.log('Error decoding payment request:', e);
             }
