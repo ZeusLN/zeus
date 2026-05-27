@@ -10,7 +10,10 @@ import {
 } from 'react-native-safe-area-context';
 import {
     BackHandler,
+    EmitterSubscription,
+    NativeEventEmitter,
     NativeEventSubscription,
+    NativeModules,
     Platform,
     StatusBar,
     AppState
@@ -63,6 +66,7 @@ import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
 import NWCPendingPaymentsModal from './components/Modals/NWCPendingPaymentsModal';
 import RatingModal from './components/Modals/RatingModal';
 import RestoreChannelModal from './components/Modals/RestoreChannelModal';
+import ScreenRecordingWarningModal from './components/Modals/ScreenRecordingWarningModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -316,6 +320,7 @@ const Stack = createNativeStackNavigator();
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription;
+    private screenRecordingSubscription?: EmitterSubscription;
     private navigation: any = null;
 
     private static SCREENS_WITH_CUSTOM_BACK_HANDLER = [
@@ -361,11 +366,29 @@ export default class App extends React.PureComponent {
 
         // Ensure stealth mode is in a valid state (safety check)
         StealthModeUtils.fixStealthModeIfNeeded();
+
+        settingsStore.getSettings().then((settings) => {
+            const protect = settings?.privacy?.screenCaptureProtection ?? false;
+            NativeModules.MobileTools.setSecureFlag(protect).catch(() => {});
+        });
+
+        if (Platform.OS === 'ios') {
+            const emitter = new NativeEventEmitter(NativeModules.MobileTools);
+            this.screenRecordingSubscription = emitter.addListener(
+                'ScreenRecordingStateChanged',
+                ({ isCapturing }: { isCapturing: boolean }) => {
+                    modalStore.toggleScreenRecordingWarning(isCapturing);
+                }
+            );
+        }
     }
 
     componentWillUnmount() {
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
+        }
+        if (this.screenRecordingSubscription) {
+            this.screenRecordingSubscription.remove();
         }
     }
 
@@ -1780,6 +1803,8 @@ export default class App extends React.PureComponent {
                                 <RatingModal />
                                 {/* @ts-ignore:next-line */}
                                 <RestoreChannelModal />
+                                {/* @ts-ignore:next-line */}
+                                <ScreenRecordingWarningModal />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
                     </AppContainer>

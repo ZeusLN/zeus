@@ -18,6 +18,7 @@ export default class ModalStore {
     @observable public showNWCPendingPaymentsModal: boolean = false;
     @observable public showRatingModal: boolean = false;
     @observable public showRestoreChannelModal: boolean = false;
+    @observable public showScreenRecordingWarning: boolean = false;
     @observable public nwcPendingPaymentsData?: {
         pendingEvents: any[];
         totalAmount: number;
@@ -89,6 +90,11 @@ export default class ModalStore {
     @action
     public toggleAlertModal = (status: boolean) => {
         this.showAlertModal = status;
+    };
+
+    @action
+    public toggleScreenRecordingWarning = (status: boolean) => {
+        this.showScreenRecordingWarning = status;
     };
 
     @action
