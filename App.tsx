@@ -148,6 +148,7 @@ import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
 import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
 import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
+import LightningAddressQR from './views/LightningAddress/LightningAddressQR';
 import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
 import Attestation from './views/LightningAddress/Attestation';
 import Attestations from './views/LightningAddress/Attestations';
@@ -1266,6 +1267,12 @@ export default class App extends React.PureComponent {
                                                                 name="LightningAddress" // @ts-ignore:next-line
                                                                 component={
                                                                     LightningAddress
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LightningAddressQR" // @ts-ignore:next-line
+                                                                component={
+                                                                    LightningAddressQR
                                                                 }
                                                             />
                                                             <Stack.Screen
