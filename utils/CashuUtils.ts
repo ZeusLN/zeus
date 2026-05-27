@@ -45,6 +45,8 @@ class CashuUtils {
     /**
      * Extract raw token string from various URL formats.
      * Supports both cashuA (v3 JSON) and cashuB (v4 CBOR) token prefixes.
+     * Accepts both base64url (`-`/`_`) and standard-base64 (`+`/`/`/`=`)
+     * alphabets, since real wallets emit either.
      */
     extractTokenString = (token: string): string => {
         if (!token || typeof token !== 'string') {
@@ -52,17 +54,15 @@ class CashuUtils {
         }
         token = token.trim();
 
-        // Find cashuA or cashuB prefix if present
-        const idxA = token.indexOf('cashuA');
-        const idxB = token.indexOf('cashuB');
-        // Pick the earliest match, or whichever exists
-        const idx =
-            idxA === -1 ? idxB : idxB === -1 ? idxA : Math.min(idxA, idxB);
-        if (idx !== -1) {
-            token = token.slice(idx);
+        // Greedy-match the cashu prefix + base64 body. This naturally stops
+        // at the first non-base64 character, trimming any trailing URL noise
+        // like `&memo=foo` that may follow the token in a web wrapper.
+        const match = token.match(/cashu[AB][0-9A-Za-z+/_=-]+/);
+        if (match) {
+            return match[0];
         }
 
-        // Remove URL prefixes
+        // No embedded cashu prefix found — strip a known URL prefix if any.
         for (const prefix of cashuTokenPrefixes) {
             if (token.startsWith(prefix)) {
                 token = token.slice(prefix.length).trim();
@@ -83,9 +83,9 @@ class CashuUtils {
             return false;
         }
 
-        return (
-            cleanToken.startsWith('cashuA') || cleanToken.startsWith('cashuB')
-        );
+        // Structural shape check: cashuA/cashuB prefix + base64 body.
+        // Cryptographic validation lives in isValidCashuTokenAsync (CDK).
+        return /^cashu[AB][0-9A-Za-z+/_=-]{10,}$/.test(cleanToken);
     };
 
     isValidCashuTokenAsync = async (token: string): Promise<boolean> => {
