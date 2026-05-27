@@ -13,7 +13,9 @@ import Text from '../../../components/Text';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 
-import SettingsStore from '../../../stores/SettingsStore';
+import SettingsStore, {
+    NOTIFICATIONS_PREF_KEYS
+} from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 import CashuStore from '../../../stores/CashuStore';
 
@@ -34,6 +36,7 @@ interface CashuLightningAddressSettingsState {
     automaticallyAccept: boolean | undefined;
     allowComments: boolean | undefined;
     zapReceiptsEnabled: boolean;
+    notifications: number;
     mintList: Array<MintItem>;
     mintUrl: string;
 }
@@ -79,6 +82,10 @@ export default class CashuLightningAddressSettings extends React.Component<
                 : false,
             zapReceiptsEnabled:
                 settings.lightningAddress?.zapReceiptsEnabled !== false,
+            notifications:
+                settings.lightningAddress?.notifications !== undefined
+                    ? settings.lightningAddress.notifications
+                    : 1,
             mintUrl: defaultMintUrl
         };
     }
@@ -115,6 +122,7 @@ export default class CashuLightningAddressSettings extends React.Component<
             automaticallyAccept,
             allowComments,
             zapReceiptsEnabled,
+            notifications,
             mintUrl,
             mintList
         } = this.state;
@@ -295,6 +303,35 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     }}
                                 />
                             </View>
+                        </View>
+                        <View style={{ marginTop: 20 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.LightningAddressSettings.notifications'
+                                )}
+                                titleColor={themeColor('text')}
+                                selectedValue={notifications}
+                                onValueChange={async (value: number) => {
+                                    try {
+                                        await update({
+                                            notifications: value
+                                        });
+                                        this.setState({
+                                            notifications: value
+                                        });
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
+                                                notifications: value
+                                            }
+                                        });
+                                    } catch (e) {}
+                                }}
+                                values={NOTIFICATIONS_PREF_KEYS}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                            />
                         </View>
                         {mintsNotConfigured ? (
                             <View style={{ marginTop: 20 }}>
