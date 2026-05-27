@@ -157,6 +157,7 @@ interface LightningAddressSettings {
     automaticallyRequestOlympusChannels: boolean; // deprecated
     routeHints: boolean;
     allowComments: boolean;
+    zapReceiptsEnabled: boolean;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
@@ -1588,6 +1589,7 @@ export default class SettingsStore {
             automaticallyRequestOlympusChannels: false, // deprecated
             routeHints: false,
             allowComments: true,
+            zapReceiptsEnabled: true,
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0,

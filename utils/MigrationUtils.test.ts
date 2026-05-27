@@ -107,7 +107,8 @@ describe('MigrationUtils', () => {
                 'wss://relay.snort.social'
             ],
             notifications: 0,
-            routeHints: false
+            routeHints: false,
+            zapReceiptsEnabled: true
         },
         lspMainnet: 'https://0conf.lnolymp.us',
         lspTestnet: 'https://testnet-0conf.lnolymp.us',
@@ -219,7 +220,8 @@ describe('MigrationUtils', () => {
                             mintUrl: '',
                             nostrPrivateKey: '',
                             notifications: 0,
-                            routeHints: false
+                            routeHints: false,
+                            zapReceiptsEnabled: true
                         }
                     })
                 )

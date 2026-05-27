@@ -37,6 +37,7 @@ interface LightningAddressSettingsState {
     automaticallyAcceptAttestationLevel: number;
     routeHints: boolean | undefined;
     allowComments: boolean | undefined;
+    zapReceiptsEnabled: boolean;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
@@ -66,6 +67,8 @@ export default class LightningAddressSettings extends React.Component<
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
+            zapReceiptsEnabled:
+                settings.lightningAddress?.zapReceiptsEnabled !== false,
             nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
             nostrRelays: settings.lightningAddress?.nostrRelays || [],
             notifications:
@@ -107,6 +110,7 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAcceptAttestationLevel,
             routeHints,
             allowComments,
+            zapReceiptsEnabled,
             nostrRelays,
             notifications
         } = this.state;
@@ -289,21 +293,74 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
+                                        const next = !allowComments;
                                         try {
                                             await update({
-                                                allow_comments: !allowComments
-                                            }).then(async () => {
-                                                this.setState({
-                                                    allowComments:
-                                                        !allowComments
-                                                });
-                                                await updateSettings({
-                                                    lightningAddress: {
-                                                        ...settings.lightningAddress,
-                                                        allowComments:
-                                                            !allowComments
-                                                    }
-                                                });
+                                                allow_comments: next
+                                            });
+                                            this.setState({
+                                                allowComments: next
+                                            });
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    allowComments: next
+                                                }
+                                            });
+                                        } catch (e) {}
+                                    }}
+                                />
+                            </View>
+                        </View>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 17
+                                    }}
+                                    infoModalText={[
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer2'
+                                        )
+                                    ]}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddressSettings.zapReceiptsEnabled'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={zapReceiptsEnabled}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
+                                    onValueChange={async () => {
+                                        const next = !zapReceiptsEnabled;
+                                        try {
+                                            await update({
+                                                zap_receipts_enabled: next
+                                            });
+                                            this.setState({
+                                                zapReceiptsEnabled: next
+                                            });
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    zapReceiptsEnabled: next
+                                                }
                                             });
                                         } catch (e) {}
                                     }}
@@ -321,16 +378,15 @@ export default class LightningAddressSettings extends React.Component<
                                     try {
                                         await update({
                                             notifications: value
-                                        }).then(async () => {
-                                            this.setState({
+                                        });
+                                        this.setState({
+                                            notifications: value
+                                        });
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
                                                 notifications: value
-                                            });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
-                                                    notifications: value
-                                                }
-                                            });
+                                            }
                                         });
                                     } catch (e) {}
                                 }}

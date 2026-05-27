@@ -280,6 +280,7 @@ class MigrationsUtils {
                 automaticallyRequestOlympusChannels: false, // deprecated
                 routeHints: false,
                 allowComments: true,
+                zapReceiptsEnabled: true,
                 nostrPrivateKey: '',
                 nostrRelays: DEFAULT_NOSTR_RELAYS,
                 notifications: 0,
