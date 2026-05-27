@@ -117,6 +117,7 @@ export interface CreateConnectionParams {
     budgetAmount?: number;
     budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
+    createdAt?: Date;
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
     totalSpendSats?: number;
@@ -536,6 +537,22 @@ export default class NostrWalletConnectStore {
 
             const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
                 this.generateConnectionSecret(params.relayUrl);
+
+            let expiresAt = params.expiresAt;
+            let customExpiryValue = params.customExpiryValue;
+            let customExpiryUnit = params.customExpiryUnit;
+            if (params.id && params.createdAt) {
+                const refreshed = NostrConnectUtils.refreshExpiryForRegenerate({
+                    expiresAt: params.expiresAt,
+                    createdAt: params.createdAt,
+                    customExpiryValue: params.customExpiryValue,
+                    customExpiryUnit: params.customExpiryUnit
+                });
+                expiresAt = refreshed.expiresAt;
+                customExpiryValue = refreshed.customExpiryValue;
+                customExpiryUnit = refreshed.customExpiryUnit;
+            }
+
             const connectionData = {
                 id: params.id || uuidv4(),
                 name: params.name.trim(),
@@ -551,15 +568,15 @@ export default class NostrWalletConnectStore {
                 createdAt: new Date(),
                 maxAmountSats: params.budgetAmount,
                 budgetRenewal: params.budgetRenewal || BudgetRenewalType.Never,
-                expiresAt: params.expiresAt,
+                expiresAt,
                 lastBudgetReset:
                     params.lastBudgetReset !== undefined
                         ? params.lastBudgetReset
                         : params.budgetAmount
                         ? new Date()
                         : undefined,
-                customExpiryValue: params.customExpiryValue,
-                customExpiryUnit: params.customExpiryUnit,
+                customExpiryValue,
+                customExpiryUnit,
                 nodePubkey,
                 implementation,
                 activity: params.activity || []

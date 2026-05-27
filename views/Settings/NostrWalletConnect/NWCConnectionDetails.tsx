@@ -183,7 +183,8 @@ export default class NWCConnectionDetails extends React.Component<
             budgetRenewal: connection.budgetRenewal || 'never',
             totalSpendSats: connection.totalSpendSats,
             lastBudgetReset: connection.lastBudgetReset,
-            activity: connection.activity
+            activity: connection.activity,
+            createdAt: connection.createdAt
         };
         if (connection.maxAmountSats && connection.maxAmountSats > 0) {
             params.budgetAmount = connection.maxAmountSats;

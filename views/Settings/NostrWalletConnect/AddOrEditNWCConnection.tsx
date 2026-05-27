@@ -571,6 +571,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
+            const createdAt = connection.createdAt;
             const params = await this.buildConnectionParams(
                 false,
                 connectionId
@@ -578,6 +579,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
+            params.createdAt = createdAt;
             await NostrWalletConnectStore.deleteConnection(connectionId);
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
