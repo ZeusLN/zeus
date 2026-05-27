@@ -451,6 +451,62 @@ export default class NostrConnectUtils {
         );
         return index >= 0 ? index : 0;
     }
+    /**
+     * Recomputes connection expiry from now when regenerating a connection
+     * (new secret, same settings). Preset durations (7d / 30d / 1y) restart
+     * from the current time; custom durations use stored value + unit.
+     */
+    static refreshExpiryForRegenerate({
+        expiresAt,
+        createdAt,
+        customExpiryValue,
+        customExpiryUnit
+    }: {
+        expiresAt?: Date;
+        createdAt: Date;
+        customExpiryValue?: number;
+        customExpiryUnit?: TimeUnit;
+    }): {
+        expiresAt?: Date;
+        customExpiryValue?: number;
+        customExpiryUnit?: TimeUnit;
+    } {
+        if (!expiresAt) {
+            return {};
+        }
+
+        const priorExpiresAt = new Date(expiresAt);
+        const priorCreatedAt = new Date(createdAt);
+
+        if (customExpiryValue && customExpiryUnit) {
+            return {
+                expiresAt: NostrConnectUtils.calculateCustomExpiryDate(
+                    customExpiryValue,
+                    customExpiryUnit
+                ),
+                customExpiryValue,
+                customExpiryUnit
+            };
+        }
+
+        const presetIndex = NostrConnectUtils.getExpiryPresetIndex(
+            priorExpiresAt,
+            priorCreatedAt
+        );
+        if (presetIndex === PRESET_INDEX.CUSTOM) {
+            const durationMs = Math.max(
+                priorExpiresAt.getTime() - priorCreatedAt.getTime(),
+                24 * 60 * 60 * 1000
+            );
+            return {
+                expiresAt: new Date(Date.now() + durationMs)
+            };
+        }
+
+        return {
+            expiresAt: NostrConnectUtils.getExpiryDateFromPreset(presetIndex)
+        };
+    }
 
     /**
      * Decodes invoice and extracts payment hash, description hash, and expiry time
