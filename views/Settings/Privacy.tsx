@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import StealthIcon from '../../assets/images/SVG/Hidden.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
+import ModalStore from '../../stores/ModalStore';
 import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -25,6 +26,7 @@ import TextInput from '../../components/TextInput';
 
 interface PrivacyProps {
     navigation: NativeStackNavigationProp<any, any>;
+    ModalStore: ModalStore;
     SettingsStore: SettingsStore;
 }
 
@@ -39,7 +41,7 @@ interface PrivacyState {
     screenCaptureProtection: boolean;
 }
 
-@inject('SettingsStore')
+@inject('ModalStore', 'SettingsStore')
 @observer
 export default class Privacy extends React.Component<
     PrivacyProps,
@@ -92,7 +94,7 @@ export default class Privacy extends React.Component<
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, ModalStore, SettingsStore } = this.props;
         const {
             defaultBlockExplorer,
             customBlockExplorer,
@@ -360,6 +362,14 @@ export default class Privacy extends React.Component<
                                                 screenCaptureProtection:
                                                     !newValue
                                             }
+                                        });
+                                        ModalStore.toggleInfoModal({
+                                            title: localeString(
+                                                'general.error'
+                                            ),
+                                            text: localeString(
+                                                'views.Settings.Privacy.screenCaptureProtection.unavailable'
+                                            )
                                         });
                                     }
                                 }}
