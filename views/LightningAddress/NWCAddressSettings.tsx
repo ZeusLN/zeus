@@ -150,12 +150,12 @@ export default class NWCAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !allowComments;
+                                        this.setState({
+                                            allowComments: next
+                                        });
                                         try {
                                             await update({
                                                 allow_comments: next
-                                            });
-                                            this.setState({
-                                                allowComments: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -163,7 +163,11 @@ export default class NWCAddressSettings extends React.Component<
                                                     allowComments: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                allowComments: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -205,12 +209,12 @@ export default class NWCAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !zapReceiptsEnabled;
+                                        this.setState({
+                                            zapReceiptsEnabled: next
+                                        });
                                         try {
                                             await update({
                                                 zap_receipts_enabled: next
-                                            });
-                                            this.setState({
-                                                zapReceiptsEnabled: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -218,7 +222,11 @@ export default class NWCAddressSettings extends React.Component<
                                                     zapReceiptsEnabled: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                zapReceiptsEnabled: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -231,21 +239,21 @@ export default class NWCAddressSettings extends React.Component<
                                 titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
+                                    const prev = notifications;
+                                    this.setState({ notifications: value });
                                     try {
                                         await update({
                                             notifications: value
-                                        }).then(async () => {
-                                            this.setState({
-                                                notifications: value
-                                            });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
-                                                    notifications: value
-                                                }
-                                            });
                                         });
-                                    } catch (e) {}
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
+                                                notifications: value
+                                            }
+                                        });
+                                    } catch (e) {
+                                        this.setState({ notifications: prev });
+                                    }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
                                 disabled={

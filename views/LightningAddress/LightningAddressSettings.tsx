@@ -172,18 +172,23 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
+                                        const next = !automaticallyAccept;
                                         this.setState({
-                                            automaticallyAccept:
-                                                !automaticallyAccept
+                                            automaticallyAccept: next
                                         });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                automaticallyAccept:
-                                                    !automaticallyAccept
-                                            }
-                                        });
-                                        restartNeeded();
+                                        try {
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    automaticallyAccept: next
+                                                }
+                                            });
+                                            restartNeeded();
+                                        } catch (e) {
+                                            this.setState({
+                                                automaticallyAccept: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -198,18 +203,27 @@ export default class LightningAddressSettings extends React.Component<
                                     automaticallyAcceptAttestationLevel
                                 }
                                 onValueChange={async (value: number) => {
+                                    const prev =
+                                        automaticallyAcceptAttestationLevel;
                                     this.setState({
                                         automaticallyAcceptAttestationLevel:
                                             value
                                     });
-                                    await updateSettings({
-                                        lightningAddress: {
-                                            ...settings.lightningAddress,
+                                    try {
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
+                                                automaticallyAcceptAttestationLevel:
+                                                    value
+                                            }
+                                        });
+                                        restartNeeded();
+                                    } catch (e) {
+                                        this.setState({
                                             automaticallyAcceptAttestationLevel:
-                                                value
-                                        }
-                                    });
-                                    restartNeeded();
+                                                prev
+                                        });
+                                    }
                                 }}
                                 values={AUTOMATIC_ATTESTATION_KEYS}
                                 disabled={
@@ -252,15 +266,20 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
-                                        this.setState({
-                                            routeHints: !routeHints
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                routeHints: !routeHints
-                                            }
-                                        });
+                                        const next = !routeHints;
+                                        this.setState({ routeHints: next });
+                                        try {
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    routeHints: next
+                                                }
+                                            });
+                                        } catch (e) {
+                                            this.setState({
+                                                routeHints: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -294,12 +313,12 @@ export default class LightningAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !allowComments;
+                                        this.setState({
+                                            allowComments: next
+                                        });
                                         try {
                                             await update({
                                                 allow_comments: next
-                                            });
-                                            this.setState({
-                                                allowComments: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -307,7 +326,11 @@ export default class LightningAddressSettings extends React.Component<
                                                     allowComments: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                allowComments: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -349,12 +372,12 @@ export default class LightningAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !zapReceiptsEnabled;
+                                        this.setState({
+                                            zapReceiptsEnabled: next
+                                        });
                                         try {
                                             await update({
                                                 zap_receipts_enabled: next
-                                            });
-                                            this.setState({
-                                                zapReceiptsEnabled: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -362,7 +385,11 @@ export default class LightningAddressSettings extends React.Component<
                                                     zapReceiptsEnabled: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                zapReceiptsEnabled: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -375,11 +402,10 @@ export default class LightningAddressSettings extends React.Component<
                                 titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
+                                    const prev = notifications;
+                                    this.setState({ notifications: value });
                                     try {
                                         await update({
-                                            notifications: value
-                                        });
-                                        this.setState({
                                             notifications: value
                                         });
                                         await updateSettings({
@@ -388,7 +414,9 @@ export default class LightningAddressSettings extends React.Component<
                                                 notifications: value
                                             }
                                         });
-                                    } catch (e) {}
+                                    } catch (e) {
+                                        this.setState({ notifications: prev });
+                                    }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
                                 disabled={

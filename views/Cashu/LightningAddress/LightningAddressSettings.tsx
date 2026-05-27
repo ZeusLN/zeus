@@ -186,18 +186,23 @@ export default class CashuLightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
+                                        const next = !automaticallyAccept;
                                         this.setState({
-                                            automaticallyAccept:
-                                                !automaticallyAccept
+                                            automaticallyAccept: next
                                         });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                automaticallyAccept:
-                                                    !automaticallyAccept
-                                            }
-                                        });
-                                        restartNeeded();
+                                        try {
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    automaticallyAccept: next
+                                                }
+                                            });
+                                            restartNeeded();
+                                        } catch (e) {
+                                            this.setState({
+                                                automaticallyAccept: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -231,12 +236,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !allowComments;
+                                        this.setState({
+                                            allowComments: next
+                                        });
                                         try {
                                             await update({
                                                 allow_comments: next
-                                            });
-                                            this.setState({
-                                                allowComments: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -244,7 +249,11 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                     allowComments: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                allowComments: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -286,12 +295,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     }
                                     onValueChange={async () => {
                                         const next = !zapReceiptsEnabled;
+                                        this.setState({
+                                            zapReceiptsEnabled: next
+                                        });
                                         try {
                                             await update({
                                                 zap_receipts_enabled: next
-                                            });
-                                            this.setState({
-                                                zapReceiptsEnabled: next
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -299,7 +308,11 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                     zapReceiptsEnabled: next
                                                 }
                                             });
-                                        } catch (e) {}
+                                        } catch (e) {
+                                            this.setState({
+                                                zapReceiptsEnabled: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -312,11 +325,10 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
+                                    const prev = notifications;
+                                    this.setState({ notifications: value });
                                     try {
                                         await update({
-                                            notifications: value
-                                        });
-                                        this.setState({
                                             notifications: value
                                         });
                                         await updateSettings({
@@ -325,7 +337,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                 notifications: value
                                             }
                                         });
-                                    } catch (e) {}
+                                    } catch (e) {
+                                        this.setState({ notifications: prev });
+                                    }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
                                 disabled={
@@ -353,11 +367,11 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     }
                                     values={mintList}
                                     onValueChange={async (value: string) => {
-                                        await update({
-                                            mint_url: value
-                                        }).then(async () => {
-                                            this.setState({
-                                                mintUrl: value
+                                        const prev = mintUrl;
+                                        this.setState({ mintUrl: value });
+                                        try {
+                                            await update({
+                                                mint_url: value
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
@@ -365,7 +379,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                     mintUrl: value
                                                 }
                                             });
-                                        });
+                                        } catch (e) {
+                                            this.setState({ mintUrl: prev });
+                                        }
                                     }}
                                 />
                             </View>
