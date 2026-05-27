@@ -71,7 +71,10 @@ RCT_EXPORT_MODULE(MobileTools);
             break;
         }
     }
-    if (!canvasView) canvasView = container.subviews.firstObject;
+    // Fail closed: only the canvas view inherits iOS's secure-content
+    // exclusion. Other UITextField subviews (border, placeholder, clear
+    // button) do not, so falling back to e.g. subviews.firstObject would
+    // silently render content unprotected.
     if (!canvasView) {
         [container removeFromSuperview];
         return;
