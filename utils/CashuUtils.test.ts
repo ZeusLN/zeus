@@ -118,13 +118,23 @@ describe('CashuUtils', () => {
             expect(CashuUtils.isValidCashuToken('notavalidtoken')).toBe(false);
         });
 
-        it('accepts tokens with a sufficient base64url-shaped payload', () => {
+        it('accepts tokens with a sufficient base64-shaped payload', () => {
             expect(CashuUtils.isValidCashuToken('cashuAinvalidpayload')).toBe(
                 true
             );
             expect(CashuUtils.isValidCashuToken('cashuBinvalidpayload')).toBe(
                 true
             );
+        });
+
+        it('accepts standard-base64 tokens with +, /, and = padding', () => {
+            // v3 wallets that use btoa() emit standard base64 with padding
+            expect(CashuUtils.isValidCashuToken('cashuAeyJ0b2tlbi8rIn0=')).toBe(
+                true
+            );
+            expect(
+                CashuUtils.isValidCashuToken('cashuAa+b/c=d+e/f=g+h/i==')
+            ).toBe(true);
         });
 
         it('rejects tokens whose payload is too short after the prefix', () => {
@@ -134,7 +144,7 @@ describe('CashuUtils', () => {
             expect(CashuUtils.isValidCashuToken('cashuBshort')).toBe(false);
         });
 
-        it('rejects tokens with non-base64url characters after the prefix', () => {
+        it('rejects tokens with non-base64 characters after the prefix', () => {
             expect(CashuUtils.isValidCashuToken('cashuA!!!!!!!!!!')).toBe(
                 false
             );
@@ -142,6 +152,18 @@ describe('CashuUtils', () => {
                 CashuUtils.isValidCashuToken('cashuB?invalid=value&more')
             ).toBe(false);
             expect(CashuUtils.isValidCashuToken('cashuAfrica')).toBe(false);
+        });
+
+        it('extracts and validates token even with trailing URL noise', () => {
+            // Web wrappers sometimes append &memo=... after the token; the
+            // extractor must trim that off so the shape check still passes.
+            const valid =
+                'cashuAeyJ0b2tlbiI6IFt7InByb29mcyI6IFtdLCAibWludCI6ICJodHRwczovL21pbnQuZXhhbXBsZS5jb20ifV19';
+            expect(
+                CashuUtils.isValidCashuToken(
+                    `https://wallet.cashu.me/?token=${valid}&memo=hello`
+                )
+            ).toBe(true);
         });
 
         it('rejects null/undefined', () => {
