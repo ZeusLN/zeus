@@ -173,9 +173,7 @@ export default class FeeEstimate extends React.PureComponent<
                                 { color: themeColor('secondaryText') }
                             ]}
                         >
-                            {localeString(
-                                'components.NWCPendingPayInvoiceModal.totalAmount'
-                            )}
+                            {localeString('general.totalAmount')}
                         </Text>
                     </View>
                 </View>

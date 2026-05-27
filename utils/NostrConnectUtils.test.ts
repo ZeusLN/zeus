@@ -27,6 +27,12 @@ jest.mock('./BackendUtils', () => ({
     default: {}
 }));
 
+jest.mock('react-native-notifications', () => ({
+    Notifications: {
+        postLocalNotification: jest.fn()
+    }
+}));
+
 import * as nostrTools from 'nostr-tools';
 
 import NostrConnectUtils from './NostrConnectUtils';
