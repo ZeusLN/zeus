@@ -1232,6 +1232,7 @@
     "views.Settings.Privacy.enableMempoolRates": "Enable Mempool.space fee suggestions",
     "views.Settings.Privacy.screenCaptureProtection": "Block screen capture",
     "views.Settings.Privacy.screenCaptureProtection.explainer": "Prevents the app from being captured in screenshots or screen recordings.",
+    "views.Settings.Privacy.screenCaptureProtection.unavailable": "Screen capture protection could not be enabled on this device.",
     "components.ScreenRecordingWarningModal.title": "Screen recording detected",
     "components.ScreenRecordingWarningModal.message": "ZEUS has been hidden from this recording to protect your privacy. The app will appear blank in the captured video.",
     "views.Settings.stealthMode": "Stealth Mode",
