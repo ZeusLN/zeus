@@ -87,6 +87,8 @@ export const NWC_PENDING_PAYMENTS = 'zeus-nwc-pending-payments';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
+export const NWC_LUD16_ENABLED = 'zeus-nwc-lud16-enabled';
+
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
     'https://nwc-ios-handoff.zeusln.com/api/v1';
@@ -197,6 +199,7 @@ export default class NostrWalletConnectStore {
     @observable public isInNWCPendingPaymentsView = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
     @observable public cashuEnabled: boolean = false;
+    @observable public lud16Enabled: boolean = true;
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
     @observable private iosBackgroundTaskActive: boolean = false;
@@ -302,6 +305,7 @@ export default class NostrWalletConnectStore {
             this.initializeWalletServiceKeys(),
             this.loadPersistentServiceSetting(),
             this.loadCashuSetting(),
+            this.loadLud16Enabled(),
             this.loadConnections()
         ]);
     }
@@ -1115,6 +1119,17 @@ export default class NostrWalletConnectStore {
             this.connections[index] = connection;
         }
     }
+    private getLightningAddress(): string | null {
+        if (!this.settingsStore.settings.lightningAddress?.enabled) {
+            return null;
+        }
+        const lud16 = this.lightningAddressStore.lightningAddress?.trim();
+        if (!lud16) {
+            return null;
+        }
+        return lud16;
+    }
+
     private generateConnectionSecret(relayUrl: string) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
@@ -1123,12 +1138,12 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-        const connectionPrivateKey = generatePrivateKey();
-        const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionUrl = `nostr+walletconnect://${
-            this.walletServiceKeys.publicKey
-        }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
-        return { connectionUrl, connectionPrivateKey, connectionPublicKey };
+        const lud16 = this.lud16Enabled ? this.getLightningAddress() : null;
+        return NostrConnectUtils.generateConnectionSecret(
+            this.walletServiceKeys.publicKey,
+            relayUrl,
+            lud16
+        );
     }
     @action
     public startWaitingForConnection = (connectionId: string) => {
@@ -2582,7 +2597,34 @@ export default class NostrWalletConnectStore {
             console.error('Failed to save Cashu setting:', error);
             throw new Error(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.failedToSaveCashuSetting'
+                    'stores.NostrWalletConnectStore.error.failedToSaveNwcSetting'
+                )
+            );
+        }
+    }
+    public async loadLud16Enabled(): Promise<void> {
+        try {
+            const stored = await Storage.getItem(NWC_LUD16_ENABLED);
+            runInAction(() => {
+                this.lud16Enabled = stored !== 'false';
+            });
+        } catch (error) {
+            runInAction(() => {
+                this.lud16Enabled = true;
+            });
+        }
+    }
+    @action
+    public async setLud16Enabled(enabled: boolean): Promise<void> {
+        try {
+            await Storage.setItem(NWC_LUD16_ENABLED, enabled.toString());
+            runInAction(() => {
+                this.lud16Enabled = enabled;
+            });
+        } catch (error) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToSaveNwcSetting'
                 )
             );
         }
@@ -2639,7 +2681,7 @@ export default class NostrWalletConnectStore {
             );
             throw new Error(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.failedToSavePersistentServiceSetting'
+                    'stores.NostrWalletConnectStore.error.failedToSaveNwcSetting'
                 )
             );
         }
