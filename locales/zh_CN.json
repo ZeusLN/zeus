@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "立即重启",
     "views.LSPS7.type": "通道租赁延期",
     "views.LSPS7.channelExtensionBlocks": "通道租赁延长的区块数",
-    "views.LSPS7.extensionExpiryBlocks": "通道租赁已延长的区块数",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "通道租赁可延长的最大区块数",
     "views.LSPS7.expirationBlock": "当前到期区块",
     "views.LSPS7.proposedExpirationBlock": "拟议到期区块",
