@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Jetzt neustarten",
     "views.LSPS7.type": "Kanal-Leasing-Verlängerung",
     "views.LSPS7.channelExtensionBlocks": "Anzahl der Blöcke, um die das Kanal-Leasing verlängert wird",
-    "views.LSPS7.extensionExpiryBlocks": "Anzahl der Blöcke, um die das Kanal-Leasing verlängert wird",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "Maximale Anzahl an Blöcken, um die das Kanal-Leasing verlängert werden kann",
     "views.LSPS7.expirationBlock": "Current expiration block",
     "views.LSPS7.proposedExpirationBlock": "Proposed expiration block",
