@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Riavvia ora",
     "views.LSPS7.type": "Estensione del contratto di locazione del canale",
     "views.LSPS7.channelExtensionBlocks": "Numero di blocchi per estendere l'affitto del canale",
-    "views.LSPS7.extensionExpiryBlocks": "Il numero di blocchi di locazione del canale è esteso di",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "Il numero massimo di blocchi di locazione del canale può essere esteso tramite",
     "views.LSPS7.expirationBlock": "Blocco di scadenza corrente",
     "views.LSPS7.proposedExpirationBlock": "Blocco di scadenza proposto",
