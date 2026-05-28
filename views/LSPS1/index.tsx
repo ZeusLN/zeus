@@ -30,19 +30,16 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { isOrderFree } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import handleAnything from '../../utils/handleAnything';
 
-import Storage from '../../storage';
-
-import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import LSPStore from '../../stores/LSPStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-
-import { LSPOrderResponse as Order } from './OrdersPane';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -69,13 +66,14 @@ interface LSPS1State {
 export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     listener: any;
     private scrollViewRef = React.createRef<ScrollView>();
+    private lastSavedOrderId: string | null = null;
     constructor(props: LSPS1Props) {
         super(props);
         this.state = {
             lspBalanceSat: 0,
             clientBalanceSat: 0,
-            requiredChannelConfirmations: '',
-            confirmsWithinBlocks: '',
+            requiredChannelConfirmations: null,
+            confirmsWithinBlocks: null,
             channelExpiryBlocks: 'N/A',
             expirationIndex: 0,
             token: props.SettingsStore.settings?.lsps1Token || '',
@@ -165,7 +163,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
 
         if (
-            requiredChannelConfirmations === '' &&
+            requiredChannelConfirmations === null &&
             info?.min_required_channel_confirmations
         ) {
             this.setState({
@@ -175,13 +173,27 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
 
         if (
-            confirmsWithinBlocks === '' &&
+            confirmsWithinBlocks === null &&
             info?.min_funding_confirms_within_blocks
         ) {
             this.setState({
                 confirmsWithinBlocks:
                     (info?.min_funding_confirms_within_blocks).toString()
             });
+        }
+
+        const { LSPStore } = this.props;
+        const { createOrderResponse } = LSPStore;
+        const result = createOrderResponse?.result || createOrderResponse;
+        const orderId = result?.order_id;
+
+        if (
+            orderId &&
+            orderId !== this.lastSavedOrderId &&
+            isOrderFree(result?.payment)
+        ) {
+            this.lastSavedOrderId = orderId;
+            LSPStore.saveOrderToHistory(createOrderResponse, 'LSPS1');
         }
     }
 
@@ -284,6 +296,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             getInfoData;
         const result = createOrderResponse?.result || createOrderResponse;
         const payment = result?.payment;
+        const isFreeOrder = isOrderFree(payment);
 
         const HistoryBtn = () => (
             <TouchableOpacity
@@ -997,14 +1010,22 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 )}
                                                 value={
                                                     this.state
-                                                        .requiredChannelConfirmations
+                                                        .requiredChannelConfirmations ??
+                                                    ''
                                                 }
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const numericValue =
+                                                        text.replace(
+                                                            /[^0-9]/g,
+                                                            ''
+                                                        );
                                                     this.setState({
                                                         requiredChannelConfirmations:
-                                                            text
-                                                    })
-                                                }
+                                                            numericValue
+                                                    });
+                                                }}
                                                 style={styles.textInput}
                                                 keyboardType="numeric"
                                             />
@@ -1026,14 +1047,22 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 )}
                                                 value={
                                                     this.state
-                                                        .confirmsWithinBlocks
+                                                        .confirmsWithinBlocks ??
+                                                    ''
                                                 }
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const numericValue =
+                                                        text.replace(
+                                                            /[^0-9]/g,
+                                                            ''
+                                                        );
                                                     this.setState({
                                                         confirmsWithinBlocks:
-                                                            text
-                                                    })
-                                                }
+                                                            numericValue
+                                                    });
+                                                }}
                                                 style={styles.textInput}
                                                 keyboardType="numeric"
                                             />
@@ -1137,143 +1166,80 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 </ScrollView>
                             )}
                         </ScrollView>
-                        <View style={{ marginTop: 10 }}>
-                            <Button
-                                title={
-                                    Object.keys(createOrderResponse).length == 0
-                                        ? `${localeString(
-                                              'views.LSPS1.createOrder'
-                                          )}`
-                                        : `${localeString(
-                                              'views.LSPS1.makePayment'
-                                          )}`
-                                }
-                                onPress={() => {
-                                    if (
+                        {(Object.keys(createOrderResponse).length === 0 ||
+                            !isFreeOrder) && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={
                                         Object.keys(createOrderResponse)
-                                            .length === 0
-                                    ) {
+                                            .length == 0
+                                            ? `${localeString(
+                                                  'views.LSPS1.createOrder'
+                                              )}`
+                                            : `${localeString(
+                                                  'views.LSPS1.makePayment'
+                                              )}`
+                                    }
+                                    onPress={() => {
                                         if (
-                                            BackendUtils.supportsLSPS1native()
+                                            Object.keys(createOrderResponse)
+                                                .length === 0
                                         ) {
-                                            LSPStore.lsps1CreateOrderNative(
+                                            let finalConfirmations =
                                                 this.state
-                                            );
-                                        } else if (
-                                            BackendUtils.supportsLSPS1rest()
-                                        ) {
-                                            LSPStore.lsps1CreateOrderREST(
-                                                this.state
-                                            );
-                                        } else if (
-                                            BackendUtils.supportsLSPScustomMessage()
-                                        ) {
-                                            LSPStore.lsps1CreateOrderCustomMessage(
-                                                this.state
-                                            );
-                                        }
-                                    } else {
-                                        const orderId = result.order_id;
+                                                    .requiredChannelConfirmations;
+                                            let finalBlocks =
+                                                this.state.confirmsWithinBlocks;
 
-                                        // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        Storage.getItem(LSPS_ORDERS_KEY)
-                                            .then((responseArrayString) => {
-                                                let responseArray = [];
-                                                if (responseArrayString) {
-                                                    responseArray =
-                                                        JSON.parse(
-                                                            responseArrayString
-                                                        );
-                                                }
+                                            if (
+                                                finalConfirmations === '' ||
+                                                finalConfirmations === null
+                                            ) {
+                                                finalConfirmations =
+                                                    info?.min_required_channel_confirmations?.toString();
+                                            }
+                                            if (
+                                                finalBlocks === '' ||
+                                                finalBlocks === null
+                                            ) {
+                                                finalBlocks =
+                                                    info?.min_funding_confirms_within_blocks?.toString();
+                                            }
 
-                                                // Check if the order_id already exists in the stored responses
-                                                const existingResponseIndex =
-                                                    responseArray.findIndex(
-                                                        (response: any) => {
-                                                            const currentOrderId =
-                                                                JSON.parse(
-                                                                    response
-                                                                ).order
-                                                                    ?.order_id ||
-                                                                JSON.parse(
-                                                                    response
-                                                                ).order?.result
-                                                                    ?.order_id;
-                                                            return (
-                                                                currentOrderId ===
-                                                                orderId
-                                                            );
-                                                        }
-                                                    );
-
-                                                if (
-                                                    existingResponseIndex === -1
-                                                ) {
-                                                    const orderData:
-                                                        | Order
-                                                        | any = {
-                                                        order: createOrderResponse
-                                                    };
-
-                                                    orderData.clientPubkey =
-                                                        this.props.NodeInfoStore.nodeInfo.nodeId;
-
+                                            this.setState(
+                                                {
+                                                    requiredChannelConfirmations:
+                                                        finalConfirmations,
+                                                    confirmsWithinBlocks:
+                                                        finalBlocks
+                                                },
+                                                () => {
                                                     if (
                                                         BackendUtils.supportsLSPS1native()
                                                     ) {
-                                                        orderData.native = true;
+                                                        LSPStore.lsps1CreateOrderNative(
+                                                            this.state
+                                                        );
+                                                    } else if (
+                                                        BackendUtils.supportsLSPS1rest()
+                                                    ) {
+                                                        LSPStore.lsps1CreateOrderREST(
+                                                            this.state
+                                                        );
                                                     } else if (
                                                         BackendUtils.supportsLSPScustomMessage()
                                                     ) {
-                                                        orderData.peer =
-                                                            LSPStore.getLSPSPubkey();
-                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
-                                                    }
-                                                    if (
-                                                        BackendUtils.supportsLSPS1rest()
-                                                    ) {
-                                                        orderData.endpoint =
-                                                            LSPStore.getLSPS1Rest();
-                                                    }
-
-                                                    orderData.service = 'LSPS1';
-
-                                                    console.log(orderData);
-
-                                                    // Serialize the orderData object into a JSON string
-                                                    const serializedResponse =
-                                                        JSON.stringify(
-                                                            orderData
+                                                        LSPStore.lsps1CreateOrderCustomMessage(
+                                                            this.state
                                                         );
-
-                                                    // Append the serialized response to the array
-                                                    responseArray.push(
-                                                        serializedResponse
-                                                    );
-
-                                                    // Save the updated array back to encrypted storage
-                                                    Storage.setItem(
-                                                        LSPS_ORDERS_KEY,
-                                                        responseArray
-                                                    )
-                                                        .then(() => {
-                                                            console.log(
-                                                                'Response saved successfully.'
-                                                            );
-                                                        })
-                                                        .catch((error) =>
-                                                            console.error(
-                                                                'Error saving order response:',
-                                                                error
-                                                            )
-                                                        );
-                                                } else {
-                                                    console.log(
-                                                        'Response with same order_id already exists. Skipping save.'
-                                                    );
+                                                    }
                                                 }
-
-                                                // Navigate to payment
+                                            );
+                                        } else {
+                                            LSPStore.saveOrderToHistory(
+                                                createOrderResponse,
+                                                'LSPS1'
+                                            ).then(() => {
                                                 handleAnything(
                                                     payment.bolt11?.invoice ||
                                                         payment.lightning_invoice ||
@@ -1284,19 +1250,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         props
                                                     );
                                                 });
-                                            })
-                                            .catch((error) =>
-                                                console.error(
-                                                    'Error retrieving order responses:',
-                                                    error
-                                                )
-                                            );
-                                    }
-                                }}
-                                containerStyle={{ paddingBottom: 10 }}
-                                secondary
-                            />
-                        </View>
+                                            });
+                                        }
+                                    }}
+                                    containerStyle={{ paddingBottom: 10 }}
+                                    secondary
+                                />
+                            </View>
+                        )}
                     </>
                 )}
 
