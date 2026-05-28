@@ -37,6 +37,7 @@ interface LightningAddressSettingsState {
     automaticallyAcceptAttestationLevel: number;
     routeHints: boolean | undefined;
     allowComments: boolean | undefined;
+    zapReceiptsEnabled: boolean;
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
@@ -66,6 +67,8 @@ export default class LightningAddressSettings extends React.Component<
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
+            zapReceiptsEnabled:
+                settings.lightningAddress?.zapReceiptsEnabled !== false,
             nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
             nostrRelays: settings.lightningAddress?.nostrRelays || [],
             notifications:
@@ -107,6 +110,7 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAcceptAttestationLevel,
             routeHints,
             allowComments,
+            zapReceiptsEnabled,
             nostrRelays,
             notifications
         } = this.state;
@@ -168,18 +172,23 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
+                                        const next = !automaticallyAccept;
                                         this.setState({
-                                            automaticallyAccept:
-                                                !automaticallyAccept
+                                            automaticallyAccept: next
                                         });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                automaticallyAccept:
-                                                    !automaticallyAccept
-                                            }
-                                        });
-                                        restartNeeded();
+                                        try {
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    automaticallyAccept: next
+                                                }
+                                            });
+                                            restartNeeded();
+                                        } catch (e) {
+                                            this.setState({
+                                                automaticallyAccept: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -194,18 +203,27 @@ export default class LightningAddressSettings extends React.Component<
                                     automaticallyAcceptAttestationLevel
                                 }
                                 onValueChange={async (value: number) => {
+                                    const prev =
+                                        automaticallyAcceptAttestationLevel;
                                     this.setState({
                                         automaticallyAcceptAttestationLevel:
                                             value
                                     });
-                                    await updateSettings({
-                                        lightningAddress: {
-                                            ...settings.lightningAddress,
+                                    try {
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
+                                                automaticallyAcceptAttestationLevel:
+                                                    value
+                                            }
+                                        });
+                                        restartNeeded();
+                                    } catch (e) {
+                                        this.setState({
                                             automaticallyAcceptAttestationLevel:
-                                                value
-                                        }
-                                    });
-                                    restartNeeded();
+                                                prev
+                                        });
+                                    }
                                 }}
                                 values={AUTOMATIC_ATTESTATION_KEYS}
                                 disabled={
@@ -248,15 +266,20 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
-                                        this.setState({
-                                            routeHints: !routeHints
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                routeHints: !routeHints
-                                            }
-                                        });
+                                        const next = !routeHints;
+                                        this.setState({ routeHints: next });
+                                        try {
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    routeHints: next
+                                                }
+                                            });
+                                        } catch (e) {
+                                            this.setState({
+                                                routeHints: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -289,23 +312,84 @@ export default class LightningAddressSettings extends React.Component<
                                         SettingsStore.settingsUpdateInProgress
                                     }
                                     onValueChange={async () => {
+                                        const next = !allowComments;
+                                        this.setState({
+                                            allowComments: next
+                                        });
                                         try {
                                             await update({
-                                                allow_comments: !allowComments
-                                            }).then(async () => {
-                                                this.setState({
-                                                    allowComments:
-                                                        !allowComments
-                                                });
-                                                await updateSettings({
-                                                    lightningAddress: {
-                                                        ...settings.lightningAddress,
-                                                        allowComments:
-                                                            !allowComments
-                                                    }
-                                                });
+                                                allow_comments: next
                                             });
-                                        } catch (e) {}
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    allowComments: next
+                                                }
+                                            });
+                                        } catch (e) {
+                                            this.setState({
+                                                allowComments: !next
+                                            });
+                                        }
+                                    }}
+                                />
+                            </View>
+                        </View>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 17
+                                    }}
+                                    infoModalText={[
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer2'
+                                        )
+                                    ]}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddressSettings.zapReceiptsEnabled'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={zapReceiptsEnabled}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
+                                    onValueChange={async () => {
+                                        const next = !zapReceiptsEnabled;
+                                        this.setState({
+                                            zapReceiptsEnabled: next
+                                        });
+                                        try {
+                                            await update({
+                                                zap_receipts_enabled: next
+                                            });
+                                            await updateSettings({
+                                                lightningAddress: {
+                                                    ...settings.lightningAddress,
+                                                    zapReceiptsEnabled: next
+                                                }
+                                            });
+                                        } catch (e) {
+                                            this.setState({
+                                                zapReceiptsEnabled: !next
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
@@ -318,21 +402,21 @@ export default class LightningAddressSettings extends React.Component<
                                 titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
+                                    const prev = notifications;
+                                    this.setState({ notifications: value });
                                     try {
                                         await update({
                                             notifications: value
-                                        }).then(async () => {
-                                            this.setState({
-                                                notifications: value
-                                            });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
-                                                    notifications: value
-                                                }
-                                            });
                                         });
-                                    } catch (e) {}
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
+                                                notifications: value
+                                            }
+                                        });
+                                    } catch (e) {
+                                        this.setState({ notifications: prev });
+                                    }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
                                 disabled={
