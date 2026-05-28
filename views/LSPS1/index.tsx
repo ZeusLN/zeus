@@ -1013,12 +1013,19 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         .requiredChannelConfirmations ??
                                                     ''
                                                 }
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const numericValue =
+                                                        text.replace(
+                                                            /[^0-9]/g,
+                                                            ''
+                                                        );
                                                     this.setState({
                                                         requiredChannelConfirmations:
-                                                            text
-                                                    })
-                                                }
+                                                            numericValue
+                                                    });
+                                                }}
                                                 style={styles.textInput}
                                                 keyboardType="numeric"
                                             />
@@ -1043,12 +1050,19 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         .confirmsWithinBlocks ??
                                                     ''
                                                 }
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    const numericValue =
+                                                        text.replace(
+                                                            /[^0-9]/g,
+                                                            ''
+                                                        );
                                                     this.setState({
                                                         confirmsWithinBlocks:
-                                                            text
-                                                    })
-                                                }
+                                                            numericValue
+                                                    });
+                                                }}
                                                 style={styles.textInput}
                                                 keyboardType="numeric"
                                             />

@@ -236,7 +236,7 @@ export default class LSPS7OrderResponse extends React.Component<
                                 {!isFreeOrder && (
                                     <KeyValue
                                         keyValue={localeString(
-                                            'iews.LSPS1.onchainPayment'
+                                            'views.LSPS1.onchainPayment'
                                         )}
                                     />
                                 )}
