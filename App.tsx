@@ -67,6 +67,8 @@ import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
 import RatingModal from './components/Modals/RatingModal';
 import RestoreChannelModal from './components/Modals/RestoreChannelModal';
 import ScreenRecordingWarningModal from './components/Modals/ScreenRecordingWarningModal';
+import ActionSheetModal from './components/Modals/ActionSheetModal';
+import EnlargedQRModal from './components/Modals/EnlargedQRModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -1876,6 +1878,10 @@ export default class App extends React.PureComponent {
                                 <RestoreChannelModal />
                                 {/* @ts-ignore:next-line */}
                                 <ScreenRecordingWarningModal />
+                                {/* @ts-ignore:next-line */}
+                                <ActionSheetModal />
+                                {/* @ts-ignore:next-line */}
+                                <EnlargedQRModal />
                                 <CopiedToastHost />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
