@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Restart Now",
     "views.LSPS7.type": "채널 임대 연장",
     "views.LSPS7.channelExtensionBlocks": "채널 임대 연장 블록 수",
-    "views.LSPS7.extensionExpiryBlocks": "채널 리스가 연장된 블록 수",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "채널 임대를 연장할 수 있는 최대 블록 수",
     "views.LSPS7.expirationBlock": "현재 만료 블록",
     "views.LSPS7.proposedExpirationBlock": "제안된 만료 블록",
