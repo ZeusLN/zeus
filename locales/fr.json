@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Redémarrer maintenant",
     "views.LSPS7.type": "Prolongation du bail de la chaîne",
     "views.LSPS7.channelExtensionBlocks": "Nombre de blocs pour prolonger le bail du canal",
-    "views.LSPS7.extensionExpiryBlocks": "Le nombre de blocs de location de canal est prolongé de",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "Le nombre maximal de blocs de location de canal peut être prolongé de",
     "views.LSPS7.expirationBlock": "Bloc d'expiration actuel",
     "views.LSPS7.proposedExpirationBlock": "Bloc d'expiration proposé",
