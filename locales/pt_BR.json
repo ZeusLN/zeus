@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Reiniciar agora",
     "views.LSPS7.type": "Extensão do arrendamento do canal",
     "views.LSPS7.channelExtensionBlocks": "Número de blocos para estender o arrendamento do canal por",
-    "views.LSPS7.extensionExpiryBlocks": "O número de blocos de arrendamento do canal é estendido por",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "O número máximo de blocos de arrendamento do canal pode ser estendido por",
     "views.LSPS7.expirationBlock": "Bloco de expiração atual",
     "views.LSPS7.proposedExpirationBlock": "Bloco de expiração proposto",
