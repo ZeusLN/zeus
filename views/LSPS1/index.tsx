@@ -72,8 +72,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         this.state = {
             lspBalanceSat: 0,
             clientBalanceSat: 0,
-            requiredChannelConfirmations: '',
-            confirmsWithinBlocks: '',
+            requiredChannelConfirmations: null,
+            confirmsWithinBlocks: null,
             channelExpiryBlocks: 'N/A',
             expirationIndex: 0,
             token: props.SettingsStore.settings?.lsps1Token || '',
@@ -163,7 +163,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
 
         if (
-            requiredChannelConfirmations === '' &&
+            requiredChannelConfirmations === null &&
             info?.min_required_channel_confirmations
         ) {
             this.setState({
@@ -173,7 +173,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
 
         if (
-            confirmsWithinBlocks === '' &&
+            confirmsWithinBlocks === null &&
             info?.min_funding_confirms_within_blocks
         ) {
             this.setState({
@@ -1010,7 +1010,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 )}
                                                 value={
                                                     this.state
-                                                        .requiredChannelConfirmations
+                                                        .requiredChannelConfirmations ??
+                                                    ''
                                                 }
                                                 onChangeText={(text: string) =>
                                                     this.setState({
@@ -1039,7 +1040,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 )}
                                                 value={
                                                     this.state
-                                                        .confirmsWithinBlocks
+                                                        .confirmsWithinBlocks ??
+                                                    ''
                                                 }
                                                 onChangeText={(text: string) =>
                                                     this.setState({
@@ -1169,25 +1171,56 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             Object.keys(createOrderResponse)
                                                 .length === 0
                                         ) {
+                                            let finalConfirmations =
+                                                this.state
+                                                    .requiredChannelConfirmations;
+                                            let finalBlocks =
+                                                this.state.confirmsWithinBlocks;
+
                                             if (
-                                                BackendUtils.supportsLSPS1native()
+                                                finalConfirmations === '' ||
+                                                finalConfirmations === null
                                             ) {
-                                                LSPStore.lsps1CreateOrderNative(
-                                                    this.state
-                                                );
-                                            } else if (
-                                                BackendUtils.supportsLSPS1rest()
-                                            ) {
-                                                LSPStore.lsps1CreateOrderREST(
-                                                    this.state
-                                                );
-                                            } else if (
-                                                BackendUtils.supportsLSPScustomMessage()
-                                            ) {
-                                                LSPStore.lsps1CreateOrderCustomMessage(
-                                                    this.state
-                                                );
+                                                finalConfirmations =
+                                                    info?.min_required_channel_confirmations?.toString();
                                             }
+                                            if (
+                                                finalBlocks === '' ||
+                                                finalBlocks === null
+                                            ) {
+                                                finalBlocks =
+                                                    info?.min_funding_confirms_within_blocks?.toString();
+                                            }
+
+                                            this.setState(
+                                                {
+                                                    requiredChannelConfirmations:
+                                                        finalConfirmations,
+                                                    confirmsWithinBlocks:
+                                                        finalBlocks
+                                                },
+                                                () => {
+                                                    if (
+                                                        BackendUtils.supportsLSPS1native()
+                                                    ) {
+                                                        LSPStore.lsps1CreateOrderNative(
+                                                            this.state
+                                                        );
+                                                    } else if (
+                                                        BackendUtils.supportsLSPS1rest()
+                                                    ) {
+                                                        LSPStore.lsps1CreateOrderREST(
+                                                            this.state
+                                                        );
+                                                    } else if (
+                                                        BackendUtils.supportsLSPScustomMessage()
+                                                    ) {
+                                                        LSPStore.lsps1CreateOrderCustomMessage(
+                                                            this.state
+                                                        );
+                                                    }
+                                                }
+                                            );
                                         } else {
                                             LSPStore.saveOrderToHistory(
                                                 createOrderResponse,
