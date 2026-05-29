@@ -11,7 +11,7 @@
 
 import * as necc from '@noble/secp256k1';
 import { HDKey } from '@scure/bip32';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { mnemonicToSeedSync } from '@scure/bip39';
 
 // Import noble_ecc to ensure hmacSha256Sync / sha256Sync are configured

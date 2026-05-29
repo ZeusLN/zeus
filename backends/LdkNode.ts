@@ -6,7 +6,7 @@
 
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
