@@ -100,6 +100,7 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
     removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
+    useSatsSymbol?: boolean;
 }
 
 export enum PosEnabled {
@@ -1569,7 +1570,8 @@ export const DEFAULT_SETTINGS: Settings = {
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
-        showMillisatoshiAmounts: false
+        showMillisatoshiAmounts: false,
+        useSatsSymbol: true
     },
     pos: {
         posEnabled: PosEnabled.Disabled,
