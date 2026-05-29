@@ -7,6 +7,7 @@ import AnimatedDigit from './AnimatedDigit';
 import Conversion from './Conversion';
 
 import FiatStore from '../stores/FiatStore';
+import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -36,11 +37,12 @@ interface KeypadAmountDisplayProps {
     childrenBeforeConversion?: boolean;
     forceUnit?: string;
     FiatStore?: FiatStore;
+    SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
 }
 
-@inject('FiatStore', 'UnitsStore')
+@inject('FiatStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class KeypadAmountDisplay extends React.Component<
     KeypadAmountDisplayProps,
@@ -206,9 +208,12 @@ export default class KeypadAmountDisplay extends React.Component<
             childrenBeforeConversion = false,
             forceUnit,
             FiatStore,
+            SettingsStore,
             UnitsStore,
             children
         } = this.props;
+        const useSatsSymbol =
+            SettingsStore?.settings?.display?.useSatsSymbol ?? true;
         const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl } =
             units === 'fiat'
@@ -238,7 +243,7 @@ export default class KeypadAmountDisplay extends React.Component<
         if (units === 'BTC') {
             prefix = '₿';
         } else if (units === 'sats') {
-            suffix = ` ${isSingularSat ? 'sat' : 'sats'}`;
+            suffix = ` ${useSatsSymbol ? 'β' : isSingularSat ? 'sat' : 'sats'}`;
         } else if (units === 'fiat') {
             if (rtl) {
                 suffix = `${space ? ' ' : ''}${symbol}`;
@@ -373,11 +378,13 @@ export default class KeypadAmountDisplay extends React.Component<
                                 style={{
                                     zIndex: 1,
                                     color: textColor,
-                                    fontSize: Math.max(
-                                        scaledFontSize * 0.2,
-                                        12
-                                    ),
-                                    fontFamily: 'PPNeueMontreal-Medium'
+                                    fontSize: useSatsSymbol
+                                        ? scaledFontSize
+                                        : Math.max(scaledFontSize * 0.2, 12),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    ...(useSatsSymbol && {
+                                        lineHeight: scaledLineHeight
+                                    })
                                 }}
                             >
                                 {suffix}

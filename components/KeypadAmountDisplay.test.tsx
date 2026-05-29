@@ -40,7 +40,10 @@ let symbol: any;
 
 beforeEach(() => {
     symbol = USD;
-    Object.assign(settingsStore, { settings: { fiat: 'USD', display: {} } });
+    // word labels, so the assertions don't depend on the β default
+    Object.assign(settingsStore, {
+        settings: { fiat: 'USD', display: { useSatsSymbol: false } }
+    });
     Object.assign(fiatStore, {
         getSymbol: () => symbol,
         symbolLookup: () => symbol
@@ -151,7 +154,10 @@ describe('KeypadAmountDisplay decimal placeholder', () => {
 
     it('fills BTC without spaces when decimal spaces are removed', async () => {
         unitsStore.units = 'BTC';
-        settingsStore.settings.display = { removeDecimalSpaces: true };
+        settingsStore.settings.display = {
+            removeDecimalSpaces: true,
+            useSatsSymbol: false
+        };
         await renderDisplay({ amount: '0.1' });
 
         expect(shown()).toBe('₿0.10000000');
