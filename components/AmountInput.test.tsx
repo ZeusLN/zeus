@@ -36,7 +36,12 @@ const NEXT_UNIT: Record<string, string> = {
 beforeEach(() => {
     (NavigationService.navigate as jest.Mock).mockClear();
     Object.assign(settingsStore, {
-        settings: { fiat: 'USD', fiatEnabled: true }
+        // word labels, so the assertions don't depend on the β default
+        settings: {
+            fiat: 'USD',
+            fiatEnabled: true,
+            display: { useSatsSymbol: false }
+        }
     });
     Object.assign(fiatStore, {
         fiatRates: [{ code: 'USD', rate: 50_000 }],
