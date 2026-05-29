@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Reiniciar ahora",
     "views.LSPS7.type": "Prórroga del contrato de arrendamiento del canal",
     "views.LSPS7.channelExtensionBlocks": "Número de bloques para extender el arrendamiento del canal",
-    "views.LSPS7.extensionExpiryBlocks": "El número de bloques que se arrendarán al canal se amplía en",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "El número máximo de bloques que se pueden ampliar con el arrendamiento del canal",
     "views.LSPS7.expirationBlock": "Bloque de expiración actual",
     "views.LSPS7.proposedExpirationBlock": "Bloque de caducidad propuesto",

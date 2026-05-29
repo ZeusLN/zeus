@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Reporniți acum",
     "views.LSPS7.type": "Prelungire a închirierii canalului",
     "views.LSPS7.channelExtensionBlocks": "Numărul de blocuri pentru a prelungi închirierea canalului",
-    "views.LSPS7.extensionExpiryBlocks": "Numărul de blocuri închirierea canalului este extins cu",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "Numărul maxim de blocuri închirierea canalului poate fi extins cu",
     "views.LSPS7.expirationBlock": "Bloc de expirare curent",
     "views.LSPS7.proposedExpirationBlock": "Bloc de expirare propus",

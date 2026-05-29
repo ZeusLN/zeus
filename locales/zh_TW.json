@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Restart Now",
     "views.LSPS7.type": "管道合約展延",
     "views.LSPS7.channelExtensionBlocks": "欲延長管道合約的區塊數",
-    "views.LSPS7.extensionExpiryBlocks": "管道合約被延長的區塊數",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "管道合約可以被延長的最大區塊數",
     "views.LSPS7.expirationBlock": "當前到期區塊",
     "views.LSPS7.proposedExpirationBlock": "預計到期區塊",

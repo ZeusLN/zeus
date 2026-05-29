@@ -1649,7 +1649,7 @@
     "views.LSPS1.restartNow": "Restart Now",
     "views.LSPS7.type": "चैनल लीज एक्सटेंशन",
     "views.LSPS7.channelExtensionBlocks": "चैनल लीज को कितने ब्लॉक्स तक बढ़ाया जाए",
-    "views.LSPS7.extensionExpiryBlocks": "चैनल लीज कितने ब्लॉक्स तक बढ़ाई गई है",
+    "views.LSPS7.extensionExpiryBlocks": "Blocks extended by",
     "views.LSPS7.maxChannelExtensionExpiryBlocks": "चैनल लीज अधिकतम कितने ब्लॉक्स तक बढ़ाई जा सकती है",
     "views.LSPS7.expirationBlock": "वर्तमान समाप्ति ब्लॉक",
     "views.LSPS7.proposedExpirationBlock": "प्रस्तावित समाप्ति ब्लॉक",
