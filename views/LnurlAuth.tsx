@@ -5,7 +5,7 @@ import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
 import { hmac } from '@noble/hashes/hmac';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 

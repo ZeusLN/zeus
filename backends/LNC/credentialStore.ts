@@ -1,6 +1,6 @@
 import Storage from '../../storage';
 import { CredentialStore } from '../../zeus_modules/@lightninglabs/lnc-rn';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 
 const LNC_STORAGE_KEY = 'lnc-rn';

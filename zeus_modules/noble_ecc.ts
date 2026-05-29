@@ -6,10 +6,11 @@
  * @see https://github.com/bitcoinjs/bitcoinjs-lib/issues/1781
  */
 import * as necc from '@noble/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { hmac } from '@noble/hashes/hmac';
+import { sha256 } from '@noble/hashes/sha2';
+import { concatBytes } from '@noble/hashes/utils';
 import { TinySecp256k1Interface as TinySecp256k1InterfaceBIP32 } from 'bip32/types/bip32';
 import { XOnlyPointAddTweakResult } from 'bitcoinjs-lib/src/types';
-import { createHmac } from 'crypto';
 import { TinySecp256k1Interface } from 'ecpair';
 
 export interface TinySecp256k1InterfaceExtended {
@@ -25,20 +26,11 @@ export interface TinySecp256k1InterfaceExtended {
 }
 
 necc.utils.sha256Sync = (...messages: Uint8Array[]): Uint8Array => {
-  const totalLength = messages.reduce((sum, message) => sum + message.length, 0);
-  const combined = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const message of messages) {
-    combined.set(message, offset);
-    offset += message.length;
-  }
-  return sha256(combined);
+  return sha256(concatBytes(...messages));
 };
 
 necc.utils.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]): Uint8Array => {
-  const hash = createHmac('sha256', Buffer.from(key));
-  messages.forEach(m => hash.update(m));
-  return Uint8Array.from(hash.digest());
+  return hmac(sha256, key, concatBytes(...messages));
 };
 
 /* const normal = necc.utils._normalizePrivateKey;
