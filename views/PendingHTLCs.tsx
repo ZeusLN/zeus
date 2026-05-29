@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { FlatList, Platform, Text, View, StyleSheet } from 'react-native';
+import {
+    FlatList,
+    NativeModules,
+    Platform,
+    Text,
+    View,
+    StyleSheet
+} from 'react-native';
 import { Button, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -13,7 +20,6 @@ import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 
 import { localeString } from '../utils/LocaleUtils';
-import { restartNeeded } from '../utils/RestartUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
 
@@ -321,21 +327,46 @@ export default class PendingHTLCs extends React.PureComponent<
                                                 <Switch
                                                     value={persistentMode}
                                                     onValueChange={async () => {
+                                                        const previousValue =
+                                                            persistentMode;
+                                                        const newValue =
+                                                            !previousValue;
                                                         this.setState({
                                                             persistentMode:
-                                                                !persistentMode
+                                                                newValue
                                                         });
                                                         await updateSettings({
                                                             persistentMode:
-                                                                !persistentMode
+                                                                newValue
                                                         });
-                                                        const newValue =
-                                                            !persistentMode;
                                                         await AsyncStorage.setItem(
                                                             PERSISTENT_KEY,
                                                             newValue.toString()
                                                         );
-                                                        restartNeeded();
+                                                        try {
+                                                            await NativeModules.LndMobileTools.setPersistentMode(
+                                                                newValue
+                                                            );
+                                                        } catch (e) {
+                                                            console.error(
+                                                                'Failed to toggle LND persistent mode:',
+                                                                e
+                                                            );
+                                                            this.setState({
+                                                                persistentMode:
+                                                                    previousValue
+                                                            });
+                                                            await updateSettings(
+                                                                {
+                                                                    persistentMode:
+                                                                        previousValue
+                                                                }
+                                                            );
+                                                            await AsyncStorage.setItem(
+                                                                PERSISTENT_KEY,
+                                                                previousValue.toString()
+                                                            );
+                                                        }
                                                     }}
                                                     trackEnabledColor={themeColor(
                                                         'background'

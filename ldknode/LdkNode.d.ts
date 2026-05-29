@@ -474,6 +474,7 @@ export interface ILdkNodeModule {
     start(): Promise<void>;
     stop(): Promise<void>;
     syncWallets(): Promise<void>;
+    setPersistentMode(enabled: boolean): Promise<void>;
 
     // Node Info Methods
     nodeId(): Promise<string>;

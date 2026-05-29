@@ -579,6 +579,34 @@ public class LndMobileService extends Service {
           notificationManager.notify(ONGOING_NOTIFICATION_ID, buildNotification());
         }
         return START_NOT_STICKY;
+      } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.APPLY_PERSISTENT_MODE")) {
+        if (notificationManager == null) {
+          notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        }
+        boolean enabled = intent.hasExtra("enabled")
+          ? intent.getBooleanExtra("enabled", false)
+          : getPersistentServicesEnabled(this);
+        if (enabled) {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
+            chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            notificationManager.createNotificationChannel(chan);
+          }
+          Notification notification = buildNotification();
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+          } else {
+            startForeground(ONGOING_NOTIFICATION_ID, notification);
+          }
+        } else {
+          try {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+          } catch (Exception e) {
+            Log.e(TAG, "Error stopping foreground service", e);
+          }
+          notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+        }
+        return enabled ? START_STICKY : START_NOT_STICKY;
       }
     }
     
