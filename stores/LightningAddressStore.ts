@@ -7,7 +7,7 @@ import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 // @ts-ignore:next-line
 import { getPublicKey, relayInit } from 'nostr-tools';

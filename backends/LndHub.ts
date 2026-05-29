@@ -6,7 +6,7 @@ import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
 import Invoice from './../models/Invoice';
 import { localeString } from './../utils/LocaleUtils';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
 
 export default class LndHub extends LND {

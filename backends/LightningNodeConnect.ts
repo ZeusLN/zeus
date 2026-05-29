@@ -22,7 +22,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { toLnrpcAddressType } from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
 
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import BigNumber from 'bignumber.js';
 
 const NEXT_ADDR_MAP: any = {
