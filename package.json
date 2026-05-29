@@ -22,7 +22,7 @@
       "^@noble/hashes/legacy$": "<rootDir>/node_modules/@noble/hashes/legacy.js",
       "^@noble/hashes/pbkdf2$": "<rootDir>/node_modules/@noble/hashes/pbkdf2.js",
       "^@noble/hashes/scrypt$": "<rootDir>/node_modules/@noble/hashes/scrypt.js",
-      "^@noble/hashes/sha256$": "<rootDir>/node_modules/@noble/hashes/sha256.js",
+      "^@noble/hashes/sha2$": "<rootDir>/node_modules/@noble/hashes/sha2.js",
       "^@noble/hashes/sha512$": "<rootDir>/node_modules/@noble/hashes/sha512.js",
       "^@noble/hashes/utils$": "<rootDir>/node_modules/@noble/hashes/utils.js"
     }

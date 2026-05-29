@@ -10,7 +10,7 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import BigNumber from 'bignumber.js';
 
 interface Headers {

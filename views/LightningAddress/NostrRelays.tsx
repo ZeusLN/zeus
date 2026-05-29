@@ -2,7 +2,7 @@ import * as React from 'react';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
