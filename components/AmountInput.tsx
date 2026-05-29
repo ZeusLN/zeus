@@ -199,9 +199,11 @@ export default class AmountInput extends React.Component<
             );
         } else {
             const isSingular = parseFloat(displayValue) === 1;
-            formattedAmount = `${numberWithCommas(displayValue || '0')} ${
-                isSingular ? 'sat' : 'sats'
-            }`;
+            const useSatsSymbol = settings?.display?.useSatsSymbol ?? true;
+            const label = useSatsSymbol ? 'β' : isSingular ? 'sat' : 'sats';
+            formattedAmount = `${numberWithCommas(
+                displayValue || '0'
+            )} ${label}`;
         }
 
         return (

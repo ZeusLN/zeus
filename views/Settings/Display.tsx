@@ -30,6 +30,7 @@ interface DisplayState {
     showAllDecimalPlaces: boolean;
     removeDecimalSpaces: boolean;
     showMillisatoshiAmounts: boolean;
+    useSatsSymbol: boolean;
     selectNodeOnStartup: boolean;
 }
 
@@ -47,6 +48,7 @@ export default class Display extends React.Component<
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
         showMillisatoshiAmounts: false,
+        useSatsSymbol: true,
         selectNodeOnStartup: false
     };
 
@@ -74,6 +76,10 @@ export default class Display extends React.Component<
                 (settings.display &&
                     settings.display.showMillisatoshiAmounts) ||
                 false,
+            useSatsSymbol:
+                settings.display?.useSatsSymbol !== undefined
+                    ? settings.display.useSatsSymbol
+                    : true,
             selectNodeOnStartup: settings.selectNodeOnStartup || false
         });
     }
@@ -97,6 +103,7 @@ export default class Display extends React.Component<
             showAllDecimalPlaces,
             removeDecimalSpaces,
             showMillisatoshiAmounts,
+            useSatsSymbol,
             selectNodeOnStartup
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
@@ -337,6 +344,41 @@ export default class Display extends React.Component<
                                             ...settings.display,
                                             showMillisatoshiAmounts:
                                                 !showMillisatoshiAmounts
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.useSatsSymbol'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={useSatsSymbol}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                                onValueChange={async () => {
+                                    this.setState({
+                                        useSatsSymbol: !useSatsSymbol
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            ...settings.display,
+                                            useSatsSymbol: !useSatsSymbol
                                         }
                                     });
                                 }}
