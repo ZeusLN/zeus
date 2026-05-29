@@ -12,7 +12,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
 import VersionUtils from '../utils/VersionUtils';
 
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import BigNumber from 'bignumber.js';
 
 const ADDRESS_TYPES = [

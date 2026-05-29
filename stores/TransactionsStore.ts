@@ -2,7 +2,7 @@ const bitcoin = require('bitcoinjs-lib');
 
 import { action, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
