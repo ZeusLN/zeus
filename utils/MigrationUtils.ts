@@ -72,6 +72,12 @@ import {
 } from '../utils/SwapUtils';
 
 import {
+    TimePeriod,
+    displayFromExpirySeconds,
+    expirySecondsFromInput
+} from '../utils/ExpiryUtils';
+
+import {
     LEGACY_ACTIVITY_FILTERS_KEY,
     ACTIVITY_FILTERS_KEY
 } from '../stores/ActivityStore';
@@ -422,6 +428,33 @@ class MigrationsUtils {
 
             settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
+        }
+
+        // Repair invoice expiry display fields when out of sync with the
+        // authoritative `expirySeconds` (e.g. older installs that defaulted
+        // `expiry` to '3600' instead of '1', causing the UI to read
+        // "3600 hours" while the invoice actually expired in one hour).
+        const MOD_KEY9 = 'invoices-expiry-display-fix';
+        const mod9 = await EncryptedStorage.getItem(MOD_KEY9);
+        if (!mod9) {
+            const invoices: any = newSettings?.invoices;
+            const expirySeconds = invoices?.expirySeconds;
+            if (expirySeconds) {
+                const inconsistent =
+                    !invoices.expiry ||
+                    !invoices.timePeriod ||
+                    expirySecondsFromInput(
+                        invoices.expiry,
+                        invoices.timePeriod as TimePeriod
+                    ) !== expirySeconds;
+                if (inconsistent) {
+                    const repaired = displayFromExpirySeconds(expirySeconds);
+                    invoices.expiry = repaired.expiry;
+                    invoices.timePeriod = repaired.timePeriod;
+                }
+            }
+            settingsStore.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY9, 'true');
         }
 
         // migrate old POS squareEnabled setting to posEnabled

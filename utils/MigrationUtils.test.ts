@@ -246,6 +246,46 @@ describe('MigrationUtils', () => {
                 }
             });
         });
+        it('repairs invoice expiry display fields when out of sync with expirySeconds', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        invoices: {
+                            expiry: '3600',
+                            timePeriod: 'Hours',
+                            expirySeconds: '3600'
+                        }
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                invoices: {
+                    expiry: '1',
+                    timePeriod: 'Hours',
+                    expirySeconds: '3600'
+                }
+            });
+        });
+        it('leaves consistent invoice expiry settings untouched', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        invoices: {
+                            expiry: '2',
+                            timePeriod: 'Hours',
+                            expirySeconds: '7200'
+                        }
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                invoices: {
+                    expiry: '2',
+                    timePeriod: 'Hours',
+                    expirySeconds: '7200'
+                }
+            });
+        });
     });
 
     describe('migrateCashuSeedVersion', () => {

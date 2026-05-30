@@ -1,5 +1,6 @@
 import {
     ExpirationPreset,
+    displayFromExpirySeconds,
     expirationIndexFromSeconds,
     expirySecondsFromInput
 } from './ExpiryUtils';
@@ -73,6 +74,65 @@ describe('ExpiryUtils', () => {
             expect(expirationIndexFromSeconds('999')).toBeNull();
             expect(expirationIndexFromSeconds('')).toBeNull();
             expect(expirationIndexFromSeconds('NaN')).toBeNull();
+        });
+    });
+
+    describe('displayFromExpirySeconds', () => {
+        it('prefers the largest evenly-dividing unit', () => {
+            expect(displayFromExpirySeconds('604800')).toEqual({
+                expiry: '1',
+                timePeriod: 'Weeks'
+            });
+            expect(displayFromExpirySeconds('86400')).toEqual({
+                expiry: '1',
+                timePeriod: 'Days'
+            });
+            expect(displayFromExpirySeconds('3600')).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours'
+            });
+            expect(displayFromExpirySeconds('600')).toEqual({
+                expiry: '10',
+                timePeriod: 'Minutes'
+            });
+            expect(displayFromExpirySeconds('7200')).toEqual({
+                expiry: '2',
+                timePeriod: 'Hours'
+            });
+            expect(displayFromExpirySeconds('1209600')).toEqual({
+                expiry: '2',
+                timePeriod: 'Weeks'
+            });
+        });
+
+        it('falls back to Seconds for non-divisible values', () => {
+            expect(displayFromExpirySeconds('90')).toEqual({
+                expiry: '90',
+                timePeriod: 'Seconds'
+            });
+            expect(displayFromExpirySeconds('1')).toEqual({
+                expiry: '1',
+                timePeriod: 'Seconds'
+            });
+        });
+
+        it('falls back to 1 Hours for empty or invalid input', () => {
+            expect(displayFromExpirySeconds('')).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours'
+            });
+            expect(displayFromExpirySeconds('0')).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours'
+            });
+            expect(displayFromExpirySeconds('-3600')).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours'
+            });
+            expect(displayFromExpirySeconds('NaN')).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours'
+            });
         });
     });
 });

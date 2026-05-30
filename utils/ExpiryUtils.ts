@@ -60,3 +60,23 @@ export const expirationIndexFromSeconds = (
             return null;
     }
 };
+
+// Inverse of expirySecondsFromInput: given seconds, returns the largest
+// natural (value, unit) pair that divides evenly. Falls back to Seconds for
+// non-divisible inputs, and to ('1', 'Hours') for empty/invalid input.
+export const displayFromExpirySeconds = (
+    expirySeconds: string
+): { expiry: string; timePeriod: TimePeriod } => {
+    const n = Number(expirySeconds);
+    if (!Number.isFinite(n) || n <= 0)
+        return { expiry: '1', timePeriod: 'Hours' };
+    if (n % SECONDS_IN_WEEK === 0)
+        return { expiry: String(n / SECONDS_IN_WEEK), timePeriod: 'Weeks' };
+    if (n % SECONDS_IN_DAY === 0)
+        return { expiry: String(n / SECONDS_IN_DAY), timePeriod: 'Days' };
+    if (n % SECONDS_IN_HOUR === 0)
+        return { expiry: String(n / SECONDS_IN_HOUR), timePeriod: 'Hours' };
+    if (n % SECONDS_IN_MINUTE === 0)
+        return { expiry: String(n / SECONDS_IN_MINUTE), timePeriod: 'Minutes' };
+    return { expiry: String(n), timePeriod: 'Seconds' };
+};
