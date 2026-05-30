@@ -306,7 +306,7 @@ class MigrationsUtils {
         const mod = await EncryptedStorage.getItem(MOD_KEY);
         if (!mod) {
             newSettings.requestSimpleTaproot = true;
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY, 'true');
         }
 
@@ -319,7 +319,7 @@ class MigrationsUtils {
             if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
                 newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
             }
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY2, 'true');
         }
 
@@ -340,7 +340,7 @@ class MigrationsUtils {
                 newSettings.neutrinoPeersMainnet =
                     DEFAULT_NEUTRINO_PEERS_MAINNET;
             }
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY3, 'true');
         }
 
@@ -370,7 +370,7 @@ class MigrationsUtils {
                 newSettings.lsps1Token = '';
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
 
@@ -387,7 +387,7 @@ class MigrationsUtils {
                 }
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY5, 'true');
         }
 
@@ -399,7 +399,7 @@ class MigrationsUtils {
                 newSettings.customSpeedloader = '';
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY6, 'true');
         }
 
@@ -412,7 +412,7 @@ class MigrationsUtils {
                 newSettings.bimodalPathfinding = false;
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY7, 'true');
         }
 
@@ -426,7 +426,7 @@ class MigrationsUtils {
                 newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
         }
 
@@ -453,7 +453,7 @@ class MigrationsUtils {
                     invoices.timePeriod = repaired.timePeriod;
                 }
             }
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY9, 'true');
         }
 
