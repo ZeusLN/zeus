@@ -952,8 +952,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {lookup ? (
                             <View
                                 style={{
-                                    paddingVertical: 10,
-                                    backgroundColor: themeColor('background')
+                                    paddingVertical: 10
                                 }}
                             >
                                 <View
@@ -1036,9 +1035,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             <>
                                 <View
                                     style={{
-                                        paddingVertical: 10,
-                                        backgroundColor:
-                                            themeColor('background')
+                                        paddingVertical: 10
                                     }}
                                 >
                                     {!isselectedMint && !isMultiMintView && (
