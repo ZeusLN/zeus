@@ -128,7 +128,23 @@ export default class MultimintPayment extends React.Component<
             error: hasNoMintsSelected
                 ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
                 : hasInsufficientBalance
-                ? localeString('stores.CashuStore.notEnoughFunds')
+                ? (() => {
+                      const selfSend = CashuStore?.multiMintPlannerSkips?.find(
+                          (s) => s.reason === 'selfSend'
+                      );
+                      if (selfSend) {
+                          return localeString(
+                              'stores.CashuStore.notEnoughFundsSelfSend',
+                              {
+                                  mintName:
+                                      CashuStore?.getMintName?.(
+                                          selfSend.mintUrl
+                                      ) || selfSend.mintUrl
+                              }
+                          );
+                      }
+                      return localeString('stores.CashuStore.notEnoughFunds');
+                  })()
                 : undefined,
             showPaymentDetails: false,
             storedNotes: '',

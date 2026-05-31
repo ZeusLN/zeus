@@ -161,6 +161,19 @@ interface ClaimTokenResponse {
     warningMessage?: string;
 }
 
+// Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
+// the mint as the destination of the invoice (e.g. Nutshell's "internal
+// mpp not allowed") — the user can act on this by selecting a different
+// mint to cover the shortfall.
+type MultimintSkipReason =
+    | 'selfSend'
+    | 'mppRejected'
+    | 'noBalance'
+    | 'addFailed'
+    | 'feeOverBalance'
+    | 'requoteFailed'
+    | 'networkError';
+
 export default class CashuStore {
     private getPayReqRequestId = 0;
 
@@ -213,6 +226,20 @@ export default class CashuStore {
     @observable public meltQuotes: {
         mintUrl: string;
         meltQuote: CDKMeltQuote;
+        // When true, this entry is a regular (non-MPP) melt quote and the
+        // executor must use CashuDevKit.melt(mintUrl, quote.id) rather than
+        // meltPartial. Used when the multi-mint planner falls back to a
+        // single mint (only one selected mint had funds, or MPP was
+        // rejected by the destination mint).
+        useRegularMelt?: boolean;
+    }[] = [];
+    // Mints excluded by the multi-mint planner during the most recent
+    // prepare pass, with a classified reason. Consumed when the
+    // notEnoughFunds error fires so the message can name the specific
+    // mint that couldn't participate (e.g. invoice destination).
+    @observable public multiMintPlannerSkips: {
+        mintUrl: string;
+        reason: MultimintSkipReason;
     }[] = [];
     @observable public meltQuote?: {
         quote: string;
@@ -927,7 +954,7 @@ export default class CashuStore {
         return result;
     };
 
-    private getMintName = (mintUrl: string): string => {
+    public getMintName = (mintUrl: string): string => {
         const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
         return (
             this.mintInfos[normalizedMintUrl]?.name ||
@@ -953,6 +980,21 @@ export default class CashuStore {
         });
     };
 
+    // Builds the user-facing "not enough funds" message, augmenting it
+    // with context when the planner classified a skip the user can act on
+    // (e.g. the destination mint refused MPP for its own invoice).
+    private notEnoughFundsMessage = (): string => {
+        const selfSend = this.multiMintPlannerSkips.find(
+            (s) => s.reason === 'selfSend'
+        );
+        if (selfSend) {
+            return localeString('stores.CashuStore.notEnoughFundsSelfSend', {
+                mintName: this.getMintName(selfSend.mintUrl)
+            });
+        }
+        return localeString('stores.CashuStore.notEnoughFunds');
+    };
+
     private normalizeMultimintPaymentAmount = (
         amount: unknown,
         min: number = 1
@@ -972,6 +1014,111 @@ export default class CashuStore {
         );
     };
 
+    private classifyMppRejection = (body: string): MultimintSkipReason => {
+        const lower = (body || '').toLowerCase();
+        // Mints refuse MPP for invoices they themselves issued. Nutshell
+        // returns "internal mpp not allowed"; other implementations may
+        // phrase it as a self-payment.
+        if (
+            lower.includes('internal mpp not allowed') ||
+            lower.includes('self payment') ||
+            lower.includes('self-payment')
+        ) {
+            return 'selfSend';
+        }
+        return 'mppRejected';
+    };
+
+    private queryMeltQuoteMpp = async (
+        normalizedMintUrl: string,
+        invoice: string,
+        amountSats: number
+    ): Promise<
+        | { ok: true; quote: any }
+        | {
+              ok: false;
+              reason: MultimintSkipReason;
+              status?: number;
+              body?: string;
+          }
+    > => {
+        try {
+            const response = await fetch(
+                `${normalizedMintUrl}/v1/melt/quote/bolt11`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        request: invoice,
+                        unit: 'sat',
+                        options: {
+                            mpp: { amount: amountSats * 1000 }
+                        }
+                    })
+                }
+            );
+            if (!response.ok) {
+                let bodyText = '';
+                try {
+                    bodyText = await response.text();
+                } catch {}
+                return {
+                    ok: false,
+                    reason: this.classifyMppRejection(bodyText),
+                    status: response.status,
+                    body: bodyText
+                };
+            }
+            const json = await response.json();
+            return { ok: true, quote: json };
+        } catch {
+            return { ok: false, reason: 'networkError' };
+        }
+    };
+
+    // Fallback for the multi-mint planner when MPP can't be used (only one
+    // selected mint has funds, or the destination mint refuses MPP for its
+    // own invoice). Creates a regular non-MPP melt quote and flags it so the
+    // executor uses CashuDevKit.melt instead of meltPartial.
+    private prepareSingleMintRegularQuote = async (
+        mintUrl: string,
+        balance: number,
+        invoice: string,
+        amountToPay: number
+    ): Promise<
+        {
+            mintUrl: string;
+            meltQuote: CDKMeltQuote;
+            useRegularMelt?: boolean;
+        }[]
+    > => {
+        try {
+            const quote = await this.createMeltQuoteCDK(mintUrl, invoice);
+            const fee = Number(quote.fee_reserve) || 0;
+            const quoteAmount = Number(quote.amount) || amountToPay;
+            if (quoteAmount + fee > balance) {
+                this.meltQuotes = [];
+                return [];
+            }
+            const result = [
+                {
+                    mintUrl,
+                    meltQuote: {
+                        ...quote,
+                        amount: quoteAmount,
+                        fee_reserve: fee
+                    },
+                    useRegularMelt: true
+                }
+            ];
+            this.meltQuotes = result;
+            return result;
+        } catch {
+            this.meltQuotes = [];
+            return [];
+        }
+    };
+
     private prepareMultiMintMeltQuotesCDK = async ({
         invoice,
         amountToPay,
@@ -984,6 +1131,7 @@ export default class CashuStore {
         {
             mintUrl: string;
             meltQuote: CDKMeltQuote;
+            useRegularMelt?: boolean;
         }[]
     > => {
         const selectedMints =
@@ -1011,10 +1159,21 @@ export default class CashuStore {
             {} as Record<string, number>
         );
 
-        // Sort largest balance first so mints with more capacity
-        // handle the bulk of the payment, avoiding fee issues
-        // on small-balance mints
-        const mintsByLargestBalance = supportedMints
+        if (amountToPay <= 0) {
+            this.meltQuotes = [];
+            this.multiMintPlannerSkips = [];
+            return [];
+        }
+
+        // Reset skip classification at the start of every pass so stale
+        // entries from a prior invoice don't leak into the error message.
+        runInAction(() => {
+            this.multiMintPlannerSkips = [];
+        });
+
+        // All selected mints with positive balance (regardless of MPP
+        // support). This is what determines whether MPP is even possible.
+        const fundedSelectedMints = uniqueSelectedMints
             .map((mintUrl) => ({
                 mintUrl,
                 balance: normalizedBalances[mintUrl] || 0
@@ -1022,157 +1181,230 @@ export default class CashuStore {
             .filter(({ balance }) => balance > 0)
             .sort((a, b) => b.balance - a.balance);
 
-        if (mintsByLargestBalance.length === 0 || amountToPay <= 0) {
+        // Only one selected mint has funds — MPP isn't possible (and would
+        // be rejected by the mint when paying its own invoice with
+        // "internal mpp not allowed"). Use a regular melt quote.
+        if (fundedSelectedMints.length === 1) {
+            const only = fundedSelectedMints[0];
+            return await this.prepareSingleMintRegularQuote(
+                only.mintUrl,
+                only.balance,
+                invoice,
+                amountToPay
+            );
+        }
+
+        if (fundedSelectedMints.length === 0) {
             this.meltQuotes = [];
             return [];
         }
 
-        const nextMeltQuotes: { mintUrl: string; meltQuote: CDKMeltQuote }[] =
-            [];
-        let remainingAmount = amountToPay;
+        // Probe each mint at min(balance, amountToPay) so the
+        // proportional split below works against usable capacity
+        // (balance net of fee), not raw balance. This avoids biasing
+        // the denominator with mints that will be skipped later.
+        type Candidate = {
+            mintUrl: string;
+            normalizedMintUrl: string;
+            balance: number;
+            probeAmount: number;
+            probeQuote: any;
+            probeFee: number;
+            usable: number;
+        };
 
-        // Calculate total usable balance for proportional splitting
-        const totalUsableBalance = mintsByLargestBalance.reduce(
-            (sum, { balance }) => sum + balance,
-            0
-        );
+        const skipped: { mintUrl: string; reason: MultimintSkipReason }[] = [];
+        const candidates: Candidate[] = [];
 
-        for (const { mintUrl } of mintsByLargestBalance) {
-            if (remainingAmount <= 0) {
-                break;
-            }
-
-            const mintBalance = normalizedBalances[mintUrl] || 0;
-            if (mintBalance <= 0) {
+        for (const mintUrl of supportedMints) {
+            const balance = normalizedBalances[mintUrl] || 0;
+            if (balance <= 0) {
+                skipped.push({ mintUrl, reason: 'noBalance' });
                 continue;
             }
-
-            // Prefer a single mint when it can cover remainingAmount.
-            // Otherwise split proportionally to each mint's share of total
-            // balance. Use ceil to avoid losing sats to rounding —
-            // Math.min with remainingAmount and mintBalance prevents
-            // over-allocation.
-            const canCover = mintBalance >= remainingAmount;
-            const proportionalShare = canCover
-                ? remainingAmount
-                : Math.ceil(amountToPay * (mintBalance / totalUsableBalance));
-            const initialAllocation = Math.min(
-                remainingAmount,
-                proportionalShare > 0 ? proportionalShare : remainingAmount,
-                mintBalance
-            );
-            if (initialAllocation <= 0) {
-                continue;
-            }
-
+            const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
             try {
                 await this.ensureMintAdded(mintUrl);
-
-                // Query the mint directly for the actual fee for this
-                // partial amount — the CDK returns the full invoice fee
-                // which doesn't reflect per-mint MPP fees
-                const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
-                const mppAmountMsat = initialAllocation * 1000;
-                const quoteResponse = await fetch(
-                    `${normalizedMintUrl}/v1/melt/quote/bolt11`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            request: invoice,
-                            unit: 'sat',
-                            options: {
-                                mpp: {
-                                    amount: mppAmountMsat
-                                }
-                            }
-                        })
-                    }
-                );
-
-                if (!quoteResponse.ok) {
-                    continue;
-                }
-
-                const quote = await quoteResponse.json();
-                const actualFee = Number(quote.fee_reserve) || 0;
-
-                let allocationAmount = initialAllocation;
-                let totalNeeded = allocationAmount + actualFee;
-
-                if (totalNeeded > mintBalance) {
-                    // Reduce allocation to fit within balance, then
-                    // re-query the mint for the actual fee at the
-                    // reduced amount
-                    let reducedAllocation = mintBalance - actualFee;
-
-                    if (reducedAllocation <= 0) {
-                        continue;
-                    }
-
-                    reducedAllocation = Math.min(
-                        remainingAmount,
-                        reducedAllocation
-                    );
-
-                    // Re-query fee for the reduced amount
-                    const reQuoteResponse = await fetch(
-                        `${normalizedMintUrl}/v1/melt/quote/bolt11`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                request: invoice,
-                                unit: 'sat',
-                                options: {
-                                    mpp: {
-                                        amount: reducedAllocation * 1000
-                                    }
-                                }
-                            })
-                        }
-                    );
-
-                    if (!reQuoteResponse.ok) {
-                        continue;
-                    }
-
-                    const reQuote = await reQuoteResponse.json();
-                    const reFee = Number(reQuote.fee_reserve) || 0;
-                    const reNeeded = reducedAllocation + reFee;
-
-                    if (reNeeded > mintBalance) {
-                        // Still doesn't fit, skip this mint
-                        continue;
-                    }
-
-                    allocationAmount = reducedAllocation;
-                    // Use the re-quoted values
-                    Object.assign(quote, reQuote);
-                }
-
-                const finalFee = Number(quote.fee_reserve) || 0;
-
-                const adjustedQuote = {
-                    ...quote,
-                    amount: allocationAmount,
-                    fee_reserve: finalFee
-                };
-
-                nextMeltQuotes.push({
-                    mintUrl,
-                    meltQuote: adjustedQuote
-                });
-                remainingAmount = Math.max(
-                    0,
-                    remainingAmount - allocationAmount
-                );
             } catch {
+                skipped.push({ mintUrl, reason: 'addFailed' });
                 continue;
             }
+            const probeAmount = Math.min(balance, amountToPay);
+            const probeResult = await this.queryMeltQuoteMpp(
+                normalizedMintUrl,
+                invoice,
+                probeAmount
+            );
+            if (!probeResult.ok) {
+                skipped.push({ mintUrl, reason: probeResult.reason });
+                continue;
+            }
+            const probeQuote = probeResult.quote;
+            const probeFee = Number(probeQuote.fee_reserve) || 0;
+            const usable = Math.max(0, balance - probeFee);
+            if (usable <= 0) {
+                skipped.push({ mintUrl, reason: 'feeOverBalance' });
+                continue;
+            }
+            candidates.push({
+                mintUrl,
+                normalizedMintUrl,
+                balance,
+                probeAmount,
+                probeQuote,
+                probeFee,
+                usable
+            });
         }
+
+        // Surface skip reasons so the error-message layer can name the
+        // mint that couldn't participate (e.g. invoice destination).
+        runInAction(() => {
+            this.multiMintPlannerSkips = [...skipped];
+        });
+
+        if (candidates.length === 0) {
+            this.meltQuotes = [];
+            return [];
+        }
+
+        // Sort by largest usable capacity first: high-capacity mints
+        // carry the bulk and we can short-circuit when one can cover
+        // the whole payment.
+        candidates.sort((a, b) => b.usable - a.usable);
+
+        const totalUsable = candidates.reduce((sum, c) => sum + c.usable, 0);
+
+        type Allocation = {
+            mintUrl: string;
+            normalizedMintUrl: string;
+            balance: number;
+            amount: number;
+            fee: number;
+            quote: any;
+        };
+
+        const allocations: Allocation[] = [];
+        let remainingAmount = amountToPay;
+
+        // Greedy proportional allocation against usable capacity. With
+        // mints sorted by usable capacity desc, a single mint can short-
+        // circuit when it covers the whole amount; otherwise each mint
+        // takes its proportional share, capped by its own usable balance.
+        for (const c of candidates) {
+            if (remainingAmount <= 0) break;
+
+            const canCover = c.usable >= remainingAmount;
+            const share = canCover
+                ? remainingAmount
+                : Math.ceil(amountToPay * (c.usable / totalUsable));
+            const targetAmount = Math.min(remainingAmount, share, c.usable);
+            if (targetAmount <= 0) continue;
+
+            // Reuse the probe quote when the target matches; otherwise
+            // re-query for the actual amount (fees may scale with amount).
+            let quote = c.probeQuote;
+            let fee = c.probeFee;
+            if (targetAmount !== c.probeAmount) {
+                const reResult = await this.queryMeltQuoteMpp(
+                    c.normalizedMintUrl,
+                    invoice,
+                    targetAmount
+                );
+                if (!reResult.ok) {
+                    skipped.push({
+                        mintUrl: c.mintUrl,
+                        reason: 'requoteFailed'
+                    });
+                    continue;
+                }
+                quote = reResult.quote;
+                fee = Number(reResult.quote.fee_reserve) || 0;
+            }
+
+            let amount = targetAmount;
+            // Re-quoted fee may have pushed us over balance — shrink.
+            if (amount + fee > c.balance) {
+                const reduced = Math.min(remainingAmount, c.balance - fee);
+                if (reduced <= 0) {
+                    skipped.push({
+                        mintUrl: c.mintUrl,
+                        reason: 'feeOverBalance'
+                    });
+                    continue;
+                }
+                const reResult = await this.queryMeltQuoteMpp(
+                    c.normalizedMintUrl,
+                    invoice,
+                    reduced
+                );
+                if (!reResult.ok) {
+                    skipped.push({
+                        mintUrl: c.mintUrl,
+                        reason: 'requoteFailed'
+                    });
+                    continue;
+                }
+                const reFee = Number(reResult.quote.fee_reserve) || 0;
+                if (reduced + reFee > c.balance) {
+                    skipped.push({
+                        mintUrl: c.mintUrl,
+                        reason: 'feeOverBalance'
+                    });
+                    continue;
+                }
+                quote = reResult.quote;
+                fee = reFee;
+                amount = reduced;
+            }
+
+            allocations.push({
+                mintUrl: c.mintUrl,
+                normalizedMintUrl: c.normalizedMintUrl,
+                balance: c.balance,
+                amount,
+                fee,
+                quote
+            });
+            remainingAmount = Math.max(0, remainingAmount - amount);
+        }
+
+        const totalAllocated = allocations.reduce((s, a) => s + a.amount, 0);
+
+        // MPP couldn't cover the amount — most often because the
+        // destination mint rejects MPP for its own invoice ("internal mpp
+        // not allowed"). Fall back to a regular melt on the highest-balance
+        // funded mint that can cover the whole amount on its own.
+        if (totalAllocated < amountToPay) {
+            const fallbackMint = fundedSelectedMints.find(
+                ({ balance }) => balance >= amountToPay
+            );
+            if (fallbackMint) {
+                const fallback = await this.prepareSingleMintRegularQuote(
+                    fallbackMint.mintUrl,
+                    fallbackMint.balance,
+                    invoice,
+                    amountToPay
+                );
+                if (fallback.length > 0) {
+                    return fallback;
+                }
+            }
+        }
+
+        const nextMeltQuotes: {
+            mintUrl: string;
+            meltQuote: CDKMeltQuote;
+            useRegularMelt?: boolean;
+        }[] = allocations.map((a) => ({
+            mintUrl: a.mintUrl,
+            meltQuote: {
+                ...a.quote,
+                amount: a.amount,
+                fee_reserve: a.fee
+            }
+        }));
+
         this.meltQuotes = nextMeltQuotes;
         return nextMeltQuotes;
     };
@@ -3881,9 +4113,7 @@ export default class CashuStore {
                     );
 
                     if (!preparedQuotes.length || totalAllocated < paymentAmt) {
-                        computedPayReqError = localeString(
-                            'stores.CashuStore.notEnoughFunds'
-                        );
+                        computedPayReqError = this.notEnoughFundsMessage();
                     }
 
                     totalFeeEstimate = preparedQuotes.reduce(
@@ -4181,9 +4411,7 @@ export default class CashuStore {
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.notEnoughFunds'
-                    );
+                    this.paymentErrorMsg = this.notEnoughFundsMessage();
                     this.loading = false;
                 });
             }
@@ -4203,9 +4431,7 @@ export default class CashuStore {
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.notEnoughFunds'
-                    );
+                    this.paymentErrorMsg = this.notEnoughFundsMessage();
                     this.loading = false;
                 });
             }
@@ -4246,114 +4472,148 @@ export default class CashuStore {
         });
 
         const meltResults = await Promise.all(
-            plannedMeltQuotes.map(async ({ mintUrl, meltQuote }, index) => {
-                try {
-                    mintProgressInfo[index].status =
-                        MintPaymentStatus.REQUESTING;
+            plannedMeltQuotes.map(
+                async ({ mintUrl, meltQuote, useRegularMelt }, index) => {
+                    try {
+                        mintProgressInfo[index].status =
+                            MintPaymentStatus.REQUESTING;
 
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
+                        onProgress?.({
+                            step: MultinutPaymentStep.PROCESSING,
+                            mints: [...mintProgressInfo],
+                            totalSelectedBalance,
+                            isProcessing: true
+                        });
 
-                    await this.ensureMintAdded(mintUrl);
+                        await this.ensureMintAdded(mintUrl);
 
-                    mintProgressInfo[index].status = MintPaymentStatus.PAYING;
+                        mintProgressInfo[index].status =
+                            MintPaymentStatus.PAYING;
 
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
+                        onProgress?.({
+                            step: MultinutPaymentStep.PROCESSING,
+                            mints: [...mintProgressInfo],
+                            totalSelectedBalance,
+                            isProcessing: true
+                        });
 
-                    // meltPartial: creates its own quote with the mint
-                    // API to get actual fees, then sends all proofs
-                    const partialAmount = Number(meltQuote.amount) || 0;
-                    const meltResult = await CashuDevKit.meltPartial(
-                        mintUrl,
-                        paymentRequest,
-                        partialAmount * 1000
-                    );
+                        const partialAmount = Number(meltQuote.amount) || 0;
+                        // useRegularMelt: planner fell back to a single mint
+                        // (only one funded, or MPP refused by destination
+                        // mint). Use the prepared regular quote directly.
+                        // Otherwise meltPartial creates its own MPP quote
+                        // with the mint API and pays the partial.
+                        const meltResult = useRegularMelt
+                            ? await CashuDevKit.melt(mintUrl, meltQuote.id)
+                            : await CashuDevKit.meltPartial(
+                                  mintUrl,
+                                  paymentRequest,
+                                  partialAmount * 1000
+                              );
 
-                    const meltState = (
-                        meltResult.state ||
-                        meltQuote.state ||
-                        ''
-                    ).toString();
-                    const normalizedMeltState =
-                        meltState.length > 0 ? meltState.toUpperCase() : 'PAID';
+                        const meltState = (
+                            meltResult.state ||
+                            meltQuote.state ||
+                            ''
+                        ).toString();
+                        const normalizedMeltState =
+                            meltState.length > 0
+                                ? meltState.toUpperCase()
+                                : 'PAID';
 
-                    if (normalizedMeltState !== 'PAID') {
-                        throw new Error(
-                            localeString('stores.CashuStore.errorPayingInvoice')
-                        );
-                    }
+                        if (normalizedMeltState !== 'PAID') {
+                            throw new Error(
+                                localeString(
+                                    'stores.CashuStore.errorPayingInvoice'
+                                )
+                            );
+                        }
 
-                    const paymentPreimage =
-                        meltResult.preimage || meltQuote.payment_preimage || '';
+                        const paymentPreimage =
+                            meltResult.preimage ||
+                            meltQuote.payment_preimage ||
+                            '';
 
-                    const payment = new CashuPayment({
-                        ...this.payReq,
-                        bolt11: paymentRequest,
-                        meltResponse: {
-                            quote: {
-                                quote: meltQuote.id,
-                                amount: meltQuote.amount,
-                                fee_reserve: meltQuote.fee_reserve,
+                        const payment = new CashuPayment({
+                            ...this.payReq,
+                            bolt11: paymentRequest,
+                            meltResponse: {
+                                quote: {
+                                    quote: meltQuote.id,
+                                    amount: meltQuote.amount,
+                                    fee_reserve: meltQuote.fee_reserve,
+                                    state: normalizedMeltState,
+                                    expiry: meltQuote.expiry,
+                                    payment_preimage: paymentPreimage || null
+                                },
+                                change: meltResult.change,
                                 state: normalizedMeltState,
-                                expiry: meltQuote.expiry,
-                                payment_preimage: paymentPreimage || null
+                                amount: meltResult.amount,
+                                fee_paid: meltResult.fee_paid,
+                                preimage: paymentPreimage
                             },
-                            change: meltResult.change,
-                            state: normalizedMeltState,
-                            amount: meltResult.amount,
-                            fee_paid: meltResult.fee_paid,
-                            preimage: paymentPreimage
-                        },
-                        amount: Number(meltResult.amount) || partialAmount,
-                        fee: meltResult.fee_paid,
-                        payment_preimage: paymentPreimage,
-                        mintUrl
-                    });
+                            amount: Number(meltResult.amount) || partialAmount,
+                            fee: meltResult.fee_paid,
+                            payment_preimage: paymentPreimage,
+                            mintUrl
+                        });
 
-                    mintProgressInfo[index].status = MintPaymentStatus.SUCCESS;
-                    mintProgressInfo[index].error = undefined;
-                    mintProgressInfo[index].feePaid =
-                        Number(meltResult.fee_paid) || 0;
+                        mintProgressInfo[index].status =
+                            MintPaymentStatus.SUCCESS;
+                        mintProgressInfo[index].error = undefined;
+                        mintProgressInfo[index].feePaid =
+                            Number(meltResult.fee_paid) || 0;
 
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
+                        onProgress?.({
+                            step: MultinutPaymentStep.PROCESSING,
+                            mints: [...mintProgressInfo],
+                            totalSelectedBalance,
+                            isProcessing: true
+                        });
 
-                    return { ok: true as const, payment };
-                } catch (error: any) {
-                    const errorMessage =
-                        error?.message ||
-                        localeString('stores.CashuStore.errorPayingInvoice');
+                        return { ok: true as const, payment };
+                    } catch (error: any) {
+                        const rawMessage =
+                            error?.message ||
+                            localeString(
+                                'stores.CashuStore.errorPayingInvoice'
+                            );
+                        // Mint quoted one fee and demanded a higher one at
+                        // melt time. The raw error names the gap; surface a
+                        // user-actionable message instead of the FFI string.
+                        const insufficientInputs = rawMessage.match(
+                            /not enough inputs provided for melt\.\s*Provided:\s*(\d+)\s*,\s*needed:\s*(\d+)/i
+                        );
+                        const errorMessage = insufficientInputs
+                            ? localeString(
+                                  'stores.CashuStore.meltFeeMismatch',
+                                  {
+                                      mintName: this.getMintName(mintUrl),
+                                      provided: insufficientInputs[1],
+                                      needed: insufficientInputs[2]
+                                  }
+                              )
+                            : rawMessage;
 
-                    mintProgressInfo[index].status = MintPaymentStatus.FAILED;
-                    mintProgressInfo[index].error = errorMessage;
+                        mintProgressInfo[index].status =
+                            MintPaymentStatus.FAILED;
+                        mintProgressInfo[index].error = errorMessage;
 
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
+                        onProgress?.({
+                            step: MultinutPaymentStep.PROCESSING,
+                            mints: [...mintProgressInfo],
+                            totalSelectedBalance,
+                            isProcessing: true
+                        });
 
-                    return {
-                        ok: false as const,
-                        mintUrl,
-                        reason: errorMessage
-                    };
+                        return {
+                            ok: false as const,
+                            mintUrl,
+                            reason: errorMessage
+                        };
+                    }
                 }
-            })
+            )
         );
 
         const segmentPayments = meltResults

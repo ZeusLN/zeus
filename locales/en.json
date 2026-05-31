@@ -2296,6 +2296,8 @@
     "stores.CashuStore.errorMintingToken": "Error minting token",
     "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "Not enough funds to cover payment",
+    "stores.CashuStore.notEnoughFundsSelfSend": "Not enough funds to cover payment. {{mintName}} couldn't be used because it's this invoice's destination — pick a different mint to cover the gap.",
+    "stores.CashuStore.meltFeeMismatch": "Multi-mint payment failed: {{mintName}} demanded a higher fee at melt time than it quoted ({{provided}} provided, {{needed}} needed). Top up {{mintName}}, pick a different mint, or lower the amount.",
     "stores.CashuStore.noMeltQuoteAvailable": "No melt quote available",
     "stores.CashuStore.noPaymentRequestAvailable": "No payment request available",
     "stores.CashuStore.invalidMultimintPaymentAmount": "Invalid multimint payment amount. Please use a whole sat amount.",
