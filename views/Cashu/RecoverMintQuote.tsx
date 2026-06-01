@@ -10,7 +10,6 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
-import CashuDevKit from '../../cashu-cdk';
 import CashuStore from '../../stores/CashuStore';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -83,28 +82,6 @@ export default class RecoverMintQuote extends React.Component<
         });
 
         try {
-            await CashuDevKit.checkMintQuote(selectedMintUrl, trimmed);
-        } catch (e: any) {
-            const msg = e?.message || String(e);
-            if (msg.includes('Unknown quote')) {
-                this.setState({
-                    checking: false,
-                    checked: true,
-                    notOnDevice: true,
-                    statusMessage: ''
-                });
-                return;
-            }
-            this.setState({
-                checking: false,
-                checked: true,
-                error: msg,
-                statusMessage: ''
-            });
-            return;
-        }
-
-        try {
             const result = await CashuStore.checkInvoicePaid(
                 trimmed,
                 selectedMintUrl
@@ -114,6 +91,13 @@ export default class RecoverMintQuote extends React.Component<
                     checking: false,
                     checked: true,
                     recoveredAmount: Number(result?.amtSat) || 0,
+                    statusMessage: ''
+                });
+            } else if (result?.isLegacy) {
+                this.setState({
+                    checking: false,
+                    checked: true,
+                    notOnDevice: true,
                     statusMessage: ''
                 });
             } else {
