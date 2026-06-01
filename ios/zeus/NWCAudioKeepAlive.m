@@ -233,7 +233,8 @@ RCT_EXPORT_METHOD(setTrack:(NSInteger)index
  */
 RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-    NSInteger next = (self.currentTrackIndex + 1) % self.trackNames.count;
+    NSInteger count = (NSInteger)self.trackNames.count;
+    NSInteger next = (self.currentTrackIndex + 1) % count;
     [self setTrack:next resolver:resolve rejecter:reject];
 }
 
@@ -242,7 +243,8 @@ RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
  */
 RCT_EXPORT_METHOD(previousTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-    NSInteger prev = (self.currentTrackIndex - 1 + self.trackNames.count) % self.trackNames.count;
+    NSInteger count = (NSInteger)self.trackNames.count;
+    NSInteger prev = (self.currentTrackIndex - 1 + count) % count;
     [self setTrack:prev resolver:resolve rejecter:reject];
 }
 
