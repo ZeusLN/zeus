@@ -264,15 +264,15 @@ RCT_EXPORT_METHOD(setMuted:(BOOL)muted
 
 - (BOOL)loadAndPlayTrackAtIndex:(NSInteger)index error:(NSError **)outError {
     NSString *trackName = self.trackNames[index];
-    NSString *path = [[NSBundle mainBundle] pathForResource:trackName ofType:@"mp3"];
+    NSString *path = [[NSBundle mainBundle] pathForResource:trackName ofType:@"m4a"];
     if (!path) {
         if (outError) {
             *outError = [NSError errorWithDomain:@"NWCAudioKeepAlive"
                                             code:3
                                         userInfo:@{NSLocalizedDescriptionKey:
-                                                   [NSString stringWithFormat:@"Audio resource not found: %@.mp3", trackName]}];
+                                                   [NSString stringWithFormat:@"Audio resource not found: %@.m4a", trackName]}];
         }
-        NSLog(@"[NWCAudio] Resource not found: %@.mp3", trackName);
+        NSLog(@"[NWCAudio] Resource not found: %@.m4a", trackName);
         return NO;
     }
 
