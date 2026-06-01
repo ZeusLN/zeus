@@ -27,7 +27,6 @@ import { isOrderFree } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import handleAnything from '../../utils/handleAnything';
 
 import LSPStore from '../../stores/LSPStore';
 import ChannelsStore from '../../stores/ChannelsStore';
@@ -631,7 +630,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                     title={
                                         Object.keys(
                                             createExtensionOrderResponse
-                                        ).length == 0
+                                        ).length === 0
                                             ? `${localeString(
                                                   'views.LSPS1.createOrder'
                                               )}`
@@ -653,16 +652,26 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 createExtensionOrderResponse,
                                                 'LSPS7'
                                             ).then(() => {
-                                                handleAnything(
-                                                    payment.bolt11?.invoice ||
-                                                        payment.lightning_invoice ||
-                                                        payment.bolt11_invoice
-                                                ).then(([route, props]) => {
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                });
+                                                navigation.navigate(
+                                                    'LSPS7PaymentAwait',
+                                                    {
+                                                        orderId:
+                                                            result?.order_id,
+                                                        invoice:
+                                                            payment?.bolt11
+                                                                ?.invoice ||
+                                                            payment?.lightning_invoice ||
+                                                            payment?.bolt11_invoice,
+                                                        satAmount:
+                                                            payment?.bolt11
+                                                                ?.order_total_sat ||
+                                                            payment?.order_total_sat ||
+                                                            payment?.bolt11
+                                                                ?.fee_total_sat ||
+                                                            payment?.fee_total_sat,
+                                                        service: 'LSPS7'
+                                                    }
+                                                );
                                             });
                                         }
                                     }}
