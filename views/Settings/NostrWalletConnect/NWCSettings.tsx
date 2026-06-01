@@ -372,7 +372,13 @@ export default class NWCSettings extends React.Component<
                                         this.togglePreview(track.index)
                                     }
                                     hitSlop={8}
-                                    style={{ marginRight: 14 }}
+                                    style={{
+                                        marginRight: 14,
+                                        width: 28,
+                                        height: 28,
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
                                 >
                                     {previewLoading &&
                                     previewingIndex === track.index ? (
