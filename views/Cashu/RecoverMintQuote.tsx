@@ -1,58 +1,58 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as bip39scure from '@scure/bip39';
-import { bytesToHex } from '@noble/hashes/utils';
-
-import CashuDevKit from '../../cashu-cdk';
 
 import Button from '../../components/Button';
 import EcashMintPicker from '../../components/EcashMintPicker';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
+import CashuDevKit from '../../cashu-cdk';
 import CashuStore from '../../stores/CashuStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-interface LegacySeedRecoveryProps {
+interface RecoverMintQuoteProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    SettingsStore: SettingsStore;
 }
 
-interface LegacySeedRecoveryState {
+interface RecoverMintQuoteState {
+    quoteId: string;
     checking: boolean;
     checked: boolean;
     error: string | null;
-    noFundsFound: boolean;
     statusMessage: string;
     recoveredAmount: number;
+    quoteState: string | null;
+    notOnDevice: boolean;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore')
 @observer
-export default class LegacySeedRecovery extends React.Component<
-    LegacySeedRecoveryProps,
-    LegacySeedRecoveryState
+export default class RecoverMintQuote extends React.Component<
+    RecoverMintQuoteProps,
+    RecoverMintQuoteState
 > {
     state = {
+        quoteId: '',
         checking: false,
         checked: false,
         error: null,
-        noFundsFound: false,
         statusMessage: '',
-        recoveredAmount: 0
+        recoveredAmount: 0,
+        quoteState: null,
+        notOnDevice: false
     };
 
-    checkLegacyFunds = async () => {
-        const { CashuStore, SettingsStore } = this.props;
+    recover = async () => {
+        const { CashuStore } = this.props;
+        const { quoteId } = this.state;
         const { selectedMintUrl } = CashuStore;
-        const { seedPhrase } = SettingsStore;
 
         if (!selectedMintUrl) {
             this.setState({
@@ -62,12 +62,10 @@ export default class LegacySeedRecovery extends React.Component<
             });
             return;
         }
-
-        if (!seedPhrase || seedPhrase.length === 0) {
+        const trimmed = quoteId.trim();
+        if (!trimmed) {
             this.setState({
-                error: localeString(
-                    'views.Cashu.LegacySeedRecovery.noSeedPhrase'
-                )
+                error: localeString('views.Cashu.RecoverMintQuote.noQuoteId')
             });
             return;
         }
@@ -76,52 +74,61 @@ export default class LegacySeedRecovery extends React.Component<
             checking: true,
             checked: false,
             error: null,
-            noFundsFound: false,
             statusMessage: localeString(
-                'views.Cashu.LegacySeedRecovery.connecting'
+                'views.Cashu.RecoverMintQuote.checking'
             ),
-            recoveredAmount: 0
+            recoveredAmount: 0,
+            quoteState: null,
+            notOnDevice: false
         });
 
         try {
-            // Derive legacy seed (bytes 32-64 from LND seed)
-            const mnemonic = seedPhrase.join(' ');
-            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
-            const legacySeed = new Uint8Array(seedFromMnemonic.slice(32, 64));
-            const seedHex = bytesToHex(legacySeed);
-
-            this.setState({
-                statusMessage: localeString(
-                    'views.Cashu.LegacySeedRecovery.checkingMint'
-                )
-            });
-
-            const amount = await CashuDevKit.restoreFromSeed(
-                selectedMintUrl,
-                seedHex
-            );
-
-            if (amount > 0) {
-                await CashuStore.syncCDKBalances();
+            await CashuDevKit.checkMintQuote(selectedMintUrl, trimmed);
+        } catch (e: any) {
+            const msg = e?.message || String(e);
+            if (msg.includes('Unknown quote')) {
                 this.setState({
                     checking: false,
                     checked: true,
-                    recoveredAmount: amount,
+                    notOnDevice: true,
+                    statusMessage: ''
+                });
+                return;
+            }
+            this.setState({
+                checking: false,
+                checked: true,
+                error: msg,
+                statusMessage: ''
+            });
+            return;
+        }
+
+        try {
+            const result = await CashuStore.checkInvoicePaid(
+                trimmed,
+                selectedMintUrl
+            );
+            if (result?.isPaid) {
+                this.setState({
+                    checking: false,
+                    checked: true,
+                    recoveredAmount: Number(result?.amtSat) || 0,
                     statusMessage: ''
                 });
             } else {
                 this.setState({
                     checking: false,
                     checked: true,
-                    noFundsFound: true,
+                    quoteState: result?.quoteState || null,
                     statusMessage: ''
                 });
             }
-        } catch (error: any) {
+        } catch (e: any) {
             this.setState({
                 checking: false,
                 checked: true,
-                error: error.message,
+                error: e?.message || String(e),
                 statusMessage: ''
             });
         }
@@ -130,12 +137,14 @@ export default class LegacySeedRecovery extends React.Component<
     render() {
         const { navigation } = this.props;
         const {
+            quoteId,
             checking,
             checked,
             error,
-            noFundsFound,
             statusMessage,
-            recoveredAmount
+            recoveredAmount,
+            quoteState,
+            notOnDevice
         } = this.state;
 
         return (
@@ -144,7 +153,7 @@ export default class LegacySeedRecovery extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Cashu.LegacySeedRecovery.title'
+                            'views.Cashu.RecoverMintQuote.title'
                         ),
                         style: {
                             color: themeColor('text'),
@@ -163,7 +172,7 @@ export default class LegacySeedRecovery extends React.Component<
                         }}
                     >
                         {localeString(
-                            'views.Cashu.LegacySeedRecovery.description'
+                            'views.Cashu.RecoverMintQuote.description'
                         )}
                     </Text>
 
@@ -175,9 +184,7 @@ export default class LegacySeedRecovery extends React.Component<
                             marginBottom: 10
                         }}
                     >
-                        {localeString(
-                            'views.Cashu.LegacySeedRecovery.selectMint'
-                        )}
+                        {localeString('cashu.mint')}
                     </Text>
                     <View style={styles.pickerContainer}>
                         <EcashMintPicker
@@ -188,12 +195,53 @@ export default class LegacySeedRecovery extends React.Component<
                         />
                     </View>
 
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontSize: 16,
+                            marginBottom: 10
+                        }}
+                    >
+                        {localeString('views.Cashu.RecoverMintQuote.quoteId')}
+                    </Text>
+                    <TextInput
+                        value={quoteId}
+                        onChangeText={(v) =>
+                            this.setState({
+                                quoteId: v,
+                                error: null,
+                                checked: false,
+                                recoveredAmount: 0,
+                                quoteState: null,
+                                notOnDevice: false
+                            })
+                        }
+                        editable={!checking}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        placeholder={localeString(
+                            'views.Cashu.RecoverMintQuote.quoteIdPlaceholder'
+                        )}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 14,
+                            padding: 12,
+                            borderWidth: 1,
+                            borderColor: themeColor('secondaryText'),
+                            borderRadius: 6,
+                            marginBottom: 20
+                        }}
+                    />
+
                     <View style={styles.buttonContainer}>
                         <Button
                             title={localeString(
-                                'views.Cashu.LegacySeedRecovery.checkButton'
+                                'views.Cashu.RecoverMintQuote.recoverButton'
                             )}
-                            onPress={this.checkLegacyFunds}
+                            onPress={this.recover}
                             disabled={checking}
                         />
                     </View>
@@ -214,26 +262,7 @@ export default class LegacySeedRecovery extends React.Component<
                         </View>
                     )}
 
-                    {error && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('error'),
-                                padding: 15,
-                                borderRadius: 8,
-                                marginTop: 20
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: 'white',
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 14
-                                }}
-                            >
-                                {error}
-                            </Text>
-                        </View>
-                    )}
+                    {error && <ErrorMessage message={error} />}
 
                     {checked && !error && recoveredAmount > 0 && (
                         <View style={styles.resultContainer}>
@@ -253,18 +282,58 @@ export default class LegacySeedRecovery extends React.Component<
                         </View>
                     )}
 
-                    {checked && !error && noFundsFound && (
-                        <View style={styles.resultContainer}>
+                    {checked &&
+                        !error &&
+                        !notOnDevice &&
+                        recoveredAmount === 0 &&
+                        quoteState && (
+                            <View style={styles.resultContainer}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 16,
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.RecoverMintQuote.notReady',
+                                        { state: quoteState }
+                                    )}
+                                </Text>
+                            </View>
+                        )}
+
+                    {checked && notOnDevice && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('warning'),
+                                padding: 15,
+                                borderRadius: 8,
+                                marginTop: 20
+                            }}
+                        >
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 16,
-                                    textAlign: 'center'
+                                    color: 'white',
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontSize: 14,
+                                    marginBottom: 8
                                 }}
                             >
                                 {localeString(
-                                    'views.Cashu.LegacySeedRecovery.noFundsFound'
+                                    'views.Cashu.RecoverMintQuote.notOnDevice'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: 'white',
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 13
+                                }}
+                            >
+                                {localeString(
+                                    'views.Cashu.RecoverMintQuote.notOnDeviceMessage'
                                 )}
                             </Text>
                         </View>
