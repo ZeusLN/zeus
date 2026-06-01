@@ -1410,12 +1410,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                         </View>
                     </ScrollView>
 
-                    <View
-                        style={[
-                            styles.bottomButtonContainer,
-                            { backgroundColor: themeColor('background') }
-                        ]}
-                    >
+                    <View style={styles.bottomButtonContainer}>
                         <Button
                             title={this.getButtonTitle()}
                             onPress={
