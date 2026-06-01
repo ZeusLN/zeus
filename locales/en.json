@@ -2039,7 +2039,7 @@
     "views.Settings.NostrWalletConnect.warning.budgetLimitReached": "The assigned budget for this connection has reached its limit. Please review and update it if you wish to continue using this connection.",
     "views.Settings.NostrWalletConnect.nwcSettings": "NWC Settings",
     "views.Settings.NostrWalletConnect.backgroundAudio": "Background Audio",
-    "views.Settings.NostrWalletConnect.backgroundAudioDescription": "Choose the ambient sound played to keep NWC relay connections alive while Zeus is in the background. Tap the play button to preview a track.",
+    "views.Settings.NostrWalletConnect.backgroundAudioDescription": "Choose the ambient sound played to keep NWC relay connections alive while ZEUS is in the background. Tap the play button to preview a track.",
     "views.Settings.NostrWalletConnect.persistentNWCService": "Persistent Mode",
     "views.Settings.NostrWalletConnect.nwcIncludeLud16InUrl": "Include Lightning Address",
     "views.Settings.NostrWalletConnect.nwcIncludeLud16InUrlDescription": "When enabled, your Lightning address (LUD-16) is added to new and regenerated NWC connection URLs. Some Nostr clients will set this as your Lightning address in your profile. Turn off if you prefer not to share it with the connecting app.",
