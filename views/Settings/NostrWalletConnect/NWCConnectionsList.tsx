@@ -184,10 +184,7 @@ export default class NWCConnectionsList extends React.Component<
         return (
             <View style={{ paddingTop: index === 0 ? 10 : 0 }}>
                 <TouchableOpacity
-                    style={[
-                        styles.connectionCard,
-                        { backgroundColor: themeColor('background') }
-                    ]}
+                    style={styles.connectionCard}
                     onPress={() => this.navigateToConnectionDetails(connection)}
                 >
                     <View style={styles.connectionHeader}>

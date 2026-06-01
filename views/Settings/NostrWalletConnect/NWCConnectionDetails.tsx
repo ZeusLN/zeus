@@ -680,12 +680,7 @@ export default class NWCConnectionDetails extends React.Component<
                             </View>
                         </ScrollView>
 
-                        <View
-                            style={[
-                                styles.bottomContainer,
-                                { backgroundColor: themeColor('background') }
-                            ]}
-                        >
+                        <View style={styles.bottomContainer}>
                             <Button
                                 title={localeString(
                                     'views.Settings.NostrWalletConnect.regenerateConnection'
