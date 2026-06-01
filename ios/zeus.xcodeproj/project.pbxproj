@@ -223,6 +223,10 @@
 		FEEEEFC0248849C8BFB0F9A4 /* ldk.png in Resources */ = {isa = PBXBuildFile; fileRef = CEF377B5DB424EBBB4249CA4 /* ldk.png */; };
 		FF3AC496C4DE4B86AEC22CA7 /* MintToken.svg in Resources */ = {isa = PBXBuildFile; fileRef = C06B8930D07546EA8605E869 /* MintToken.svg */; };
 		NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */ = {isa = PBXBuildFile; fileRef = NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */; };
+		NWCAUDIO0000000000000010 /* Soft Pulse.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000014 /* Soft Pulse.mp3 */; };
+		NWCAUDIO0000000000000011 /* Fireplace.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000015 /* Fireplace.mp3 */; };
+		NWCAUDIO0000000000000012 /* White Noise.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000016 /* White Noise.mp3 */; };
+		NWCAUDIO0000000000000013 /* Gentle Rain.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -700,6 +704,10 @@
 		FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_6a.jpg; path = ../assets/images/zeus_illustration_6a.jpg; sourceTree = "<group>"; };
 		NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NWCAudioKeepAlive.m; path = zeus/NWCAudioKeepAlive.m; sourceTree = "<group>"; };
 		NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NWCAudioKeepAlive.h; path = zeus/NWCAudioKeepAlive.h; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000014 /* Soft Pulse.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "Soft Pulse.mp3"; path = "zeus/Soft Pulse.mp3"; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000015 /* Fireplace.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = Fireplace.mp3; path = zeus/Fireplace.mp3; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000016 /* White Noise.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "White Noise.mp3"; path = "zeus/White Noise.mp3"; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000017 /* Gentle Rain.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "Gentle Rain.mp3"; path = "zeus/Gentle Rain.mp3"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -868,6 +876,10 @@
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
 				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
+				NWCAUDIO0000000000000014 /* Soft Pulse.mp3 */,
+				NWCAUDIO0000000000000015 /* Fireplace.mp3 */,
+				NWCAUDIO0000000000000016 /* White Noise.mp3 */,
+				NWCAUDIO0000000000000017 /* Gentle Rain.mp3 */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
@@ -1645,6 +1657,10 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
+				NWCAUDIO0000000000000010 /* Soft Pulse.mp3 in Resources */,
+				NWCAUDIO0000000000000011 /* Fireplace.mp3 in Resources */,
+				NWCAUDIO0000000000000012 /* White Noise.mp3 in Resources */,
+				NWCAUDIO0000000000000013 /* Gentle Rain.mp3 in Resources */,
 				74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */,
 				74C5F97A2D5311BC003840C4 /* PPNeueMontreal-Bold.otf in Resources */,
 				74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */,
