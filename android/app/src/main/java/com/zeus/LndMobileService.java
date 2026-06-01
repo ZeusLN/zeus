@@ -93,6 +93,7 @@ public class LndMobileService extends Service {
   private Map<String, lndmobile.SendStream> writeStreams = new HashMap<>();
 
   private NotificationManager notificationManager;
+  private boolean isNotificationActive = false;
 
   private static boolean isReceiveStream(Method m) {
     return m.toString().contains("RecvStream");
@@ -555,12 +556,14 @@ public class LndMobileService extends Service {
       if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP")) {
         Log.i(TAG, "Received stopForeground Intent");
         stopForeground(STOP_FOREGROUND_REMOVE);
+        isNotificationActive = false;
         stopSelf();
         return START_NOT_STICKY;
       } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.GRACEFUL_STOP")) {
         Handler handler = new Handler(Looper.getMainLooper(), msg -> {
           if (msg.what == MSG_STOP_LND_RESULT) {
             stopForeground(STOP_FOREGROUND_REMOVE);
+            isNotificationActive = false;
             stopSelf();
             Process.killProcess(Process.myPid());
             return true;
@@ -572,7 +575,9 @@ public class LndMobileService extends Service {
         stopLnd(messenger, -1);
         return START_NOT_STICKY;
       } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION")) {
-        if (getPersistentServicesEnabled(this)) {
+        // Only refresh an existing notification — don't recreate one that's
+        // been dismissed (e.g. by setPersistentMode(false) on wallet switch).
+        if (isNotificationActive && getPersistentServicesEnabled(this)) {
           if (notificationManager == null) {
             notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
           }
@@ -598,6 +603,7 @@ public class LndMobileService extends Service {
           } else {
             startForeground(ONGOING_NOTIFICATION_ID, notification);
           }
+          isNotificationActive = true;
         } else {
           try {
             stopForeground(STOP_FOREGROUND_REMOVE);
@@ -605,6 +611,7 @@ public class LndMobileService extends Service {
             Log.e(TAG, "Error stopping foreground service", e);
           }
           notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+          isNotificationActive = false;
         }
         return enabled ? START_STICKY : START_NOT_STICKY;
       }
@@ -628,6 +635,7 @@ public class LndMobileService extends Service {
       } else {
         startForeground(ONGOING_NOTIFICATION_ID, notification);
       }
+      isNotificationActive = true;
     } else {
       try {
         stopForeground(STOP_FOREGROUND_REMOVE);
@@ -640,6 +648,7 @@ public class LndMobileService extends Service {
       if (notificationManager != null) {
         notificationManager.cancel(ONGOING_NOTIFICATION_ID);
       }
+      isNotificationActive = false;
     }
 
     // else noop, instead of calling startService, start will be handled by binding
@@ -702,6 +711,7 @@ public class LndMobileService extends Service {
       if (notificationManager != null) {
         notificationManager.cancel(ONGOING_NOTIFICATION_ID);
       }
+      isNotificationActive = false;
     }
   }
 
@@ -710,6 +720,7 @@ public class LndMobileService extends Service {
     if (notificationManager != null) {
       notificationManager.cancel(ONGOING_NOTIFICATION_ID);
     }
+    isNotificationActive = false;
     if (handlerThread != null) {
       handlerThread.quitSafely();
       handlerThread = null;
@@ -731,6 +742,7 @@ public class LndMobileService extends Service {
       if (notificationManager != null) {
         notificationManager.cancel(ONGOING_NOTIFICATION_ID);
       }
+      isNotificationActive = false;
       stopSelf();
     }
     super.onTaskRemoved(rootIntent);
@@ -778,6 +790,7 @@ public class LndMobileService extends Service {
     if (notificationManager != null) {
       notificationManager.cancelAll();
     }
+    isNotificationActive = false;
     Lndmobile.stopDaemon(
       lnrpc.LightningOuterClass.StopRequest.newBuilder().build().toByteArray(),
       new Callback() {
@@ -819,6 +832,7 @@ public class LndMobileService extends Service {
     if (notificationManager != null) {
       notificationManager.cancelAll();
     }
+    isNotificationActive = false;
     Lndmobile.cancelGossipSync();
   }
 }

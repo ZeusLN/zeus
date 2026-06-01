@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    NativeModules,
+    Platform,
     View,
     Text,
     TouchableOpacity,
@@ -19,6 +21,8 @@ import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 import LoadingIndicator from '../../components/LoadingIndicator';
+
+import LdkNode from '../../ldknode/LdkNodeInjection';
 
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -283,6 +287,27 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 const currentImplementation = implementation;
                 if (currentImplementation === 'lightning-node-connect') {
                     BackendUtils.disconnect();
+                }
+
+                if (Platform.OS === 'android') {
+                    // Dismiss the previously selected embedded node's
+                    // persistent notification so users aren't left
+                    // looking at a notification for a wallet they
+                    // just switched away from.
+                    try {
+                        if (currentImplementation === 'ldk-node') {
+                            await LdkNode.node.setPersistentMode(false);
+                        } else if (currentImplementation === 'embedded-lnd') {
+                            await NativeModules.LndMobileTools.setPersistentMode(
+                                false
+                            );
+                        }
+                    } catch (e) {
+                        console.log(
+                            'Failed to dismiss previous embedded node notification:',
+                            e
+                        );
+                    }
                 }
 
                 // Store startup state before updating settings
