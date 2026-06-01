@@ -1,8 +1,18 @@
 import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
 
+export interface AudioTrack {
+    index: number;
+    name: string;
+    isSelected: boolean;
+}
+
 export interface AudioKeepAliveStatus {
     isActive: boolean;
-    engineRunning: boolean;
+    playerPlaying: boolean;
+    isMuted: boolean;
+    currentTrackIndex: number;
+    currentTrackName: string;
+    availableTracks: string[];
     /** Seconds the audio session has been alive */
     uptimeSeconds: number;
     /** Seconds spent in background since last backgrounding */
@@ -36,17 +46,28 @@ export interface AudioStatusUpdatePayload extends AudioKeepAliveStatus {
     suspectedSuspension?: boolean;
 }
 
+export interface AudioTrackChangedPayload {
+    trackIndex: number;
+    trackName: string;
+}
+
 export type AudioKeepAliveEventType =
     | 'NWCAudioInterrupted'
     | 'NWCAudioInterruptionEnded'
     | 'NWCAudioRouteChanged'
     | 'NWCAudioStatusUpdate'
-    | 'NWCAudioSuspended';
+    | 'NWCAudioSuspended'
+    | 'NWCAudioTrackChanged';
 
 interface NWCAudioKeepAliveModule {
     startAudioKeepAlive(): Promise<AudioKeepAliveStatus>;
     stopAudioKeepAlive(): Promise<AudioKeepAliveStatus>;
     getStatus(): Promise<AudioKeepAliveStatus>;
+    getAvailableTracks(): Promise<AudioTrack[]>;
+    setTrack(index: number): Promise<AudioKeepAliveStatus>;
+    nextTrack(): Promise<AudioKeepAliveStatus>;
+    previousTrack(): Promise<AudioKeepAliveStatus>;
+    setMuted(muted: boolean): Promise<AudioKeepAliveStatus>;
     addListener(eventType: string): void;
     removeListeners(count: number): void;
 }
@@ -125,6 +146,61 @@ class IOSAudioKeepAliveUtils {
         }
     }
 
+    async getAvailableTracks(): Promise<AudioTrack[] | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.getAvailableTracks();
+        } catch (e) {
+            console.error('[NWCAudio] getAvailableTracks() failed:', e);
+            return null;
+        }
+    }
+
+    async setTrack(index: number): Promise<AudioKeepAliveStatus | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.setTrack(index);
+        } catch (e) {
+            console.error('[NWCAudio] setTrack() failed:', e);
+            return null;
+        }
+    }
+
+    async nextTrack(): Promise<AudioKeepAliveStatus | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.nextTrack();
+        } catch (e) {
+            console.error('[NWCAudio] nextTrack() failed:', e);
+            return null;
+        }
+    }
+
+    async previousTrack(): Promise<AudioKeepAliveStatus | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.previousTrack();
+        } catch (e) {
+            console.error('[NWCAudio] previousTrack() failed:', e);
+            return null;
+        }
+    }
+
+    async setMuted(muted: boolean): Promise<AudioKeepAliveStatus | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.setMuted(muted);
+        } catch (e) {
+            console.error('[NWCAudio] setMuted() failed:', e);
+            return null;
+        }
+    }
+
     onInterrupted(
         handler: (payload: AudioInterruptedPayload) => void
     ): (() => void) | null {
@@ -167,6 +243,15 @@ class IOSAudioKeepAliveUtils {
         const emitter = this.getEmitter();
         if (!emitter) return null;
         const sub = emitter.addListener('NWCAudioSuspended', handler);
+        return () => sub.remove();
+    }
+
+    onTrackChanged(
+        handler: (payload: AudioTrackChangedPayload) => void
+    ): (() => void) | null {
+        const emitter = this.getEmitter();
+        if (!emitter) return null;
+        const sub = emitter.addListener('NWCAudioTrackChanged', handler);
         return () => sub.remove();
     }
 

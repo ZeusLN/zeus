@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, ScrollView, Text, Platform } from 'react-native';
+import {
+    View,
+    ScrollView,
+    Text,
+    Platform,
+    TouchableOpacity,
+    ActivityIndicator
+} from 'react-native';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +24,9 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
+import IOSAudioKeepAliveUtils, {
+    AudioTrack
+} from '../../../utils/IOSAudioKeepAliveUtils';
 
 interface NWCSettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -31,6 +41,12 @@ interface NWCSettingsState {
     enableCashu: boolean;
     persistentNWCServiceEnabled: boolean;
     lud16Enabled: boolean;
+    // iOS background audio track picker
+    availableTracks: AudioTrack[];
+    selectedTrackIndex: number;
+    previewingIndex: number | null;
+    previewStartedSession: boolean;
+    previewLoading: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore', 'ModalStore')
@@ -46,7 +62,12 @@ export default class NWCSettings extends React.Component<
             error: null,
             enableCashu: false,
             persistentNWCServiceEnabled: false,
-            lud16Enabled: true
+            lud16Enabled: true,
+            availableTracks: [],
+            selectedTrackIndex: 0,
+            previewingIndex: null,
+            previewStartedSession: false,
+            previewLoading: false
         };
     }
 
@@ -61,6 +82,19 @@ export default class NWCSettings extends React.Component<
                 NostrWalletConnectStore.persistentNWCServiceEnabled,
             lud16Enabled: NostrWalletConnectStore.lud16Enabled
         });
+
+        if (Platform.OS === 'ios' && IOSAudioKeepAliveUtils.isAvailable()) {
+            this.loadAudioTracks();
+        }
+    }
+
+    componentWillUnmount() {
+        if (
+            this.state.previewStartedSession ||
+            this.state.previewingIndex !== null
+        ) {
+            this.stopSettingsPreview(this.state.selectedTrackIndex, true);
+        }
     }
 
     toggleCashuWallet = async () => {
@@ -148,6 +182,261 @@ export default class NWCSettings extends React.Component<
             ]
         });
     };
+
+    loadAudioTracks = async () => {
+        const [tracks, status] = await Promise.all([
+            IOSAudioKeepAliveUtils.getAvailableTracks(),
+            IOSAudioKeepAliveUtils.getStatus()
+        ]);
+        if (tracks) {
+            this.setState({
+                availableTracks: tracks,
+                selectedTrackIndex: status?.currentTrackIndex ?? 0
+            });
+        }
+    };
+    stopSettingsPreview = async (
+        persistTrackIndex: number,
+        skipStateUpdate: boolean = false
+    ) => {
+        const { NostrWalletConnectStore } = this.props;
+        const { previewStartedSession } = this.state;
+        const status = await IOSAudioKeepAliveUtils.getStatus();
+        const liveNwc = NostrWalletConnectStore.iosAudioKeepAliveActive;
+
+        if (previewStartedSession) {
+            await IOSAudioKeepAliveUtils.stop();
+            await IOSAudioKeepAliveUtils.setTrack(persistTrackIndex);
+        } else if (liveNwc && status?.playerPlaying) {
+            await IOSAudioKeepAliveUtils.setMuted(true);
+        } else if (status?.isActive && status?.playerPlaying) {
+            await IOSAudioKeepAliveUtils.stop();
+            await IOSAudioKeepAliveUtils.setTrack(persistTrackIndex);
+        }
+
+        if (!skipStateUpdate) {
+            this.setState({
+                previewingIndex: null,
+                previewStartedSession: false,
+                selectedTrackIndex: persistTrackIndex
+            });
+        }
+    };
+
+    selectTrack = async (index: number) => {
+        const { previewingIndex } = this.state;
+
+        if (previewingIndex !== null && index !== previewingIndex) {
+            await this.stopSettingsPreview(index);
+            return;
+        }
+
+        this.setState({ selectedTrackIndex: index });
+
+        const { NostrWalletConnectStore } = this.props;
+        const sessionActive =
+            this.state.previewingIndex !== null ||
+            NostrWalletConnectStore.iosAudioKeepAliveActive;
+
+        if (!sessionActive) {
+            await IOSAudioKeepAliveUtils.setTrack(index);
+        }
+    };
+
+    togglePreview = async (index: number) => {
+        const { previewingIndex, previewStartedSession, selectedTrackIndex } =
+            this.state;
+        const { NostrWalletConnectStore } = this.props;
+
+        // Stop button – always silence playback (native loops until stopped).
+        if (previewingIndex === index) {
+            await this.stopSettingsPreview(selectedTrackIndex);
+            return;
+        }
+
+        this.setState({ previewLoading: true, previewingIndex: index });
+
+        // Settings preview: stop any previous session before starting the new
+        // looping track so only one plays at a time.
+        if (previewStartedSession) {
+            await IOSAudioKeepAliveUtils.stop();
+            const status = await IOSAudioKeepAliveUtils.start();
+            if (!status?.isActive) {
+                this.setState({
+                    previewingIndex: null,
+                    previewLoading: false,
+                    previewStartedSession: false
+                });
+                return;
+            }
+            await IOSAudioKeepAliveUtils.setMuted(false);
+            await IOSAudioKeepAliveUtils.setTrack(index);
+            this.setState({
+                previewingIndex: index,
+                selectedTrackIndex: index,
+                previewStartedSession: true,
+                previewLoading: false
+            });
+            return;
+        }
+
+        if (NostrWalletConnectStore.iosAudioKeepAliveActive) {
+            await IOSAudioKeepAliveUtils.setMuted(false);
+            await IOSAudioKeepAliveUtils.setTrack(index);
+            this.setState({
+                previewingIndex: index,
+                selectedTrackIndex: index,
+                previewLoading: false
+            });
+            return;
+        }
+
+        const status = await IOSAudioKeepAliveUtils.start();
+        if (!status?.isActive) {
+            this.setState({
+                previewingIndex: null,
+                previewLoading: false
+            });
+            return;
+        }
+        await IOSAudioKeepAliveUtils.setMuted(false);
+        await IOSAudioKeepAliveUtils.setTrack(index);
+        this.setState({
+            previewingIndex: index,
+            selectedTrackIndex: index,
+            previewStartedSession: true,
+            previewLoading: false
+        });
+    };
+
+    renderAudioTrackPicker() {
+        const {
+            availableTracks,
+            selectedTrackIndex,
+            previewingIndex,
+            previewLoading
+        } = this.state;
+
+        if (!IOSAudioKeepAliveUtils.isAvailable()) return null;
+
+        const textColor = themeColor('text');
+        const secondaryText = themeColor('secondaryText');
+        const highlight = themeColor('highlight');
+        const separator = themeColor('separator');
+
+        return (
+            <View style={{ marginTop: 28 }}>
+                <Text
+                    style={{
+                        color: textColor,
+                        fontSize: 17,
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {localeString(
+                        'views.Settings.NostrWalletConnect.backgroundAudio'
+                    )}
+                </Text>
+                <Text
+                    style={{
+                        color: secondaryText,
+                        fontSize: 14,
+                        marginTop: 8,
+                        lineHeight: 20,
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {localeString(
+                        'views.Settings.NostrWalletConnect.backgroundAudioDescription'
+                    )}
+                </Text>
+
+                <View style={{ marginTop: 16 }}>
+                    {availableTracks.map((track) => {
+                        const isSelected = selectedTrackIndex === track.index;
+                        const isPreviewing = previewingIndex === track.index;
+
+                        return (
+                            <View
+                                key={track.index}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 13,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: separator
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.togglePreview(track.index)
+                                    }
+                                    hitSlop={8}
+                                    style={{ marginRight: 14 }}
+                                >
+                                    {previewLoading &&
+                                    previewingIndex === track.index ? (
+                                        <ActivityIndicator
+                                            size="small"
+                                            color={highlight}
+                                        />
+                                    ) : (
+                                        <Icon
+                                            name={
+                                                isPreviewing
+                                                    ? 'stop-circle'
+                                                    : 'play-circle'
+                                            }
+                                            type="material"
+                                            color={
+                                                isPreviewing
+                                                    ? highlight
+                                                    : secondaryText
+                                            }
+                                            size={28}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.selectTrack(track.index)
+                                    }
+                                    activeOpacity={0.7}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            flex: 1,
+                                            color: isSelected
+                                                ? highlight
+                                                : textColor,
+                                            fontSize: 16,
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {track.name}
+                                    </Text>
+                                    {isSelected && (
+                                        <Icon
+                                            name="check"
+                                            type="material"
+                                            color={highlight}
+                                            size={20}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        );
+                    })}
+                </View>
+            </View>
+        );
+    }
 
     render() {
         const { navigation, SettingsStore } = this.props;
@@ -365,6 +654,11 @@ export default class NWCSettings extends React.Component<
                                 </Text>
                             </View>
                         )}
+
+                        {/* iOS-only: background audio track picker */}
+                        {Platform.OS === 'ios' && this.renderAudioTrackPicker()}
+
+                        <View style={{ height: 30 }} />
                     </ScrollView>
                 )}
             </Screen>
