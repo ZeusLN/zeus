@@ -288,6 +288,86 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('migrateInvoiceExpiryDisplay', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+        });
+
+        it('repairs inconsistent expiry/timePeriod on v2 settings', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                invoices: {
+                    expiry: '3600',
+                    timePeriod: 'Hours',
+                    expirySeconds: '3600'
+                }
+            };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            });
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'invoices-expiry-display-fix',
+                'true'
+            );
+        });
+
+        it('leaves consistent settings untouched', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                invoices: {
+                    expiry: '2',
+                    timePeriod: 'Hours',
+                    expirySeconds: '7200'
+                }
+            };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices).toEqual({
+                expiry: '2',
+                timePeriod: 'Hours',
+                expirySeconds: '7200'
+            });
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                invoices: {
+                    expiry: '3600',
+                    timePeriod: 'Hours',
+                    expirySeconds: '3600'
+                }
+            };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices.expiry).toBe('3600');
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when invoices.expirySeconds is missing', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {};
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings).toEqual({});
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'invoices-expiry-display-fix',
+                'true'
+            );
+        });
+    });
+
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
             // Clear mock history before each test
