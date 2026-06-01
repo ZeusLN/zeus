@@ -1866,7 +1866,8 @@ describe('handleAnything', () => {
                 'ChoosePaymentMethod',
                 expect.objectContaining({
                     lightning: 'lnbc1234',
-                    creq
+                    creqParams: expect.objectContaining({ amount: 100 }),
+                    creqString: creq
                 })
             ]);
         });

@@ -253,6 +253,14 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
+        let creqParams;
+        let creqString;
+        if (creq && isCREQ(creq)) {
+            try {
+                creqParams = decodeCREQ(creq);
+                creqString = creq;
+            } catch {}
+        }
         return [
             'ChoosePaymentMethod',
             {
@@ -260,7 +268,8 @@ const handleAnything = async (
                 satAmount,
                 lightning,
                 offer,
-                creq
+                creqParams,
+                creqString
             }
         ];
     } else if (creq && isCREQ(creq)) {

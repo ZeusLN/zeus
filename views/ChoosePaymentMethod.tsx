@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { CREQParams } from '../utils/CREQUtils';
 
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
@@ -34,7 +35,8 @@ interface RouteParams {
     lightning: string;
     lightningAddress: string;
     offer: string;
-    creq: string;
+    creqParams: CREQParams | undefined;
+    creqString: string | undefined;
     lnurlParams: LNURLWithdrawParams | undefined;
 }
 
@@ -53,7 +55,8 @@ interface ChoosePaymentMethodState {
     lightning: string;
     lightningAddress: string;
     offer: string;
-    creq: string;
+    creqParams: CREQParams | undefined;
+    creqString: string | undefined;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
 }
@@ -68,13 +71,14 @@ export default class ChoosePaymentMethod extends React.Component<
     private blurUnsubscribe?: () => void;
     private hasNavigatedAway = false;
 
-    state = {
+    state: ChoosePaymentMethodState = {
         value: '',
         satAmount: '',
         lightning: '',
         lightningAddress: '',
         offer: '',
-        creq: '',
+        creqParams: undefined,
+        creqString: undefined,
         lnurlParams: undefined,
         feeRate: ''
     };
@@ -120,7 +124,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
-            creq,
+            creqParams,
+            creqString,
             lnurlParams
         } = params ?? {};
 
@@ -136,7 +141,8 @@ export default class ChoosePaymentMethod extends React.Component<
             ...(lightning && { lightning }),
             ...(lightningAddress && { lightningAddress }),
             ...(offer && { offer }),
-            ...(creq && { creq }),
+            ...(creqParams && { creqParams }),
+            ...(creqString && { creqString }),
             ...(lnurlParams && { lnurlParams })
         };
         if (Object.keys(stateUpdate).length > 0) {
@@ -225,7 +231,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lightning,
             lightningAddress,
             offer,
-            creq,
+            creqParams,
+            creqString,
             lnurlParams,
             feeRate
         } = this.state;
@@ -305,7 +312,8 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightning={lightning}
                     lightningAddress={lightningAddress}
                     offer={offer}
-                    creq={creq}
+                    creqParams={creqParams}
+                    creqString={creqString}
                     lnurlParams={lnurlParams}
                     // balance data
                     lightningBalance={lightningBalance}

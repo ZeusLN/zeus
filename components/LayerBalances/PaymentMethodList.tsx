@@ -12,7 +12,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { decodeCREQ } from '../../utils/CREQUtils';
+import { CREQParams } from '../../utils/CREQUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -31,7 +31,8 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
-    creq?: string;
+    creqParams?: CREQParams;
+    creqString?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
@@ -170,7 +171,8 @@ const SwipeableRow = ({
     lightning,
     lightningAddress,
     offer,
-    creq,
+    creqParams,
+    creqString,
     lnurlParams
 }: {
     item: DataRow;
@@ -182,7 +184,8 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
-    creq?: string;
+    creqParams?: CREQParams;
+    creqString?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
@@ -241,16 +244,15 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Ecash (CREQ)' && creq) {
+    if (item.layer === 'Ecash (CREQ)' && creqParams && creqString) {
         return (
             <RectButton
                 style={[styles.rectButton, rowDisabled && { opacity: 0.5 }]}
                 onPress={() => {
                     if (rowDisabled) return;
-                    const creqParams = decodeCREQ(creq);
                     navigation.navigate('CREQPayment', {
                         creqParams,
-                        creqString: creq
+                        creqString
                     });
                 }}
             >
@@ -287,7 +289,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
-            creq,
+            creqString,
             lnurlParams,
             lightningBalance,
             onchainBalance,
@@ -340,13 +342,13 @@ export default class PaymentMethodList extends Component<
         }
 
         if (
-            creq &&
+            creqString &&
             BackendUtils.supportsCashuWallet() &&
             settingsStore?.settings?.ecash?.enableCashu
         ) {
             DATA.push({
                 layer: 'Ecash (CREQ)',
-                subtitle: creq.substring(0, 30) + '...',
+                subtitle: creqString.substring(0, 30) + '...',
                 balance: ecashBalance,
                 disabled: false,
                 satAmount
@@ -392,7 +394,8 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
-            creq,
+            creqParams,
+            creqString,
             lnurlParams
         } = this.props;
         const satAmountNum =
@@ -420,7 +423,8 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
-                            creq={creq}
+                            creqParams={creqParams}
+                            creqString={creqString}
                             lnurlParams={lnurlParams}
                         />
                     )}
