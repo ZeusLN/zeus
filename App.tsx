@@ -262,6 +262,7 @@ import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
 import CashuLockSettings from './views/Cashu/CashuLockSettings';
 import LegacySeedRecovery from './views/Cashu/LegacySeedRecovery';
+import RecoverMintQuote from './views/Cashu/RecoverMintQuote';
 
 // Cashu Lightning address
 import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
@@ -1593,6 +1594,12 @@ export default class App extends React.PureComponent {
                                                                 name="LegacySeedRecovery" // @ts-ignore:next-line
                                                                 component={
                                                                     LegacySeedRecovery
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="RecoverMintQuote" // @ts-ignore:next-line
+                                                                component={
+                                                                    RecoverMintQuote
                                                                 }
                                                             />
                                                             <Stack.Screen

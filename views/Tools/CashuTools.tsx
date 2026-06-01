@@ -144,6 +144,42 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                             </ListItem>
                         )}
 
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('RecoverMintQuote')
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.RecoverMintQuote.title'
+                                    )}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.RecoverMintQuote.subtitle'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+
                         <View style={{ marginTop: 25 }}>
                             <Button
                                 title={localeString(
