@@ -9,18 +9,24 @@ static NSString *const kEventInterruptionEnded = @"NWCAudioInterruptionEnded";
 static NSString *const kEventRouteChanged      = @"NWCAudioRouteChanged";
 static NSString *const kEventStatusUpdate      = @"NWCAudioStatusUpdate";
 static NSString *const kEventSuspended         = @"NWCAudioSuspended";
+static NSString *const kEventTrackChanged      = @"NWCAudioTrackChanged";
 
 // How often (seconds) to emit a heartbeat status event while active
 static const NSTimeInterval kStatusIntervalSeconds = 30.0;
 
-// Silence buffer duration in seconds (short buffer looped forever)
-static const double kSilentBufferDuration = 0.1;
-static const double kSampleRate           = 44100.0;
+// Available ambient audio tracks bundled with the app
+static NSArray<NSString *> *kAvailableTracks(void) {
+    return @[@"Soft Pulse", @"Fireplace", @"White Noise", @"Gentle Rain"];
+}
 
-@interface NWCAudioKeepAlive ()
+@interface NWCAudioKeepAlive () <AVAudioPlayerDelegate>
 
-@property (nonatomic, strong) AVAudioEngine      *audioEngine;
-@property (nonatomic, strong) AVAudioPlayerNode  *playerNode;
+@property (nonatomic, strong) AVAudioPlayer     *audioPlayer;
+
+// Track management
+@property (nonatomic, copy)   NSArray<NSString *> *trackNames;
+@property (nonatomic, assign) NSInteger            currentTrackIndex;
+@property (nonatomic, assign) BOOL                 isMuted;
 
 // Monitoring
 @property (nonatomic, strong) NSDate   *sessionStartTime;
@@ -53,7 +59,8 @@ RCT_EXPORT_MODULE();
         kEventInterruptionEnded,
         kEventRouteChanged,
         kEventStatusUpdate,
-        kEventSuspended
+        kEventSuspended,
+        kEventTrackChanged,
     ];
 }
 
@@ -69,11 +76,14 @@ RCT_EXPORT_MODULE();
 
 - (instancetype)init {
     if (self = [super init]) {
-        _isActive        = NO;
-        _hasListeners    = NO;
-        _disconnectCount = 0;
-        _iosVersion      = [[UIDevice currentDevice] systemVersion];
-        _deviceModel     = [self deviceModelIdentifier];
+        _isActive          = NO;
+        _hasListeners      = NO;
+        _disconnectCount   = 0;
+        _trackNames        = kAvailableTracks();
+        _currentTrackIndex = 0;
+        _isMuted           = NO;
+        _iosVersion        = [[UIDevice currentDevice] systemVersion];
+        _deviceModel       = [self deviceModelIdentifier];
     }
     return self;
 }
@@ -86,15 +96,15 @@ RCT_EXPORT_MODULE();
             [timer invalidate];
         });
     }
-    [self teardownAudioEngine];
+    [self teardownAudioPlayer];
     [self unregisterNotifications];
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Configures AVAudioSession with .playback category (mixWithOthers so we
- * don't hijack Spotify etc.), builds an AVAudioEngine that loops a silent
- * PCM buffer, and activates the session.  Returns a status dict on resolve.
+ * Starts the AVAudioSession (.playback + mixWithOthers) and begins looping
+ * the currently selected ambient track.  Returns a status dict on resolve.
  */
 RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
@@ -106,7 +116,7 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
 
     NSError *error = nil;
 
-    // 1. Configure AVAudioSession
+    // 1. Configure AVAudioSession for background playback
     AVAudioSession *session = [AVAudioSession sharedInstance];
     BOOL ok = [session setCategory:AVAudioSessionCategoryPlayback
                        withOptions:AVAudioSessionCategoryOptionMixWithOthers
@@ -124,27 +134,25 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
         return;
     }
 
-    // 2. Build engine + silent buffer loop
-    if (![self setupAudioEngine:&error]) {
-        NSLog(@"[NWCAudio] engine setup failed: %@", error.localizedDescription);
+    // 2. Load and play the selected track
+    if (![self loadAndPlayTrackAtIndex:self.currentTrackIndex error:&error]) {
+        NSLog(@"[NWCAudio] Failed to load track: %@", error.localizedDescription);
         [session setActive:NO error:nil];
-        reject(@"AUDIO_ENGINE_ERROR", @"Failed to set up audio engine", error);
+        reject(@"AUDIO_PLAYER_ERROR", @"Failed to load audio track", error);
         return;
     }
 
     // 3. Register for system notifications
     [self registerNotifications];
 
-    self.sessionStartTime       = [NSDate date];
-    self.backgroundEnteredTime  = nil;
-    self.isActive               = YES;
+    self.sessionStartTime      = [NSDate date];
+    self.backgroundEnteredTime = nil;
+    self.isActive              = YES;
 
-    // 4. Start heartbeat timer (main thread for RunLoop compatibility)
+    // 4. Start heartbeat timer on main thread
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.statusTimer invalidate];
-        if (!self.isActive) {
-            return;
-        }
+        if (!self.isActive) return;
         __weak typeof(self) weakSelf = self;
         self.statusTimer = [NSTimer scheduledTimerWithTimeInterval:kStatusIntervalSeconds
                                                           repeats:YES
@@ -153,12 +161,13 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
         }];
     });
 
-    NSLog(@"[NWCAudio] Started – iOS %@ on %@", self.iosVersion, self.deviceModel);
+    NSLog(@"[NWCAudio] Started – iOS %@ on %@ – track: %@",
+          self.iosVersion, self.deviceModel, self.trackNames[self.currentTrackIndex]);
     resolve([self currentStatusDict]);
 }
 
 /**
- * Stops the audio engine and deactivates the AVAudioSession.
+ * Stops playback and deactivates the AVAudioSession.
  */
 RCT_EXPORT_METHOD(stopAudioKeepAlive:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
@@ -174,86 +183,156 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
     resolve([self currentStatusDict]);
 }
 
-// ─── Audio engine ────────────────────────────────────────────────────────────
+/**
+ * Returns the list of available ambient audio tracks.
+ */
+RCT_EXPORT_METHOD(getAvailableTracks:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    NSMutableArray *result = [NSMutableArray array];
+    for (NSInteger i = 0; i < self.trackNames.count; i++) {
+        [result addObject:@{
+            @"index": @(i),
+            @"name":  self.trackNames[i],
+            @"isSelected": @(i == self.currentTrackIndex)
+        }];
+    }
+    resolve(result);
+}
 
-- (BOOL)setupAudioEngine:(NSError **)outError {
-    self.audioEngine = [[AVAudioEngine alloc] init];
-    self.playerNode  = [[AVAudioPlayerNode alloc] init];
+/**
+ * Selects a track by index and immediately switches to it if active.
+ */
+RCT_EXPORT_METHOD(setTrack:(NSInteger)index
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    if (index < 0 || index >= (NSInteger)self.trackNames.count) {
+        reject(@"INVALID_TRACK", @"Track index out of range", nil);
+        return;
+    }
 
-    [self.audioEngine attachNode:self.playerNode];
+    self.currentTrackIndex = index;
 
-    // Use stereo 44.1 kHz float format
-    AVAudioFormat *format = [[AVAudioFormat alloc]
-        initStandardFormatWithSampleRate:kSampleRate
-                                channels:2];
-    if (!format) {
+    if (self.isActive) {
+        NSError *error = nil;
+        if (![self loadAndPlayTrackAtIndex:index error:&error]) {
+            reject(@"AUDIO_PLAYER_ERROR", @"Failed to switch audio track", error);
+            return;
+        }
+    }
+
+    [self safeEmit:kEventTrackChanged body:@{
+        @"trackIndex": @(index),
+        @"trackName":  self.trackNames[index]
+    }];
+
+    resolve([self currentStatusDict]);
+}
+
+/**
+ * Advances to the next track (wraps around).
+ */
+RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    NSInteger next = (self.currentTrackIndex + 1) % self.trackNames.count;
+    [self setTrack:next resolver:resolve rejecter:reject];
+}
+
+/**
+ * Goes back to the previous track (wraps around).
+ */
+RCT_EXPORT_METHOD(previousTrack:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    NSInteger prev = (self.currentTrackIndex - 1 + self.trackNames.count) % self.trackNames.count;
+    [self setTrack:prev resolver:resolve rejecter:reject];
+}
+
+/**
+ * Mutes or unmutes the audio track. The session stays alive; only volume is 0.
+ */
+RCT_EXPORT_METHOD(setMuted:(BOOL)muted
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    self.isMuted = muted;
+    self.audioPlayer.volume = muted ? 0.0f : 1.0f;
+    NSLog(@"[NWCAudio] %@", muted ? @"Muted" : @"Unmuted");
+    resolve([self currentStatusDict]);
+}
+
+// ─── Audio player ────────────────────────────────────────────────────────────
+
+- (BOOL)loadAndPlayTrackAtIndex:(NSInteger)index error:(NSError **)outError {
+    NSString *trackName = self.trackNames[index];
+    NSString *path = [[NSBundle mainBundle] pathForResource:trackName ofType:@"mp3"];
+    if (!path) {
         if (outError) {
             *outError = [NSError errorWithDomain:@"NWCAudioKeepAlive"
-                                            code:1
+                                            code:3
                                         userInfo:@{NSLocalizedDescriptionKey:
-                                                   @"Failed to create audio format"}];
+                                                   [NSString stringWithFormat:@"Audio resource not found: %@.mp3", trackName]}];
+        }
+        NSLog(@"[NWCAudio] Resource not found: %@.mp3", trackName);
+        return NO;
+    }
+
+    NSURL *url = [NSURL fileURLWithPath:path];
+
+    // Stop and release the existing player
+    [self teardownAudioPlayer];
+
+    NSError *playerError = nil;
+    AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&playerError];
+    if (!player) {
+        if (outError) *outError = playerError;
+        NSLog(@"[NWCAudio] AVAudioPlayer init failed: %@", playerError.localizedDescription);
+        return NO;
+    }
+
+    player.numberOfLoops = -1; // infinite loop
+    player.volume        = self.isMuted ? 0.0f : 1.0f;
+    player.delegate      = self;
+
+    if (![player prepareToPlay]) {
+        if (outError) {
+            *outError = [NSError errorWithDomain:@"NWCAudioKeepAlive"
+                                            code:4
+                                        userInfo:@{NSLocalizedDescriptionKey:
+                                                   @"AVAudioPlayer failed to prepare"}];
         }
         return NO;
     }
 
-    [self.audioEngine connect:self.playerNode
-                           to:self.audioEngine.mainMixerNode
-                       format:format];
-
-    // Build a silent PCM buffer (zero-filled float samples)
-    AVAudioFrameCount frameCount = (AVAudioFrameCount)(kSampleRate * kSilentBufferDuration);
-    AVAudioPCMBuffer *silentBuffer = [[AVAudioPCMBuffer alloc]
-        initWithPCMFormat:format
-           frameCapacity:frameCount];
-    if (!silentBuffer) {
-        if (outError) {
-            *outError = [NSError errorWithDomain:@"NWCAudioKeepAlive"
-                                            code:2
-                                        userInfo:@{NSLocalizedDescriptionKey:
-                                                   @"Failed to allocate PCM buffer"}];
-        }
-        return NO;
-    }
-    silentBuffer.frameLength = frameCount;
-
-    // Explicitly zero both channels (buffers may contain garbage memory)
-    for (AVAudioChannelCount ch = 0; ch < format.channelCount; ch++) {
-        memset(silentBuffer.floatChannelData[ch], 0,
-               frameCount * sizeof(float));
-    }
-
-    // Schedule the buffer for infinite looping before starting the engine
-    [self.playerNode scheduleBuffer:silentBuffer
-                             atTime:nil
-                            options:AVAudioPlayerNodeBufferLoops
-                  completionHandler:nil];
-
-    // Keep at a near-zero but non-zero volume so iOS does not optimize away
-    // the audio engine (a true 0.0 can cause the engine to be suspended).
-    self.audioEngine.mainMixerNode.outputVolume = 0.001f;
-
-    NSError *startError = nil;
-    if (![self.audioEngine startAndReturnError:&startError]) {
-        if (outError) *outError = startError;
-        self.audioEngine = nil;
-        self.playerNode  = nil;
-        return NO;
-    }
-
-    [self.playerNode play];
-    NSLog(@"[NWCAudio] Engine running – silent loop active");
+    [player play];
+    self.audioPlayer = player;
+    NSLog(@"[NWCAudio] Now playing: %@%@", trackName, self.isMuted ? @" (muted)" : @"");
     return YES;
 }
 
-- (void)teardownAudioEngine {
-    if (self.playerNode.isPlaying) {
-        [self.playerNode stop];
+- (void)teardownAudioPlayer {
+    if (self.audioPlayer.isPlaying) {
+        [self.audioPlayer stop];
     }
-    if (self.audioEngine.isRunning) {
-        [self.audioEngine stop];
+    self.audioPlayer.delegate = nil;
+    self.audioPlayer = nil;
+}
+
+// ─── AVAudioPlayerDelegate ───────────────────────────────────────────────────
+
+- (void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error {
+    NSLog(@"[NWCAudio] Decode error: %@", error.localizedDescription);
+    self.disconnectCount++;
+    self.lastDisconnectReason = @"decode_error";
+    [self safeEmit:kEventSuspended body:@{
+        @"reason":        @"decode_error",
+        @"uptimeSeconds": @([self uptimeSeconds])
+    }];
+}
+
+- (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
+    // numberOfLoops = -1 means this should never fire, but guard against it
+    if (self.isActive) {
+        NSLog(@"[NWCAudio] Player finished unexpectedly – restarting");
+        [player play];
     }
-    self.playerNode  = nil;
-    self.audioEngine = nil;
 }
 
 // ─── Internal stop ───────────────────────────────────────────────────────────
@@ -269,7 +348,7 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
         [timer invalidate];
     });
 
-    [self teardownAudioEngine];
+    [self teardownAudioPlayer];
     [self unregisterNotifications];
 
     NSError *error = nil;
@@ -350,7 +429,7 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
         NSLog(@"[NWCAudio] Interruption ended – shouldResume: %d", shouldResume);
 
         if (shouldResume && self.isActive) {
-            [self resumeAudioEngine];
+            [self resumeAudioPlayer];
         }
 
         [self safeEmit:kEventInterruptionEnded body:@{
@@ -365,7 +444,7 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
     AVAudioSessionRouteChangeReason reason =
         (AVAudioSessionRouteChangeReason)reasonValue.unsignedIntegerValue;
 
-    NSString *reasonStr = [self routeChangeReasonString:reason];
+    NSString *reasonStr     = [self routeChangeReasonString:reason];
     NSString *currentOutput = [self currentAudioOutputDescription];
     NSLog(@"[NWCAudio] Route changed: %@ → output: %@", reasonStr, currentOutput);
 
@@ -377,18 +456,18 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
 }
 
 - (void)handleMediaServerReset:(NSNotification *)notification {
-    NSLog(@"[NWCAudio] Media server reset – rebuilding engine");
+    NSLog(@"[NWCAudio] Media server reset – reloading player");
     self.disconnectCount++;
     self.lastDisconnectReason = @"media_server_reset";
 
     if (self.isActive) {
-        [self teardownAudioEngine];
         NSError *error = nil;
-        if (![self setupAudioEngine:&error]) {
-            NSLog(@"[NWCAudio] Failed to rebuild engine after reset: %@",
+        [[AVAudioSession sharedInstance] setActive:YES error:nil];
+        if (![self loadAndPlayTrackAtIndex:self.currentTrackIndex error:&error]) {
+            NSLog(@"[NWCAudio] Failed to rebuild player after reset: %@",
                   error.localizedDescription);
             [self safeEmit:kEventSuspended body:@{
-                @"reason":     @"media_server_reset_recovery_failed",
+                @"reason":        @"media_server_reset_recovery_failed",
                 @"uptimeSeconds": @([self uptimeSeconds])
             }];
         }
@@ -397,9 +476,8 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
 
 - (void)handleDidEnterBackground:(NSNotification *)notification {
     self.backgroundEnteredTime = [NSDate date];
-    NSLog(@"[NWCAudio] App entered background – audio engine running: %d",
-          self.audioEngine.isRunning);
-
+    NSLog(@"[NWCAudio] App entered background – player playing: %d",
+          self.audioPlayer.isPlaying);
     [self emitStatusUpdate:NO reason:@"entered_background"];
 }
 
@@ -411,37 +489,41 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
           bgDuration);
     self.backgroundEnteredTime = nil;
 
+    // If the player was stopped while in background, restart it
+    if (self.isActive && !self.audioPlayer.isPlaying) {
+        NSError *error = nil;
+        [self loadAndPlayTrackAtIndex:self.currentTrackIndex error:&error];
+    }
+
     [self emitStatusUpdate:NO reason:@"returned_to_foreground"];
 }
 
-// ─── Audio engine resume ─────────────────────────────────────────────────────
+// ─── Audio player resume ─────────────────────────────────────────────────────
 
-- (void)resumeAudioEngine {
-    if (self.audioEngine.isRunning) return;
+- (void)resumeAudioPlayer {
+    if (self.audioPlayer.isPlaying) return;
 
     NSError *error = nil;
-
-    // Re-activate session first
     [[AVAudioSession sharedInstance] setActive:YES error:&error];
     if (error) {
         NSLog(@"[NWCAudio] Re-activate session error: %@", error.localizedDescription);
     }
 
-    if (![self.audioEngine startAndReturnError:&error]) {
-        NSLog(@"[NWCAudio] Engine restart failed: %@", error.localizedDescription);
-        self.disconnectCount++;
-        self.lastDisconnectReason = @"engine_restart_failed";
-        [self safeEmit:kEventSuspended body:@{
-            @"reason":     @"engine_restart_failed",
-            @"uptimeSeconds": @([self uptimeSeconds])
-        }];
-        return;
+    if (self.audioPlayer) {
+        [self.audioPlayer play];
+        NSLog(@"[NWCAudio] Player resumed");
+    } else {
+        // Player was deallocated – recreate it
+        if (![self loadAndPlayTrackAtIndex:self.currentTrackIndex error:&error]) {
+            NSLog(@"[NWCAudio] Player restart failed: %@", error.localizedDescription);
+            self.disconnectCount++;
+            self.lastDisconnectReason = @"player_restart_failed";
+            [self safeEmit:kEventSuspended body:@{
+                @"reason":        @"player_restart_failed",
+                @"uptimeSeconds": @([self uptimeSeconds])
+            }];
+        }
     }
-
-    if (!self.playerNode.isPlaying) {
-        [self.playerNode play];
-    }
-    NSLog(@"[NWCAudio] Engine resumed successfully");
 }
 
 // ─── Event helpers ───────────────────────────────────────────────────────────
@@ -470,15 +552,19 @@ RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
         : 0;
 
     return @{
-        @"isActive":              @(self.isActive),
-        @"engineRunning":         @(self.audioEngine.isRunning),
-        @"uptimeSeconds":         @(uptime),
-        @"backgroundDuration":    @(bgElapsed),
-        @"disconnectCount":       @(self.disconnectCount),
-        @"lastDisconnectReason":  self.lastDisconnectReason ?: @"none",
-        @"iosVersion":            self.iosVersion ?: @"unknown",
-        @"deviceModel":           self.deviceModel ?: @"unknown",
-        @"currentOutput":         [self currentAudioOutputDescription]
+        @"isActive":             @(self.isActive),
+        @"playerPlaying":        @(self.audioPlayer.isPlaying),
+        @"isMuted":              @(self.isMuted),
+        @"currentTrackIndex":    @(self.currentTrackIndex),
+        @"currentTrackName":     self.trackNames[self.currentTrackIndex],
+        @"availableTracks":      self.trackNames,
+        @"uptimeSeconds":        @(uptime),
+        @"backgroundDuration":   @(bgElapsed),
+        @"disconnectCount":      @(self.disconnectCount),
+        @"lastDisconnectReason": self.lastDisconnectReason ?: @"none",
+        @"iosVersion":           self.iosVersion ?: @"unknown",
+        @"deviceModel":          self.deviceModel ?: @"unknown",
+        @"currentOutput":        [self currentAudioOutputDescription]
     };
 }
 
