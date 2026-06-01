@@ -16,7 +16,7 @@ static const NSTimeInterval kStatusIntervalSeconds = 30.0;
 
 // Available ambient audio tracks bundled with the app
 static NSArray<NSString *> *kAvailableTracks(void) {
-    return @[@"Soft Pulse", @"Fireplace", @"White Noise", @"Gentle Rain"];
+    return @[@"Fireplace", @"White Noise", @"Gentle Rain"];
 }
 
 @interface NWCAudioKeepAlive () <AVAudioPlayerDelegate>
