@@ -1,4 +1,8 @@
-import { errorToUserFriendly, parseLdkNodeError } from './ErrorUtils';
+import {
+    errorToUserFriendly,
+    parseLdkNodeError,
+    parseCashuDevKitError
+} from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => require('../locales/en.json')[key]
@@ -270,6 +274,189 @@ describe('ErrorUtils', () => {
         it('handles null/undefined', () => {
             expect(parseLdkNodeError(null)).toEqual('');
             expect(parseLdkNodeError(undefined)).toEqual('');
+        });
+    });
+
+    describe('parseCashuDevKitError', () => {
+        it('extracts inner message from iOS FfiError with associated value', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Generic(message: "Mint returned HTTP 400")'
+                )
+            ).toEqual('Mint returned HTTP 400');
+        });
+
+        it('extracts inner message from various iOS FfiError variants', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.InsufficientFunds(message: "Not enough proofs to melt")'
+                )
+            ).toEqual('Not enough proofs to melt');
+
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.PaymentFailed(message: "lightning payment failed")'
+                )
+            ).toEqual('lightning payment failed');
+
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Network(message: "connection refused")'
+                )
+            ).toEqual('connection refused');
+        });
+
+        it('humanizes bare iOS FfiError case names with no associated value', () => {
+            expect(
+                parseCashuDevKitError('CashuDevKit.FfiError.Generic')
+            ).toEqual('Generic');
+            expect(
+                parseCashuDevKitError('CashuDevKit.FfiError.InsufficientFunds')
+            ).toEqual('Insufficient funds');
+            expect(
+                parseCashuDevKitError('CashuDevKit.FfiError.KeysetUnknown')
+            ).toEqual('Keyset unknown');
+        });
+
+        it('extracts inner message from Android FfiException with dot separator', () => {
+            expect(
+                parseCashuDevKitError(
+                    'uniffi.cdk_ffi.FfiException.Generic: Mint returned HTTP 400'
+                )
+            ).toEqual('Mint returned HTTP 400');
+        });
+
+        it('extracts inner message from Android FfiException with dollar separator', () => {
+            expect(
+                parseCashuDevKitError(
+                    'uniffi.cdk_ffi.FfiException$PaymentFailed: lightning payment failed'
+                )
+            ).toEqual('lightning payment failed');
+        });
+
+        it('humanizes Android FfiException case when no inner message present', () => {
+            expect(
+                parseCashuDevKitError('uniffi.cdk_ffi.FfiException$InvalidUrl')
+            ).toEqual('Invalid url');
+        });
+
+        it('parses Error object with iOS-style FfiError message', () => {
+            expect(
+                parseCashuDevKitError(
+                    new Error(
+                        'CashuDevKit.FfiError.PaymentFailed(message: "no route found")'
+                    )
+                )
+            ).toEqual('no route found');
+        });
+
+        it('parses Error object with Android-style FfiException message', () => {
+            expect(
+                parseCashuDevKitError(
+                    new Error(
+                        'uniffi.cdk_ffi.FfiException.Network: timed out connecting to mint'
+                    )
+                )
+            ).toEqual('timed out connecting to mint');
+        });
+
+        it('handles multi-line inner messages on iOS', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Generic(message: "first line\nsecond line")'
+                )
+            ).toEqual('first line\nsecond line');
+        });
+
+        it('preserves embedded colons in Android inner messages', () => {
+            expect(
+                parseCashuDevKitError(
+                    'uniffi.cdk_ffi.FfiException.Generic: Mint returned HTTP 400: bad request'
+                )
+            ).toEqual('Mint returned HTTP 400: bad request');
+        });
+
+        it('passes through non-CDK error strings unchanged', () => {
+            expect(parseCashuDevKitError('Something went wrong')).toEqual(
+                'Something went wrong'
+            );
+        });
+
+        it('passes through non-CDK Error objects unchanged', () => {
+            expect(
+                parseCashuDevKitError(new Error('Insufficient funds'))
+            ).toEqual('Insufficient funds');
+        });
+
+        it('handles empty string', () => {
+            expect(parseCashuDevKitError('')).toEqual('');
+        });
+
+        it('handles null/undefined', () => {
+            expect(parseCashuDevKitError(null)).toEqual('');
+            expect(parseCashuDevKitError(undefined)).toEqual('');
+        });
+
+        it('handles object with no message property', () => {
+            expect(parseCashuDevKitError({})).toEqual('[object Object]');
+        });
+
+        it('extracts only the detail field from CDK mint error responses (iOS)', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Generic(message: "CDK Error: Unknown error response: `code: 20004, detail: Lightning payment failed: Ran out of routes to try after 1 attempt: see `paystatus`.`")'
+                )
+            ).toEqual(
+                'Lightning payment failed: Ran out of routes to try after 1 attempt: see `paystatus`.'
+            );
+        });
+
+        it('extracts only the detail field from CDK mint error responses (Android)', () => {
+            expect(
+                parseCashuDevKitError(
+                    'uniffi.cdk_ffi.FfiException$Generic: CDK Error: Unknown error response: `code: 20004, detail: Lightning payment failed: unable to find a path to destination.`'
+                )
+            ).toEqual(
+                'Lightning payment failed: unable to find a path to destination.'
+            );
+        });
+
+        it('falls back to the error field when detail is absent', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Generic(message: "CDK Error: Unknown error response: `code: 11000, error: quote amount not as requested`")'
+                )
+            ).toEqual('Quote amount not as requested');
+        });
+
+        it('capitalizes lowercased detail messages', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Generic(message: "code: 20001, detail: insufficient inputs provided")'
+                )
+            ).toEqual('Insufficient inputs provided');
+        });
+
+        it('extracts detail from a raw (non-FFI-wrapped) CDK string', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CDK Error: Unknown error response: `code: 20004, detail: payment expired.`'
+                )
+            ).toEqual('Payment expired.');
+        });
+
+        it('leaves non-CDK strings with the word "detail:" alone', () => {
+            expect(
+                parseCashuDevKitError('see the detail: that is important')
+            ).toEqual('see the detail: that is important');
+        });
+
+        it('returns the unparsed inner message when no code/detail pattern is present', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.PaymentFailed(message: "no route to recipient")'
+                )
+            ).toEqual('no route to recipient');
         });
     });
 });

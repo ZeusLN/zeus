@@ -55,6 +55,66 @@ const parseLdkNodeError = (error: any): string => {
     return str.replace(/^Error:\s*/, '').trim() || str;
 };
 
+// Parses CashuDevKit FFI error strings from both platforms into clean messages.
+// iOS:     "CashuDevKit.FfiError.Generic(message: \"actual message\")" (UniFFI
+//          generates errorDescription = String(reflecting: self) which leaks the
+//          fully-qualified type whenever the generic catch block fires).
+// Android: "uniffi.cdk_ffi.FfiException$Generic: actual message"
+const parseCashuDevKitError = (error: any): string => {
+    const str =
+        typeof error === 'string'
+            ? error
+            : error?.message || error?.toString?.() || '';
+    if (!str) return str;
+
+    const iosWithAssoc = str.match(
+        /CashuDevKit\.FfiError\.\w+\(message:\s*"([\s\S]+?)"\)/
+    );
+    if (iosWithAssoc) return extractMintDetail(iosWithAssoc[1].trim());
+
+    const iosBare = str.match(/CashuDevKit\.FfiError\.(\w+)/);
+    if (iosBare) return humanizeVariantName(iosBare[1]);
+
+    const androidMatch = str.match(
+        /uniffi\.cdk_ffi\.FfiException[.$](\w+)(?::\s*([\s\S]+))?/
+    );
+    if (androidMatch) {
+        const inner = androidMatch[2]?.trim();
+        return inner
+            ? extractMintDetail(inner)
+            : humanizeVariantName(androidMatch[1]);
+    }
+
+    return extractMintDetail(str);
+};
+
+// "InsufficientFunds" -> "Insufficient funds"
+const humanizeVariantName = (variant: string): string => {
+    const spaced = variant.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+};
+
+// CDK formats mint error responses as:
+//   "CDK Error: Unknown error response: `code: NNNN, detail: <human text>`"
+// (or `code: NNNN, error: <text>` when the mint omits detail). The detail
+// field is the user-facing description; everything before it (CDK Error
+// prefix, code number, surrounding backticks) is plumbing. Strip it down
+// to just the detail, capitalized.
+const extractMintDetail = (msg: string): string => {
+    const detailMatch = msg.match(
+        /code:\s*\d+,\s*(?:detail|error):\s*([\s\S]+)$/i
+    );
+    if (!detailMatch) return msg;
+
+    let detail = detailMatch[1].trim();
+    // Strip trailing wrappers that closed the original quoted form.
+    while (/[`")\s]$/.test(detail)) {
+        detail = detail.slice(0, -1);
+    }
+    if (!detail) return msg;
+    return detail.charAt(0).toUpperCase() + detail.slice(1);
+};
+
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
 
 const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
@@ -108,4 +168,4 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     return baseError;
 };
 
-export { errorToUserFriendly, parseLdkNodeError };
+export { errorToUserFriendly, parseLdkNodeError, parseCashuDevKitError };

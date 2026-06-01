@@ -27,6 +27,7 @@ import {
     CDKError,
     CashuDevKitNativeModule
 } from './types';
+import { parseCashuDevKitError } from '../utils/ErrorUtils';
 
 const { CashuDevKitModule } = NativeModules as unknown as {
     CashuDevKitModule: CashuDevKitNativeModule;
@@ -36,7 +37,7 @@ const { CashuDevKitModule } = NativeModules as unknown as {
  * Map native error messages to CDK error types
  */
 function mapCDKError(error: any): CDKError {
-    const message = error?.message || String(error);
+    const message = parseCashuDevKitError(error);
     const normalizedMessage = message.toLowerCase();
 
     if (
