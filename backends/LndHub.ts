@@ -6,7 +6,7 @@ import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
 import Invoice from './../models/Invoice';
 import { localeString } from './../utils/LocaleUtils';
-import { sha256 } from '@noble/hashes/sha2';
+import { sha256Bytes } from './../utils/HashingUtils';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
 
 export default class LndHub extends LND {
@@ -107,18 +107,20 @@ export default class LndHub extends LND {
         ]);
     };
     lnurlAuth = (message: string) => {
-        const messageHash = sha256(Base64Utils.stringToUint8Array(message));
+        const messageHash = sha256Bytes(
+            Base64Utils.stringToUint8Array(message)
+        );
 
         let signed, signature, key;
         switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
-                key = sha256(
+                key = sha256Bytes(
                     Base64Utils.stringToUint8Array(
                         `lndhub://${settingsStore.username}:${settingsStore.password}`
                     )
                 );
                 signed = ecdsaSignDERHex(messageHash, key);
-                signature = sha256(Base64Utils.stringToUint8Array(signed));
+                signature = sha256Bytes(Base64Utils.stringToUint8Array(signed));
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(

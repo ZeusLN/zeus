@@ -1,11 +1,10 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import Identicon from 'identicon.js';
-import { sha1 } from '@noble/hashes/legacy';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import { SvgXml } from 'react-native-svg';
 
 import Base64Utils from './../utils/Base64Utils';
+import { sha1ForIdenticon } from './../utils/HashingUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 export const NodeTitle = (selectedNode: any, overrideSensitivity = false) => {
@@ -63,11 +62,7 @@ export default function NodeIdenticon({
     })();
 
     const data = new Identicon(
-        bytesToHex(
-            sha1(
-                utf8ToBytes(`string:${stableIdentity.length}:${stableIdentity}`)
-            )
-        ),
+        sha1ForIdenticon(stableIdentity),
         // @ts-ignore:next-line
         {
             background: [255, 255, 255, 255],
