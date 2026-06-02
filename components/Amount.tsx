@@ -207,7 +207,7 @@ function AmountDisplay({
                     {useSatsSymbol ? <TextSpace /> : <Spacer width={2} />}
                     <View accessible={accessible}>
                         <Body
-                            secondary={!useSatsSymbol}
+                            secondary
                             small={!jumboText && !fontSize && !useSatsSymbol}
                             jumbo={useSatsSymbol ? jumboText : false}
                             defaultSize={defaultTextSize}
