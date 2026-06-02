@@ -1,7 +1,6 @@
 import { action, runInAction } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
 import { schnorr } from '@noble/curves/secp256k1.js';
-import { sha256 } from '@noble/hashes/sha2';
 import { hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import {
     nip19,
@@ -13,6 +12,7 @@ import {
 
 import Storage from '../storage';
 
+import { sha256Bytes } from '../utils/HashingUtils';
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -147,7 +147,7 @@ export default class LnurlPayStore {
                     const relaysBytes = hexToBytes(relays_sig);
                     this.isRelaysSigValid = schnorr.verify(
                         relaysBytes,
-                        sha256(utf8ToBytes(JSON.stringify(relays))),
+                        sha256Bytes(utf8ToBytes(JSON.stringify(relays))),
                         hexToBytes(user_pubkey)
                     );
                 }
