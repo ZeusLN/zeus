@@ -190,75 +190,95 @@ export default class RefundSwap extends React.Component<
         fee: any,
         destinationAddress: string
     ): Promise<void> => {
-        const {
-            swapTreeDetails,
-            refundPubKey,
-            effectiveLockupAddress,
-            endpoint,
-            id
-        } = swapData;
-        const claimLeafOutput = swapTreeDetails?.claimLeaf?.output;
-        const refundLeafOutput = swapTreeDetails?.refundLeaf?.output;
-        const nodeInfo = this.props.NodeInfoStore?.nodeInfo;
+        try {
+            const {
+                swapTreeDetails,
+                refundPubKey,
+                effectiveLockupAddress,
+                endpoint,
+                id
+            } = swapData;
+            const claimLeafOutput = swapTreeDetails?.claimLeaf?.output;
+            const refundLeafOutput = swapTreeDetails?.refundLeaf?.output;
+            const nodeInfo = this.props.NodeInfoStore?.nodeInfo;
 
-        if (!claimLeafOutput) {
-            throw new Error('Could not find claim leaf output in swap data');
+            if (!claimLeafOutput) {
+                throw new Error(
+                    'Could not find claim leaf output in swap data'
+                );
+            }
+
+            if (!refundLeafOutput) {
+                throw new Error(
+                    'Could not find refund leaf output in swap data'
+                );
+            }
+
+            if (!refundPubKey) {
+                throw new Error(
+                    'Could not find refund public key in swap data'
+                );
+            }
+
+            if (!effectiveLockupAddress) {
+                throw new Error('Could not find lockup address in swap data');
+            }
+
+            if (!nodeInfo) {
+                throw new Error('Node info is not available');
+            }
+
+            const privateKey =
+                swapData.refundPrivateKey ||
+                privateKeyFromSwapKeys(swapData.keys);
+            if (!privateKey) {
+                throw new Error('Could not derive swap private key');
+            }
+
+            const transactionHex = await this.getReverseTransactionHex(
+                swapData
+            );
+
+            if (!transactionHex) {
+                throw new Error('Could not fetch swap lockup transaction');
+            }
+
+            const preimageHex = await this.getReversePreimageHex(swapData);
+
+            if (!preimageHex) {
+                throw new Error(
+                    'Could not derive swap preimage from rescue key'
+                );
+            }
+
+            await createReverseClaimTransaction({
+                endpoint: this.getBaseEndpoint(endpoint),
+                swapId: id,
+                claimLeaf: claimLeafOutput,
+                refundLeaf: refundLeafOutput,
+                privateKey,
+                servicePubKey: refundPubKey,
+                preimageHex,
+                transactionHex,
+                lockupAddress: effectiveLockupAddress,
+                destinationAddress,
+                feeRate: Number(fee || DEFAULT_FEE_RATE),
+                minerFee: this.props.SwapStore?.claimMinerFee || 0,
+                isTestnet: nodeInfo.isTestNet
+            });
+
+            this.setState({
+                refundStatus: 'Claim transaction created successfully.',
+                destinationAddress: ''
+            });
+        } catch (error: any) {
+            this.setState({
+                loading: false,
+                error: error.message
+            });
+            console.error('Error creating reverse claim transaction:', error);
+            throw error;
         }
-
-        if (!refundLeafOutput) {
-            throw new Error('Could not find refund leaf output in swap data');
-        }
-
-        if (!refundPubKey) {
-            throw new Error('Could not find refund public key in swap data');
-        }
-
-        if (!effectiveLockupAddress) {
-            throw new Error('Could not find lockup address in swap data');
-        }
-
-        if (!nodeInfo) {
-            throw new Error('Node info is not available');
-        }
-
-        const privateKey =
-            swapData.refundPrivateKey || privateKeyFromSwapKeys(swapData.keys);
-        if (!privateKey) {
-            throw new Error('Could not derive swap private key');
-        }
-
-        const transactionHex = await this.getReverseTransactionHex(swapData);
-
-        if (!transactionHex) {
-            throw new Error('Could not fetch swap lockup transaction');
-        }
-
-        const preimageHex = await this.getReversePreimageHex(swapData);
-
-        if (!preimageHex) {
-            throw new Error('Could not derive swap preimage from rescue key');
-        }
-
-        await createReverseClaimTransaction({
-            endpoint: this.getBaseEndpoint(endpoint),
-            swapId: id,
-            claimLeaf: claimLeafOutput,
-            refundLeaf: refundLeafOutput,
-            privateKey,
-            servicePubKey: refundPubKey,
-            preimageHex,
-            transactionHex,
-            lockupAddress: effectiveLockupAddress,
-            destinationAddress,
-            feeRate: Number(fee || DEFAULT_FEE_RATE),
-            minerFee: this.props.SwapStore?.claimMinerFee || 0,
-            isTestnet: nodeInfo.isTestNet
-        });
-
-        this.setState({
-            refundStatus: 'Claim transaction created successfully.',
-            destinationAddress: ''
-        });
     };
 
     componentDidUpdate(prevProps: Readonly<RefundSwapProps>) {
