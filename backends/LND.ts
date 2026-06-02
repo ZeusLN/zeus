@@ -7,10 +7,10 @@ import {
 } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { sha256Bytes } from './../utils/HashingUtils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
-import { sha256 } from '@noble/hashes/sha2';
 import BigNumber from 'bignumber.js';
 
 interface Headers {
@@ -717,7 +717,9 @@ export default class LND {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: sha256(Base64Utils.stringToUint8Array(signed.signature))
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
     lookupInvoice = (data: any) =>

@@ -6,7 +6,7 @@
 
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
-import { sha256 } from '@noble/hashes/sha2';
+import { sha256Bytes } from '../utils/HashingUtils';
 
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
@@ -1773,7 +1773,9 @@ export default class LdkNode {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: sha256(Base64Utils.stringToUint8Array(signed.signature))
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
 
