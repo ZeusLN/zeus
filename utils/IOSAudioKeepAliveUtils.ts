@@ -68,6 +68,10 @@ interface NWCAudioKeepAliveModule {
     nextTrack(): Promise<AudioKeepAliveStatus>;
     previousTrack(): Promise<AudioKeepAliveStatus>;
     setMuted(muted: boolean): Promise<AudioKeepAliveStatus>;
+    /** Call while app is in foreground so the Live Activity can start before backgrounding. */
+    armNWCAudio(): Promise<boolean>;
+    /** Call when NWC service is stopped/torn down. */
+    disarmNWCAudio(): Promise<boolean>;
     addListener(eventType: string): void;
     removeListeners(count: number): void;
 }
@@ -198,6 +202,33 @@ class IOSAudioKeepAliveUtils {
         } catch (e) {
             console.error('[NWCAudio] setMuted() failed:', e);
             return null;
+        }
+    }
+
+    /**
+     * Call while the app is still in the foreground (when NWC becomes active).
+     * Arms the native side so that UIApplicationWillResignActiveNotification
+     * can start the Live Activity before the app fully enters the background –
+     * the only window ActivityKit accepts Activity.request().
+     */
+    async arm(): Promise<void> {
+        const mod = this.getModule();
+        if (!mod) return;
+        try {
+            await mod.armNWCAudio();
+        } catch (e) {
+            console.error('[NWCAudio] arm() failed:', e);
+        }
+    }
+
+    /** Call when the NWC service is stopped or torn down. */
+    async disarm(): Promise<void> {
+        const mod = this.getModule();
+        if (!mod) return;
+        try {
+            await mod.disarmNWCAudio();
+        } catch (e) {
+            console.error('[NWCAudio] disarm() failed:', e);
         }
     }
 
