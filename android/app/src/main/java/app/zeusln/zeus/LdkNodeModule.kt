@@ -535,6 +535,22 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         return false
     }
 
+    @ReactMethod
+    fun setPersistentMode(enabled: Boolean, promise: Promise) {
+        try {
+            if (enabled) {
+                if (node != null) {
+                    LdkNodeService.startService(reactApplicationContext)
+                }
+            } else {
+                LdkNodeService.stopService(reactApplicationContext)
+            }
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
     // Node Lifecycle Methods
 
     @ReactMethod

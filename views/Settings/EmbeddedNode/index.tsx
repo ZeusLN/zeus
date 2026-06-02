@@ -12,8 +12,9 @@ import Switch from '../../../components/Switch';
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
-import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+
+import LdkNode from '../../../ldknode/LdkNodeInjection';
 
 const PERSISTENT_LDK_KEY = 'persistentLdkNodeServicesEnabled';
 
@@ -434,8 +435,9 @@ export default class EmbeddedNode extends React.Component<
                                         <Switch
                                             value={this.state.persistentMode}
                                             onValueChange={async () => {
-                                                const newValue =
-                                                    !this.state.persistentMode;
+                                                const previousValue =
+                                                    this.state.persistentMode;
+                                                const newValue = !previousValue;
                                                 this.setState({
                                                     persistentMode: newValue
                                                 });
@@ -443,7 +445,24 @@ export default class EmbeddedNode extends React.Component<
                                                     PERSISTENT_LDK_KEY,
                                                     newValue.toString()
                                                 );
-                                                restartNeeded();
+                                                try {
+                                                    await LdkNode.node.setPersistentMode(
+                                                        newValue
+                                                    );
+                                                } catch (e) {
+                                                    console.error(
+                                                        'Failed to toggle LDK persistent mode:',
+                                                        e
+                                                    );
+                                                    this.setState({
+                                                        persistentMode:
+                                                            previousValue
+                                                    });
+                                                    await AsyncStorage.setItem(
+                                                        PERSISTENT_LDK_KEY,
+                                                        previousValue.toString()
+                                                    );
+                                                }
                                             }}
                                         />
                                     </View>
@@ -454,11 +473,9 @@ export default class EmbeddedNode extends React.Component<
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {`${localeString(
+                                        {localeString(
                                             'views.Settings.EmbeddedNode.persistentModeLdk.subtitle'
-                                        )} ${localeString(
-                                            'views.Settings.EmbeddedNode.restart'
-                                        )}`}
+                                        )}
                                     </Text>
                                 </View>
                             </>

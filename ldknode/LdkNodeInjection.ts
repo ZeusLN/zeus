@@ -3,7 +3,7 @@
  * Similar pattern to LndMobileInjection
  */
 
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { generateVssAuthHeaders } from '../utils/VssAuthUtils';
 import type {
@@ -169,6 +169,11 @@ const stop = async (): Promise<void> => {
 
 const syncWallets = async (): Promise<void> => {
     return await LdkNodeModule.syncWallets();
+};
+
+const setPersistentMode = async (enabled: boolean): Promise<void> => {
+    if (Platform.OS !== 'android') return;
+    return await LdkNodeModule.setPersistentMode(enabled);
 };
 
 // ============================================================================
@@ -1025,6 +1030,7 @@ export interface ILdkNodeInjections {
         start: () => Promise<void>;
         stop: () => Promise<void>;
         syncWallets: () => Promise<void>;
+        setPersistentMode: (enabled: boolean) => Promise<void>;
         nodeId: () => Promise<string>;
         status: () => Promise<NodeStatus>;
         listBalances: () => Promise<BalanceDetails>;
@@ -1273,6 +1279,7 @@ const LdkNodeInjection: ILdkNodeInjections = {
         start,
         stop,
         syncWallets,
+        setPersistentMode,
         nodeId,
         status,
         listBalances,

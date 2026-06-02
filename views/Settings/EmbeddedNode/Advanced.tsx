@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { NativeModules, Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -215,21 +215,41 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                         <Switch
                                             value={persistentMode}
                                             onValueChange={async () => {
+                                                const previousValue =
+                                                    persistentMode;
+                                                const newValue = !previousValue;
                                                 this.setState({
-                                                    persistentMode:
-                                                        !persistentMode
+                                                    persistentMode: newValue
                                                 });
                                                 await updateSettings({
-                                                    persistentMode:
-                                                        !persistentMode
+                                                    persistentMode: newValue
                                                 });
-                                                const newValue =
-                                                    !persistentMode;
                                                 await AsyncStorage.setItem(
                                                     PERSISTENT_KEY,
                                                     newValue.toString()
                                                 );
-                                                restartNeeded();
+                                                try {
+                                                    await NativeModules.LndMobileTools.setPersistentMode(
+                                                        newValue
+                                                    );
+                                                } catch (e) {
+                                                    console.error(
+                                                        'Failed to toggle LND persistent mode:',
+                                                        e
+                                                    );
+                                                    this.setState({
+                                                        persistentMode:
+                                                            previousValue
+                                                    });
+                                                    await updateSettings({
+                                                        persistentMode:
+                                                            previousValue
+                                                    });
+                                                    await AsyncStorage.setItem(
+                                                        PERSISTENT_KEY,
+                                                        previousValue.toString()
+                                                    );
+                                                }
                                             }}
                                         />
                                     </View>
@@ -244,13 +264,11 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {`${localeString(
+                                        {localeString(
                                             embeddedTor
                                                 ? 'views.Settings.EmbeddedNode.persistentMode.subtitleTor'
                                                 : 'views.Settings.EmbeddedNode.persistentMode.subtitle'
-                                        )} ${localeString(
-                                            'views.Settings.EmbeddedNode.restart'
-                                        )}`}
+                                        )}
                                     </Text>
                                 </View>
                             </>

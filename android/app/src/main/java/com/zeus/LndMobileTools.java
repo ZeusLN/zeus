@@ -613,6 +613,23 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     ProcessPhoenix.triggerRebirth(getReactApplicationContext());
   }
 
+  @ReactMethod
+  public void setPersistentMode(boolean enabled, Promise promise) {
+    try {
+      Intent intent = new Intent(getReactApplicationContext(), LndMobileService.class);
+      intent.setAction("app.zeusln.zeus.android.intent.action.APPLY_PERSISTENT_MODE");
+      intent.putExtra("enabled", enabled);
+      if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        getReactApplicationContext().startForegroundService(intent);
+      } else {
+        getReactApplicationContext().startService(intent);
+      }
+      promise.resolve(null);
+    } catch (Exception e) {
+      promise.reject("error", e.getMessage());
+    }
+  }
+
   private void checkWriteExternalStoragePermission(@NonNull RequestWriteExternalStoragePermissionCallback successCallback,
                                                    @NonNull Runnable failCallback,
                                                    @NonNull Runnable failPermissionCheckcallback) {

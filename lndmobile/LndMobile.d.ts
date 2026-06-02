@@ -133,6 +133,7 @@ export interface ILndMobileTools {
     checkLndProcessExist(): Promise<boolean>;
     deleteTLSCerts(): Promise<boolean>;
     restartApp(): void;
+    setPersistentMode(enabled: boolean): Promise<void>;
 
     // iOS-specific
     checkICloudEnabled(): Promise<boolean>;
