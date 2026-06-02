@@ -1920,6 +1920,9 @@ export default class SettingsStore {
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
                 await MigrationsUtils.migrateRgsDefaultToZeus(parsedSettings);
+                await MigrationsUtils.migrateInvoiceExpiryDisplay(
+                    parsedSettings
+                );
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');

@@ -72,6 +72,12 @@ import {
 } from '../utils/SwapUtils';
 
 import {
+    TimePeriod,
+    displayFromExpirySeconds,
+    expirySecondsFromInput
+} from '../utils/ExpiryUtils';
+
+import {
     LEGACY_ACTIVITY_FILTERS_KEY,
     ACTIVITY_FILTERS_KEY
 } from '../stores/ActivityStore';
@@ -300,7 +306,7 @@ class MigrationsUtils {
         const mod = await EncryptedStorage.getItem(MOD_KEY);
         if (!mod) {
             newSettings.requestSimpleTaproot = true;
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY, 'true');
         }
 
@@ -313,7 +319,7 @@ class MigrationsUtils {
             if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
                 newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
             }
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY2, 'true');
         }
 
@@ -334,7 +340,7 @@ class MigrationsUtils {
                 newSettings.neutrinoPeersMainnet =
                     DEFAULT_NEUTRINO_PEERS_MAINNET;
             }
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY3, 'true');
         }
 
@@ -364,7 +370,7 @@ class MigrationsUtils {
                 newSettings.lsps1Token = '';
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
 
@@ -381,7 +387,7 @@ class MigrationsUtils {
                 }
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY5, 'true');
         }
 
@@ -393,7 +399,7 @@ class MigrationsUtils {
                 newSettings.customSpeedloader = '';
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY6, 'true');
         }
 
@@ -406,7 +412,7 @@ class MigrationsUtils {
                 newSettings.bimodalPathfinding = false;
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY7, 'true');
         }
 
@@ -420,9 +426,11 @@ class MigrationsUtils {
                 newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
             }
 
-            settingsStore.setSettings(JSON.stringify(newSettings));
+            await settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
         }
+
+        await this.migrateInvoiceExpiryDisplay(newSettings);
 
         // migrate old POS squareEnabled setting to posEnabled
         if (newSettings?.pos?.squareEnabled) {
@@ -475,6 +483,41 @@ class MigrationsUtils {
         }
         await settingsStore.setSettings(JSON.stringify(settings));
         await EncryptedStorage.setItem(MOD_KEY_RGS, 'true');
+        return settings;
+    }
+
+    // Repair invoice expiry display fields when out of sync with the
+    // authoritative `expirySeconds` (e.g. older installs that defaulted
+    // `expiry` to '3600' instead of '1', causing the UI to read
+    // "3600 hours" while the invoice actually expired in one hour).
+    // Must run on both the legacy and modern (zeus-settings-v2) paths,
+    // since affected users may already have migrated to v2 carrying the
+    // stale value forward.
+    public async migrateInvoiceExpiryDisplay(settings: any) {
+        const MOD_KEY_INVOICE_EXPIRY = 'invoices-expiry-display-fix';
+        const modInvoiceExpiry = await EncryptedStorage.getItem(
+            MOD_KEY_INVOICE_EXPIRY
+        );
+        if (modInvoiceExpiry) return settings;
+
+        const invoices: any = settings?.invoices;
+        const expirySeconds = invoices?.expirySeconds;
+        if (expirySeconds) {
+            const inconsistent =
+                !invoices.expiry ||
+                !invoices.timePeriod ||
+                expirySecondsFromInput(
+                    invoices.expiry,
+                    invoices.timePeriod as TimePeriod
+                ) !== expirySeconds;
+            if (inconsistent) {
+                const repaired = displayFromExpirySeconds(expirySeconds);
+                invoices.expiry = repaired.expiry;
+                invoices.timePeriod = repaired.timePeriod;
+            }
+        }
+        await settingsStore.setSettings(JSON.stringify(settings));
+        await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
         return settings;
     }
 
