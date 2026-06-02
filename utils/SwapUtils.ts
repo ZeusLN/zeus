@@ -269,6 +269,7 @@ export const privateKeyFromSwapKeys = (
 ): string | null => {
     const raw = keys?.__D;
     if (!raw) {
+        console.warn('privateKeyFromSwapKeys: keys.__D is missing');
         return null;
     }
 
@@ -293,6 +294,10 @@ export const privateKeyFromSwapKeys = (
     }
 
     if (!bytes) {
+        console.warn(
+            'privateKeyFromSwapKeys: unexpected key format',
+            typeof raw
+        );
         return null;
     }
 
