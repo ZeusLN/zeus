@@ -226,6 +226,11 @@
 		NWCAUDIO0000000000000011 /* Fireplace.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000015 /* Fireplace.m4a */; };
 		NWCAUDIO0000000000000012 /* White Noise.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000016 /* White Noise.m4a */; };
 		NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.m4a */; };
+		NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000007 /* NWCWidgetAttributes.swift */; };
+		NWCLA000000000000000002 /* NWCWidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000008 /* NWCWidgetBridge.swift */; };
+		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
+		NWCLA000000000000000004 /* NWCWidgetBridgeImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */; };
+		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -404,6 +409,13 @@
 			remoteGlobalIDString = 358F4ED71D1E81A9004DF814;
 			remoteInfo = RCTBlob;
 		};
+		NWCLA000000000000000019 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = NWCLA000000000000000011;
+			remoteInfo = NWCWidget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -414,6 +426,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				5134B5512EB7C1B000A6AD03 /* ShareQR.appex in Embed Foundation Extensions */,
+				NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -703,9 +716,14 @@
 		FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_6a.jpg; path = ../assets/images/zeus_illustration_6a.jpg; sourceTree = "<group>"; };
 		NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NWCAudioKeepAlive.m; path = zeus/NWCAudioKeepAlive.m; sourceTree = "<group>"; };
 		NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NWCAudioKeepAlive.h; path = zeus/NWCAudioKeepAlive.h; sourceTree = "<group>"; };
-		NWCAUDIO0000000000000015 /* Fireplace.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = Fireplace.m4a; path = zeus/Fireplace.m4a; sourceTree = "<group>"; };
-		NWCAUDIO0000000000000016 /* White Noise.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = "White Noise.m4a"; path = "zeus/White Noise.m4a"; sourceTree = "<group>"; };
-		NWCAUDIO0000000000000017 /* Gentle Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Gentle Rain.m4a"; path = "zeus/Gentle Rain.m4a"; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000015 /* Fireplace.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = Fireplace.m4a; path = zeus/Fireplace.m4a; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000016 /* White Noise.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = "White Noise.m4a"; path = "zeus/White Noise.m4a"; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000017 /* Gentle Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = "Gentle Rain.m4a"; path = "zeus/Gentle Rain.m4a"; sourceTree = "<group>"; };
+		NWCLA000000000000000006 /* NWCWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NWCWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		NWCLA000000000000000007 /* NWCWidgetAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetAttributes.swift; path = NWCWidget/NWCWidgetAttributes.swift; sourceTree = "<group>"; };
+		NWCLA000000000000000008 /* NWCWidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetBridge.swift; path = NWCWidget/NWCWidgetBridge.swift; sourceTree = "<group>"; };
+		NWCLA000000000000000009 /* NWCActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCActivityManager.swift; path = zeus/NWCActivityManager.swift; sourceTree = "<group>"; };
+		NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetBridgeImpl.swift; path = zeus/NWCWidgetBridgeImpl.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -716,6 +734,14 @@
 			);
 			target = 5134B5462EB7C1B000A6AD03 /* ShareQR */;
 		};
+		NWCLA000000000000000013 /* Exceptions for "NWCWidget" folder in "NWCWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				NWCWidget.entitlements,
+			);
+			target = NWCLA000000000000000011 /* NWCWidget */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -725,6 +751,14 @@
 				5134B5522EB7C1B000A6AD03 /* Exceptions for "ShareQR" folder in "ShareQR" target */,
 			);
 			path = ShareQR;
+			sourceTree = "<group>";
+		};
+		NWCLA000000000000000015 /* NWCWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				NWCLA000000000000000013 /* Exceptions for "NWCWidget" folder in "NWCWidget" target */,
+			);
+			path = NWCWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -772,6 +806,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5134B5442EB7C1B000A6AD03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		NWCLA00000000000000001B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -874,6 +915,10 @@
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
 				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
+				NWCLA000000000000000009 /* NWCActivityManager.swift */,
+				NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */,
+				NWCLA000000000000000007 /* NWCWidgetAttributes.swift */,
+				NWCLA000000000000000008 /* NWCWidgetBridge.swift */,
 				NWCAUDIO0000000000000015 /* Fireplace.m4a */,
 				NWCAUDIO0000000000000016 /* White Noise.m4a */,
 				NWCAUDIO0000000000000017 /* Gentle Rain.m4a */,
@@ -982,6 +1027,7 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				00E356EF1AD99517003FC87E /* zeusTests */,
 				5134B5482EB7C1B000A6AD03 /* ShareQR */,
+				NWCLA000000000000000015 /* NWCWidget */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				C313040DFF224D8A9EC46990 /* Resources */,
@@ -1003,6 +1049,7 @@
 				2D02E47B1E0B4A5D006451C7 /* zeus-tvOS.app */,
 				2D02E4901E0B4A5D006451C7 /* zeus-tvOSTests.xctest */,
 				5134B5472EB7C1B000A6AD03 /* ShareQR.appex */,
+				NWCLA000000000000000006 /* NWCWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1318,6 +1365,7 @@
 			);
 			dependencies = (
 				5134B5502EB7C1B000A6AD03 /* PBXTargetDependency */,
+				NWCLA000000000000000020 /* PBXTargetDependency */,
 			);
 			name = zeus;
 			productName = "Hello World";
@@ -1380,6 +1428,26 @@
 			productReference = 5134B5472EB7C1B000A6AD03 /* ShareQR.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		NWCLA000000000000000011 /* NWCWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = NWCLA000000000000000016 /* Build configuration list for PBXNativeTarget "NWCWidget" */;
+			buildPhases = (
+				NWCLA000000000000000012 /* Sources */,
+				NWCLA00000000000000001B /* Frameworks */,
+				NWCLA000000000000000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				NWCLA000000000000000015 /* NWCWidget */,
+			);
+			name = NWCWidget;
+			productName = NWCWidget;
+			productReference = NWCLA000000000000000006 /* NWCWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1410,6 +1478,9 @@
 						TestTargetID = 2D02E47A1E0B4A5D006451C7;
 					};
 					5134B5462EB7C1B000A6AD03 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					NWCLA000000000000000011 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -1478,6 +1549,7 @@
 				2D02E47A1E0B4A5D006451C7 /* zeus-tvOS */,
 				2D02E48F1E0B4A5D006451C7 /* zeus-tvOSTests */,
 				5134B5462EB7C1B000A6AD03 /* ShareQR */,
+				NWCLA000000000000000011 /* NWCWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -1850,6 +1922,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		NWCLA000000000000000014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -1990,6 +2069,10 @@
 				745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
+				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
+				NWCLA000000000000000002 /* NWCWidgetBridge.swift in Sources */,
+				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
+				NWCLA000000000000000004 /* NWCWidgetBridgeImpl.swift in Sources */,
 				745388442A54C2B6000927CE /* lightning.pb.swift in Sources */,
 				74B637822A5A350B00750202 /* LncModule.mm in Sources */,
 				74B637842A5A350B00750202 /* Callback.mm in Sources */,
@@ -2025,6 +2108,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		NWCLA000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -2042,6 +2132,11 @@
 			isa = PBXTargetDependency;
 			target = 5134B5462EB7C1B000A6AD03 /* ShareQR */;
 			targetProxy = 5134B54F2EB7C1B000A6AD03 /* PBXContainerItemProxy */;
+		};
+		NWCLA000000000000000020 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = NWCLA000000000000000011 /* NWCWidget */;
+			targetProxy = NWCLA000000000000000019 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -2566,6 +2661,98 @@
 			};
 			name = Release;
 		};
+		NWCLA000000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = NWCWidget/NWCWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9TU7M3555F;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NWCWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zeus NWC";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 13.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus.NWCWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		NWCLA000000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = NWCWidget/NWCWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9TU7M3555F;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NWCWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zeus NWC";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 13.1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus.NWCWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -2619,6 +2806,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		NWCLA000000000000000016 /* Build configuration list for PBXNativeTarget "NWCWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				NWCLA000000000000000017 /* Debug */,
+				NWCLA000000000000000018 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
