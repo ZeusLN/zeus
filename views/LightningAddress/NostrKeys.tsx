@@ -7,7 +7,8 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
-import hashjs from 'hash.js';
+
+import { sha256StringToHex } from '../../utils/HashingUtils';
 
 import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
@@ -343,14 +344,11 @@ export default class NostrKey extends React.Component<
                                                         .nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        hashjs
-                                                            .sha256()
-                                                            .update(
-                                                                JSON.stringify(
-                                                                    relays
-                                                                )
+                                                        sha256StringToHex(
+                                                            JSON.stringify(
+                                                                relays
                                                             )
-                                                            .digest('hex'),
+                                                        ),
                                                         nostrPrivateKey
                                                     )
                                                 );

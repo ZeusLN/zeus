@@ -5,6 +5,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Tab } from '@rneui/themed';
 
 import BIP32Factory from 'bip32';
+
+import { hashScryptAsync } from '../../utils/HashingUtils';
 import ecc from '../../zeus_modules/noble_ecc';
 
 // You must wrap a tiny-secp256k1 compatible implementation
@@ -12,7 +14,6 @@ const bip32 = BIP32Factory(ecc);
 
 const aez = require('aez');
 const crc32 = require('fast-crc32c/impls/js_crc32c');
-const scrypt = require('scrypt-js').scrypt;
 
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
@@ -149,14 +150,12 @@ export default class SeedQRExport extends React.PureComponent<
                 return;
             }
 
-            const key = await scrypt(
-                password,
-                salt,
-                SCRYPT_N,
-                SCRYPT_R,
-                SCRYPT_P,
-                SCRYPT_KEY_LENGTH
-            );
+            const key = await hashScryptAsync(password, salt, {
+                N: SCRYPT_N,
+                r: SCRYPT_R,
+                p: SCRYPT_P,
+                dkLen: SCRYPT_KEY_LENGTH
+            });
 
             const plainSeedBytes = aez.decrypt(
                 key,
