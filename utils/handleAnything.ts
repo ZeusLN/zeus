@@ -179,11 +179,16 @@ export function strictUriEncode(
     );
 }
 
+// The merchant identifier regexes use alternation with `.*` patterns that
+// catastrophically backtrack on long inputs and blow Hermes' regex stack.
+// Real merchant QR payloads are bounded, so skip the test for anything longer.
+const MERCHANT_QR_MAX_LEN = 500;
+
 /**
  * Checks if the input matches a known merchant QR code pattern.
  */
 function isMerchantQR(input: string): boolean {
-    if (!input) return false;
+    if (!input || input.length > MERCHANT_QR_MAX_LEN) return false;
     return merchantConfigs.some((merchant) =>
         merchant.identifierRegex.test(input)
     );
@@ -193,7 +198,7 @@ function convertMerchantQRToLightningAddress(
     qrContent: string,
     network: 'mainnet' | 'signet' | 'regtest'
 ): string | null {
-    if (!qrContent) return null;
+    if (!qrContent || qrContent.length > MERCHANT_QR_MAX_LEN) return null;
 
     for (const merchant of merchantConfigs) {
         const match = qrContent.match(merchant.identifierRegex);
