@@ -1,3 +1,18 @@
+jest.mock('react-native-fs', () => ({
+    __esModule: true,
+    default: {
+        DownloadDirectoryPath: '/public-downloads',
+        DocumentDirectoryPath: '/docs',
+        CachesDirectoryPath: '/cache',
+        exists: jest.fn().mockResolvedValue(false),
+        unlink: jest.fn(),
+        writeFile: jest.fn()
+    }
+}));
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: jest.fn()
+}));
+
 import {
     SubmarineClaimTransaction,
     ReverseClaimTransaction

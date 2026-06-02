@@ -204,33 +204,39 @@ export default class RefundSwap extends React.Component<
 
             if (!claimLeafOutput) {
                 throw new Error(
-                    'Could not find claim leaf output in swap data'
+                    localeString('views.Swaps.error.missingClaimLeaf')
                 );
             }
 
             if (!refundLeafOutput) {
                 throw new Error(
-                    'Could not find refund leaf output in swap data'
+                    localeString('views.Swaps.error.missingRefundLeaf')
                 );
             }
 
             if (!refundPubKey) {
                 throw new Error(
-                    'Could not find refund public key in swap data'
+                    localeString('views.Swaps.error.missingRefundPubKey')
                 );
             }
 
             if (!effectiveLockupAddress) {
-                throw new Error('Could not find lockup address in swap data');
+                throw new Error(
+                    localeString('views.Swaps.error.missingLockupAddress')
+                );
             }
 
             if (!nodeInfo) {
-                throw new Error('Node info is not available');
+                throw new Error(
+                    localeString('views.Swaps.error.nodeInfoUnavailable')
+                );
             }
 
             const privateKey = privateKeyFromSwapKeys(swapData.keys);
             if (!privateKey) {
-                throw new Error('Could not derive swap private key');
+                throw new Error(
+                    localeString('views.Swaps.error.missingPrivateKey')
+                );
             }
 
             const transactionHex = await this.getReverseTransactionHex(
@@ -238,14 +244,16 @@ export default class RefundSwap extends React.Component<
             );
 
             if (!transactionHex) {
-                throw new Error('Could not fetch swap lockup transaction');
+                throw new Error(
+                    localeString('views.Swaps.error.missingLockupTx')
+                );
             }
 
             const preimageHex = await this.getReversePreimageHex(swapData);
 
             if (!preimageHex) {
                 throw new Error(
-                    'Could not derive swap preimage from rescue key'
+                    localeString('views.Swaps.error.missingPreimage')
                 );
             }
 
@@ -266,7 +274,7 @@ export default class RefundSwap extends React.Component<
             });
 
             this.setState({
-                refundStatus: 'Claim transaction created successfully.',
+                refundStatus: localeString('views.Swaps.claimSuccess'),
                 destinationAddress: ''
             });
         } catch (error: any) {
