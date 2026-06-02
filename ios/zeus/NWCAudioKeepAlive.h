@@ -18,6 +18,8 @@
  *   nextTrack()                    → advance to next track (wraps)
  *   previousTrack()                → go back to previous track (wraps)
  *   setMuted(muted)                → mute/unmute volume (session stays alive)
+ *   armNWCAudio()                  → call from JS (foreground) to pre-arm Live Activity startup
+ *   disarmNWCAudio()               → call from JS when NWC service stops
  *
  * Emitted events (listen via NativeEventEmitter):
  *   NWCAudioInterrupted            Audio session interrupted (e.g. phone call)

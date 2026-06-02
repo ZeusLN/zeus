@@ -2721,6 +2721,12 @@ export default class NostrWalletConnectStore {
         // If we're already in the background (rare edge case), start immediately
         if (AppState.currentState === 'background') {
             this.startIOSAudioKeepAlive();
+        } else {
+            // App is in the foreground: arm the native side so that the
+            // UIApplicationWillResignActiveNotification handler (which fires while
+            // UIApplication.applicationState is still .active) can call
+            // Activity.request() – the only window ActivityKit allows it.
+            IOSAudioKeepAliveUtils.arm();
         }
 
         let previousState: string = AppState.currentState;
@@ -2765,6 +2771,8 @@ export default class NostrWalletConnectStore {
             this.iosAudioAppStateListener.remove();
             this.iosAudioAppStateListener = null;
         }
+        // Disarm the native Live Activity pre-start hook.
+        IOSAudioKeepAliveUtils.disarm();
     }
 
     /**
