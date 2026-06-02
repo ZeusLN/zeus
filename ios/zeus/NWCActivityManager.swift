@@ -7,20 +7,18 @@ import ActivityKit
 
     @objc static let shared = NWCActivityManager()
 
-    // Callbacks wired by NWCAudioKeepAlive.m so widget button taps reach the audio engine.
     @objc var onNextTrack:  (() -> Void)?
     @objc var onPrevTrack:  (() -> Void)?
     @objc var onToggleMute: (() -> Void)?
     @objc var onStop:       (() -> Void)?
 
-    // Only adopt an existing activity that is still live (not ended/dismissed).
-    // Orphaned activities from previous crashes are ended in init().
     private var activity: Activity<NWCLiveActivityAttributes>?
 
     override private init() {
         super.init()
         NWCBridge = NWCWidgetBridgeImpl(manager: self)
-        cleanupOrphanedActivities()
+        // Synchronous cleanup so a force-quit island is gone on next cold start.
+        endAllActivitiesBlocking()
     }
 
     // ─── ObjC entry points ────────────────────────────────────────────────────
@@ -37,27 +35,32 @@ import ActivityKit
         }
     }
 
+    /// Normal stop (async). Ends every NWC activity, not only the cached reference.
     @objc func stopActivity() {
         DispatchQueue.main.async { [weak self] in
             self?.stopActivityOnMain()
         }
     }
 
+    /// Ends all NWC Live Activities and blocks until ActivityKit completes.
+    /// Required on force-quit: async `stopActivity` often never runs before iOS kills the process.
+    @objc func endAllActivitiesImmediately() {
+        endAllActivitiesBlocking()
+    }
+
     // ─── Main-queue implementation ────────────────────────────────────────────
 
-    // 5-minute rolling staleDate – safety net if the app is killed mid-session.
     private var staleDate: Date { Date().addingTimeInterval(300) }
 
     private func startActivityOnMain(trackName: String, isMuted: Bool) {
         let auth = ActivityAuthorizationInfo()
         guard auth.areActivitiesEnabled else {
-            NSLog("[NWCActivity] Live Activities disabled – go to Settings → ZEUS → Live Activities")
+            NSLog("[NWCActivity] Live Activities disabled – Settings → ZEUS → Live Activities")
             return
         }
 
-        // Re-use any existing live activity (active OR stale — both accept updates).
-        if let existing = activity, isLive(existing) {
-            NSLog("[NWCActivity] activity already active, updating instead")
+        if let existing = activity, Self.isLive(existing) {
+            NSLog("[NWCActivity] activity already live, updating instead")
             updateActivityOnMain(trackName: trackName, isMuted: isMuted)
             return
         }
@@ -83,7 +86,7 @@ import ActivityKit
     }
 
     private func updateActivityOnMain(trackName: String?, isMuted: Bool) {
-        guard let current = activity, isLive(current) else {
+        guard let current = activity, Self.isLive(current) else {
             NSLog("[NWCActivity] update skipped – no live activity")
             return
         }
@@ -93,7 +96,6 @@ import ActivityKit
         )
         Task {
             if #available(iOS 16.2, *) {
-                // Rolling the staleDate forward keeps the activity alive during a long session.
                 let content = ActivityContent(state: state, staleDate: staleDate)
                 await current.update(content)
             } else {
@@ -105,53 +107,51 @@ import ActivityKit
     }
 
     private func stopActivityOnMain() {
-        guard let current = activity else { return }
         activity = nil
+        Task {
+            await Self.endEveryNWCLiveActivity()
+            NSLog("[NWCActivity] ended (async)")
+        }
+    }
+
+    // ─── Blocking end (force-quit + cold-start cleanup) ───────────────────────
+
+    private func endAllActivitiesBlocking() {
+        let sem = DispatchSemaphore(value: 0)
+        Task.detached(priority: .userInitiated) {
+            await Self.endEveryNWCLiveActivity()
+            await MainActor.run { [weak self] in
+                self?.activity = nil
+            }
+            sem.signal()
+        }
+        _ = sem.wait(timeout: .now() + 5)
+    }
+
+    private static func endEveryNWCLiveActivity() async {
         let finalState = NWCLiveActivityAttributes.ContentState(
             currentTrackName: nil,
             isMuted: false
         )
-        Task {
+        for act in Activity<NWCLiveActivityAttributes>.activities {
+            guard isLive(act) else { continue }
             if #available(iOS 16.2, *) {
                 let content = ActivityContent(state: finalState, staleDate: Date())
-                await current.end(content, dismissalPolicy: .immediate)
+                await act.end(content, dismissalPolicy: .immediate)
             } else {
-                await current.end(using: finalState, dismissalPolicy: .immediate)
+                await act.end(using: finalState, dismissalPolicy: .immediate)
             }
-            NSLog("[NWCActivity] ended")
+            NSLog("[NWCActivity] ended activity id=%@", act.id)
         }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    /// True when the activity can still be updated (active or stale but not ended/dismissed).
-    private func isLive(_ act: Activity<NWCLiveActivityAttributes>) -> Bool {
+    private static func isLive(_ act: Activity<NWCLiveActivityAttributes>) -> Bool {
         if act.activityState == .ended { return false }
         if #available(iOS 16.2, *) {
             if act.activityState == .dismissed { return false }
         }
         return true
-    }
-
-    /// End any activities left over from a previous session (e.g. a crash that
-    /// prevented the normal stopActivity() call from completing).
-    private func cleanupOrphanedActivities() {
-        let orphans = Activity<NWCLiveActivityAttributes>.activities
-        guard !orphans.isEmpty else { return }
-        NSLog("[NWCActivity] cleaning up %d orphaned activit(y|ies)", orphans.count)
-        Task {
-            for orphan in orphans {
-                if #available(iOS 16.2, *) {
-                    let content = ActivityContent(
-                        state: NWCLiveActivityAttributes.ContentState(
-                            currentTrackName: nil, isMuted: false),
-                        staleDate: Date()
-                    )
-                    await orphan.end(content, dismissalPolicy: .immediate)
-                } else {
-                    await orphan.end(using: nil, dismissalPolicy: .immediate)
-                }
-            }
-        }
     }
 }
