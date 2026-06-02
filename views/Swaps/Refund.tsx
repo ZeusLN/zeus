@@ -228,9 +228,7 @@ export default class RefundSwap extends React.Component<
                 throw new Error('Node info is not available');
             }
 
-            const privateKey =
-                swapData.refundPrivateKey ||
-                privateKeyFromSwapKeys(swapData.keys);
+            const privateKey = privateKeyFromSwapKeys(swapData.keys);
             if (!privateKey) {
                 throw new Error('Could not derive swap private key');
             }
