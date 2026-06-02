@@ -3,9 +3,10 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Tab } from '@rneui/themed';
-import { scryptAsync } from '@noble/hashes/scrypt';
 
 import BIP32Factory from 'bip32';
+
+import { hashScryptAsync } from '../../utils/HashingUtils';
 import ecc from '../../zeus_modules/noble_ecc';
 
 // You must wrap a tiny-secp256k1 compatible implementation
@@ -149,7 +150,7 @@ export default class SeedQRExport extends React.PureComponent<
                 return;
             }
 
-            const key = await scryptAsync(password, salt, {
+            const key = await hashScryptAsync(password, salt, {
                 N: SCRYPT_N,
                 r: SCRYPT_R,
                 p: SCRYPT_P,

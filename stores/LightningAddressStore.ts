@@ -7,12 +7,13 @@ import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha2';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils';
 // @ts-ignore:next-line
 import { getPublicKey, relayInit } from 'nostr-tools';
 
 const bip39 = require('bip39');
+
+import { sha256Hex, sha256StringToHex } from '../utils/HashingUtils';
 
 import CashuStore from './CashuStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -215,9 +216,7 @@ export default class LightningAddressStore {
                 this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
-                const hash = bytesToHex(
-                    sha256(Base64Utils.hexToBytes(preimage))
-                );
+                const hash = sha256Hex(Base64Utils.hexToBytes(preimage));
                 if (nostrPrivateKey) {
                     const pmthash_sig = bytesToHex(
                         schnorr.sign(hash, nostrPrivateKey)
@@ -299,7 +298,7 @@ export default class LightningAddressStore {
 
             const relays_sig = bytesToHex(
                 schnorr.sign(
-                    bytesToHex(sha256(utf8ToBytes(JSON.stringify(relays)))),
+                    sha256StringToHex(JSON.stringify(relays)),
                     nostrPrivateKey
                 )
             );

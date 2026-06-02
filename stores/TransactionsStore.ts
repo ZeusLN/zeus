@@ -2,9 +2,9 @@ const bitcoin = require('bitcoinjs-lib');
 
 import { action, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
-import { sha256 } from '@noble/hashes/sha2';
-import { bytesToHex } from '@noble/hashes/utils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import { sha256Hex } from '../utils/HashingUtils';
 
 import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
@@ -593,9 +593,7 @@ export default class TransactionsStore {
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
-            const payment_hash = Base64Utils.hexToBase64(
-                bytesToHex(sha256(preimage))
-            );
+            const payment_hash = Base64Utils.hexToBase64(sha256Hex(preimage));
 
             data.dest = Base64Utils.hexToBase64(pubkey);
             data.dest_custom_records = { [keySendPreimageType]: secret };
