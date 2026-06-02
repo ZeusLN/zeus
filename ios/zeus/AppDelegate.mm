@@ -98,20 +98,19 @@ static void ClearKeychainIfNecessary() {
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-  NSLog(@"App will terminate – stopping Live Activity");
+  NSLog(@"App will terminate – ending Live Activities (blocking)");
   if (@available(iOS 16.1, *)) {
     Class managerClass = NSClassFromString(@"NWCActivityManager");
     if (managerClass && [managerClass respondsToSelector:@selector(shared)]) {
       #pragma clang diagnostic push
       #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
       id manager = [managerClass performSelector:@selector(shared)];
-      #pragma clang diagnostic pop
-      if ([manager respondsToSelector:@selector(stopActivity)]) {
-        [manager performSelector:@selector(stopActivity)];
+      if ([manager respondsToSelector:@selector(endAllActivitiesImmediately)]) {
+        [manager performSelector:@selector(endAllActivitiesImmediately)];
       }
+      #pragma clang diagnostic pop
     }
   }
-  [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:2.0]];
 }
 
 @end

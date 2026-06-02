@@ -360,7 +360,10 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
         [nc removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
         [nc removeObserver:self name:UIApplicationWillTerminateNotification   object:nil];
         [self unregisterDarwinObservers];
-        NSLog(@"[NWCAudio] Disarmed – Darwin IPC removed");
+        if (@available(iOS 16.1, *)) {
+            [[NWCActivityManager shared] endAllActivitiesImmediately];
+        }
+        NSLog(@"[NWCAudio] Disarmed – Darwin IPC removed, Live Activity ended");
     });
     resolve(@(YES));
 }
@@ -685,9 +688,9 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
  * Ends the Live Activity immediately so the Dynamic Island disappears.
  */
 - (void)handleWillTerminate:(NSNotification *)notification {
-    NSLog(@"[NWCAudio] App terminating – stopping Live Activity");
+    NSLog(@"[NWCAudio] App terminating – ending Live Activity (blocking)");
     if (@available(iOS 16.1, *)) {
-        [[NWCActivityManager shared] stopActivity];
+        [[NWCActivityManager shared] endAllActivitiesImmediately];
     }
 }
 
