@@ -21,7 +21,7 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 
-import { LSPOrderState } from '../../models/LSP';
+import { LSPOrderState, LSPService, PaymentAwaitState } from '../../models/LSP';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
@@ -30,16 +30,11 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString } from '../../utils/LocaleUtils';
-import { sleep } from '../../utils/SleepUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
 
 const POLL_INTERVAL_MS = 5000;
-const CUSTOM_MESSAGE_WAIT_MS = 3000;
-
-type PaymentAwaitState = 'polling' | 'completed' | 'failed';
-type LSPService = 'LSPS1' | 'LSPS7';
 
 interface LSPPaymentAwaitProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -62,7 +57,6 @@ interface LSPPaymentAwaitInternalState {
     endpoint?: string;
     peer?: string;
     native?: boolean;
-    failureMessage?: string;
 }
 
 @inject('LSPStore', 'ChannelsStore', 'NodeInfoStore')
@@ -79,7 +73,7 @@ export default class LSPPaymentAwait extends React.Component<
     constructor(props: LSPPaymentAwaitProps) {
         super(props);
         this.state = {
-            paymentState: 'polling'
+            paymentState: PaymentAwaitState.POLLING
         };
     }
 
@@ -141,7 +135,7 @@ export default class LSPPaymentAwait extends React.Component<
     }
 
     private handleBackPress = (): boolean => {
-        if (this.state.paymentState === 'completed') {
+        if (this.state.paymentState === PaymentAwaitState.COMPLETED) {
             this.props.navigation.popTo('Wallet');
             return true;
         }
@@ -150,7 +144,7 @@ export default class LSPPaymentAwait extends React.Component<
 
     private scheduleNextPoll() {
         if (this.isUnmounted) return;
-        if (this.state.paymentState !== 'polling') return;
+        if (this.state.paymentState !== PaymentAwaitState.POLLING) return;
         this.pollTimer = setTimeout(() => {
             this.pollOrderStatus();
         }, POLL_INTERVAL_MS);
@@ -158,7 +152,7 @@ export default class LSPPaymentAwait extends React.Component<
 
     private pollOrderStatus = async () => {
         if (this.isUnmounted || this.isPolling) return;
-        if (this.state.paymentState !== 'polling') return;
+        if (this.state.paymentState !== PaymentAwaitState.POLLING) return;
 
         const { LSPStore } = this.props;
         const { orderId, service } = this.props.route.params;
@@ -174,14 +168,13 @@ export default class LSPPaymentAwait extends React.Component<
 
             let response: any;
 
-            if (service === 'LSPS7') {
+            if (service === LSPService.LSPS7) {
                 if (!peer) {
                     this.isPolling = false;
                     this.scheduleNextPoll();
                     return;
                 }
-                LSPStore.lsps7GetOrderCustomMessage(orderId, peer);
-                await sleep(CUSTOM_MESSAGE_WAIT_MS);
+                await LSPStore.lsps7GetOrderCustomMessage(orderId, peer);
                 response = LSPStore.getExtensionOrderResponse;
             } else {
                 if (native) {
@@ -189,8 +182,7 @@ export default class LSPPaymentAwait extends React.Component<
                 } else if (endpoint && BackendUtils.supportsLSPS1rest()) {
                     await LSPStore.lsps1GetOrderREST(orderId, endpoint);
                 } else if (peer && BackendUtils.supportsLSPScustomMessage()) {
-                    LSPStore.lsps1GetOrderCustomMessage(orderId, peer);
-                    await sleep(CUSTOM_MESSAGE_WAIT_MS);
+                    await LSPStore.lsps1GetOrderCustomMessage(orderId, peer);
                 } else {
                     this.isPolling = false;
                     this.scheduleNextPoll();
@@ -205,16 +197,15 @@ export default class LSPPaymentAwait extends React.Component<
                 const result = response?.result || response;
                 if (result?.order_state === LSPOrderState.COMPLETED) {
                     this.updateOrderInStorage(response);
-                    this.setState({ paymentState: 'completed' });
+                    this.setState({
+                        paymentState: PaymentAwaitState.COMPLETED
+                    });
                     this.isPolling = false;
                     return;
                 }
                 if (result?.order_state === LSPOrderState.FAILED) {
                     this.updateOrderInStorage(response);
-                    this.setState({
-                        paymentState: 'failed',
-                        failureMessage: LSPStore.error_msg || undefined
-                    });
+                    this.setState({ paymentState: PaymentAwaitState.FAILED });
                     this.isPolling = false;
                     return;
                 }
@@ -279,7 +270,8 @@ export default class LSPPaymentAwait extends React.Component<
 
     private viewOrderDetails = () => {
         const { orderId, service } = this.props.route.params;
-        const target = service === 'LSPS7' ? 'LSPS7Order' : 'LSPS1Order';
+        const target =
+            service === LSPService.LSPS7 ? 'LSPS7Order' : 'LSPS1Order';
         this.props.navigation.replace(target, {
             orderId,
             orderShouldUpdate: true
@@ -289,15 +281,15 @@ export default class LSPPaymentAwait extends React.Component<
     render() {
         const { navigation, LSPStore } = this.props;
         const { invoice, satAmount, service } = this.props.route.params;
-        const { paymentState, failureMessage } = this.state;
+        const { paymentState } = this.state;
 
         const successSubtitle =
-            service === 'LSPS7'
+            service === LSPService.LSPS7
                 ? localeString('views.LSPS7.leaseExtended')
                 : localeString('views.LSPS1.channelOnlineSoon');
 
         const failureFallback =
-            service === 'LSPS7'
+            service === LSPService.LSPS7
                 ? localeString('views.LSPS7.extensionFailed')
                 : localeString('views.LSPS1.channelOpenFailed');
 
@@ -307,9 +299,9 @@ export default class LSPPaymentAwait extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text:
-                            paymentState === 'completed'
+                            paymentState === PaymentAwaitState.COMPLETED
                                 ? localeString('views.LSPS1.orderCompleted')
-                                : paymentState === 'failed'
+                                : paymentState === PaymentAwaitState.FAILED
                                 ? localeString('views.LSPS1.orderFailed')
                                 : localeString('views.LSPS1.awaitingPayment'),
                         style: {
@@ -318,8 +310,13 @@ export default class LSPPaymentAwait extends React.Component<
                         }
                     }}
                     navigation={navigation}
+                    onBack={
+                        paymentState === PaymentAwaitState.COMPLETED
+                            ? this.goToWallet
+                            : undefined
+                    }
                 />
-                {paymentState === 'polling' && (
+                {paymentState === PaymentAwaitState.POLLING && (
                     <ScrollView
                         contentContainerStyle={{
                             paddingHorizontal: 15,
@@ -378,7 +375,7 @@ export default class LSPPaymentAwait extends React.Component<
                         />
                     </ScrollView>
                 )}
-                {paymentState === 'completed' && (
+                {paymentState === PaymentAwaitState.COMPLETED && (
                     <View
                         style={{
                             flex: 1,
@@ -419,7 +416,7 @@ export default class LSPPaymentAwait extends React.Component<
                             </Text>
                         </View>
                         <View>
-                            {service === 'LSPS1' &&
+                            {service === LSPService.LSPS1 &&
                                 BackendUtils.supportsPendingChannels() && (
                                     <Button
                                         title={localeString(
@@ -439,7 +436,7 @@ export default class LSPPaymentAwait extends React.Component<
                         </View>
                     </View>
                 )}
-                {paymentState === 'failed' && (
+                {paymentState === PaymentAwaitState.FAILED && (
                     <View
                         style={{
                             flex: 1,
@@ -450,11 +447,7 @@ export default class LSPPaymentAwait extends React.Component<
                     >
                         <View style={{ paddingTop: 20 }}>
                             <ErrorMessage
-                                message={
-                                    failureMessage ||
-                                    LSPStore.error_msg ||
-                                    failureFallback
-                                }
+                                message={LSPStore.error_msg || failureFallback}
                             />
                         </View>
                         <View>

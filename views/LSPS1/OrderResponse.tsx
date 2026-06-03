@@ -14,7 +14,12 @@ import {
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 
-import { LSPOrderState, isOrderFree } from '../../models/LSP';
+import {
+    buildPaymentAwaitParams,
+    isOrderFree,
+    LSPOrderState,
+    LSPService
+} from '../../models/LSP';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -483,23 +488,11 @@ export default class LSPS1OrderResponse extends React.Component<
                                                 onPress={() => {
                                                     navigation.navigate(
                                                         'LSPS1PaymentAwait',
-                                                        {
-                                                            orderId:
-                                                                orderResponse?.order_id,
-                                                            invoice:
-                                                                payment.bolt11
-                                                                    ?.invoice ||
-                                                                payment.lightning_invoice ||
-                                                                payment.bolt11_invoice,
-                                                            satAmount:
-                                                                payment.bolt11
-                                                                    ?.order_total_sat ||
-                                                                payment.order_total_sat ||
-                                                                payment.bolt11
-                                                                    ?.fee_total_sat ||
-                                                                payment.fee_total_sat,
-                                                            service: 'LSPS1'
-                                                        }
+                                                        buildPaymentAwaitParams(
+                                                            payment,
+                                                            orderResponse?.order_id,
+                                                            LSPService.LSPS1
+                                                        )
                                                     );
                                                 }}
                                             />

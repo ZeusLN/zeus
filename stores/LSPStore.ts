@@ -24,6 +24,10 @@ export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';
 
+// Upper bound for how long a custom-message get_order round trip may take before
+// the caller stops waiting. Resolves early as soon as the response arrives.
+const CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000;
+
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
@@ -53,6 +57,12 @@ export default class LSPStore {
     @observable public createExtensionOrderResponse: any = {};
     @observable public getExtensionOrderId: string;
     @observable public getExtensionOrderResponse: any = {};
+
+    // Resolve callbacks for in-flight custom-message get_order requests, invoked
+    // by handleCustomMessages when the matching response arrives so callers can
+    // await the round trip instead of racing a fixed delay.
+    private getOrderResponseResolver: (() => void) | null = null;
+    private getExtensionOrderResponseResolver: (() => void) | null = null;
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -579,6 +589,7 @@ export default class LSPStore {
                 this.getOrderResponse = data;
             }
             this.loadingLSPS1 = false;
+            this.getOrderResponseResolver?.();
             return true;
         } else if (data.id === this.getExtendableChannelsId) {
             if (data.error) {
@@ -613,6 +624,7 @@ export default class LSPStore {
                 this.getExtensionOrderResponse = data;
             }
             this.loadingLSPS7 = false;
+            this.getExtensionOrderResponseResolver?.();
             return true;
         }
         return false;
@@ -890,36 +902,56 @@ export default class LSPStore {
     }
 
     @action
-    public lsps1GetOrderCustomMessage(orderId: string, peer: string) {
+    public lsps1GetOrderCustomMessage(
+        orderId: string,
+        peer: string
+    ): Promise<void> {
         this.loadingLSPS1 = true;
 
         this.getOrderId = uuidv4();
         const method = 'lsps1.get_order';
 
-        this.sendCustomMessage({
-            peer,
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {
-                    order_id: orderId
-                },
-                id: this.getOrderId
+        return new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                this.getOrderResponseResolver = null;
+                resolve();
+            };
+            const timeoutId = setTimeout(
+                settle,
+                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
+            );
+            this.getOrderResponseResolver = settle;
+
+            this.sendCustomMessage({
+                peer,
+                type: CUSTOM_MESSAGE_TYPE,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {
+                        order_id: orderId
+                    },
+                    id: this.getOrderId
+                })
             })
-        })
-            .then((response) => {
-                console.log(
-                    `Response for custom message (${method}) received:`,
-                    response
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(
+                        `Response for custom message (${method}) received:`,
+                        response
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    settle();
+                });
+        });
     }
 
     // LSPS1 Native (for embedded LDK Node)
@@ -1225,29 +1257,46 @@ export default class LSPStore {
         this.getExtensionOrderId = uuidv4();
         const method = 'lsps7.get_order';
 
-        this.sendCustomMessage({
-            peer,
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {
-                    order_id: orderId
-                },
-                id: this.getExtensionOrderId
+        await new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                this.getExtensionOrderResponseResolver = null;
+                resolve();
+            };
+            const timeoutId = setTimeout(
+                settle,
+                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
+            );
+            this.getExtensionOrderResponseResolver = settle;
+
+            this.sendCustomMessage({
+                peer,
+                type: CUSTOM_MESSAGE_TYPE,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {
+                        order_id: orderId
+                    },
+                    id: this.getExtensionOrderId
+                })
             })
-        })
-            .then((response) => {
-                console.log(
-                    `Response for custom message (${method}) received:`,
-                    response
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(
+                        `Response for custom message (${method}) received:`,
+                        response
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    settle();
+                });
+        });
     };
 }

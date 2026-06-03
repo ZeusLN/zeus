@@ -23,7 +23,11 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { isOrderFree } from '../../models/LSP';
+import {
+    buildPaymentAwaitParams,
+    isOrderFree,
+    LSPService
+} from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -654,23 +658,11 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             ).then(() => {
                                                 navigation.navigate(
                                                     'LSPS7PaymentAwait',
-                                                    {
-                                                        orderId:
-                                                            result?.order_id,
-                                                        invoice:
-                                                            payment?.bolt11
-                                                                ?.invoice ||
-                                                            payment?.lightning_invoice ||
-                                                            payment?.bolt11_invoice,
-                                                        satAmount:
-                                                            payment?.bolt11
-                                                                ?.order_total_sat ||
-                                                            payment?.order_total_sat ||
-                                                            payment?.bolt11
-                                                                ?.fee_total_sat ||
-                                                            payment?.fee_total_sat,
-                                                        service: 'LSPS7'
-                                                    }
+                                                    buildPaymentAwaitParams(
+                                                        payment,
+                                                        result?.order_id,
+                                                        LSPService.LSPS7
+                                                    )
                                                 );
                                             });
                                         }
