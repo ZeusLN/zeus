@@ -15,6 +15,7 @@ import Amount from './Amount';
 import Button from '../components/Button';
 import LoadingIndicator from './LoadingIndicator';
 import ModalBox from './ModalBox';
+import { Portal } from './Portal';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -303,125 +304,60 @@ export default class UTXOPicker extends React.Component<
 
         return (
             <React.Fragment>
-                <ModalBox
-                    isOpen={showUtxoModal}
-                    style={{
-                        ...styles.sheet,
-                        backgroundColor: themeColor('modalBackground'),
-                        height: SCREEN_HEIGHT * 0.9
-                    }}
-                    swipeToClose={true}
-                    backdropPressToClose={true}
-                    backButtonClose={true}
-                    position="bottom"
-                    coverScreen={true}
-                    onClosed={this.closePicker}
-                >
-                    <View style={styles.sheetInner}>
-                        <View
-                            style={{
-                                ...styles.handle,
-                                backgroundColor: themeColor('secondaryText')
-                            }}
-                        />
-
-                        <Text
-                            style={[
-                                styles.sheetTitle,
-                                { color: themeColor('text') }
-                            ]}
-                        >
-                            {localeString('components.UTXOPicker.modal.title')}
-                        </Text>
-                        <Text
-                            style={[
-                                styles.sheetDescription,
-                                { color: themeColor('secondaryText') }
-                            ]}
-                        >
-                            {localeString(
-                                'components.UTXOPicker.modal.description'
-                            )}
-                        </Text>
-
-                        <View style={styles.amountBlock}>
-                            <Amount
-                                sats={selectedBalance}
-                                sensitive={true}
-                                toggleable
-                                jumboText
-                            />
-                            <View style={styles.selectionMetaRow}>
-                                <Text
-                                    style={[
-                                        styles.selectionMetaText,
-                                        { color: themeColor('secondaryText') }
-                                    ]}
-                                >
-                                    {`${localeString('general.selected')}: ${
-                                        utxosSelected.length
-                                    }`}
-                                </Text>
-                                {utxosSelected.length > 0 && (
-                                    <TouchableOpacity
-                                        onPress={this.clearPickerSelection}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={localeString(
-                                            'general.clear'
-                                        )}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.selectionMetaAction,
-                                                {
-                                                    color: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }
-                                            ]}
-                                        >
-                                            {localeString('general.clear')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </View>
-
-                        {BackendUtils.supportsAccounts() && (
-                            <AccountFilter
-                                default={account}
-                                items={accounts.filter(
-                                    (item: any) => !item.hidden
-                                )}
-                                refresh={(newAccount: string) => {
-                                    getUTXOs({ account: newAccount });
-                                    this.setState({ account: newAccount });
-                                }}
-                                onChangeAccount={() => {
-                                    this.setState({
-                                        utxosSelected: [],
-                                        selectedBalance: 0,
-                                        clearedDraftInModal: false
-                                    });
+                <Portal>
+                    <ModalBox
+                        isOpen={showUtxoModal}
+                        style={{
+                            ...styles.sheet,
+                            backgroundColor: themeColor('modalBackground'),
+                            height: SCREEN_HEIGHT * 0.9
+                        }}
+                        swipeToClose={true}
+                        backdropPressToClose={true}
+                        backButtonClose={true}
+                        position="bottom"
+                        onClosed={this.closePicker}
+                    >
+                        <View style={styles.sheetInner}>
+                            <View
+                                style={{
+                                    ...styles.handle,
+                                    backgroundColor: themeColor('secondaryText')
                                 }}
                             />
-                        )}
 
-                        <View
-                            style={{
-                                ...styles.body,
-                                backgroundColor: themeColor('background')
-                            }}
-                        >
-                            {loading ? (
-                                <View style={styles.loadingWrap}>
-                                    <LoadingIndicator />
-                                </View>
-                            ) : utxos.length === 0 ? (
-                                <View style={styles.emptyState}>
+                            <Text
+                                style={[
+                                    styles.sheetTitle,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {localeString(
+                                    'components.UTXOPicker.modal.title'
+                                )}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.sheetDescription,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {localeString(
+                                    'components.UTXOPicker.modal.description'
+                                )}
+                            </Text>
+
+                            <View style={styles.amountBlock}>
+                                <Amount
+                                    sats={selectedBalance}
+                                    sensitive={true}
+                                    toggleable
+                                    jumboText
+                                />
+                                <View style={styles.selectionMetaRow}>
                                     <Text
                                         style={[
-                                            styles.text,
+                                            styles.selectionMetaText,
                                             {
                                                 color: themeColor(
                                                     'secondaryText'
@@ -429,73 +365,152 @@ export default class UTXOPicker extends React.Component<
                                             }
                                         ]}
                                     >
-                                        {localeString(
-                                            'views.UTXOs.CoinControl.noUTXOs'
-                                        )}
+                                        {`${localeString(
+                                            'general.selected'
+                                        )}: ${utxosSelected.length}`}
                                     </Text>
-                                </View>
-                            ) : (
-                                <FlatList
-                                    showsVerticalScrollIndicator={false}
-                                    data={utxos}
-                                    contentContainerStyle={styles.listContent}
-                                    extraData={utxosSelected}
-                                    renderItem={(info) =>
-                                        this.renderUtxoItem(info, selectedSet)
-                                    }
-                                    keyExtractor={(item: Utxo) =>
-                                        item.getOutpoint ??
-                                        `${item.txid}:${String(item.output)}`
-                                    }
-                                    onEndReachedThreshold={50}
-                                    refreshing={loading}
-                                    onRefresh={() => getUTXOs({ account })}
-                                />
-                            )}
-                        </View>
-
-                        <View style={styles.footer}>
-                            <View style={styles.footerButton}>
-                                <Button
-                                    title={localeString(
-                                        'components.UTXOPicker.modal.set'
+                                    {utxosSelected.length > 0 && (
+                                        <TouchableOpacity
+                                            onPress={this.clearPickerSelection}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={localeString(
+                                                'general.clear'
+                                            )}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.selectionMetaAction,
+                                                    {
+                                                        color: themeColor(
+                                                            'highlight'
+                                                        )
+                                                    }
+                                                ]}
+                                            >
+                                                {localeString('general.clear')}
+                                            </Text>
+                                        </TouchableOpacity>
                                     )}
-                                    disabled={
-                                        loading ||
-                                        utxos.length === 0 ||
-                                        utxosSelected.length === 0
-                                    }
-                                    onPress={() => {
-                                        const {
-                                            utxosSelected,
-                                            selectedBalance
-                                        } = this.state;
-                                        this.setState({
-                                            showUtxoModal: false,
-                                            clearedDraftInModal: false,
-                                            utxosSet: utxosSelected,
-                                            setBalance: selectedBalance
-                                        });
+                                </View>
+                            </View>
 
-                                        onValueChange(
-                                            utxosSelected,
-                                            selectedBalance,
-                                            account
-                                        );
+                            {BackendUtils.supportsAccounts() && (
+                                <AccountFilter
+                                    default={account}
+                                    items={accounts.filter(
+                                        (item: any) => !item.hidden
+                                    )}
+                                    refresh={(newAccount: string) => {
+                                        getUTXOs({ account: newAccount });
+                                        this.setState({ account: newAccount });
+                                    }}
+                                    onChangeAccount={() => {
+                                        this.setState({
+                                            utxosSelected: [],
+                                            selectedBalance: 0,
+                                            clearedDraftInModal: false
+                                        });
                                     }}
                                 />
+                            )}
+
+                            <View
+                                style={{
+                                    ...styles.body,
+                                    backgroundColor: themeColor('background')
+                                }}
+                            >
+                                {loading ? (
+                                    <View style={styles.loadingWrap}>
+                                        <LoadingIndicator />
+                                    </View>
+                                ) : utxos.length === 0 ? (
+                                    <View style={styles.emptyState}>
+                                        <Text
+                                            style={[
+                                                styles.text,
+                                                {
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }
+                                            ]}
+                                        >
+                                            {localeString(
+                                                'views.UTXOs.CoinControl.noUTXOs'
+                                            )}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <FlatList
+                                        showsVerticalScrollIndicator={false}
+                                        data={utxos}
+                                        contentContainerStyle={
+                                            styles.listContent
+                                        }
+                                        extraData={utxosSelected}
+                                        renderItem={(info) =>
+                                            this.renderUtxoItem(
+                                                info,
+                                                selectedSet
+                                            )
+                                        }
+                                        keyExtractor={(item: Utxo) =>
+                                            item.getOutpoint ??
+                                            `${item.txid}:${String(
+                                                item.output
+                                            )}`
+                                        }
+                                        onEndReachedThreshold={50}
+                                        refreshing={loading}
+                                        onRefresh={() => getUTXOs({ account })}
+                                    />
+                                )}
                             </View>
 
-                            <View style={styles.footerButton}>
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={this.closePicker}
-                                    secondary
-                                />
+                            <View style={styles.footer}>
+                                <View style={styles.footerButton}>
+                                    <Button
+                                        title={localeString(
+                                            'components.UTXOPicker.modal.set'
+                                        )}
+                                        disabled={
+                                            loading ||
+                                            utxos.length === 0 ||
+                                            utxosSelected.length === 0
+                                        }
+                                        onPress={() => {
+                                            const {
+                                                utxosSelected,
+                                                selectedBalance
+                                            } = this.state;
+                                            this.setState({
+                                                showUtxoModal: false,
+                                                clearedDraftInModal: false,
+                                                utxosSet: utxosSelected,
+                                                setBalance: selectedBalance
+                                            });
+
+                                            onValueChange(
+                                                utxosSelected,
+                                                selectedBalance,
+                                                account
+                                            );
+                                        }}
+                                    />
+                                </View>
+
+                                <View style={styles.footerButton}>
+                                    <Button
+                                        title={localeString('general.cancel')}
+                                        onPress={this.closePicker}
+                                        secondary
+                                    />
+                                </View>
                             </View>
                         </View>
-                    </View>
-                </ModalBox>
+                    </ModalBox>
+                </Portal>
 
                 <View>
                     <Text

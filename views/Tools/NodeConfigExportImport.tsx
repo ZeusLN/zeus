@@ -4,7 +4,6 @@ import {
     StyleSheet,
     Alert,
     ScrollView,
-    Modal,
     TouchableOpacity,
     Platform,
     Image
@@ -29,6 +28,7 @@ import Text from '../../components/Text';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import ShowHideToggle from '../../components/ShowHideToggle';
+import CenteredModal from '../../components/Modals/CenteredModal';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor, isLightTheme } from '../../utils/ThemeUtils';
@@ -157,47 +157,50 @@ export default class NodeConfigExportImport extends React.Component<
         const { activeModal } = this.state;
 
         return (
-            <Modal
-                animationType="slide"
-                transparent
-                visible={activeModal === 'info'}
-                onRequestClose={() => this.setState({ activeModal: 'none' })}
+            <CenteredModal
+                isOpen={activeModal === 'info'}
+                onClose={() => {
+                    if (this.state.activeModal === 'info')
+                        this.setState({ activeModal: 'none' });
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
+                <View
+                    style={{
+                        backgroundColor: isLightTheme()
+                            ? '#ffffff'
+                            : themeColor('secondary'),
+                        borderRadius: 24,
+                        padding: 20,
+                        width: '85%',
+                        maxHeight: '80%',
+                        alignItems: 'center'
+                    }}
+                >
+                    <Text
                         style={{
-                            backgroundColor: isLightTheme()
-                                ? '#ffffff'
-                                : themeColor('secondary'),
-                            borderRadius: 24,
-                            padding: 20,
-                            alignItems: 'center'
+                            fontSize: 20,
+                            marginBottom: 20
                         }}
                     >
-                        <Text
-                            style={{
-                                fontSize: 20,
-                                marginBottom: 20
-                            }}
-                        >
-                            {Platform.OS === 'android'
-                                ? localeString(
-                                      'views.Tools.nodeConfigExportImport.explainerAndroid'
-                                  )
-                                : localeString(
-                                      'views.Tools.nodeConfigExportImport.explaineriOS'
-                                  )}
-                        </Text>
-                        <Button
-                            title={localeString('general.ok')}
-                            onPress={() =>
-                                this.setState({ activeModal: 'none' })
-                            }
-                            secondary
-                        />
-                    </View>
+                        {Platform.OS === 'android'
+                            ? localeString(
+                                  'views.Tools.nodeConfigExportImport.explainerAndroid'
+                              )
+                            : localeString(
+                                  'views.Tools.nodeConfigExportImport.explaineriOS'
+                              )}
+                    </Text>
+                    <Button
+                        title={localeString('general.ok')}
+                        onPress={() =>
+                            this.setState({
+                                activeModal: 'none'
+                            })
+                        }
+                        secondary
+                    />
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -217,208 +220,197 @@ export default class NodeConfigExportImport extends React.Component<
                 ).length;
 
         return (
-            <Modal
-                visible={activeModal === 'nodeSelection'}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => {
-                    this.setState({
-                        selectedNodes: []
-                    });
+            <CenteredModal
+                isOpen={activeModal === 'nodeSelection'}
+                onClose={() => {
+                    if (this.state.activeModal === 'nodeSelection')
+                        this.setState({
+                            activeModal: 'none',
+                            selectedNodes: []
+                        });
                 }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                maxHeight: '80%',
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background')
-                            }
-                        ]}
-                    >
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {nodes.length > 0 && (
-                                <CheckBox
-                                    title={localeString(
-                                        'views.Tools.nodeConfigExportImport.selectAllConfigs'
-                                    )}
-                                    checked={allNodesSelected}
-                                    onPress={() => {
-                                        if (allNodesSelected) {
-                                            this.setState({
-                                                selectedNodes: []
-                                            });
-                                        } else {
-                                            const selectableNodes = nodes
-                                                .map((_, index) => index)
-                                                .filter(
-                                                    (index) =>
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'embedded-lnd' &&
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'ldk-node'
-                                                );
-                                            this.setState({
-                                                selectedNodes: selectableNodes
-                                            });
-                                        }
-                                    }}
-                                    containerStyle={{
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 0,
-                                        marginBottom: 15
-                                    }}
-                                    textStyle={{
-                                        color: themeColor('text'),
-                                        fontWeight: 'bold'
-                                    }}
-                                    checkedColor={themeColor('text')}
-                                />
-                            )}
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '80%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {nodes.length > 0 && (
+                            <CheckBox
+                                title={localeString(
+                                    'views.Tools.nodeConfigExportImport.selectAllConfigs'
+                                )}
+                                checked={allNodesSelected}
+                                onPress={() => {
+                                    if (allNodesSelected) {
+                                        this.setState({
+                                            selectedNodes: []
+                                        });
+                                    } else {
+                                        const selectableNodes = nodes
+                                            .map((_, index) => index)
+                                            .filter(
+                                                (index) =>
+                                                    nodes[index]
+                                                        .implementation !==
+                                                        'embedded-lnd' &&
+                                                    nodes[index]
+                                                        .implementation !==
+                                                        'ldk-node'
+                                            );
+                                        this.setState({
+                                            selectedNodes: selectableNodes
+                                        });
+                                    }
+                                }}
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 0,
+                                    marginBottom: 15
+                                }}
+                                textStyle={{
+                                    color: themeColor('text'),
+                                    fontWeight: 'bold'
+                                }}
+                                checkedColor={themeColor('text')}
+                            />
+                        )}
 
-                            {nodes.map((node: Node, index: number) => {
-                                const isEmbedded =
-                                    node.implementation === 'embedded-lnd' ||
-                                    node.implementation === 'ldk-node';
-                                const isSelected =
-                                    selectedNodes.includes(index);
+                        {nodes.map((node: Node, index: number) => {
+                            const isEmbedded =
+                                node.implementation === 'embedded-lnd' ||
+                                node.implementation === 'ldk-node';
+                            const isSelected = selectedNodes.includes(index);
 
-                                return (
-                                    <View key={index} style={styles.nodeItem}>
-                                        <CheckBox
-                                            title={
-                                                <View style={styles.nodeInfo}>
-                                                    {node.photo ? (
-                                                        <Image
-                                                            source={{
-                                                                uri: getPhoto(
-                                                                    node.photo
-                                                                )
-                                                            }}
-                                                            style={
-                                                                styles.nodePhoto
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <NodeIdenticon
-                                                            selectedNode={node}
-                                                            width={42}
-                                                            rounded
-                                                        />
-                                                    )}
-                                                    <View
-                                                        style={styles.nodeText}
+                            return (
+                                <View key={index} style={styles.nodeItem}>
+                                    <CheckBox
+                                        title={
+                                            <View style={styles.nodeInfo}>
+                                                {node.photo ? (
+                                                    <Image
+                                                        source={{
+                                                            uri: getPhoto(
+                                                                node.photo
+                                                            )
+                                                        }}
+                                                        style={styles.nodePhoto}
+                                                    />
+                                                ) : (
+                                                    <NodeIdenticon
+                                                        selectedNode={node}
+                                                        width={42}
+                                                        rounded
+                                                    />
+                                                )}
+                                                <View style={styles.nodeText}>
+                                                    <Text
+                                                        numberOfLines={1}
+                                                        ellipsizeMode="tail"
+                                                        style={{
+                                                            color: isEmbedded
+                                                                ? themeColor(
+                                                                      'secondaryText'
+                                                                  )
+                                                                : themeColor(
+                                                                      'text'
+                                                                  ),
+                                                            fontSize: 16
+                                                        }}
                                                     >
-                                                        <Text
-                                                            numberOfLines={1}
-                                                            ellipsizeMode="tail"
-                                                            style={{
-                                                                color: isEmbedded
-                                                                    ? themeColor(
-                                                                          'secondaryText'
-                                                                      )
-                                                                    : themeColor(
-                                                                          'text'
-                                                                      ),
-                                                                fontSize: 16
-                                                            }}
-                                                        >
-                                                            {NodeTitle(node)}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 12
-                                                            }}
-                                                        >
-                                                            {isEmbedded
-                                                                ? `${localeString(
-                                                                      'views.Tools.nodeConfigExportImport.notExportable'
-                                                                  ).toUpperCase()} - ${getImplementationDisplayName(
-                                                                      node.implementation
-                                                                  )}`
-                                                                : getImplementationDisplayName(
-                                                                      node.implementation
-                                                                  )}
-                                                        </Text>
-                                                    </View>
+                                                        {NodeTitle(node)}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 12
+                                                        }}
+                                                    >
+                                                        {isEmbedded
+                                                            ? `${localeString(
+                                                                  'views.Tools.nodeConfigExportImport.notExportable'
+                                                              ).toUpperCase()} - ${getImplementationDisplayName(
+                                                                  node.implementation
+                                                              )}`
+                                                            : getImplementationDisplayName(
+                                                                  node.implementation
+                                                              )}
+                                                    </Text>
                                                 </View>
-                                            }
-                                            checked={isSelected}
-                                            disabled={isEmbedded}
-                                            onPress={() => {
-                                                if (isEmbedded) return;
+                                            </View>
+                                        }
+                                        checked={isSelected}
+                                        disabled={isEmbedded}
+                                        onPress={() => {
+                                            if (isEmbedded) return;
 
-                                                this.setState((prevState) => ({
-                                                    selectedNodes:
-                                                        prevState.selectedNodes.includes(
-                                                            index
-                                                        )
-                                                            ? prevState.selectedNodes.filter(
-                                                                  (n) =>
-                                                                      n !==
-                                                                      index
-                                                              )
-                                                            : [
-                                                                  ...prevState.selectedNodes,
-                                                                  index
-                                                              ]
-                                                }));
-                                            }}
-                                            iconRight={true}
-                                            containerStyle={{
-                                                backgroundColor: 'transparent',
-                                                borderWidth: 0,
-                                                marginBottom: 10,
-                                                padding: 0
-                                            }}
-                                            uncheckedColor={
-                                                isEmbedded
-                                                    ? themeColor(
-                                                          'secondaryText'
-                                                      )
-                                                    : themeColor('text')
-                                            }
-                                            checkedColor={themeColor('text')}
-                                        />
-                                    </View>
-                                );
-                            })}
-                        </ScrollView>
+                                            this.setState((prevState) => ({
+                                                selectedNodes:
+                                                    prevState.selectedNodes.includes(
+                                                        index
+                                                    )
+                                                        ? prevState.selectedNodes.filter(
+                                                              (n) => n !== index
+                                                          )
+                                                        : [
+                                                              ...prevState.selectedNodes,
+                                                              index
+                                                          ]
+                                            }));
+                                        }}
+                                        iconRight={true}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderWidth: 0,
+                                            marginBottom: 10,
+                                            padding: 0
+                                        }}
+                                        uncheckedColor={
+                                            isEmbedded
+                                                ? themeColor('secondaryText')
+                                                : themeColor('text')
+                                        }
+                                        checkedColor={themeColor('text')}
+                                    />
+                                </View>
+                            );
+                        })}
+                    </ScrollView>
 
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={localeString('general.confirm')}
-                                onPress={() => {
-                                    this.setState({
-                                        activeModal: 'export',
-                                        useEncryption: true
-                                    });
-                                }}
-                                disabled={selectedNodes.length === 0}
-                                buttonStyle={{ marginBottom: 10 }}
-                            />
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={() => {
-                                    this.setState({
-                                        activeModal: 'none',
-                                        selectedNodes: []
-                                    });
-                                }}
-                                secondary
-                            />
-                        </View>
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString('general.confirm')}
+                            onPress={() => {
+                                this.setState({
+                                    activeModal: 'export',
+                                    useEncryption: true
+                                });
+                            }}
+                            disabled={selectedNodes.length === 0}
+                            buttonStyle={{ marginBottom: 10 }}
+                        />
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() => {
+                                this.setState({
+                                    activeModal: 'none',
+                                    selectedNodes: []
+                                });
+                            }}
+                            secondary
+                        />
                     </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -427,100 +419,106 @@ export default class NodeConfigExportImport extends React.Component<
             this.state;
 
         return (
-            <Modal
-                visible={activeModal === 'export'}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={this.resetExportState}
+            <CenteredModal
+                isOpen={activeModal === 'export'}
+                onClose={() => {
+                    if (this.state.activeModal === 'export')
+                        this.resetExportState();
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background')
-                            }
-                        ]}
-                    >
-                        <CheckBox
-                            title={localeString('general.encrypt')}
-                            checked={useEncryption}
-                            onPress={() =>
-                                this.setState({ useEncryption: !useEncryption })
-                            }
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderWidth: 0
-                            }}
-                            textStyle={{
-                                color: themeColor('text')
-                            }}
-                            checkedColor={themeColor('text')}
-                        />
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '80%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <CheckBox
+                        title={localeString('general.encrypt')}
+                        checked={useEncryption}
+                        onPress={() =>
+                            this.setState({
+                                useEncryption: !useEncryption
+                            })
+                        }
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderWidth: 0
+                        }}
+                        textStyle={{
+                            color: themeColor('text')
+                        }}
+                        checkedColor={themeColor('text')}
+                    />
 
-                        {useEncryption && (
-                            <>
-                                <TextInput
-                                    placeholder={localeString(
-                                        'views.Tools.nodeConfigExportImport.password'
-                                    )}
-                                    value={exportPassword}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ exportPassword: text })
-                                    }
-                                    secureTextEntry
-                                />
-                                <TextInput
-                                    placeholder={localeString(
-                                        'views.Tools.nodeConfigExportImport.confirmPassword'
-                                    )}
-                                    value={confirmPassword}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ confirmPassword: text })
-                                    }
-                                    secureTextEntry
-                                />
-                            </>
-                        )}
-
-                        {!useEncryption && (
-                            <Text
-                                style={{
-                                    color: themeColor('error'),
-                                    fontWeight: 'bold',
-                                    marginBottom: 10
-                                }}
-                            >
-                                {localeString(
-                                    'views.Tools.nodeConfigExportImport.unencryptedWarning'
+                    {useEncryption && (
+                        <>
+                            <TextInput
+                                placeholder={localeString(
+                                    'views.Tools.nodeConfigExportImport.password'
                                 )}
-                            </Text>
-                        )}
-
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={localeString(
-                                    'views.Tools.nodeConfigExportImport.exportConfigs'
-                                )}
-                                onPress={this.executeExport}
-                                disabled={
-                                    useEncryption &&
-                                    (!exportPassword ||
-                                        exportPassword !== confirmPassword)
+                                value={exportPassword}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        exportPassword: text
+                                    })
                                 }
-                                buttonStyle={{ marginBottom: 10 }}
+                                secureTextEntry
                             />
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={this.resetExportState}
-                                secondary
+                            <TextInput
+                                placeholder={localeString(
+                                    'views.Tools.nodeConfigExportImport.confirmPassword'
+                                )}
+                                value={confirmPassword}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        confirmPassword: text
+                                    })
+                                }
+                                secureTextEntry
                             />
-                        </View>
+                        </>
+                    )}
+
+                    {!useEncryption && (
+                        <Text
+                            style={{
+                                color: themeColor('error'),
+                                fontWeight: 'bold',
+                                marginBottom: 10
+                            }}
+                        >
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.unencryptedWarning'
+                            )}
+                        </Text>
+                    )}
+
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString(
+                                'views.Tools.nodeConfigExportImport.exportConfigs'
+                            )}
+                            onPress={this.executeExport}
+                            disabled={
+                                useEncryption &&
+                                (!exportPassword ||
+                                    exportPassword !== confirmPassword)
+                            }
+                            buttonStyle={{ marginBottom: 10 }}
+                        />
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={this.resetExportState}
+                            secondary
+                        />
                     </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -642,68 +640,71 @@ export default class NodeConfigExportImport extends React.Component<
             this.state;
 
         return (
-            <Modal
-                visible={activeModal === 'password'}
-                transparent={true}
-                animationType="slide"
+            <CenteredModal
+                isOpen={activeModal === 'password'}
+                onClose={() => {
+                    if (this.state.activeModal === 'password')
+                        this.resetImportState();
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background')
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '80%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <Text style={styles.modalTitle}>
+                        {localeString('views.Lockscreen.enterPassword')}
+                    </Text>
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            placeholder={'****************'}
+                            value={importPassword}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    importPassword: text
+                                })
                             }
-                        ]}
-                    >
-                        <Text style={styles.modalTitle}>
-                            {localeString('views.Lockscreen.enterPassword')}
-                        </Text>
-
-                        <View style={styles.inputContainer}>
-                            <TextInput
-                                placeholder={'****************'}
-                                value={importPassword}
-                                onChangeText={(text: string) =>
-                                    this.setState({ importPassword: text })
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            secureTextEntry={importPasswordHidden}
+                            style={styles.textInput}
+                        />
+                        <View style={styles.showHideToggle}>
+                            <ShowHideToggle
+                                onPress={() =>
+                                    this.setState({
+                                        importPasswordHidden:
+                                            !importPasswordHidden
+                                    })
                                 }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                secureTextEntry={importPasswordHidden}
-                                style={styles.textInput}
-                            />
-                            <View style={styles.showHideToggle}>
-                                <ShowHideToggle
-                                    onPress={() =>
-                                        this.setState({
-                                            importPasswordHidden:
-                                                !importPasswordHidden
-                                        })
-                                    }
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={localeString('general.proceed')}
-                                onPress={() => {
-                                    this.handlePasswordSubmit(importPassword);
-                                }}
-                                disabled={!importPassword}
-                                buttonStyle={{ marginBottom: 10 }}
-                            />
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={this.resetImportState}
-                                secondary
                             />
                         </View>
                     </View>
+
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString('general.proceed')}
+                            onPress={() => {
+                                this.handlePasswordSubmit(importPassword);
+                            }}
+                            disabled={!importPassword}
+                            buttonStyle={{ marginBottom: 10 }}
+                        />
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={this.resetImportState}
+                            secondary
+                        />
+                    </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -715,157 +716,152 @@ export default class NodeConfigExportImport extends React.Component<
             selectedImportNodes.length === importNodes.length;
 
         return (
-            <Modal
-                visible={activeModal === 'importNodeSelection'}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={this.resetImportState}
+            <CenteredModal
+                isOpen={activeModal === 'importNodeSelection'}
+                onClose={() => {
+                    if (this.state.activeModal === 'importNodeSelection')
+                        this.resetImportState();
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                maxHeight: '80%',
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background')
-                            }
-                        ]}
-                    >
-                        <Text style={styles.modalTitle}>
-                            {localeString(
-                                'views.Tools.nodeConfigExportImport.selectConfigsToImport'
-                            )}
-                        </Text>
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '80%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <Text style={styles.modalTitle}>
+                        {localeString(
+                            'views.Tools.nodeConfigExportImport.selectConfigsToImport'
+                        )}
+                    </Text>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {importNodes.length > 1 && (
-                                <CheckBox
-                                    title={localeString(
-                                        'views.Tools.nodeConfigExportImport.selectAllConfigs'
-                                    )}
-                                    checked={allNodesSelected}
-                                    onPress={() => {
-                                        if (allNodesSelected) {
-                                            this.setState({
-                                                selectedImportNodes: []
-                                            });
-                                        } else {
-                                            this.setState({
-                                                selectedImportNodes:
-                                                    importNodes.map((_, i) => i)
-                                            });
-                                        }
-                                    }}
-                                    containerStyle={{
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 0,
-                                        marginBottom: 15
-                                    }}
-                                    textStyle={{
-                                        color: themeColor('text'),
-                                        fontWeight: 'bold'
-                                    }}
-                                    checkedColor={themeColor('text')}
-                                />
-                            )}
-
-                            {importNodes.map((node: Node, index: number) => {
-                                const isSelected =
-                                    selectedImportNodes.includes(index);
-
-                                return (
-                                    <View key={index} style={styles.nodeItem}>
-                                        <CheckBox
-                                            title={
-                                                <View style={styles.nodeInfo}>
-                                                    <NodeIdenticon
-                                                        selectedNode={node}
-                                                        width={42}
-                                                        rounded
-                                                    />
-                                                    <View
-                                                        style={styles.nodeText}
-                                                    >
-                                                        <Text
-                                                            numberOfLines={1}
-                                                            ellipsizeMode="tail"
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                fontSize: 16
-                                                            }}
-                                                        >
-                                                            {NodeTitle(node)}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 12
-                                                            }}
-                                                        >
-                                                            {getImplementationDisplayName(
-                                                                node.implementation
-                                                            )}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                            }
-                                            checked={isSelected}
-                                            onPress={() => {
-                                                this.setState((prevState) => ({
-                                                    selectedImportNodes:
-                                                        prevState.selectedImportNodes.includes(
-                                                            index
-                                                        )
-                                                            ? prevState.selectedImportNodes.filter(
-                                                                  (n) =>
-                                                                      n !==
-                                                                      index
-                                                              )
-                                                            : [
-                                                                  ...prevState.selectedImportNodes,
-                                                                  index
-                                                              ]
-                                                }));
-                                            }}
-                                            iconRight={true}
-                                            containerStyle={{
-                                                backgroundColor: 'transparent',
-                                                borderWidth: 0,
-                                                marginBottom: 10,
-                                                padding: 0
-                                            }}
-                                            uncheckedColor={themeColor('text')}
-                                            checkedColor={themeColor('text')}
-                                        />
-                                    </View>
-                                );
-                            })}
-                        </ScrollView>
-
-                        <View style={styles.buttonContainer}>
-                            <Button
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {importNodes.length > 1 && (
+                            <CheckBox
                                 title={localeString(
-                                    'views.Tools.nodeConfigExportImport.importSelected'
+                                    'views.Tools.nodeConfigExportImport.selectAllConfigs'
                                 )}
-                                onPress={this.executeImport}
-                                disabled={selectedImportNodes.length === 0}
-                                buttonStyle={{ marginBottom: 10 }}
+                                checked={allNodesSelected}
+                                onPress={() => {
+                                    if (allNodesSelected) {
+                                        this.setState({
+                                            selectedImportNodes: []
+                                        });
+                                    } else {
+                                        this.setState({
+                                            selectedImportNodes:
+                                                importNodes.map((_, i) => i)
+                                        });
+                                    }
+                                }}
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 0,
+                                    marginBottom: 15
+                                }}
+                                textStyle={{
+                                    color: themeColor('text'),
+                                    fontWeight: 'bold'
+                                }}
+                                checkedColor={themeColor('text')}
                             />
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={this.resetImportState}
-                                secondary
-                            />
-                        </View>
+                        )}
+
+                        {importNodes.map((node: Node, index: number) => {
+                            const isSelected =
+                                selectedImportNodes.includes(index);
+
+                            return (
+                                <View key={index} style={styles.nodeItem}>
+                                    <CheckBox
+                                        title={
+                                            <View style={styles.nodeInfo}>
+                                                <NodeIdenticon
+                                                    selectedNode={node}
+                                                    width={42}
+                                                    rounded
+                                                />
+                                                <View style={styles.nodeText}>
+                                                    <Text
+                                                        numberOfLines={1}
+                                                        ellipsizeMode="tail"
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontSize: 16
+                                                        }}
+                                                    >
+                                                        {NodeTitle(node)}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 12
+                                                        }}
+                                                    >
+                                                        {getImplementationDisplayName(
+                                                            node.implementation
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        }
+                                        checked={isSelected}
+                                        onPress={() => {
+                                            this.setState((prevState) => ({
+                                                selectedImportNodes:
+                                                    prevState.selectedImportNodes.includes(
+                                                        index
+                                                    )
+                                                        ? prevState.selectedImportNodes.filter(
+                                                              (n) => n !== index
+                                                          )
+                                                        : [
+                                                              ...prevState.selectedImportNodes,
+                                                              index
+                                                          ]
+                                            }));
+                                        }}
+                                        iconRight={true}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderWidth: 0,
+                                            marginBottom: 10,
+                                            padding: 0
+                                        }}
+                                        uncheckedColor={themeColor('text')}
+                                        checkedColor={themeColor('text')}
+                                    />
+                                </View>
+                            );
+                        })}
+                    </ScrollView>
+
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString(
+                                'views.Tools.nodeConfigExportImport.importSelected'
+                            )}
+                            onPress={this.executeImport}
+                            disabled={selectedImportNodes.length === 0}
+                            buttonStyle={{ marginBottom: 10 }}
+                        />
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={this.resetImportState}
+                            secondary
+                        />
                     </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -1118,112 +1114,109 @@ export default class NodeConfigExportImport extends React.Component<
         const hasRecoverableData = recoverableSettings.length > 0;
 
         return (
-            <Modal
-                animationType="slide"
-                transparent
-                visible={activeModal === 'recovery'}
-                onRequestClose={this.resetRecoveryState}
+            <CenteredModal
+                isOpen={activeModal === 'recovery'}
+                onClose={() => {
+                    if (this.state.activeModal === 'recovery')
+                        this.resetRecoveryState();
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background'),
-                                maxHeight: '85%'
-                            }
-                        ]}
-                    >
-                        <Text style={styles.modalTitle}>
-                            {localeString(
-                                'views.Tools.nodeConfigExportImport.recovery.title'
-                            )}
-                        </Text>
-
-                        {isScanning ? (
-                            <View style={styles.scanningContainer}>
-                                <LoadingIndicator />
-                                <Text style={{ marginTop: 15 }}>
-                                    {localeString(
-                                        'views.Tools.nodeConfigExportImport.recovery.scanning'
-                                    )}
-                                </Text>
-                            </View>
-                        ) : (
-                            <ScrollView
-                                style={{ maxHeight: 400 }}
-                                showsVerticalScrollIndicator={false}
-                            >
-                                {Platform.OS === 'ios' && (
-                                    <View style={styles.warningBanner}>
-                                        <Icon
-                                            name="alert-circle"
-                                            type="feather"
-                                            color={themeColor('warning')}
-                                            size={18}
-                                        />
-                                        <Text style={styles.warningBannerText}>
-                                            {localeString(
-                                                'views.Tools.nodeConfigExportImport.recovery.iOSWarning'
-                                            )}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {hasRecoverableData ? (
-                                    <>
-                                        <Text style={styles.recoverySubtitle}>
-                                            {localeString(
-                                                'views.Tools.nodeConfigExportImport.recovery.foundData'
-                                            )}
-                                        </Text>
-                                        {recoverableSettings.map(
-                                            (result, index) =>
-                                                this.renderRecoveryItem(
-                                                    result,
-                                                    index
-                                                )
-                                        )}
-                                    </>
-                                ) : scanResult ? (
-                                    <View style={styles.emptyState}>
-                                        <Text style={styles.emptyStateText}>
-                                            {localeString(
-                                                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
-                                            )}
-                                        </Text>
-                                        <Text style={styles.emptyStateSubtext}>
-                                            {localeString(
-                                                'views.Tools.nodeConfigExportImport.recovery.noDataFoundDesc'
-                                            )}
-                                        </Text>
-                                    </View>
-                                ) : null}
-                            </ScrollView>
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '85%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <Text style={styles.modalTitle}>
+                        {localeString(
+                            'views.Tools.nodeConfigExportImport.recovery.title'
                         )}
+                    </Text>
 
-                        <View style={styles.buttonContainer}>
-                            {!isScanning && scanResult && (
-                                <Button
-                                    title={localeString(
-                                        'views.Tools.nodeConfigExportImport.recovery.rescan'
-                                    )}
-                                    onPress={() => this.handleRecoveryScan()}
-                                    secondary
-                                    buttonStyle={{ marginBottom: 10 }}
-                                />
-                            )}
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={this.resetRecoveryState}
-                                secondary
-                            />
+                    {isScanning ? (
+                        <View style={styles.scanningContainer}>
+                            <LoadingIndicator />
+                            <Text style={{ marginTop: 15 }}>
+                                {localeString(
+                                    'views.Tools.nodeConfigExportImport.recovery.scanning'
+                                )}
+                            </Text>
                         </View>
+                    ) : (
+                        <ScrollView
+                            style={{ maxHeight: 400 }}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {Platform.OS === 'ios' && (
+                                <View style={styles.warningBanner}>
+                                    <Icon
+                                        name="alert-circle"
+                                        type="feather"
+                                        color={themeColor('warning')}
+                                        size={18}
+                                    />
+                                    <Text style={styles.warningBannerText}>
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.recovery.iOSWarning'
+                                        )}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {hasRecoverableData ? (
+                                <>
+                                    <Text style={styles.recoverySubtitle}>
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.recovery.foundData'
+                                        )}
+                                    </Text>
+                                    {recoverableSettings.map((result, index) =>
+                                        this.renderRecoveryItem(result, index)
+                                    )}
+                                </>
+                            ) : scanResult ? (
+                                <View style={styles.emptyState}>
+                                    <Text style={styles.emptyStateText}>
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+                                        )}
+                                    </Text>
+                                    <Text style={styles.emptyStateSubtext}>
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.recovery.noDataFoundDesc'
+                                        )}
+                                    </Text>
+                                </View>
+                            ) : null}
+                        </ScrollView>
+                    )}
+
+                    <View style={styles.buttonContainer}>
+                        {!isScanning && scanResult && (
+                            <Button
+                                title={localeString(
+                                    'views.Tools.nodeConfigExportImport.recovery.rescan'
+                                )}
+                                onPress={() => this.handleRecoveryScan()}
+                                secondary
+                                buttonStyle={{
+                                    marginBottom: 10
+                                }}
+                            />
+                        )}
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={this.resetRecoveryState}
+                            secondary
+                        />
                     </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -1291,177 +1284,168 @@ export default class NodeConfigExportImport extends React.Component<
             selectedRecoveryNodes.length === recoveryNodes.length;
 
         return (
-            <Modal
-                animationType="slide"
-                transparent
-                visible={activeModal === 'recoveryNodeSelection'}
-                onRequestClose={() =>
-                    this.setState({ activeModal: 'recovery' })
-                }
+            <CenteredModal
+                isOpen={activeModal === 'recoveryNodeSelection'}
+                onClose={() => {
+                    if (this.state.activeModal === 'recoveryNodeSelection')
+                        this.setState({ activeModal: 'recovery' });
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                maxHeight: '80%',
-                                backgroundColor: isLightTheme()
-                                    ? '#ffffff'
-                                    : themeColor('background')
-                            }
-                        ]}
-                    >
-                        <Text style={styles.modalTitle}>
+                <View
+                    style={[
+                        styles.modalContent,
+                        {
+                            maxHeight: '80%',
+                            backgroundColor: isLightTheme()
+                                ? '#ffffff'
+                                : themeColor('background')
+                        }
+                    ]}
+                >
+                    <Text style={styles.modalTitle}>
+                        {localeString(
+                            'views.Tools.nodeConfigExportImport.recovery.selectConfigsToRestore'
+                        )}
+                    </Text>
+
+                    <View style={styles.previewSection}>
+                        <Text style={styles.previewLabel}>
                             {localeString(
-                                'views.Tools.nodeConfigExportImport.recovery.selectConfigsToRestore'
+                                'views.Tools.nodeConfigExportImport.recovery.source'
                             )}
                         </Text>
+                        <Text style={styles.previewValue}>{sourceName}</Text>
+                    </View>
 
-                        <View style={styles.previewSection}>
-                            <Text style={styles.previewLabel}>
-                                {localeString(
-                                    'views.Tools.nodeConfigExportImport.recovery.source'
-                                )}
-                            </Text>
-                            <Text style={styles.previewValue}>
-                                {sourceName}
-                            </Text>
-                        </View>
-
-                        <ScrollView
-                            style={{ maxHeight: 300 }}
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {recoveryNodes.length > 1 && (
-                                <CheckBox
-                                    title={localeString(
-                                        'views.Tools.nodeConfigExportImport.selectAllConfigs'
-                                    )}
-                                    checked={allNodesSelected}
-                                    onPress={() => {
-                                        if (allNodesSelected) {
-                                            this.setState({
-                                                selectedRecoveryNodes: []
-                                            });
-                                        } else {
-                                            this.setState({
-                                                selectedRecoveryNodes:
-                                                    recoveryNodes.map(
-                                                        (_, i) => i
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    containerStyle={{
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 0,
-                                        marginBottom: 15
-                                    }}
-                                    textStyle={{
-                                        color: themeColor('text'),
-                                        fontWeight: 'bold'
-                                    }}
-                                    checkedColor={themeColor('text')}
-                                />
-                            )}
-
-                            {recoveryNodes.map((node: Node, index: number) => {
-                                const isSelected =
-                                    selectedRecoveryNodes.includes(index);
-
-                                return (
-                                    <View key={index} style={styles.nodeItem}>
-                                        <CheckBox
-                                            title={
-                                                <View style={styles.nodeInfo}>
-                                                    <NodeIdenticon
-                                                        selectedNode={node}
-                                                        width={42}
-                                                        rounded
-                                                    />
-                                                    <View
-                                                        style={styles.nodeText}
-                                                    >
-                                                        <Text
-                                                            numberOfLines={1}
-                                                            ellipsizeMode="tail"
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                fontSize: 16
-                                                            }}
-                                                        >
-                                                            {NodeTitle(node)}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 12
-                                                            }}
-                                                        >
-                                                            {getImplementationDisplayName(
-                                                                node.implementation
-                                                            )}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                            }
-                                            checked={isSelected}
-                                            onPress={() => {
-                                                this.setState((prevState) => ({
-                                                    selectedRecoveryNodes:
-                                                        prevState.selectedRecoveryNodes.includes(
-                                                            index
-                                                        )
-                                                            ? prevState.selectedRecoveryNodes.filter(
-                                                                  (n) =>
-                                                                      n !==
-                                                                      index
-                                                              )
-                                                            : [
-                                                                  ...prevState.selectedRecoveryNodes,
-                                                                  index
-                                                              ]
-                                                }));
-                                            }}
-                                            iconRight={true}
-                                            containerStyle={{
-                                                backgroundColor: 'transparent',
-                                                borderWidth: 0,
-                                                marginBottom: 10,
-                                                padding: 0
-                                            }}
-                                            uncheckedColor={themeColor('text')}
-                                            checkedColor={themeColor('text')}
-                                        />
-                                    </View>
-                                );
-                            })}
-                        </ScrollView>
-
-                        <View style={styles.buttonContainer}>
-                            <Button
+                    <ScrollView
+                        style={{ maxHeight: 300 }}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {recoveryNodes.length > 1 && (
+                            <CheckBox
                                 title={localeString(
-                                    'views.Tools.nodeConfigExportImport.recovery.restoreSelected'
+                                    'views.Tools.nodeConfigExportImport.selectAllConfigs'
                                 )}
-                                onPress={this.handleRecoveryRestore}
-                                disabled={selectedRecoveryNodes.length === 0}
-                                buttonStyle={{ marginBottom: 10 }}
+                                checked={allNodesSelected}
+                                onPress={() => {
+                                    if (allNodesSelected) {
+                                        this.setState({
+                                            selectedRecoveryNodes: []
+                                        });
+                                    } else {
+                                        this.setState({
+                                            selectedRecoveryNodes:
+                                                recoveryNodes.map((_, i) => i)
+                                        });
+                                    }
+                                }}
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 0,
+                                    marginBottom: 15
+                                }}
+                                textStyle={{
+                                    color: themeColor('text'),
+                                    fontWeight: 'bold'
+                                }}
+                                checkedColor={themeColor('text')}
                             />
-                            <Button
-                                title={localeString('general.goBack')}
-                                onPress={() =>
-                                    this.setState({ activeModal: 'recovery' })
-                                }
-                                secondary
-                            />
-                        </View>
+                        )}
+
+                        {recoveryNodes.map((node: Node, index: number) => {
+                            const isSelected =
+                                selectedRecoveryNodes.includes(index);
+
+                            return (
+                                <View key={index} style={styles.nodeItem}>
+                                    <CheckBox
+                                        title={
+                                            <View style={styles.nodeInfo}>
+                                                <NodeIdenticon
+                                                    selectedNode={node}
+                                                    width={42}
+                                                    rounded
+                                                />
+                                                <View style={styles.nodeText}>
+                                                    <Text
+                                                        numberOfLines={1}
+                                                        ellipsizeMode="tail"
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontSize: 16
+                                                        }}
+                                                    >
+                                                        {NodeTitle(node)}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 12
+                                                        }}
+                                                    >
+                                                        {getImplementationDisplayName(
+                                                            node.implementation
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        }
+                                        checked={isSelected}
+                                        onPress={() => {
+                                            this.setState((prevState) => ({
+                                                selectedRecoveryNodes:
+                                                    prevState.selectedRecoveryNodes.includes(
+                                                        index
+                                                    )
+                                                        ? prevState.selectedRecoveryNodes.filter(
+                                                              (n) => n !== index
+                                                          )
+                                                        : [
+                                                              ...prevState.selectedRecoveryNodes,
+                                                              index
+                                                          ]
+                                            }));
+                                        }}
+                                        iconRight={true}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderWidth: 0,
+                                            marginBottom: 10,
+                                            padding: 0
+                                        }}
+                                        uncheckedColor={themeColor('text')}
+                                        checkedColor={themeColor('text')}
+                                    />
+                                </View>
+                            );
+                        })}
+                    </ScrollView>
+
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString(
+                                'views.Tools.nodeConfigExportImport.recovery.restoreSelected'
+                            )}
+                            onPress={this.handleRecoveryRestore}
+                            disabled={selectedRecoveryNodes.length === 0}
+                            buttonStyle={{ marginBottom: 10 }}
+                        />
+                        <Button
+                            title={localeString('general.goBack')}
+                            onPress={() =>
+                                this.setState({
+                                    activeModal: 'recovery'
+                                })
+                            }
+                            secondary
+                        />
                     </View>
                 </View>
-            </Modal>
+            </CenteredModal>
         );
     };
 
@@ -1470,6 +1454,13 @@ export default class NodeConfigExportImport extends React.Component<
 
         return (
             <Screen>
+                {this.renderNodeSelectionModal()}
+                {this.renderExportModal()}
+                {this.renderInfoModal()}
+                {this.renderPasswordModal()}
+                {this.renderImportNodeSelectionModal()}
+                {this.renderRecoveryModal()}
+                {this.renderRecoveryNodeSelectionModal()}
                 <ScrollView showsVerticalScrollIndicator={false}>
                     <Header
                         leftComponent="Back"
@@ -1494,13 +1485,6 @@ export default class NodeConfigExportImport extends React.Component<
                         }
                         navigation={this.props.navigation}
                     />
-                    {this.renderNodeSelectionModal()}
-                    {this.renderExportModal()}
-                    {this.renderInfoModal()}
-                    {this.renderPasswordModal()}
-                    {this.renderImportNodeSelectionModal()}
-                    {this.renderRecoveryModal()}
-                    {this.renderRecoveryNodeSelectionModal()}
 
                     <View style={styles.container}>
                         {isLoading ? (
@@ -1669,12 +1653,6 @@ const styles = StyleSheet.create({
     optionText: {
         marginLeft: 15,
         fontSize: 16
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center'
     },
     modalContent: {
         width: '85%',

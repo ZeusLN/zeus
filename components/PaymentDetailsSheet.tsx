@@ -2,18 +2,17 @@ import * as React from 'react';
 import {
     Animated,
     Image,
-    Modal,
     PanResponder,
     PanResponderInstance,
     ScrollView,
     Text,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
+import CenteredModal from './Modals/CenteredModal';
 import { Row } from './layout/Row';
 
 import { getFeePercentage } from '../utils/AmountUtils';
@@ -197,169 +196,143 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
 
         return (
             <>
-                <Modal
-                    visible={isOpen}
-                    transparent={true}
-                    animationType="fade"
-                    onRequestClose={onClose}
-                >
-                    <TouchableWithoutFeedback onPress={onClose}>
+                <CenteredModal isOpen={isOpen} onClose={onClose}>
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            width: '90%',
+                            maxHeight: '80%'
+                        }}
+                    >
                         <View
                             style={{
-                                flex: 1,
-                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                flexDirection: 'row',
                                 justifyContent: 'center',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                marginBottom: 16
                             }}
                         >
-                            <TouchableWithoutFeedback>
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 24,
-                                        padding: 20,
-                                        width: '90%',
-                                        maxHeight: '80%'
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            flexDirection: 'row',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            marginBottom: 16
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium',
-                                                color: themeColor('text'),
-                                                fontSize: 20,
-                                                textAlign: 'center',
-                                                flex: 1
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Payment.details'
-                                            )}
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={onClose}
-                                            hitSlop={{
-                                                top: 8,
-                                                bottom: 8,
-                                                left: 8,
-                                                right: 8
-                                            }}
-                                            style={{ padding: 4 }}
-                                        >
-                                            <CloseSvg
-                                                fill={themeColor('text')}
-                                                width={16}
-                                                height={16}
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
-                                    <ScrollView>
-                                        {paymentAmount != null && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Receive.amount'
-                                                )}
-                                                value={
-                                                    <Amount
-                                                        sats={paymentAmount}
-                                                        debit
-                                                        sensitive
-                                                        toggleable
-                                                    />
-                                                }
-                                            />
-                                        )}
-
-                                        {feeAmount != null && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Payment.fee'
-                                                )}
-                                                value={
-                                                    <Row>
-                                                        <Amount
-                                                            sats={feeAmount}
-                                                            debit
-                                                            sensitive
-                                                            toggleable
-                                                        />
-                                                        {feePercentage ? (
-                                                            <Text
-                                                                style={{
-                                                                    fontFamily:
-                                                                        'PPNeueMontreal-Book',
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {` (${feePercentage})`}
-                                                            </Text>
-                                                        ) : null}
-                                                    </Row>
-                                                }
-                                            />
-                                        )}
-
-                                        {paymentDuration != null && (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Payment.settlementTime'
-                                                )}
-                                                value={`${paymentDuration.toFixed(
-                                                    2
-                                                )}s`}
-                                                disableCopy
-                                            />
-                                        )}
-
-                                        {memo ? (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Invoice.memo'
-                                                )}
-                                                value={memo}
-                                            />
-                                        ) : null}
-
-                                        {this.renderContactRow()}
-
-                                        {paymentHash ? (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Payment.paymentHash'
-                                                )}
-                                                value={paymentHash}
-                                                sensitive
-                                            />
-                                        ) : null}
-
-                                        {paymentPreimage ? (
-                                            <KeyValue
-                                                keyValue={localeString(
-                                                    'views.Payment.paymentPreimage'
-                                                )}
-                                                value={paymentPreimage}
-                                                sensitive
-                                            />
-                                        ) : null}
-
-                                        {this.renderPathRow()}
-                                    </ScrollView>
-                                </View>
-                            </TouchableWithoutFeedback>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    color: themeColor('text'),
+                                    fontSize: 20,
+                                    textAlign: 'center',
+                                    flex: 1
+                                }}
+                            >
+                                {localeString('views.Payment.details')}
+                            </Text>
+                            <TouchableOpacity
+                                onPress={onClose}
+                                hitSlop={{
+                                    top: 8,
+                                    bottom: 8,
+                                    left: 8,
+                                    right: 8
+                                }}
+                                style={{ padding: 4 }}
+                            >
+                                <CloseSvg
+                                    fill={themeColor('text')}
+                                    width={16}
+                                    height={16}
+                                />
+                            </TouchableOpacity>
                         </View>
-                    </TouchableWithoutFeedback>
-                </Modal>
+                        <ScrollView>
+                            {paymentAmount != null && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Receive.amount'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={paymentAmount}
+                                            debit
+                                            sensitive
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
+
+                            {feeAmount != null && (
+                                <KeyValue
+                                    keyValue={localeString('views.Payment.fee')}
+                                    value={
+                                        <Row>
+                                            <Amount
+                                                sats={feeAmount}
+                                                debit
+                                                sensitive
+                                                toggleable
+                                            />
+                                            {feePercentage ? (
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {` (${feePercentage})`}
+                                                </Text>
+                                            ) : null}
+                                        </Row>
+                                    }
+                                />
+                            )}
+
+                            {paymentDuration != null && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.settlementTime'
+                                    )}
+                                    value={`${paymentDuration.toFixed(2)}s`}
+                                    disableCopy
+                                />
+                            )}
+
+                            {memo ? (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Invoice.memo'
+                                    )}
+                                    value={memo}
+                                />
+                            ) : null}
+
+                            {this.renderContactRow()}
+
+                            {paymentHash ? (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.paymentHash'
+                                    )}
+                                    value={paymentHash}
+                                    sensitive
+                                />
+                            ) : null}
+
+                            {paymentPreimage ? (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Payment.paymentPreimage'
+                                    )}
+                                    value={paymentPreimage}
+                                    sensitive
+                                />
+                            ) : null}
+
+                            {this.renderPathRow()}
+                        </ScrollView>
+                    </View>
+                </CenteredModal>
                 {this.renderTrigger()}
             </>
         );
