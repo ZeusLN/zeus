@@ -2542,9 +2542,23 @@ export default class CashuStore {
             JSON.stringify(uniqueMintUrls)
         );
 
+        const promoteSingle =
+            uniqueMintUrls.length === 1 &&
+            this.selectedMintUrl !== uniqueMintUrls[0];
+
         runInAction(() => {
             this.multiMintSelectedUrls = uniqueMintUrls;
+            if (promoteSingle) {
+                this.selectedMintUrl = uniqueMintUrls[0];
+            }
         });
+
+        if (promoteSingle) {
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-selectedMintUrl`,
+                uniqueMintUrls[0]
+            );
+        }
 
         return uniqueMintUrls;
     };
