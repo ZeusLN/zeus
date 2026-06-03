@@ -22,8 +22,6 @@ import * as nip44 from '@nostr/tools/nip44';
 
 const NOFFER_PREFIX = 'noffer';
 const BECH32_MAX_SIZE = 5000;
-const NOFFER_REGEX =
-    /^(?:noffer1[02-9ac-hj-np-z]{6,}|NOFFER1[02-9AC-HJ-NP-Z]{6,})$/;
 
 export const CLINK_KIND = 21001;
 export const CLINK_VERSION = '1';
@@ -123,16 +121,6 @@ const bytesToBigEndianInt = (bytes: Uint8Array): number => {
         n = n * 256 + bytes[i];
     }
     return n;
-};
-
-export const isValidNoffer = (input: string): boolean => {
-    if (!input || !NOFFER_REGEX.test(input)) return false;
-    try {
-        decodeNoffer(input);
-        return true;
-    } catch {
-        return false;
-    }
 };
 
 export const decodeNoffer = (input: string): NofferData => {
@@ -555,7 +543,6 @@ export const requestInvoiceFromNoffer = async (
 };
 
 const ClinkUtils = {
-    isValidNoffer,
     decodeNoffer,
     buildClinkRequestPayload,
     isValidClinkResponseEvent,

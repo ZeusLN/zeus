@@ -3,7 +3,6 @@ import { hexToBytes } from '@noble/hashes/utils';
 
 import ClinkUtils, {
     decodeNoffer,
-    isValidNoffer,
     NofferPriceType,
     buildClinkRequestPayload,
     isValidClinkResponseEvent,
@@ -68,61 +67,6 @@ describe('ClinkUtils', () => {
         '79f00d3f5a19ec806189fcab03c1be4ff81d18ee4f653c88fac41fe03570f432';
     const relay = 'wss://relay.shockwallet.app';
     const offerId = 'coffee';
-
-    describe('isValidNoffer', () => {
-        it('accepts a well-formed noffer string', () => {
-            const noffer = buildNoffer({ pubkey, relay, offer: offerId });
-            expect(isValidNoffer(noffer)).toBe(true);
-        });
-
-        it('accepts uppercase noffer strings', () => {
-            const noffer = buildNoffer({
-                pubkey,
-                relay,
-                offer: offerId
-            }).toUpperCase();
-            expect(isValidNoffer(noffer)).toBe(true);
-        });
-
-        it('rejects empty input', () => {
-            expect(isValidNoffer('')).toBe(false);
-        });
-
-        it('rejects strings with wrong prefix', () => {
-            expect(isValidNoffer('noffe1abcdefghij')).toBe(false);
-            expect(
-                isValidNoffer(
-                    'lno1pgx7mn5wfshymjpvf68xemtv4eqgcrsdac8q6tdvf5hgwf38yuq'
-                )
-            ).toBe(false);
-            expect(
-                isValidNoffer(
-                    'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg'
-                )
-            ).toBe(false);
-        });
-
-        it('rejects strings with invalid bech32 charset', () => {
-            expect(isValidNoffer('noffer1!!!!!!!')).toBe(false);
-        });
-
-        it('rejects strings with invalid bech32 checksum', () => {
-            const good = buildNoffer({ pubkey, relay, offer: offerId });
-            const tampered =
-                good.slice(0, -1) + (good.endsWith('q') ? 'p' : 'q');
-            expect(isValidNoffer(tampered)).toBe(false);
-        });
-
-        it('rejects noffer missing required TLVs', () => {
-            const data = new Uint8Array([0, 32, ...hexToBytes(pubkey)]);
-            const incomplete = bech32.encode(
-                'noffer',
-                bech32.toWords(data),
-                5000
-            );
-            expect(isValidNoffer(incomplete)).toBe(false);
-        });
-    });
 
     describe('decodeNoffer', () => {
         it('decodes pubkey, relay, and offer id (required TLVs)', () => {
@@ -540,7 +484,6 @@ describe('ClinkUtils', () => {
 
     describe('default export', () => {
         it('exposes the public API', () => {
-            expect(typeof ClinkUtils.isValidNoffer).toBe('function');
             expect(typeof ClinkUtils.decodeNoffer).toBe('function');
             expect(typeof ClinkUtils.requestInvoiceFromNoffer).toBe('function');
             expect(typeof ClinkUtils.buildClinkRequestPayload).toBe('function');
