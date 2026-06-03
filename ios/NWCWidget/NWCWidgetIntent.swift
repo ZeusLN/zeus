@@ -1,9 +1,6 @@
 import AppIntents
-import WidgetKit
 
-// Darwin notification names – must match NWCAudioKeepAlive.m exactly.
-// CFNotificationCenter is the correct IPC mechanism for widget extension → host app
-// because LiveActivityIntent.perform() runs in the extension process, not the main app.
+// Must match NWCAudioKeepAlive.m
 private let kNWCNextTrack  = "com.zeusln.zeus.nwc.nextTrack"
 private let kNWCPrevTrack  = "com.zeusln.zeus.nwc.prevTrack"
 private let kNWCToggleMute = "com.zeusln.zeus.nwc.toggleMute"

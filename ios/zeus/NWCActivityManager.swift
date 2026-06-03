@@ -1,27 +1,17 @@
 import Foundation
 import ActivityKit
 
-/// Manages the NWC Live Activity (Dynamic Island + lock-screen banner).
 @available(iOS 16.1, *)
 @objc final class NWCActivityManager: NSObject {
 
     @objc static let shared = NWCActivityManager()
 
-    @objc var onNextTrack:  (() -> Void)?
-    @objc var onPrevTrack:  (() -> Void)?
-    @objc var onToggleMute: (() -> Void)?
-    @objc var onStop:       (() -> Void)?
-
     private var activity: Activity<NWCLiveActivityAttributes>?
 
     override private init() {
         super.init()
-        NWCBridge = NWCWidgetBridgeImpl(manager: self)
-        // Synchronous cleanup so a force-quit island is gone on next cold start.
         endAllActivitiesBlocking()
     }
-
-    // ─── ObjC entry points ────────────────────────────────────────────────────
 
     @objc func startActivity(trackName: String, isMuted: Bool) {
         DispatchQueue.main.async { [weak self] in
@@ -35,20 +25,15 @@ import ActivityKit
         }
     }
 
-    /// Normal stop (async). Ends every NWC activity, not only the cached reference.
     @objc func stopActivity() {
         DispatchQueue.main.async { [weak self] in
             self?.stopActivityOnMain()
         }
     }
 
-    /// Ends all NWC Live Activities and blocks until ActivityKit completes.
-    /// Required on force-quit: async `stopActivity` often never runs before iOS kills the process.
     @objc func endAllActivitiesImmediately() {
         endAllActivitiesBlocking()
     }
-
-    // ─── Main-queue implementation ────────────────────────────────────────────
 
     private var staleDate: Date { Date().addingTimeInterval(300) }
 
@@ -60,7 +45,6 @@ import ActivityKit
         }
 
         if let existing = activity, Self.isLive(existing) {
-            NSLog("[NWCActivity] activity already live, updating instead")
             updateActivityOnMain(trackName: trackName, isMuted: isMuted)
             return
         }
@@ -114,8 +98,6 @@ import ActivityKit
         }
     }
 
-    // ─── Blocking end (force-quit + cold-start cleanup) ───────────────────────
-
     private func endAllActivitiesBlocking() {
         let sem = DispatchSemaphore(value: 0)
         Task.detached(priority: .userInitiated) {
@@ -141,11 +123,8 @@ import ActivityKit
             } else {
                 await act.end(using: finalState, dismissalPolicy: .immediate)
             }
-            NSLog("[NWCActivity] ended activity id=%@", act.id)
         }
     }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private static func isLive(_ act: Activity<NWCLiveActivityAttributes>) -> Bool {
         if act.activityState == .ended { return false }

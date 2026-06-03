@@ -3,10 +3,6 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-// ─── Zeus icon (widget asset catalog: zeusLogo @1x/@2x/@3x) ─────────────────
-// Uses the same layout as Primal's dynamicIslandLogo — explicit frame + fit.
-// Asset is built from zeus_icon.jpg (opaque), not the 1024 App Store icon.
-
 private struct ZeusIcon: View {
     var size: CGFloat = 20
 
@@ -19,8 +15,6 @@ private struct ZeusIcon: View {
             .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
     }
 }
-
-// ─── Circle button style ──────────────────────────────────────────────────────
 
 private struct CircleButtonStyle: ButtonStyle {
     var size: CGFloat = 38
@@ -35,15 +29,11 @@ private struct CircleButtonStyle: ButtonStyle {
     }
 }
 
-// ─── Expanded / lock-screen content ──────────────────────────────────────────
-
 private struct NWCExpandedView: View {
     let context: ActivityViewContext<NWCLiveActivityAttributes>
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-
-            // Row 1 – header
             HStack(spacing: 10) {
                 ZeusIcon(size: 28)
 
@@ -59,16 +49,13 @@ private struct NWCExpandedView: View {
                     .monospacedDigit()
             }
 
-            // Row 2 – track name
-            let muted = context.state.isMuted
             if let track = context.state.currentTrackName {
-                Text(muted ? "Muted · \(track)" : "Now playing: \(track)")
+                Text(context.state.isMuted ? "Muted · \(track)" : "Now playing: \(track)")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
 
-            // Row 3 – controls (all buttons same size)
             HStack(spacing: 0) {
                 Button(intent: NWCPrevTrackIntent()) {
                     Image(systemName: "backward.fill")
@@ -80,13 +67,12 @@ private struct NWCExpandedView: View {
                 Spacer()
 
                 Button(intent: NWCToggleMuteIntent()) {
-                    Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    Image(systemName: context.state.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(muted ? Color.orange : .white.opacity(0.85))
-                        .contentTransition(.symbolEffect(.replace))
+                        .foregroundStyle(context.state.isMuted ? Color.orange : .white.opacity(0.85))
                 }
                 .buttonStyle(CircleButtonStyle(
-                    tint: muted ? Color.orange.opacity(0.25) : Color.white.opacity(0.14)
+                    tint: context.state.isMuted ? Color.orange.opacity(0.25) : Color.white.opacity(0.14)
                 ))
 
                 Spacer()
@@ -118,12 +104,9 @@ private struct NWCExpandedView: View {
     }
 }
 
-// ─── Widget ───────────────────────────────────────────────────────────────────
-
 struct NWCWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NWCLiveActivityAttributes.self) { context in
-            // Lock-screen / notification-banner
             NWCExpandedView(context: context)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
@@ -144,7 +127,6 @@ struct NWCWidgetLiveActivity: Widget {
                           : "speaker.wave.2.fill")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(context.state.isMuted ? .orange : .white)
-                        .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 2)
