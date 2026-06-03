@@ -54,6 +54,7 @@ private struct NWCExpandedView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
+                    .id(context.state.contentRevision)
             }
 
             HStack(spacing: 0) {
@@ -71,6 +72,7 @@ private struct NWCExpandedView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(context.state.isMuted ? Color.orange : .white.opacity(0.85))
                 }
+                .id(context.state.contentRevision)
                 .buttonStyle(CircleButtonStyle(
                     tint: context.state.isMuted ? Color.orange.opacity(0.25) : Color.white.opacity(0.14)
                 ))
@@ -128,6 +130,7 @@ struct NWCWidgetLiveActivity: Widget {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(context.state.isMuted ? .orange : .white)
                 }
+                .id(context.state.contentRevision)
                 .buttonStyle(.plain)
                 .padding(.trailing, 2)
             } minimal: {
