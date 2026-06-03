@@ -133,7 +133,6 @@ struct NWCWidgetLiveActivity: Widget {
             } minimal: {
                 ZeusIcon(size: 16)
             }
-            .widgetURL(URL(string: "zeus://nwc"))
             .keylineTint(Color(red: 1, green: 0.82, blue: 0))
         }
     }
