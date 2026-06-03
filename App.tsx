@@ -69,6 +69,7 @@ import RestoreChannelModal from './components/Modals/RestoreChannelModal';
 import ScreenRecordingWarningModal from './components/Modals/ScreenRecordingWarningModal';
 import ActionSheetModal from './components/Modals/ActionSheetModal';
 import EnlargedQRModal from './components/Modals/EnlargedQRModal';
+import { PortalProvider } from './components/Portal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -471,6 +472,7 @@ export default class App extends React.PureComponent {
                     <AppContainer>
                         <PushNotificationManager>
                             <GestureHandlerRootView style={{ flex: 1 }}>
+                                <PortalProvider>
                                 <StealthModeWrapper>
                                     <SafeAreaView
                                         style={{ flex: 1 }}
@@ -1818,6 +1820,7 @@ export default class App extends React.PureComponent {
                                 <ActionSheetModal />
                                 {/* @ts-ignore:next-line */}
                                 <EnlargedQRModal />
+                                </PortalProvider>
                             </GestureHandlerRootView>
                         </PushNotificationManager>
                     </AppContainer>
