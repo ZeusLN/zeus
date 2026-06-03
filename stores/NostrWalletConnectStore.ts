@@ -2706,13 +2706,6 @@ export default class NostrWalletConnectStore {
             console.warn('Android: Reconnection check error:', error);
         }
     }
-    // ─── iOS audio keep-alive (AVAudioSession + silent loop) ─────────────────
-
-    /**
-     * iOS-only: registers AppState listener when has `At least one active connection`
-     * is on (same setting as Android’s foreground service). Starts silent audio
-     * in background and re-subscribes relays when returning to foreground.
-     */
     private setupIOSAppStateMonitoring(): void {
         if (Platform.OS !== 'ios') return;
         // Remove any stale listener before registering a new one
@@ -2722,10 +2715,6 @@ export default class NostrWalletConnectStore {
         if (AppState.currentState === 'background') {
             this.startIOSAudioKeepAlive();
         } else {
-            // App is in the foreground: arm the native side so that the
-            // UIApplicationWillResignActiveNotification handler (which fires while
-            // UIApplication.applicationState is still .active) can call
-            // Activity.request() – the only window ActivityKit allows it.
             IOSAudioKeepAliveUtils.arm();
         }
 
@@ -2749,7 +2738,6 @@ export default class NostrWalletConnectStore {
                     nextState === 'active' &&
                     previousState === 'background'
                 ) {
-                    // App returning to foreground — stop audio, re-subscribe relay
                     console.log(
                         '[NWCAudio] App returning to foreground – stopping keep-alive'
                     );
@@ -2771,28 +2759,15 @@ export default class NostrWalletConnectStore {
             this.iosAudioAppStateListener.remove();
             this.iosAudioAppStateListener = null;
         }
-        // Disarm the native Live Activity pre-start hook.
         IOSAudioKeepAliveUtils.disarm();
     }
 
-    /**
-     * iOS: when the first NWC connection is created after a cold start that had
-     * none, `initializeService` bailed out early and never registered AppState /
-     * audio keep-alive. Call this after a connection is live so background works
-     * without restarting the app.
-     */
     private ensureIOSNWCBackgroundMonitoring(): void {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
         if (!this.isServiceReady()) return;
         this.setupIOSAppStateMonitoring();
     }
-    /**
-     * Starts a silent AVAudioSession (.playback) backed by an AVAudioEngine
-     * loop.  While active, iOS treats the app as a foreground-like audio
-     * process and avoids suspending it, allowing the Nostr WebSocket relay
-     * subscriptions to remain live in the background.
-     */
     @action
     public async startIOSAudioKeepAlive(): Promise<boolean> {
         if (Platform.OS !== 'ios') return false;
@@ -2882,8 +2857,6 @@ export default class NostrWalletConnectStore {
                     `[NWCAudio] Suspected suspension – reason: ${payload.reason}, ` +
                         `uptime: ${payload.uptimeSeconds.toFixed(0)}s`
                 );
-                // Re-subscribe once we can – the next foreground transition
-                // will also trigger initializeService via AppState change.
             }
         );
 

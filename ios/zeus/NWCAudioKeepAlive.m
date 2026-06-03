@@ -4,7 +4,6 @@
 #import <UIKit/UIKit.h>
 #import <sys/utsname.h>
 
-// ─── Event name constants ────────────────────────────────────────────────────
 static NSString *const kEventInterrupted       = @"NWCAudioInterrupted";
 static NSString *const kEventInterruptionEnded = @"NWCAudioInterruptionEnded";
 static NSString *const kEventRouteChanged      = @"NWCAudioRouteChanged";
@@ -12,18 +11,14 @@ static NSString *const kEventStatusUpdate      = @"NWCAudioStatusUpdate";
 static NSString *const kEventSuspended         = @"NWCAudioSuspended";
 static NSString *const kEventTrackChanged      = @"NWCAudioTrackChanged";
 
-// How often (seconds) to emit a heartbeat status event while active
 static const NSTimeInterval kStatusIntervalSeconds = 30.0;
 
-// Darwin notification names shared with NWCWidgetIntent.swift (extension IPC).
-// LiveActivityIntent.perform() runs in the widget extension process; posting a
-// Darwin notification is the only way to reach the background-audio main app.
+// Must match NWCWidgetIntent.swift
 static NSString *const kDarwinNextTrack  = @"com.zeusln.zeus.nwc.nextTrack";
 static NSString *const kDarwinPrevTrack  = @"com.zeusln.zeus.nwc.prevTrack";
 static NSString *const kDarwinToggleMute = @"com.zeusln.zeus.nwc.toggleMute";
 static NSString *const kDarwinStop       = @"com.zeusln.zeus.nwc.stop";
 
-// Available ambient audio tracks bundled with the app
 static NSArray<NSString *> *kAvailableTracks(void) {
     return @[@"Fireplace", @"White Noise", @"Gentle Rain"];
 }
@@ -32,27 +27,21 @@ static NSArray<NSString *> *kAvailableTracks(void) {
 
 @property (nonatomic, strong) AVAudioPlayer     *audioPlayer;
 
-// Track management
 @property (nonatomic, copy)   NSArray<NSString *> *trackNames;
 @property (nonatomic, assign) NSInteger            currentTrackIndex;
 @property (nonatomic, assign) BOOL                 isMuted;
 
-// Monitoring
 @property (nonatomic, strong) NSDate   *sessionStartTime;
 @property (nonatomic, strong) NSDate   *backgroundEnteredTime;
 @property (nonatomic, strong) NSTimer  *statusTimer;
 @property (nonatomic, assign) BOOL      isActive;
 @property (nonatomic, assign) BOOL      hasListeners;
 
-// Stats
 @property (nonatomic, assign) NSUInteger disconnectCount;
 @property (nonatomic, strong) NSString  *lastDisconnectReason;
 @property (nonatomic, strong) NSString  *iosVersion;
 @property (nonatomic, strong) NSString  *deviceModel;
 
-// Live Activity early-start support.
-// Set YES (while app is in foreground) so that the UIApplicationWillResignActiveNotification
-// handler can call Activity.request() before the app state becomes .background.
 @property (nonatomic, assign) BOOL      nwcArmed;
 
 - (void)switchToTrackAtIndex:(NSInteger)index;
@@ -63,8 +52,7 @@ static NSArray<NSString *> *kAvailableTracks(void) {
 
 @end
 
-// Darwin notification C callback — must live after the private @interface above
-// so the compiler can see properties and methods used inside the block.
+// After private @interface (nwcDarwinCallback uses instance members).
 static void nwcDarwinCallback(CFNotificationCenterRef center, void *observer,
     CFNotificationName name, const void *object, CFDictionaryRef userInfo) {
     NWCAudioKeepAlive *self = (__bridge NWCAudioKeepAlive *)observer;
@@ -105,7 +93,6 @@ static void nwcDarwinCallback(CFNotificationCenterRef center, void *observer,
 
 RCT_EXPORT_MODULE();
 
-// ─── RCTEventEmitter ─────────────────────────────────────────────────────────
 
 + (BOOL)requiresMainQueueSetup {
     return NO;
@@ -130,7 +117,6 @@ RCT_EXPORT_MODULE();
     self.hasListeners = NO;
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 - (instancetype)init {
     if (self = [super init]) {
@@ -159,12 +145,7 @@ RCT_EXPORT_MODULE();
     [self unregisterDarwinObservers];
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
 
-/**
- * Starts the AVAudioSession (.playback + mixWithOthers) and begins looping
- * the currently selected ambient track.  Returns a status dict on resolve.
- */
 RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     if (self.isActive) {
@@ -220,8 +201,6 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
         }];
     });
 
-    // 5. Wire up widget button callbacks and start the Live Activity
-    [self registerWidgetCallbacks];
     if (@available(iOS 16.1, *)) {
         NSString *trackName = self.trackNames[self.currentTrackIndex];
         [[NWCActivityManager shared] startActivityWithTrackName:trackName
@@ -233,26 +212,17 @@ RCT_EXPORT_METHOD(startAudioKeepAlive:(RCTPromiseResolveBlock)resolve
     resolve([self currentStatusDict]);
 }
 
-/**
- * Stops playback and deactivates the AVAudioSession.
- */
 RCT_EXPORT_METHOD(stopAudioKeepAlive:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     [self stopInternal:@"manual_stop"];
     resolve([self currentStatusDict]);
 }
 
-/**
- * Returns the current status without modifying state.
- */
 RCT_EXPORT_METHOD(getStatus:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     resolve([self currentStatusDict]);
 }
 
-/**
- * Returns the list of available ambient audio tracks.
- */
 RCT_EXPORT_METHOD(getAvailableTracks:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSMutableArray *result = [NSMutableArray array];
@@ -266,9 +236,6 @@ RCT_EXPORT_METHOD(getAvailableTracks:(RCTPromiseResolveBlock)resolve
     resolve(result);
 }
 
-/**
- * Selects a track by index and immediately switches to it if active.
- */
 RCT_EXPORT_METHOD(setTrack:(NSInteger)index
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
@@ -287,18 +254,12 @@ RCT_EXPORT_METHOD(setTrack:(NSInteger)index
     resolve([self currentStatusDict]);
 }
 
-/**
- * Advances to the next track (wraps around).
- */
 RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSInteger next = (self.currentTrackIndex + 1) % (NSInteger)self.trackNames.count;
     [self setTrack:next resolver:resolve rejecter:reject];
 }
 
-/**
- * Goes back to the previous track (wraps around).
- */
 RCT_EXPORT_METHOD(previousTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSInteger prev = (self.currentTrackIndex - 1 + (NSInteger)self.trackNames.count)
@@ -306,9 +267,6 @@ RCT_EXPORT_METHOD(previousTrack:(RCTPromiseResolveBlock)resolve
     [self setTrack:prev resolver:resolve rejecter:reject];
 }
 
-/**
- * Mutes or unmutes the audio track. The session stays alive; only volume is 0.
- */
 RCT_EXPORT_METHOD(setMuted:(BOOL)muted
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
@@ -316,31 +274,21 @@ RCT_EXPORT_METHOD(setMuted:(BOOL)muted
     resolve([self currentStatusDict]);
 }
 
-/**
- * Called from JS while the app is still in the FOREGROUND (when the NWC service
- * becomes active and the AppState monitor is registered).  Sets a flag so that
- * handleWillResignActive: can call Activity.request() immediately – the only
- * window where ActivityKit accepts new activities (UIApplication.applicationState
- * must be .active, which it is during UIApplicationWillResignActiveNotification).
- */
 RCT_EXPORT_METHOD(armNWCAudio:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     dispatch_async(dispatch_get_main_queue(), ^{
         self.nwcArmed = YES;
         NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-        // Remove stale observers before re-registering to avoid duplicates.
         [nc removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
         [nc removeObserver:self name:UIApplicationWillTerminateNotification   object:nil];
         [nc addObserver:self
                selector:@selector(handleWillResignActive:)
                    name:UIApplicationWillResignActiveNotification
                  object:nil];
-        // Stop the Live Activity if the process is force-quit by the user.
         [nc addObserver:self
                selector:@selector(handleWillTerminate:)
                    name:UIApplicationWillTerminateNotification
                  object:nil];
-        // Always unregister first to prevent duplicate callbacks if armNWCAudio
         // is called more than once during a session.
         [self unregisterDarwinObservers];
         [self registerDarwinObservers];
@@ -349,9 +297,6 @@ RCT_EXPORT_METHOD(armNWCAudio:(RCTPromiseResolveBlock)resolve
     resolve(@(YES));
 }
 
-/**
- * Called from JS when the NWC service stops or is torn down.
- */
 RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -368,10 +313,7 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     resolve(@(YES));
 }
 
-// ─── Internal track / mute helpers ───────────────────────────────────────────
 
-/// Switches to the given track index, starts it if the session is active,
-/// and updates the Live Activity state.
 - (void)switchToTrackAtIndex:(NSInteger)index {
     self.currentTrackIndex = index;
 
@@ -387,7 +329,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     }
 }
 
-/// Applies a mute/unmute change and propagates to the Live Activity.
 - (void)applyMuted:(BOOL)muted {
     self.isMuted = muted;
     self.audioPlayer.volume = muted ? 0.0f : 1.0f;
@@ -400,62 +341,7 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     }
 }
 
-// ─── Widget callback registration ────────────────────────────────────────────
 
-/// Registers callback blocks on NWCActivityManager so widget button taps
-/// (next/prev/mute/stop) route back into this instance.
-- (void)registerWidgetCallbacks {
-    if (@available(iOS 16.1, *)) {
-        __weak typeof(self) weakSelf = self;
-
-        [NWCActivityManager shared].onNextTrack = ^{
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            NSInteger next = (strongSelf.currentTrackIndex + 1)
-                             % (NSInteger)strongSelf.trackNames.count;
-            [strongSelf switchToTrackAtIndex:next];
-            [strongSelf safeEmit:kEventTrackChanged body:@{
-                @"trackIndex": @(next),
-                @"trackName":  strongSelf.trackNames[next],
-                @"source":     @"widget"
-            }];
-        };
-
-        [NWCActivityManager shared].onPrevTrack = ^{
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            NSInteger count = (NSInteger)strongSelf.trackNames.count;
-            NSInteger prev  = (strongSelf.currentTrackIndex - 1 + count) % count;
-            [strongSelf switchToTrackAtIndex:prev];
-            [strongSelf safeEmit:kEventTrackChanged body:@{
-                @"trackIndex": @(prev),
-                @"trackName":  strongSelf.trackNames[prev],
-                @"source":     @"widget"
-            }];
-        };
-
-        [NWCActivityManager shared].onToggleMute = ^{
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            [strongSelf applyMuted:!strongSelf.isMuted];
-        };
-
-        [NWCActivityManager shared].onStop = ^{
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            [strongSelf stopInternal:@"widget_stop"];
-            // Emit so JS can react (close NWC connection, etc.)
-            [strongSelf safeEmit:kEventSuspended body:@{
-                @"reason":     @"widget_stop",
-                @"uptimeSeconds": @([strongSelf uptimeSeconds])
-            }];
-        };
-    }
-}
-
-// ─── Audio player ────────────────────────────────────────────────────────────
-
-/// Resolves a bundled ambient track by name (tries common audio extensions).
 - (NSString *)pathForBundledTrackNamed:(NSString *)trackName {
     static NSArray<NSString *> *extensions;
     static dispatch_once_t once;
@@ -527,7 +413,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     self.audioPlayer = nil;
 }
 
-// ─── AVAudioPlayerDelegate ───────────────────────────────────────────────────
 
 - (void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error {
     NSLog(@"[NWCAudio] Decode error: %@", error.localizedDescription);
@@ -547,7 +432,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     }
 }
 
-// ─── Internal stop ───────────────────────────────────────────────────────────
 
 - (void)stopInternal:(NSString *)reason {
     if (!self.isActive) return;
@@ -563,9 +447,7 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     [self teardownAudioPlayer];
     [self unregisterNotifications];
 
-    // unregisterNotifications uses removeObserver:self which wipes ALL observers
-    // registered by armNWCAudio. Re-register the two lifetime observers so the
-    // next background/terminate events are still handled correctly.
+    // removeObserver:self clears arm observers; re-register if still armed.
     if (self.nwcArmed) {
         NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
         [nc addObserver:self
@@ -596,7 +478,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     NSLog(@"[NWCAudio] Stopped after %.0f s – reason: %@", uptime, reason);
 }
 
-// ─── AVAudioSession notifications ────────────────────────────────────────────
 
 - (void)registerNotifications {
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
@@ -628,12 +509,9 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
 }
 
 - (void)unregisterNotifications {
-    // Only removes NSNotificationCenter observers.
-    // Darwin observers (widget IPC) are managed separately by arm/disarm.
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-// ─── Darwin IPC helpers (widget extension → main app) ────────────────────────
 
 - (void)registerDarwinObservers {
     CFNotificationCenterRef darwin = CFNotificationCenterGetDarwinNotifyCenter();
@@ -660,18 +538,7 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     NSLog(@"[NWCAudio] Darwin observers removed");
 }
 
-// ─── Notification handlers ───────────────────────────────────────────────────
 
-/**
- * Fires while UIApplication.applicationState is still .active (the only state
- * in which ActivityKit accepts Activity.request()).  If the NWC service is armed
- * and audio is not yet playing, we start the Live Activity right here so it is
- * already visible the instant the app moves to background.
- *
- * When startAudioKeepAlive is later called (from the 'background' AppState
- * event on the JS side), NWCActivityManager detects the existing activity and
- * updates its state instead of requesting a new one.
- */
 - (void)handleWillResignActive:(NSNotification *)notification {
     if (!self.nwcArmed) return;
     if (@available(iOS 16.1, *)) {
@@ -682,11 +549,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     }
 }
 
-/**
- * Called when the process is about to be terminated (user force-quits via the
- * app-switcher, or the OS terminates a suspended background app).
- * Ends the Live Activity immediately so the Dynamic Island disappears.
- */
 - (void)handleWillTerminate:(NSNotification *)notification {
     NSLog(@"[NWCAudio] App terminating – ending Live Activity (blocking)");
     if (@available(iOS 16.1, *)) {
@@ -789,7 +651,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     [self emitStatusUpdate:NO reason:@"returned_to_foreground"];
 }
 
-// ─── Audio player resume ─────────────────────────────────────────────────────
 
 - (void)resumeAudioPlayer {
     if (self.audioPlayer.isPlaying) return;
@@ -816,7 +677,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     }
 }
 
-// ─── Event helpers ───────────────────────────────────────────────────────────
 
 - (void)emitStatusUpdate:(BOOL)isSuspected reason:(NSString *)reason {
     if (!self.hasListeners) return;
@@ -833,7 +693,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     [self sendEventWithName:eventName body:body];
 }
 
-// ─── Status dict ─────────────────────────────────────────────────────────────
 
 - (NSDictionary *)currentStatusDict {
     NSTimeInterval uptime    = [self uptimeSeconds];
@@ -858,7 +717,6 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     };
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
 
 - (NSTimeInterval)uptimeSeconds {
     return self.sessionStartTime

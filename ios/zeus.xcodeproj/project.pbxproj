@@ -227,9 +227,7 @@
 		NWCAUDIO0000000000000012 /* White Noise.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000016 /* White Noise.m4a */; };
 		NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.m4a */; };
 		NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000007 /* NWCWidgetAttributes.swift */; };
-		NWCLA000000000000000002 /* NWCWidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000008 /* NWCWidgetBridge.swift */; };
 		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
-		NWCLA000000000000000004 /* NWCWidgetBridgeImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */; };
 		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -721,9 +719,7 @@
 		NWCAUDIO0000000000000017 /* Gentle Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = "Gentle Rain.m4a"; path = "zeus/Gentle Rain.m4a"; sourceTree = "<group>"; };
 		NWCLA000000000000000006 /* NWCWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NWCWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		NWCLA000000000000000007 /* NWCWidgetAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetAttributes.swift; path = NWCWidget/NWCWidgetAttributes.swift; sourceTree = "<group>"; };
-		NWCLA000000000000000008 /* NWCWidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetBridge.swift; path = NWCWidget/NWCWidgetBridge.swift; sourceTree = "<group>"; };
 		NWCLA000000000000000009 /* NWCActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCActivityManager.swift; path = zeus/NWCActivityManager.swift; sourceTree = "<group>"; };
-		NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetBridgeImpl.swift; path = zeus/NWCWidgetBridgeImpl.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -916,9 +912,7 @@
 				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
 				NWCLA000000000000000009 /* NWCActivityManager.swift */,
-				NWCLA000000000000000010 /* NWCWidgetBridgeImpl.swift */,
 				NWCLA000000000000000007 /* NWCWidgetAttributes.swift */,
-				NWCLA000000000000000008 /* NWCWidgetBridge.swift */,
 				NWCAUDIO0000000000000015 /* Fireplace.m4a */,
 				NWCAUDIO0000000000000016 /* White Noise.m4a */,
 				NWCAUDIO0000000000000017 /* Gentle Rain.m4a */,
@@ -2070,9 +2064,7 @@
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
 				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
-				NWCLA000000000000000002 /* NWCWidgetBridge.swift in Sources */,
 				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
-				NWCLA000000000000000004 /* NWCWidgetBridgeImpl.swift in Sources */,
 				745388442A54C2B6000927CE /* lightning.pb.swift in Sources */,
 				74B637822A5A350B00750202 /* LncModule.mm in Sources */,
 				74B637842A5A350B00750202 /* Callback.mm in Sources */,

@@ -50,8 +50,6 @@ static void ClearKeychainIfNecessary() {
   [RNNotifications startMonitorNotifications];
   ClearKeychainIfNecessary();
 
-  // Initialize NWCActivityManager early so the widget bridge is set up before
-  // any Live Activity intent fires (intents run in the host-app process).
   if (@available(iOS 16.1, *)) {
     Class managerClass = NSClassFromString(@"NWCActivityManager");
     if (managerClass && [managerClass respondsToSelector:@selector(shared)]) {

@@ -13,9 +13,7 @@ export interface AudioKeepAliveStatus {
     currentTrackIndex: number;
     currentTrackName: string;
     availableTracks: string[];
-    /** Seconds the audio session has been alive */
     uptimeSeconds: number;
-    /** Seconds spent in background since last backgrounding */
     backgroundDuration: number;
     disconnectCount: number;
     lastDisconnectReason: string;
@@ -68,9 +66,7 @@ interface NWCAudioKeepAliveModule {
     nextTrack(): Promise<AudioKeepAliveStatus>;
     previousTrack(): Promise<AudioKeepAliveStatus>;
     setMuted(muted: boolean): Promise<AudioKeepAliveStatus>;
-    /** Call while app is in foreground so the Live Activity can start before backgrounding. */
     armNWCAudio(): Promise<boolean>;
-    /** Call when NWC service is stopped/torn down. */
     disarmNWCAudio(): Promise<boolean>;
     addListener(eventType: string): void;
     removeListeners(count: number): void;
@@ -205,12 +201,6 @@ class IOSAudioKeepAliveUtils {
         }
     }
 
-    /**
-     * Call while the app is still in the foreground (when NWC becomes active).
-     * Arms the native side so that UIApplicationWillResignActiveNotification
-     * can start the Live Activity before the app fully enters the background –
-     * the only window ActivityKit accepts Activity.request().
-     */
     async arm(): Promise<void> {
         const mod = this.getModule();
         if (!mod) return;
@@ -221,7 +211,6 @@ class IOSAudioKeepAliveUtils {
         }
     }
 
-    /** Call when the NWC service is stopped or torn down. */
     async disarm(): Promise<void> {
         const mod = this.getModule();
         if (!mod) return;
