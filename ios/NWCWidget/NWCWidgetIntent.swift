@@ -1,4 +1,5 @@
 import AppIntents
+import ActivityKit
 
 // Must match NWCAudioKeepAlive.m
 private let kNWCNextTrack  = "com.zeusln.zeus.nwc.nextTrack"
@@ -14,30 +15,43 @@ private func postDarwin(_ name: String) {
     )
 }
 
+@available(iOS 17.0, *)
 struct NWCNextTrackIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Next Track"
     func perform() async throws -> some IntentResult {
+        if #available(iOS 16.2, *) {
+            await NWCLiveActivityShared.applyNextTrack()
+        }
         postDarwin(kNWCNextTrack)
         return .result()
     }
 }
 
+@available(iOS 17.0, *)
 struct NWCPrevTrackIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Previous Track"
     func perform() async throws -> some IntentResult {
+        if #available(iOS 16.2, *) {
+            await NWCLiveActivityShared.applyPrevTrack()
+        }
         postDarwin(kNWCPrevTrack)
         return .result()
     }
 }
 
+@available(iOS 17.0, *)
 struct NWCToggleMuteIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Toggle Mute"
     func perform() async throws -> some IntentResult {
+        if #available(iOS 16.2, *) {
+            await NWCLiveActivityShared.applyToggleMute()
+        }
         postDarwin(kNWCToggleMute)
         return .result()
     }
 }
 
+@available(iOS 17.0, *)
 struct NWCStopIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop NWC"
     func perform() async throws -> some IntentResult {
