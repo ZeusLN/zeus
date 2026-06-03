@@ -327,7 +327,10 @@ export default class LightningSwipeableRow extends Component<
         const { settings } = settingsStore;
         if (clinkNoffer) {
             this.props.navigation.navigate('ClinkPay', {
-                noffer: clinkNoffer
+                noffer: clinkNoffer,
+                ecash:
+                    BackendUtils.supportsCashuWallet() &&
+                    settings?.ecash?.enableCashu
             });
         } else if (offer) {
             this.props.navigation.navigate('Send', {
