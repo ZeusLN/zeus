@@ -152,6 +152,7 @@ const QrAmountCard = observer(function QrAmountCard({
             <Amount
                 sats={satAmount}
                 toggleable
+                jumboText
                 fontSize={fontSize}
                 colorOverride={themeColor('buttonText')}
             />
