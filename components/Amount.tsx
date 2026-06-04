@@ -188,6 +188,15 @@ function AmountDisplay({
         useSatsSymbol: boolean
     ) => {
         const isPlural = displayAmount !== '1';
+        // β is a unit symbol and scales 1:1 with the digits. The "sat"/"sats"
+        // word is a secondary label and should stay smaller than the digits.
+        // When the caller passes a numeric fontSize for scaling, preserve that
+        // visual hierarchy by computing a proportionally smaller word size
+        // (the 0.4× ratio matches the original 16/40 jumbo defaults).
+        const labelFontSize =
+            useSatsSymbol || fontSize === undefined
+                ? fontSize
+                : Math.max(12, Math.round(fontSize * 0.4));
 
         return (
             <Row
@@ -216,7 +225,7 @@ function AmountDisplay({
                             small={!jumboText && !fontSize && !useSatsSymbol}
                             jumbo={useSatsSymbol ? jumboText : false}
                             defaultSize={defaultTextSize}
-                            fontSize={fontSize}
+                            fontSize={labelFontSize}
                             color={color}
                             colorOverride={colorOverride}
                             accessible={accessible}
