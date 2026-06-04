@@ -230,6 +230,7 @@
 		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
 		NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */; };
 		NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000004 /* NWCWidgetIntent.swift */; };
+		NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000006 /* NWCAmbientTracks.swift */; };
 		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -724,6 +725,7 @@
 		NWCLA000000000000000009 /* NWCActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCActivityManager.swift; path = zeus/NWCActivityManager.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityShared.swift; path = NWCWidget/NWCLiveActivityShared.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000004 /* NWCWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetIntent.swift; path = NWCWidget/NWCWidgetIntent.swift; sourceTree = "<group>"; };
+		NWCLIS000000000000000006 /* NWCAmbientTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCAmbientTracks.swift; path = NWCWidget/NWCAmbientTracks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -916,6 +918,7 @@
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
 				NWCLA000000000000000009 /* NWCActivityManager.swift */,
 				NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */,
+				NWCLIS000000000000000006 /* NWCAmbientTracks.swift */,
 				NWCLIS000000000000000004 /* NWCWidgetIntent.swift */,
 				NWCLA000000000000000007 /* NWCWidgetAttributes.swift */,
 				NWCAUDIO0000000000000015 /* Fireplace.m4a */,
@@ -2079,6 +2082,7 @@
 				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
 				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
 				NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */,
+				NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */,
 				NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */,
 				745388442A54C2B6000927CE /* lightning.pb.swift in Sources */,
 				74B637822A5A350B00750202 /* LncModule.mm in Sources */,

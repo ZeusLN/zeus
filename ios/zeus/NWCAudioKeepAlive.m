@@ -19,10 +19,6 @@ static NSString *const kDarwinPrevTrack  = @"com.zeusln.zeus.nwc.prevTrack";
 static NSString *const kDarwinToggleMute = @"com.zeusln.zeus.nwc.toggleMute";
 static NSString *const kDarwinStop       = @"com.zeusln.zeus.nwc.stop";
 
-static NSArray<NSString *> *kAvailableTracks(void) {
-    return @[@"Fireplace", @"White Noise", @"Gentle Rain"];
-}
-
 @interface NWCAudioKeepAlive () <AVAudioPlayerDelegate>
 
 @property (nonatomic, strong) AVAudioPlayer     *audioPlayer;
@@ -123,7 +119,7 @@ RCT_EXPORT_MODULE();
         _isActive          = NO;
         _hasListeners      = NO;
         _disconnectCount   = 0;
-        _trackNames        = kAvailableTracks();
+        _trackNames        = [NWCAmbientTracks trackNames];
         _currentTrackIndex = 0;
         _isMuted           = NO;
         _iosVersion        = [[UIDevice currentDevice] systemVersion];
