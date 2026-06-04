@@ -240,12 +240,16 @@ const SwipeableRow = ({
     }
 
     if (item.layer === 'CLINK') {
+        // Stay clickable regardless of lightning balance: the invoice is
+        // fetched over Nostr inside ClinkPay (amount may be unknown for
+        // variable/spontaneous noffers until then), and the resulting
+        // bolt11 may be paid via ecash.
         return (
             <LightningSwipeableRow
                 navigation={navigation}
                 clinkNoffer={clinkNoffer}
                 locked={true}
-                disabled={rowDisabled}
+                disabled={item.disabled}
             >
                 <Row item={item} />
             </LightningSwipeableRow>
