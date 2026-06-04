@@ -2736,7 +2736,7 @@ export default class NostrWalletConnectStore {
                     await this.startIOSAudioKeepAlive();
                 } else if (
                     nextState === 'active' &&
-                    previousState === 'background'
+                    this.iosAudioKeepAliveActive
                 ) {
                     console.log(
                         '[NWCAudio] App returning to foreground – stopping keep-alive'

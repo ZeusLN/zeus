@@ -77,14 +77,13 @@ import UIKit
     }
 
     private func pushState(trackIndex: Int, isMuted: Bool, label: String) {
-        if #available(iOS 16.2, *) {
-            let (_, _, revision) = NWCLiveActivityShared.readDisplay()
-            NWCLiveActivityShared.writeDisplay(
-                trackIndex: trackIndex,
-                isMuted: isMuted,
-                revision: revision &+ 1
-            )
-        }
+        let (_, _, revision) = NWCLiveActivityShared.readDisplay()
+        let newRevision = revision &+ 1
+        NWCLiveActivityShared.writeDisplay(
+            trackIndex: trackIndex,
+            isMuted: isMuted,
+            revision: newRevision
+        )
 
         guard let current = resolveLiveActivity() else {
             NSLog("[NWCActivity] %@ skipped – no live activity", label)
@@ -92,11 +91,10 @@ import UIKit
         }
 
         let trackName = NWCLiveActivityShared.trackName(at: trackIndex)
-        let (_, _, revision) = NWCLiveActivityShared.readDisplay()
         let state = NWCLiveActivityAttributes.ContentState(
             currentTrackName: trackName,
             isMuted: isMuted,
-            contentRevision: revision
+            contentRevision: newRevision
         )
 
         var bgTask: UIBackgroundTaskIdentifier = .invalid
@@ -115,7 +113,7 @@ import UIKit
                 await current.update(using: state)
             }
             NSLog("[NWCActivity] %@ – track=%@ muted=%d rev=%u",
-                  label, trackName, isMuted ? 1 : 0, revision)
+                  label, trackName, isMuted ? 1 : 0, newRevision)
             if bgTask != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTask)
             }
@@ -130,36 +128,45 @@ import UIKit
         }
 
         let trackIndex = trackIndex(for: trackName)
-        if #available(iOS 16.2, *) {
-            NWCLiveActivityShared.writeDisplay(trackIndex: trackIndex, isMuted: isMuted, revision: 0)
-        }
+        NWCLiveActivityShared.writeDisplay(trackIndex: trackIndex, isMuted: isMuted, revision: 0)
 
-        if let existing = resolveLiveActivity() {
-            activity = existing
-            pushState(trackIndex: trackIndex, isMuted: isMuted, label: "rebind-update")
-            startRefreshTimer()
-            return
-        }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
 
-        let attrs = NWCLiveActivityAttributes(startedAt: .now)
-        let state = NWCLiveActivityAttributes.ContentState(
-            currentTrackName: trackName,
-            isMuted: isMuted,
-            contentRevision: 0
-        )
-
-        do {
-            if #available(iOS 16.2, *) {
-                let content = ActivityContent(state: state, staleDate: staleDate)
-                activity = try Activity.request(attributes: attrs, content: content, pushType: .none)
-            } else {
-                activity = try Activity.request(attributes: attrs, contentState: state, pushType: .none)
+            if let existing = NWCLiveActivityShared.resolveLiveActivity() {
+                await NWCLiveActivityShared.endDuplicateActivities(keepingId: existing.id)
+                self.activity = existing
+                NWCLiveActivityShared.setPreferredActivityId(existing.id)
+                self.pushState(trackIndex: trackIndex, isMuted: isMuted, label: "rebind-update")
+                self.startRefreshTimer()
+                return
             }
-            NSLog("[NWCActivity] started – id=%@ track=%@", activity?.id ?? "?", trackName)
-            startRefreshTimer()
-        } catch {
-            NSLog("[NWCActivity] FAILED to start – %@ (%@)",
-                  error.localizedDescription, String(describing: error))
+
+            await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
+
+            let attrs = NWCLiveActivityAttributes(startedAt: .now)
+            let state = NWCLiveActivityAttributes.ContentState(
+                currentTrackName: trackName,
+                isMuted: isMuted,
+                contentRevision: 0
+            )
+
+            do {
+                if #available(iOS 16.2, *) {
+                    let content = ActivityContent(state: state, staleDate: self.staleDate)
+                    self.activity = try Activity.request(attributes: attrs, content: content, pushType: .none)
+                } else {
+                    self.activity = try Activity.request(attributes: attrs, contentState: state, pushType: .none)
+                }
+                if let id = self.activity?.id {
+                    NWCLiveActivityShared.setPreferredActivityId(id)
+                }
+                NSLog("[NWCActivity] started – id=%@ track=%@", self.activity?.id ?? "?", trackName)
+                self.startRefreshTimer()
+            } catch {
+                NSLog("[NWCActivity] FAILED to start – %@ (%@)",
+                      error.localizedDescription, String(describing: error))
+            }
         }
     }
 
@@ -171,7 +178,7 @@ import UIKit
         stopRefreshTimer()
         activity = nil
         Task {
-            await Self.endEveryNWCLiveActivity()
+            await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
             NSLog("[NWCActivity] ended (async)")
         }
     }
@@ -197,7 +204,7 @@ import UIKit
 
     private func scheduleStaleActivityCleanupOnLaunch() {
         Task.detached(priority: .utility) {
-            await Self.endEveryNWCLiveActivity()
+            await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
             await MainActor.run { [weak self] in
                 self?.activity = nil
             }
@@ -206,20 +213,7 @@ import UIKit
     }
 
     private static func endEveryNWCLiveActivity() async {
-        let finalState = NWCLiveActivityAttributes.ContentState(
-            currentTrackName: nil,
-            isMuted: false,
-            contentRevision: 0
-        )
-        for act in Activity<NWCLiveActivityAttributes>.activities {
-            guard isLive(act) else { continue }
-            if #available(iOS 16.2, *) {
-                let content = ActivityContent(state: finalState, staleDate: Date())
-                await act.end(content, dismissalPolicy: .immediate)
-            } else {
-                await act.end(using: finalState, dismissalPolicy: .immediate)
-            }
-        }
+        await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
     }
 
     private static func isLive(_ act: Activity<NWCLiveActivityAttributes>) -> Bool {

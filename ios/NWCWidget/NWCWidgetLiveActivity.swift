@@ -34,20 +34,23 @@ private struct NWCExpandedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 10) {
-                ZeusIcon(size: 28)
+            HStack(alignment: .center, spacing: 0) {
+                HStack(spacing: 10) {
+                    ZeusIcon(size: 28)
 
-                Text("Active: NWC")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    Text("Active: NWC")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 Text(context.attributes.startedAt, style: .timer)
                     .font(.system(size: 15, weight: .medium).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.55))
                     .monospacedDigit()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let track = context.state.currentTrackName {
                 Text(context.state.isMuted ? "Muted · \(track)" : "Now playing: \(track)")
@@ -103,6 +106,7 @@ private struct NWCExpandedView: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

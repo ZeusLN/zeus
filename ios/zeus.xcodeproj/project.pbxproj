@@ -228,6 +228,7 @@
 		NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.m4a */; };
 		NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000007 /* NWCWidgetAttributes.swift */; };
 		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
+		NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */; };
 		NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */; };
 		NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000004 /* NWCWidgetIntent.swift */; };
 		NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000006 /* NWCAmbientTracks.swift */; };
@@ -723,6 +724,7 @@
 		NWCLA000000000000000006 /* NWCWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NWCWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		NWCLA000000000000000007 /* NWCWidgetAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetAttributes.swift; path = NWCWidget/NWCWidgetAttributes.swift; sourceTree = "<group>"; };
 		NWCLA000000000000000009 /* NWCActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCActivityManager.swift; path = zeus/NWCActivityManager.swift; sourceTree = "<group>"; };
+		NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityBridge.swift; path = zeus/NWCLiveActivityBridge.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityShared.swift; path = NWCWidget/NWCLiveActivityShared.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000004 /* NWCWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetIntent.swift; path = NWCWidget/NWCWidgetIntent.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000006 /* NWCAmbientTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCAmbientTracks.swift; path = NWCWidget/NWCAmbientTracks.swift; sourceTree = "<group>"; };
@@ -917,6 +919,7 @@
 				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
 				NWCLA000000000000000009 /* NWCActivityManager.swift */,
+				NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */,
 				NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */,
 				NWCLIS000000000000000006 /* NWCAmbientTracks.swift */,
 				NWCLIS000000000000000004 /* NWCWidgetIntent.swift */,
@@ -2081,6 +2084,7 @@
 				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
 				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
 				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
+				NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */,
 				NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */,
 				NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */,
 				NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */,
