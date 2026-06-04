@@ -55,27 +55,24 @@ static void nwcDarwinCallback(CFNotificationCenterRef center, void *observer,
     if (!self) return;
     NSString *noteName = (__bridge NSString *)name;
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!self.isActive) return;
-        if ([noteName isEqualToString:kDarwinNextTrack]) {
-            NSInteger next = (self.currentTrackIndex + 1) % (NSInteger)self.trackNames.count;
-            [self switchToTrackAtIndex:next];
-            [self safeEmit:kEventTrackChanged body:@{
-                @"trackIndex": @(next),
-                @"trackName":  self.trackNames[next],
-                @"source":     @"widget"
-            }];
-        } else if ([noteName isEqualToString:kDarwinPrevTrack]) {
+        if (!self.isActive && !self.nwcArmed) return;
+        if ([noteName isEqualToString:kDarwinNextTrack]
+            || [noteName isEqualToString:kDarwinPrevTrack]) {
+            NSInteger index = [NWCLiveActivityBridge appGroupTrackIndex];
             NSInteger count = (NSInteger)self.trackNames.count;
-            NSInteger prev  = (self.currentTrackIndex - 1 + count) % count;
-            [self switchToTrackAtIndex:prev];
-            [self safeEmit:kEventTrackChanged body:@{
-                @"trackIndex": @(prev),
-                @"trackName":  self.trackNames[prev],
-                @"source":     @"widget"
-            }];
+            if (count > 0) {
+                if (index < 0 || index >= count) index = 0;
+                [self switchToTrackAtIndex:index];
+                [self safeEmit:kEventTrackChanged body:@{
+                    @"trackIndex": @(index),
+                    @"trackName":  self.trackNames[index],
+                    @"source":     @"widget"
+                }];
+            }
         } else if ([noteName isEqualToString:kDarwinToggleMute]) {
-            [self applyMuted:!self.isMuted];
+            [self applyMuted:[NWCLiveActivityBridge appGroupIsMuted]];
         } else if ([noteName isEqualToString:kDarwinStop]) {
+            if (!self.isActive) return;
             [self stopInternal:@"widget_stop"];
             [self safeEmit:kEventSuspended body:@{
                 @"reason":        @"widget_stop",
@@ -318,6 +315,9 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
         [self loadAndPlayTrackAtIndex:index error:&error];
     }
 
+    [NWCLiveActivityBridge syncAppGroupFromAudioWithTrackIndex:index
+                                                      isMuted:self.isMuted];
+
     if (@available(iOS 16.1, *)) {
         NSString *trackName = self.trackNames[index];
         [[NWCActivityManager shared] updateActivityWithTrackName:trackName
@@ -329,6 +329,9 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     self.isMuted = muted;
     self.audioPlayer.volume = muted ? 0.0f : 1.0f;
     NSLog(@"[NWCAudio] %@", muted ? @"Muted" : @"Unmuted");
+
+    [NWCLiveActivityBridge syncAppGroupFromAudioWithTrackIndex:self.currentTrackIndex
+                                                      isMuted:muted];
 
     if (@available(iOS 16.1, *)) {
         NSString *trackName = self.trackNames[self.currentTrackIndex];
@@ -638,6 +641,12 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
     NSLog(@"[NWCAudio] App returning to foreground after %.0f s in background",
           bgDuration);
     self.backgroundEnteredTime = nil;
+
+    if (!self.isActive && !self.nwcArmed) {
+        if (@available(iOS 16.1, *)) {
+            [[NWCActivityManager shared] endAllActivitiesImmediately];
+        }
+    }
 
     if (self.isActive && !self.audioPlayer.isPlaying) {
         NSError *error = nil;

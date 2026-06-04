@@ -9,6 +9,7 @@ enum NWCLiveActivityShared {
     private static let keyTrackIndex = "nwc.trackIndex"
     private static let keyIsMuted = "nwc.isMuted"
     private static let keyRevision = "nwc.contentRevision"
+    private static let keyActivityId = "nwc.activityId"
 
     private static var defaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
@@ -35,9 +36,50 @@ enum NWCLiveActivityShared {
         d?.set(Int(revision), forKey: keyRevision)
     }
 
+    static func setPreferredActivityId(_ id: String?) {
+        let d = defaults
+        if let id {
+            d?.set(id, forKey: keyActivityId)
+        } else {
+            d?.removeObject(forKey: keyActivityId)
+        }
+    }
+
     @available(iOS 16.1, *)
     static func resolveLiveActivity() -> Activity<NWCLiveActivityAttributes>? {
-        Activity<NWCLiveActivityAttributes>.activities.last(where: isLive)
+        let live = Activity<NWCLiveActivityAttributes>.activities.filter(isLive)
+        guard !live.isEmpty else { return nil }
+        if let preferred = defaults?.string(forKey: keyActivityId),
+           let match = live.first(where: { $0.id == preferred }) {
+            return match
+        }
+        if live.count > 1 {
+            NSLog("[NWCLiveActivityShared] %d live activities; using newest by startedAt", live.count)
+        }
+        return live.max(by: { $0.attributes.startedAt < $1.attributes.startedAt })
+    }
+
+    /// Ends duplicate live activities, keeping at most one (by `keepingId`, or none if nil).
+    @available(iOS 16.1, *)
+    static func endDuplicateActivities(keepingId: String?) async {
+        let finalState = NWCLiveActivityAttributes.ContentState(
+            currentTrackName: nil,
+            isMuted: false,
+            contentRevision: 0
+        )
+        for act in Activity<NWCLiveActivityAttributes>.activities {
+            guard isLive(act) else { continue }
+            if let keepingId, act.id == keepingId { continue }
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: finalState, staleDate: Date())
+                await act.end(content, dismissalPolicy: .immediate)
+            } else {
+                await act.end(using: finalState, dismissalPolicy: .immediate)
+            }
+        }
+        if keepingId == nil {
+            setPreferredActivityId(nil)
+        }
     }
 
     @available(iOS 16.1, *)
