@@ -196,7 +196,7 @@ export default class LSPPaymentAwait extends React.Component<
             if (response && Object.keys(response).length > 0) {
                 const result = response?.result || response;
                 if (result?.order_state === LSPOrderState.COMPLETED) {
-                    this.updateOrderInStorage(response);
+                    LSPStore.updateOrderInStorage(response);
                     this.setState({
                         paymentState: PaymentAwaitState.COMPLETED
                     });
@@ -204,7 +204,7 @@ export default class LSPPaymentAwait extends React.Component<
                     return;
                 }
                 if (result?.order_state === LSPOrderState.FAILED) {
-                    this.updateOrderInStorage(response);
+                    LSPStore.updateOrderInStorage(response);
                     this.setState({ paymentState: PaymentAwaitState.FAILED });
                     this.isPolling = false;
                     return;
@@ -217,34 +217,6 @@ export default class LSPPaymentAwait extends React.Component<
         this.isPolling = false;
         this.scheduleNextPoll();
     };
-
-    private updateOrderInStorage(order: any) {
-        Storage.getItem(LSPS_ORDERS_KEY)
-            .then((responseArrayString) => {
-                if (!responseArrayString) return;
-                const responseArray = JSON.parse(responseArrayString);
-                const index = responseArray.findIndex((response: any) => {
-                    const decodedResponse = JSON.parse(response);
-                    const result =
-                        decodedResponse?.order?.result ||
-                        decodedResponse?.order;
-                    const currentOrderResult = (order as any)?.result || order;
-                    return result?.order_id === currentOrderResult?.order_id;
-                });
-                if (index !== -1) {
-                    const oldOrder = JSON.parse(responseArray[index]);
-                    oldOrder.order = order;
-                    responseArray[index] = JSON.stringify(oldOrder);
-                    Storage.setItem(LSPS_ORDERS_KEY, responseArray);
-                }
-            })
-            .catch((error) => {
-                console.error(
-                    'LSPPaymentAwait: error updating order in storage',
-                    error
-                );
-            });
-    }
 
     private payFromZeusWallet = () => {
         const { invoice } = this.props.route.params;

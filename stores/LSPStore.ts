@@ -1299,4 +1299,32 @@ export default class LSPStore {
                 });
         });
     };
+
+    public updateOrderInStorage(order: any) {
+        Storage.getItem(LSPS_ORDERS_KEY)
+            .then((responseArrayString) => {
+                if (!responseArrayString) return;
+                const responseArray = JSON.parse(responseArrayString);
+                const index = responseArray.findIndex((response: any) => {
+                    const decodedResponse = JSON.parse(response);
+                    const result =
+                        decodedResponse?.order?.result ||
+                        decodedResponse?.order;
+                    const currentOrderResult = order?.result || order;
+                    return result?.order_id === currentOrderResult?.order_id;
+                });
+                if (index !== -1) {
+                    const oldOrder = JSON.parse(responseArray[index]);
+                    oldOrder.order = order;
+                    responseArray[index] = JSON.stringify(oldOrder);
+                    Storage.setItem(LSPS_ORDERS_KEY, responseArray);
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    'LSPStore: error updating order in storage',
+                    error
+                );
+            });
+    }
 }
