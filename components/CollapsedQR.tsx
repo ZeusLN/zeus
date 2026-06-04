@@ -26,8 +26,10 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
-import { getUnformattedAmount } from '../utils/AmountUtils';
-import { settingsStore } from '../stores/Stores';
+import {
+    getUnformattedAmount,
+    shouldUseSatsSymbol
+} from '../utils/AmountUtils';
 import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
 
 import Turtle from '../assets/images/SVG/Turtle.svg';
@@ -96,8 +98,7 @@ const QrAmountCard = observer(function QrAmountCard({
     qrSize: number;
 }) {
     const availableWidth = qrSize - QR_AMOUNT_CARD_PADDING * 2;
-    const useSatsSymbol =
-        settingsStore.settings?.display?.useSatsSymbol ?? true;
+    const useSatsSymbol = shouldUseSatsSymbol();
     const unformatted = getUnformattedAmount({ sats: satAmount });
     const numberLen = String(unformatted.amount ?? '').length;
 
