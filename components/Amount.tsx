@@ -20,7 +20,12 @@ import {
 } from '../utils/UnitsUtils';
 import type { Units } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
+import {
+    processSatsAmount,
+    getUnformattedAmount,
+    getSatsUnitLabel,
+    shouldUseSatsSymbol
+} from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
@@ -216,7 +221,7 @@ function AmountDisplay({
                             colorOverride={colorOverride}
                             accessible={accessible}
                         >
-                            {useSatsSymbol ? 'β' : isPlural ? 'sats' : 'sat'}
+                            {getSatsUnitLabel(isPlural, useSatsSymbol)}
                             {fee
                                 ? ' ' +
                                   formatInlineNoun(
@@ -419,8 +424,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
 
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
-        const useSatsSymbol =
-            SettingsStore.settings?.display?.useSatsSymbol ?? true;
+        const useSatsSymbol = shouldUseSatsSymbol();
 
         const unformattedAmount = getUnformattedAmount({
             sats: value,
