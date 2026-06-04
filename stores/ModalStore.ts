@@ -1,11 +1,16 @@
 import { action, observable } from 'mobx';
 
 import Storage from '../storage';
+import { localeString } from '../utils/LocaleUtils';
 import {
     RATING_DISMISSED_KEY,
     PAYMENT_COUNT_KEY,
     RATING_REPROMPT_INTERVAL
 } from '../utils/RatingUtils';
+import {
+    ANNOUNCEMENTS,
+    ANNOUNCEMENT_DISMISSED_KEY_PREFIX
+} from '../utils/Announcements';
 
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
@@ -159,6 +164,48 @@ export default class ModalStore {
             console.log(e);
         }
         this.toggleRatingModal(false);
+    };
+
+    @action
+    public checkAndTriggerAnnouncements = async (navigation: any) => {
+        try {
+            for (const announcement of ANNOUNCEMENTS) {
+                const key =
+                    ANNOUNCEMENT_DISMISSED_KEY_PREFIX +
+                    announcement.id +
+                    '_dismissed';
+                const dismissed = await Storage.getItem(key);
+                if (dismissed === 'true') continue;
+                if (announcement.shouldShow && !announcement.shouldShow())
+                    continue;
+
+                // Persist dismissal up-front so each announcement is strictly
+                // one-shot per device regardless of how the user closes it.
+                await Storage.setItem(key, 'true');
+
+                this.toggleInfoModal({
+                    title: localeString(announcement.titleKey),
+                    text: localeString(announcement.bodyKey),
+                    buttons: announcement.cta
+                        ? [
+                              {
+                                  title: localeString(
+                                      announcement.cta.labelKey
+                                  ),
+                                  callback: () =>
+                                      announcement.cta!.onPress(navigation)
+                              }
+                          ]
+                        : undefined
+                });
+
+                // Only surface one announcement per session — avoids stacking
+                // modals when several land in the same release.
+                return;
+            }
+        } catch (e) {
+            console.log(e);
+        }
     };
 
     @action
