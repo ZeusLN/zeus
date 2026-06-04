@@ -7,7 +7,6 @@ import AnimatedDigit from './AnimatedDigit';
 import Conversion from './Conversion';
 
 import FiatStore from '../stores/FiatStore';
-import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -17,6 +16,7 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../utils/UnitsUtils';
+import { getSatsUnitLabel, shouldUseSatsSymbol } from '../utils/AmountUtils';
 
 interface KeypadAmountDisplayState {
     exitingDigit: null | { char: string; key: number };
@@ -37,12 +37,11 @@ interface KeypadAmountDisplayProps {
     childrenBeforeConversion?: boolean;
     forceUnit?: string;
     FiatStore?: FiatStore;
-    SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
 }
 
-@inject('FiatStore', 'SettingsStore', 'UnitsStore')
+@inject('FiatStore', 'UnitsStore')
 @observer
 export default class KeypadAmountDisplay extends React.Component<
     KeypadAmountDisplayProps,
@@ -190,12 +189,10 @@ export default class KeypadAmountDisplay extends React.Component<
             childrenBeforeConversion = false,
             forceUnit,
             FiatStore,
-            SettingsStore,
             UnitsStore,
             children
         } = this.props;
-        const useSatsSymbol =
-            SettingsStore?.settings?.display?.useSatsSymbol ?? true;
+        const useSatsSymbol = shouldUseSatsSymbol();
         const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl } =
             units === 'fiat'
@@ -225,7 +222,7 @@ export default class KeypadAmountDisplay extends React.Component<
         if (units === 'BTC') {
             prefix = '₿';
         } else if (units === 'sats') {
-            suffix = ` ${useSatsSymbol ? 'β' : isSingularSat ? 'sat' : 'sats'}`;
+            suffix = ` ${getSatsUnitLabel(!isSingularSat, useSatsSymbol)}`;
         } else if (units === 'fiat') {
             if (rtl) {
                 suffix = `${space ? ' ' : ''}${symbol}`;
