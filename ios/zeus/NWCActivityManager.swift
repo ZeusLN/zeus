@@ -12,7 +12,7 @@ import UIKit
 
     override private init() {
         super.init()
-        endAllActivitiesBlocking()
+        scheduleStaleActivityCleanupOnLaunch()
     }
 
     @objc func startActivity(trackName: String, isMuted: Bool) {
@@ -34,7 +34,12 @@ import UIKit
     }
 
     @objc func endAllActivitiesImmediately() {
-        endAllActivitiesBlocking()
+        stopRefreshTimer()
+        activity = nil
+        Task.detached(priority: .userInitiated) {
+            await Self.endEveryNWCLiveActivity()
+            NSLog("[NWCActivity] ended all (immediate)")
+        }
     }
 
     // MARK: - Private
@@ -190,17 +195,14 @@ import UIKit
         refreshTimer = nil
     }
 
-    private func endAllActivitiesBlocking() {
-        stopRefreshTimer()
-        let sem = DispatchSemaphore(value: 0)
-        Task.detached(priority: .userInitiated) {
+    private func scheduleStaleActivityCleanupOnLaunch() {
+        Task.detached(priority: .utility) {
             await Self.endEveryNWCLiveActivity()
             await MainActor.run { [weak self] in
                 self?.activity = nil
             }
-            sem.signal()
+            NSLog("[NWCActivity] launch cleanup finished")
         }
-        _ = sem.wait(timeout: .now() + 5)
     }
 
     private static func endEveryNWCLiveActivity() async {

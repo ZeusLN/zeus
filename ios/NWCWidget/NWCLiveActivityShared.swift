@@ -4,7 +4,7 @@ import Foundation
 /// Shared Live Activity display state (app group). Used by the main app and Live Activity intents.
 enum NWCLiveActivityShared {
     static let appGroupID = "group.com.zeusln.zeus"
-    static let tracks = ["Fireplace", "White Noise", "Gentle Rain"]
+    static var tracks: [String] { NWCAmbientTracks.trackNames() }
 
     private static let keyTrackIndex = "nwc.trackIndex"
     private static let keyIsMuted = "nwc.isMuted"
