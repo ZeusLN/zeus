@@ -466,7 +466,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     />
                                 )}
 
-                            {Object.keys(createOrderResponse).length == 0 && (
+                            {Object.keys(createOrderResponse).length === 0 && (
                                 <ScrollView
                                     style={{
                                         flex: 1,
@@ -516,7 +516,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 {getInfoData &&
                                                     Object.keys(
                                                         createOrderResponse
-                                                    ).length == 0 &&
+                                                    ).length === 0 &&
                                                     info && (
                                                         <View
                                                             style={{
@@ -1175,7 +1175,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 <Button
                                     title={
                                         Object.keys(createOrderResponse)
-                                            .length == 0
+                                            .length === 0
                                             ? `${localeString(
                                                   'views.LSPS1.createOrder'
                                               )}`
