@@ -13,6 +13,8 @@ import android.util.Base64;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.view.WindowManager;
+import android.app.Activity;
 
 import java.util.Arrays;
 import java.io.UnsupportedEncodingException;
@@ -166,6 +168,23 @@ class MobileTools extends ReactContextBaseJavaModule {
       android.util.Log.e(TAG, "Error clearing shared intent", e);
       promise.reject("CLEAR_ERROR", e.getMessage());
     }
+  }
+
+  @ReactMethod
+  public void setSecureFlag(boolean enable, Promise promise) {
+    Activity activity = getCurrentActivity();
+    if (activity == null) {
+      promise.reject("NO_ACTIVITY", "No active activity");
+      return;
+    }
+    activity.runOnUiThread(() -> {
+      if (enable) {
+        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+      } else {
+        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+      }
+      promise.resolve(true);
+    });
   }
 
   @ReactMethod

@@ -7,6 +7,8 @@ import {
     RATING_REPROMPT_INTERVAL
 } from '../utils/RatingUtils';
 
+import type { ActionSheetItem } from '../components/Modals/ActionSheetModal';
+
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
@@ -18,6 +20,13 @@ export default class ModalStore {
     @observable public showNWCPendingPaymentsModal: boolean = false;
     @observable public showRatingModal: boolean = false;
     @observable public showRestoreChannelModal: boolean = false;
+    @observable public showScreenRecordingWarning: boolean = false;
+    @observable public showActionSheet: boolean = false;
+    @observable public actionSheetItems: ActionSheetItem[] = [];
+    public actionSheetOnSelect?: (value: any) => void;
+    @observable public showEnlargedQR: boolean = false;
+    @observable public enlargedQRValue: string = '';
+    @observable public enlargedQRLogo: any = undefined;
     @observable public nwcPendingPaymentsData?: {
         pendingEvents: any[];
         totalAmount: number;
@@ -89,6 +98,50 @@ export default class ModalStore {
     @action
     public toggleAlertModal = (status: boolean) => {
         this.showAlertModal = status;
+    };
+
+    @action
+    public toggleScreenRecordingWarning = (status: boolean) => {
+        this.showScreenRecordingWarning = status;
+    };
+
+    @action
+    public toggleEnlargedQR = (params?: { value?: string; logo?: any }) => {
+        if (params?.value) {
+            this.enlargedQRValue = params.value;
+            this.enlargedQRLogo = params.logo;
+            this.showEnlargedQR = true;
+        } else {
+            this.showEnlargedQR = false;
+        }
+    };
+
+    @action
+    public clearEnlargedQR = () => {
+        this.showEnlargedQR = false;
+        this.enlargedQRValue = '';
+        this.enlargedQRLogo = undefined;
+    };
+
+    @action
+    public toggleActionSheet = (params?: {
+        items?: ActionSheetItem[];
+        onSelect?: (value: any) => void;
+    }) => {
+        if (params?.items?.length) {
+            this.actionSheetItems = params.items;
+            this.actionSheetOnSelect = params.onSelect;
+            this.showActionSheet = true;
+        } else {
+            this.showActionSheet = false;
+        }
+    };
+
+    @action
+    public clearActionSheet = () => {
+        this.showActionSheet = false;
+        this.actionSheetItems = [];
+        this.actionSheetOnSelect = undefined;
     };
 
     @action
@@ -267,6 +320,14 @@ export default class ModalStore {
         }
         if (this.showRatingModal) {
             this.showRatingModal = false;
+            return true;
+        }
+        if (this.showEnlargedQR) {
+            this.showEnlargedQR = false;
+            return true;
+        }
+        if (this.showActionSheet) {
+            this.showActionSheet = false;
             return true;
         }
         return false;
