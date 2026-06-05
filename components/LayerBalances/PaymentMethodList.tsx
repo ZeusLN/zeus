@@ -338,6 +338,38 @@ export default class PaymentMethodList extends Component<
             });
         }
 
+        // Only show on-chain balance for non-Lnbank accounts
+        if (value && BackendUtils.supportsOnchainReceiving()) {
+            DATA.push({
+                layer: 'On-chain',
+                subtitle: value,
+                disabled: !BackendUtils.supportsOnchainSends(),
+                balance: onchainBalance,
+                account: 'default',
+                satAmount
+            });
+
+            if (accounts && accounts.length > 0) {
+                accounts.forEach((account) => {
+                    if (!account.hidden && !account.watch_only) {
+                        DATA.push({
+                            layer: account.name,
+                            subtitle: value ?? account.XFP,
+                            disabled: false,
+                            balance: account.balance,
+                            account: account.name,
+                            hidden: account.hidden,
+                            satAmount
+                        });
+                    }
+                });
+            }
+        }
+
+        // Rendered after the balance-backed rows so the UI groups
+        // "buckets you can spend from" together up top, with the noffer
+        // (which spans lightning + ecash and may have no known amount)
+        // sitting beneath them.
         if (clinkNoffer) {
             // Only Fixed-price noffers carry the amount in the bech32 itself.
             // Variable and Spontaneous noffers have no amount until the
@@ -380,34 +412,6 @@ export default class PaymentMethodList extends Component<
                     satAmount: embeddedAmount
                 })
             });
-        }
-
-        // Only show on-chain balance for non-Lnbank accounts
-        if (value && BackendUtils.supportsOnchainReceiving()) {
-            DATA.push({
-                layer: 'On-chain',
-                subtitle: value,
-                disabled: !BackendUtils.supportsOnchainSends(),
-                balance: onchainBalance,
-                account: 'default',
-                satAmount
-            });
-
-            if (accounts && accounts.length > 0) {
-                accounts.forEach((account) => {
-                    if (!account.hidden && !account.watch_only) {
-                        DATA.push({
-                            layer: account.name,
-                            subtitle: value ?? account.XFP,
-                            disabled: false,
-                            balance: account.balance,
-                            account: account.name,
-                            hidden: account.hidden,
-                            satAmount
-                        });
-                    }
-                });
-            }
         }
         return DATA;
     };
