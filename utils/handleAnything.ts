@@ -7,6 +7,7 @@ import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
+import { isCREQ, decodeCREQ } from './CREQUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
@@ -220,11 +221,14 @@ const handleAnything = async (
     const network = getNetworkString();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    let { value, satAmount, lightning, offer }: any =
+    let { value, satAmount, lightning, offer, creq }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
-        (value && lightning) || (value && offer) || (lightning && offer);
+        (value && lightning) ||
+        (value && offer) ||
+        (lightning && offer) ||
+        (creq && (value || lightning || offer));
 
     // ecash mode
     const ecash =
@@ -254,13 +258,34 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
+        let creqParams;
+        let creqString;
+        if (creq && isCREQ(creq)) {
+            try {
+                creqParams = decodeCREQ(creq);
+                creqString = creq;
+            } catch {}
+        }
         return [
             'ChoosePaymentMethod',
             {
                 value,
                 satAmount,
                 lightning,
-                offer
+                offer,
+                creqParams,
+                creqString
+            }
+        ];
+    } else if (creq && isCREQ(creq)) {
+        // CREQ from BIP-21 as only payment method
+        if (isClipboardValue) return true;
+        const creqParams = decodeCREQ(creq);
+        return [
+            'CREQPayment',
+            {
+                creqParams,
+                creqString: creq
             }
         ];
     } else if (offer) {
@@ -972,6 +997,16 @@ const handleAnything = async (
             'ImportAccount',
             {
                 extended_public_key: value
+            }
+        ];
+    } else if (isCREQ(value)) {
+        if (isClipboardValue) return true;
+        const creqParams = decodeCREQ(value);
+        return [
+            'CREQPayment',
+            {
+                creqParams,
+                creqString: value
             }
         ];
     } else if (await CashuUtils.isValidCashuTokenAsync(value)) {

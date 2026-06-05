@@ -12,6 +12,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { CREQParams } from '../../utils/CREQUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -30,6 +31,8 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
+    creqParams?: CREQParams;
+    creqString?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
@@ -61,7 +64,8 @@ const LAYER_LOCALE_MAP: Record<string, string> = {
     'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
     'Lightning address': 'general.lightningAddress',
     Offer: 'views.Settings.Bolt12Offer',
-    'On-chain': 'general.onchain'
+    'On-chain': 'general.onchain',
+    'Ecash (CREQ)': 'components.LayerBalances.ecashCreq'
 };
 
 const getGradientColors = (): [string, string] => {
@@ -72,7 +76,8 @@ const getGradientColors = (): [string, string] => {
 };
 
 const LayerIcon = ({ layer }: { layer: string }) => {
-    if (layer === 'Lightning via ecash') return <EcashSvg />;
+    if (layer === 'Lightning via ecash' || layer === 'Ecash (CREQ)')
+        return <EcashSvg />;
     if (layer === 'On-chain') return <OnChainSvg />;
     if (['Lightning', 'Lightning address', 'Offer'].includes(layer))
         return <LightningSvg />;
@@ -166,6 +171,8 @@ const SwipeableRow = ({
     lightning,
     lightningAddress,
     offer,
+    creqParams,
+    creqString,
     lnurlParams
 }: {
     item: DataRow;
@@ -177,6 +184,8 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
+    creqParams?: CREQParams;
+    creqString?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
@@ -235,6 +244,23 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'Ecash (CREQ)' && creqParams && creqString) {
+        return (
+            <RectButton
+                style={[styles.rectButton, rowDisabled && { opacity: 0.5 }]}
+                onPress={() => {
+                    if (rowDisabled) return;
+                    navigation.navigate('CREQPayment', {
+                        creqParams,
+                        creqString
+                    });
+                }}
+            >
+                <Row item={item} />
+            </RectButton>
+        );
+    }
+
     if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
@@ -263,6 +289,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            creqString,
             lnurlParams,
             lightningBalance,
             onchainBalance,
@@ -314,6 +341,20 @@ export default class PaymentMethodList extends Component<
             });
         }
 
+        if (
+            creqString &&
+            BackendUtils.supportsCashuWallet() &&
+            settingsStore?.settings?.ecash?.enableCashu
+        ) {
+            DATA.push({
+                layer: 'Ecash (CREQ)',
+                subtitle: creqString.substring(0, 30) + '...',
+                balance: ecashBalance,
+                disabled: false,
+                satAmount
+            });
+        }
+
         // Only show on-chain balance for non-Lnbank accounts
         if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
@@ -353,6 +394,8 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            creqParams,
+            creqString,
             lnurlParams
         } = this.props;
         const satAmountNum =
@@ -380,6 +423,8 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
+                            creqParams={creqParams}
+                            creqString={creqString}
                             lnurlParams={lnurlParams}
                         />
                     )}
