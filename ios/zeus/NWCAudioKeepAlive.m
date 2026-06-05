@@ -117,7 +117,16 @@ RCT_EXPORT_MODULE();
         _hasListeners      = NO;
         _disconnectCount   = 0;
         _trackNames        = [NWCAmbientTracks trackNames];
-        _currentTrackIndex = 0;
+
+        // Restore last-selected track from the app group (written by
+        // switchToTrackAtIndex: via NWCLiveActivityBridge). UserDefaults
+        // returns 0 if the key was never written, which matches the default.
+        NSInteger persisted = [NWCLiveActivityBridge appGroupTrackIndex];
+        NSInteger count = (NSInteger)_trackNames.count;
+        _currentTrackIndex = (count > 0 && persisted >= 0 && persisted < count)
+            ? persisted
+            : 0;
+
         _isMuted           = NO;
         _iosVersion        = [[UIDevice currentDevice] systemVersion];
         _deviceModel       = [self deviceModelIdentifier];
