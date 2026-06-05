@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
 
+import { localeString } from './LocaleUtils';
+
 export type TimePeriod = 'Seconds' | 'Minutes' | 'Hours' | 'Days' | 'Weeks';
 
 export enum ExpirationPreset {
@@ -79,4 +81,26 @@ export const displayFromExpirySeconds = (
     if (n % SECONDS_IN_MINUTE === 0)
         return { expiry: String(n / SECONDS_IN_MINUTE), timePeriod: 'Minutes' };
     return { expiry: String(n), timePeriod: 'Seconds' };
+};
+
+// Formats a (value, time period) pair into a localized, properly pluralized
+// duration string, e.g. ('1', 'Hours') → '1 Hour', ('2', 'Days') → '2 Days'.
+export const localizedExpiryDuration = (
+    expiry: string,
+    timePeriod: string
+): string => {
+    const unitKeys: {
+        [key: string]: { singular: string; plural: string };
+    } = {
+        Seconds: { singular: 'time.seconds', plural: 'time.seconds' },
+        Minutes: { singular: 'time.minute', plural: 'time.minutes' },
+        Hours: { singular: 'time.hour', plural: 'time.hours' },
+        Days: { singular: 'time.day', plural: 'time.days' },
+        Weeks: { singular: 'time.week', plural: 'time.weeks' }
+    };
+    const keys = unitKeys[timePeriod];
+    const unit = keys
+        ? localeString(expiry === '1' ? keys.singular : keys.plural)
+        : timePeriod;
+    return `${expiry} ${unit}`;
 };

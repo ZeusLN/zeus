@@ -12,7 +12,10 @@ import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { displayFromExpirySeconds } from '../../utils/ExpiryUtils';
+import {
+    displayFromExpirySeconds,
+    localizedExpiryDuration
+} from '../../utils/ExpiryUtils';
 
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
@@ -63,20 +66,7 @@ export default class SwapSettings extends React.Component<
         const { settings } = this.props.SettingsStore;
         const expirySeconds = settings?.invoices?.expirySeconds || '3600';
         const { expiry, timePeriod } = displayFromExpirySeconds(expirySeconds);
-        const unitKeys: {
-            [key: string]: { singular: string; plural: string };
-        } = {
-            Seconds: { singular: 'time.seconds', plural: 'time.seconds' },
-            Minutes: { singular: 'time.minute', plural: 'time.minutes' },
-            Hours: { singular: 'time.hour', plural: 'time.hours' },
-            Days: { singular: 'time.day', plural: 'time.days' },
-            Weeks: { singular: 'time.week', plural: 'time.weeks' }
-        };
-        const keys = unitKeys[timePeriod];
-        const unit = keys
-            ? localeString(expiry === '1' ? keys.singular : keys.plural)
-            : timePeriod;
-        return `${expiry} ${unit}`;
+        return localizedExpiryDuration(expiry, timePeriod);
     };
 
     render() {

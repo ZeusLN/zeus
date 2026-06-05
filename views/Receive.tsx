@@ -84,7 +84,8 @@ import {
     ExpirationPreset,
     TimePeriod,
     expirationIndexFromSeconds,
-    expirySecondsFromInput
+    expirySecondsFromInput,
+    localizedExpiryDuration
 } from '../utils/ExpiryUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -1217,11 +1218,7 @@ export default class Receive extends React.Component<
         const expiryDisplay = lspIsActive ? LOCKED_EXPIRY : expiry;
         const periodDisplay = lspIsActive ? LOCKED_TIME_PERIOD : timePeriod;
 
-        const period =
-            expiryDisplay === '1'
-                ? periodDisplay.toLowerCase().replace(/s$/, '')
-                : periodDisplay.toLowerCase();
-        return `${expiryDisplay} ${period}`;
+        return localizedExpiryDuration(expiryDisplay, periodDisplay);
     };
 
     render() {

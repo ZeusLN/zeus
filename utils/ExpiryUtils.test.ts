@@ -2,8 +2,26 @@ import {
     ExpirationPreset,
     displayFromExpirySeconds,
     expirationIndexFromSeconds,
-    expirySecondsFromInput
+    expirySecondsFromInput,
+    localizedExpiryDuration
 } from './ExpiryUtils';
+
+jest.mock('./LocaleUtils', () => {
+    const locale: { [key: string]: string } = {
+        'time.seconds': 'Seconds',
+        'time.minute': 'Minute',
+        'time.minutes': 'Minutes',
+        'time.hour': 'Hour',
+        'time.hours': 'Hours',
+        'time.day': 'Day',
+        'time.days': 'Days',
+        'time.week': 'Week',
+        'time.weeks': 'Weeks'
+    };
+    return {
+        localeString: (key: string) => locale[key] || key
+    };
+});
 
 describe('ExpiryUtils', () => {
     describe('expirySecondsFromInput', () => {
@@ -133,6 +151,18 @@ describe('ExpiryUtils', () => {
                 expiry: '1',
                 timePeriod: 'Hours'
             });
+        });
+    });
+
+    describe('localizedExpiryDuration', () => {
+        it('uses the singular unit for a value of 1', () => {
+            expect(localizedExpiryDuration('1', 'Hours')).toBe('1 Hour');
+            expect(localizedExpiryDuration('1', 'Days')).toBe('1 Day');
+        });
+
+        it('uses the plural unit for values other than 1', () => {
+            expect(localizedExpiryDuration('2', 'Hours')).toBe('2 Hours');
+            expect(localizedExpiryDuration('10', 'Minutes')).toBe('10 Minutes');
         });
     });
 });
