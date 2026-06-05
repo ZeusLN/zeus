@@ -12,6 +12,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { decodeNoffer, NofferPriceType } from '../../utils/ClinkUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -240,16 +241,17 @@ const SwipeableRow = ({
     }
 
     if (item.layer === 'CLINK') {
-        // Stay clickable regardless of lightning balance: the invoice is
-        // fetched over Nostr inside ClinkPay (amount may be unknown for
-        // variable/spontaneous noffers until then), and the resulting
-        // bolt11 may be paid via ecash.
+        // The row's balance/satAmount (when populated for Fixed noffers)
+        // already reflects the larger of lightning and ecash, so the
+        // standard insufficient-balance check is correct here. For
+        // Variable/Spontaneous noffers item.balance is unset and only
+        // item.disabled (driven by a fully empty combined balance) applies.
         return (
             <LightningSwipeableRow
                 navigation={navigation}
                 clinkNoffer={clinkNoffer}
                 locked={true}
-                disabled={item.disabled}
+                disabled={rowDisabled}
             >
                 <Row item={item} />
             </LightningSwipeableRow>
@@ -337,12 +339,46 @@ export default class PaymentMethodList extends Component<
         }
 
         if (clinkNoffer) {
+            // Only Fixed-price noffers carry the amount in the bech32 itself.
+            // Variable and Spontaneous noffers have no amount until the
+            // service returns a bolt11, so a balance comparison here would
+            // be meaningless.
+            let embeddedAmount: number | undefined;
+            try {
+                const decoded = decodeNoffer(clinkNoffer);
+                if (
+                    decoded.priceType === NofferPriceType.Fixed &&
+                    typeof decoded.price === 'number' &&
+                    decoded.price > 0
+                ) {
+                    embeddedAmount = decoded.price;
+                }
+            } catch {}
+            // ClinkPay can settle the returned bolt11 via either the
+            // lightning balance or ecash, so the row's balance is the
+            // larger of the two (ecash only counts when cashu is enabled).
+            // Using the max means the row is enabled iff at least one
+            // bucket alone can cover the amount.
+            const ecashAvailable =
+                BackendUtils.supportsCashuWallet() &&
+                settingsStore?.settings?.ecash?.enableCashu;
+            const clinkBalance = Math.max(
+                Number(lightningBalance ?? 0),
+                ecashAvailable ? Number(ecashBalance ?? 0) : 0
+            );
             DATA.push({
                 layer: 'CLINK',
                 subtitle: clinkNoffer,
-                disabled: false,
-                balance: lightningBalance,
-                satAmount
+                // No funds in either bucket means no path to pay,
+                // regardless of the noffer's pricing type.
+                disabled: clinkBalance === 0,
+                ...(embeddedAmount !== undefined && {
+                    balance: clinkBalance,
+                    // Compare against the noffer's embedded price (the
+                    // amount that will actually be paid) rather than any
+                    // BIP21 `amount=` that may have come in separately.
+                    satAmount: embeddedAmount
+                })
             });
         }
 
