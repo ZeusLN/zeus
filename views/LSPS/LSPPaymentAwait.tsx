@@ -169,12 +169,12 @@ export default class LSPPaymentAwait extends React.Component<
             let response: any;
 
             if (service === LSPService.LSPS7) {
-                if (!peer) {
+                if (!peer && !BackendUtils.supportsLSPS7native()) {
                     this.isPolling = false;
                     this.scheduleNextPoll();
                     return;
                 }
-                await LSPStore.lsps7GetOrderCustomMessage(orderId, peer);
+                await LSPStore.lsps7GetOrderCustomMessage(orderId, peer!);
                 response = LSPStore.getExtensionOrderResponse;
             } else {
                 if (native) {
