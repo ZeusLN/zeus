@@ -23,8 +23,6 @@ import LSPS1OrderResponse from './OrderResponse';
 
 import { LSPOrderState } from '../../models/LSP';
 
-import { Order } from './OrdersPane';
-
 interface OrderProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<'LSPS1Order', { orderId: string; orderShouldUpdate: boolean }>;
@@ -128,60 +126,10 @@ export default class LSPS1Order extends React.Component<
                                             LSPOrderState.FAILED) &&
                                     !orderShouldUpdate
                                 ) {
-                                    this.updateOrderInStorage(getOrderData);
+                                    LSPStore.updateOrderInStorage(getOrderData);
                                 }
                             }
                         }, 3000);
-                    } else {
-                        console.log('Order not found in encrypted storage.');
-                    }
-                } else {
-                    console.log(
-                        'No saved responses found in encrypted storage.'
-                    );
-                }
-            })
-            .catch((error) => {
-                console.error(
-                    'Error retrieving saved responses from encrypted storage:',
-                    error
-                );
-            });
-    }
-
-    updateOrderInStorage(order: Order) {
-        console.log('Updating order in encrypted storage...');
-        Storage.getItem(LSPS_ORDERS_KEY)
-            .then((responseArrayString) => {
-                if (responseArrayString) {
-                    let responseArray = JSON.parse(responseArrayString);
-                    // Find the index of the order to be updated
-                    const index = responseArray.findIndex((response: any) => {
-                        const decodedResponse = JSON.parse(response);
-                        const result =
-                            decodedResponse?.order?.result ||
-                            decodedResponse?.order;
-                        const currentOrderResult = order?.result || order;
-                        return result.order_id === currentOrderResult.order_id;
-                    });
-                    if (index !== -1) {
-                        // Get the old order data
-                        const oldOrder = JSON.parse(responseArray[index]);
-
-                        // Replace the order property with the new order
-                        oldOrder.order = order;
-
-                        // Update the order in the array
-                        responseArray[index] = JSON.stringify(oldOrder);
-
-                        // Save the updated order array back to encrypted storage
-                        Storage.setItem(LSPS_ORDERS_KEY, responseArray).then(
-                            () => {
-                                console.log(
-                                    'Order updated in encrypted storage!'
-                                );
-                            }
-                        );
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }

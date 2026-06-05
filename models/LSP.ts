@@ -4,6 +4,17 @@ export enum LSPOrderState {
     FAILED = 'FAILED'
 }
 
+export enum LSPService {
+    LSPS1 = 'LSPS1',
+    LSPS7 = 'LSPS7'
+}
+
+export enum PaymentAwaitState {
+    POLLING = 'polling',
+    COMPLETED = 'completed',
+    FAILED = 'failed'
+}
+
 export interface LSPActivity {
     model: 'LSPS1Order' | 'LSPS7Order';
     state: LSPOrderState;
@@ -32,3 +43,25 @@ export const isOrderFree = (payment: any): boolean => {
         !payment.bolt11_invoice
     );
 };
+
+/**
+ * Builds the navigation params for the LSPS payment-await screen from an order's
+ * payment object. Shared by every LSPS1/LSPS7 "make payment" call site.
+ */
+export const buildPaymentAwaitParams = (
+    payment: any,
+    orderId: string,
+    service: LSPService
+) => ({
+    orderId,
+    invoice:
+        payment?.bolt11?.invoice ||
+        payment?.lightning_invoice ||
+        payment?.bolt11_invoice,
+    satAmount:
+        payment?.bolt11?.order_total_sat ||
+        payment?.order_total_sat ||
+        payment?.bolt11?.fee_total_sat ||
+        payment?.fee_total_sat,
+    service
+});

@@ -30,11 +30,14 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { isOrderFree } from '../../models/LSP';
+import {
+    buildPaymentAwaitParams,
+    isOrderFree,
+    LSPService
+} from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import handleAnything from '../../utils/handleAnything';
 
 import LSPStore from '../../stores/LSPStore';
 import ChannelsStore from '../../stores/ChannelsStore';
@@ -463,7 +466,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     />
                                 )}
 
-                            {Object.keys(createOrderResponse).length == 0 && (
+                            {Object.keys(createOrderResponse).length === 0 && (
                                 <ScrollView
                                     style={{
                                         flex: 1,
@@ -513,7 +516,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 {getInfoData &&
                                                     Object.keys(
                                                         createOrderResponse
-                                                    ).length == 0 &&
+                                                    ).length === 0 &&
                                                     info && (
                                                         <View
                                                             style={{
@@ -1172,7 +1175,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 <Button
                                     title={
                                         Object.keys(createOrderResponse)
-                                            .length == 0
+                                            .length === 0
                                             ? `${localeString(
                                                   'views.LSPS1.createOrder'
                                               )}`
@@ -1240,16 +1243,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 createOrderResponse,
                                                 'LSPS1'
                                             ).then(() => {
-                                                handleAnything(
-                                                    payment.bolt11?.invoice ||
-                                                        payment.lightning_invoice ||
-                                                        payment.bolt11_invoice
-                                                ).then(([route, props]) => {
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                });
+                                                navigation.navigate(
+                                                    'LSPS1PaymentAwait',
+                                                    buildPaymentAwaitParams(
+                                                        payment,
+                                                        result?.order_id,
+                                                        LSPService.LSPS1
+                                                    )
+                                                );
                                             });
                                         }
                                     }}

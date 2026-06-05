@@ -11,11 +11,15 @@ import {
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 
-import { LSPOrderState, isOrderFree } from '../../models/LSP';
+import {
+    buildPaymentAwaitParams,
+    isOrderFree,
+    LSPOrderState,
+    LSPService
+} from '../../models/LSP';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import handleAnything from '../../utils/handleAnything';
 
 interface LSPS7OrderResponseProps {
     navigation: any;
@@ -354,17 +358,14 @@ export default class LSPS7OrderResponse extends React.Component<
                                                     paddingVertical: 20
                                                 }}
                                                 onPress={() => {
-                                                    handleAnything(
-                                                        payment.bolt11
-                                                            ?.invoice ||
-                                                            payment.lightning_invoice ||
-                                                            payment.bolt11_invoice
-                                                    ).then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    });
+                                                    navigation.navigate(
+                                                        'LSPS7PaymentAwait',
+                                                        buildPaymentAwaitParams(
+                                                            payment,
+                                                            orderResponse?.order_id,
+                                                            LSPService.LSPS7
+                                                        )
+                                                    );
                                                 }}
                                             />
                                         </>

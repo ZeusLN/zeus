@@ -18,26 +18,8 @@ import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPS7OrderResponse from './OrderResponse';
 
-import { Payment } from '../../views/LSPS1/OrdersPane';
-
 import Storage from '../../storage';
 import { LSPOrderState } from '../../models/LSP';
-
-interface Order {
-    announce_channel: boolean;
-    channel?: string;
-    channel_expiry_blocks: number;
-    required_channel_confirmations: number;
-    funding_confirms_within_blocks: number;
-    created_at: string;
-    lsp_balance_sat: string;
-    client_balance_sat: string;
-    order_id: string;
-    order_state: string;
-    payment: Payment;
-    token: string;
-    result?: Order | any;
-}
 
 interface OrderProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -134,61 +116,12 @@ export default class LSPS7Order extends React.Component<
                                             LSPOrderState.FAILED) &&
                                     !orderShouldUpdate
                                 ) {
-                                    this.updateOrderInStorage(
+                                    LSPStore.updateOrderInStorage(
                                         getExtensionOrderData
                                     );
                                 }
                             }
                         }, 3000);
-                    } else {
-                        console.log('Order not found in encrypted storage.');
-                    }
-                } else {
-                    console.log(
-                        'No saved responses found in encrypted storage.'
-                    );
-                }
-            })
-            .catch((error) => {
-                console.error(
-                    'Error retrieving saved responses from encrypted storage:',
-                    error
-                );
-            });
-    }
-
-    updateOrderInStorage(order: Order) {
-        console.log('Updating order in encrypted storage...');
-        Storage.getItem(LSPS_ORDERS_KEY)
-            .then((responseArrayString) => {
-                if (responseArrayString) {
-                    let responseArray = JSON.parse(responseArrayString);
-                    // Find the index of the order to be updated
-                    const index = responseArray.findIndex((response: any) => {
-                        const decodedResponse = JSON.parse(response);
-                        const result =
-                            decodedResponse?.order?.result ||
-                            decodedResponse?.order;
-                        const currentOrderResult = order?.result || order;
-                        return result.order_id === currentOrderResult.order_id;
-                    });
-                    if (index !== -1) {
-                        // Get the old order data
-                        const oldOrder = JSON.parse(responseArray[index]);
-
-                        // Replace the order property with the new order
-                        oldOrder.order = order;
-
-                        // Update the order in the array
-                        responseArray[index] = JSON.stringify(oldOrder);
-
-                        // Save the updated order array back to encrypted storage
-                        Storage.setItem(
-                            LSPS_ORDERS_KEY,
-                            JSON.stringify(responseArray)
-                        ).then(() => {
-                            console.log('Order updated in encrypted storage!');
-                        });
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }
