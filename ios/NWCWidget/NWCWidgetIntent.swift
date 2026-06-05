@@ -19,9 +19,7 @@ private func postDarwin(_ name: String) {
 struct NWCNextTrackIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Next Track"
     func perform() async throws -> some IntentResult {
-        if #available(iOS 16.2, *) {
-            await NWCLiveActivityShared.applyNextTrack()
-        }
+        await NWCLiveActivityShared.applyNextTrack()
         postDarwin(kNWCNextTrack)
         return .result()
     }
@@ -31,9 +29,7 @@ struct NWCNextTrackIntent: LiveActivityIntent {
 struct NWCPrevTrackIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Previous Track"
     func perform() async throws -> some IntentResult {
-        if #available(iOS 16.2, *) {
-            await NWCLiveActivityShared.applyPrevTrack()
-        }
+        await NWCLiveActivityShared.applyPrevTrack()
         postDarwin(kNWCPrevTrack)
         return .result()
     }
@@ -43,9 +39,7 @@ struct NWCPrevTrackIntent: LiveActivityIntent {
 struct NWCToggleMuteIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Toggle Mute"
     func perform() async throws -> some IntentResult {
-        if #available(iOS 16.2, *) {
-            await NWCLiveActivityShared.applyToggleMute()
-        }
+        await NWCLiveActivityShared.applyToggleMute()
         postDarwin(kNWCToggleMute)
         return .result()
     }
@@ -56,9 +50,7 @@ struct NWCStopIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop NWC"
     func perform() async throws -> some IntentResult {
         postDarwin(kNWCStop)
-        if #available(iOS 16.2, *) {
-            await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
-        }
+        await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
         return .result()
     }
 }
