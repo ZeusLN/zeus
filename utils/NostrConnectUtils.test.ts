@@ -27,6 +27,12 @@ jest.mock('./BackendUtils', () => ({
     default: {}
 }));
 
+jest.mock('react-native-notifications', () => ({
+    Notifications: {
+        postLocalNotification: jest.fn()
+    }
+}));
+
 import * as nostrTools from 'nostr-tools';
 
 import NostrConnectUtils from './NostrConnectUtils';
@@ -251,6 +257,57 @@ describe('NostrConnectUtils', () => {
             expect(a.connectionPrivateKey).not.toBe(b.connectionPrivateKey);
             expect(a.connectionPublicKey).not.toBe(b.connectionPublicKey);
             expect(a.connectionUrl).not.toBe(b.connectionUrl);
+        });
+    });
+
+    describe('refreshExpiryForRegenerate', () => {
+        const createdAt = new Date('2024-01-01T00:00:00Z');
+
+        it('returns empty when connection never expires', () => {
+            expect(
+                NostrConnectUtils.refreshExpiryForRegenerate({
+                    createdAt
+                })
+            ).toEqual({});
+        });
+
+        it('restarts a 30-day preset from now', () => {
+            const priorExpiresAt = new Date('2024-01-31T00:00:00Z');
+            const before = Date.now();
+            const { expiresAt } = NostrConnectUtils.refreshExpiryForRegenerate({
+                expiresAt: priorExpiresAt,
+                createdAt
+            });
+            const after = Date.now();
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            expect(expiresAt!.getTime()).toBeGreaterThanOrEqual(
+                before + thirtyDaysMs - 1000
+            );
+            expect(expiresAt!.getTime()).toBeLessThanOrEqual(
+                after + thirtyDaysMs + 1000
+            );
+        });
+
+        it('restarts custom expiry from now using stored value and unit', () => {
+            const priorExpiresAt = new Date('2024-02-01T00:00:00Z');
+            const before = Date.now();
+            const { expiresAt, customExpiryValue, customExpiryUnit } =
+                NostrConnectUtils.refreshExpiryForRegenerate({
+                    expiresAt: priorExpiresAt,
+                    createdAt,
+                    customExpiryValue: 14,
+                    customExpiryUnit: 'Days'
+                });
+            const after = Date.now();
+            const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+            expect(customExpiryValue).toBe(14);
+            expect(customExpiryUnit).toBe('Days');
+            expect(expiresAt!.getTime()).toBeGreaterThanOrEqual(
+                before + fourteenDaysMs - 1000
+            );
+            expect(expiresAt!.getTime()).toBeLessThanOrEqual(
+                after + fourteenDaysMs + 1000
+            );
         });
     });
 });

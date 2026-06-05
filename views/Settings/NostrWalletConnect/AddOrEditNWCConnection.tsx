@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
-import { ButtonGroup, Icon } from '@rneui/themed';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -110,11 +110,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
     };
 
-    async componentDidMount() {
+    componentDidMount() {
         const { navigation } = this.props;
-        await this.loadData();
-        this.unsubscribeFocus = navigation.addListener('focus', async () => {
-            await this.loadData();
+        this.unsubscribeFocus = navigation.addListener('focus', () => {
+            void this.loadData();
         });
     }
 
@@ -137,7 +136,9 @@ export default class AddOrEditNWCConnection extends React.Component<
     loadConnectionForEdit = async (connectionId: string) => {
         const { NostrWalletConnectStore } = this.props;
         await NostrWalletConnectStore.loadConnections();
-        const connection = NostrWalletConnectStore.getConnection(connectionId);
+        const { connection } = NostrWalletConnectStore.getConnection({
+            connectionId
+        });
         if (connection) {
             const budgetRenewalIndex = NostrConnectUtils.getBudgetRenewalIndex(
                 connection.budgetRenewal
@@ -487,7 +488,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             maxBudgetLimit,
             customRelayUrl
         } = this.state;
-        const { NostrWalletConnectStore } = this.props;
 
         const budgetRenewalOptions =
             NostrConnectUtils.getBudgetRenewalOptions();
@@ -496,7 +496,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         const isCustomRelay =
             selectedRelayUrl === localeString('general.custom');
         if (isCustomRelay) {
-            const { status, error } = await NostrWalletConnectStore.pingRelay(
+            const { status, error } = await NostrConnectUtils.pingRelay(
                 customRelayUrl
             );
             if (!status) {
@@ -559,8 +559,9 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState({ loading: true, error: '' });
         try {
             await NostrWalletConnectStore.loadConnections();
-            const connection =
-                NostrWalletConnectStore.getConnection(connectionId);
+            const { connection } = NostrWalletConnectStore.getConnection({
+                connectionId
+            });
             if (!connection) {
                 throw new Error(
                     localeString(
@@ -570,6 +571,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
+            const createdAt = connection.createdAt;
             const params = await this.buildConnectionParams(
                 false,
                 connectionId
@@ -577,6 +579,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
+            params.createdAt = createdAt;
             await NostrWalletConnectStore.deleteConnection(connectionId);
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
@@ -614,8 +617,17 @@ export default class AddOrEditNWCConnection extends React.Component<
                     connectionId,
                     params
                 );
-                if (updated) {
+                if (updated.success) {
                     setTimeout(() => navigation.goBack(), 100);
+                } else {
+                    this.setState({
+                        error:
+                            NostrWalletConnectStore.errorMessage ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
+                            ),
+                        loading: false
+                    });
                 }
             } else {
                 const nostrUrl = await NostrWalletConnectStore.createConnection(
@@ -639,29 +651,6 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     clearErrors = () => {
         this.setState({ error: '' });
-    };
-
-    showBackgroundConnectionInfo = () => {
-        const { ModalStore } = this.props;
-        ModalStore.toggleInfoModal({
-            title: localeString(
-                'views.Settings.NostrWalletConnect.backgroundConnectionTitle'
-            ),
-            text: [
-                localeString(
-                    'views.Settings.NostrWalletConnect.backgroundConnectionDescription'
-                ),
-                localeString(
-                    'views.Settings.NostrWalletConnect.backgroundDisclaimer1'
-                ),
-                localeString(
-                    'views.Settings.NostrWalletConnect.backgroundDisclaimer2'
-                ),
-                localeString(
-                    'views.Settings.NostrWalletConnect.backgroundDisclaimer3'
-                )
-            ]
-        });
     };
 
     renderPermissionTypeItem = (permissionType: PermissionOption) => {
@@ -845,7 +834,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     render() {
-        const { navigation, route, NostrWalletConnectStore } = this.props;
+        const { navigation, route } = this.props;
         const {
             connectionName,
             selectedBudgetRenewalIndex,
@@ -860,7 +849,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedPermissions,
             customRelayUrl
         } = this.state;
-        const { persistentNWCServiceEnabled } = NostrWalletConnectStore;
         const budgetRenewalButtons: any =
             NostrConnectUtils.getBudgetRenewalOptions().map(
                 (option, index) => ({
@@ -962,67 +950,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 </Text>
                             </View>
                         )}
-
-                        {/* Background Connection Info */}
-                        {!route.params?.isEdit &&
-                            Platform.OS !== 'ios' &&
-                            persistentNWCServiceEnabled && (
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginHorizontal: 10,
-                                        marginTop: 10,
-                                        gap: 5,
-                                        marginBottom: 15,
-                                        padding: 16,
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 12
-                                    }}
-                                >
-                                    <View style={{ flex: 1 }}>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 16,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontWeight: '400'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.backgroundConnectionTitle'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontSize: 14,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                marginTop: 4
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.backgroundConnectionDescription'
-                                            )}
-                                        </Text>
-                                    </View>
-                                    <Icon
-                                        name="info"
-                                        onPress={
-                                            this.showBackgroundConnectionInfo
-                                        }
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={24}
-                                    />
-                                </View>
-                            )}
 
                         {/* Connection Name */}
                         <View style={styles.section}>
@@ -1483,12 +1410,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                         </View>
                     </ScrollView>
 
-                    <View
-                        style={[
-                            styles.bottomButtonContainer,
-                            { backgroundColor: themeColor('background') }
-                        ]}
-                    >
+                    <View style={styles.bottomButtonContainer}>
                         <Button
                             title={this.getButtonTitle()}
                             onPress={

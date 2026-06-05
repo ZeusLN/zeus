@@ -16,6 +16,7 @@ import { Body } from '../../../components/text/Body';
 import Button from '../../../components/Button';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import KeyValue from '../../../components/KeyValue';
+import Amount from '../../../components/Amount';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import ModalStore from '../../../stores/ModalStore';
@@ -72,7 +73,6 @@ export default class NWCConnectionDetails extends React.Component<
             'focus',
             this.loadConnection
         );
-        this.loadConnection();
     }
     componentDidUpdate(
         _prevProps: NWCConnectionDetailsProps,
@@ -135,9 +135,9 @@ export default class NWCConnectionDetails extends React.Component<
         }
         this.setState({ loading: true });
         try {
-            await NostrWalletConnectStore.loadConnections();
-            const connection =
-                NostrWalletConnectStore.getConnection(connectionId);
+            const { connection } = NostrWalletConnectStore.getConnection({
+                connectionId
+            });
             if (connection) {
                 this.setState({ connection, loading: false });
             } else {
@@ -183,7 +183,8 @@ export default class NWCConnectionDetails extends React.Component<
             budgetRenewal: connection.budgetRenewal || 'never',
             totalSpendSats: connection.totalSpendSats,
             lastBudgetReset: connection.lastBudgetReset,
-            activity: connection.activity
+            activity: connection.activity,
+            createdAt: connection.createdAt
         };
         if (connection.maxAmountSats && connection.maxAmountSats > 0) {
             params.budgetAmount = connection.maxAmountSats;
@@ -198,6 +199,39 @@ export default class NWCConnectionDetails extends React.Component<
         }
 
         return params;
+    };
+
+    confirmRegenerateConnection = () => {
+        const { connection } = this.state;
+        if (!connection) {
+            this.setState({
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            });
+            return;
+        }
+        confirmAction(
+            localeString(
+                'views.Settings.NostrWalletConnect.regenerateConnection'
+            ),
+            localeString(
+                'views.Settings.NostrWalletConnect.regenerateConnection.confirm'
+            ),
+            {
+                text: localeString(
+                    'views.Settings.NostrWalletConnect.regenerateConnection'
+                ),
+                onPress: () => {
+                    this.regenerateConnection();
+                }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
     };
 
     regenerateConnection = async () => {
@@ -290,7 +324,11 @@ export default class NWCConnectionDetails extends React.Component<
                     centerComponent={
                         connection
                             ? {
-                                  text: connection.name,
+                                  text: regenerating
+                                      ? localeString(
+                                            'views.Settings.NostrWalletConnect.regeneratingConnection'
+                                        )
+                                      : connection.name,
                                   style: {
                                       color: themeColor('text'),
                                       fontFamily: 'PPNeueMontreal-Book'
@@ -316,9 +354,9 @@ export default class NWCConnectionDetails extends React.Component<
                                         style={styles.headerActionButton}
                                     >
                                         <ClockIcon
-                                            color={themeColor('bitcoin')}
-                                            width={20}
-                                            height={20}
+                                            color={themeColor('text')}
+                                            width={30}
+                                            height={30}
                                         />
                                     </TouchableOpacity>
                                 )}
@@ -332,8 +370,8 @@ export default class NWCConnectionDetails extends React.Component<
                                 >
                                     <EditIcon
                                         fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
+                                        width={30}
+                                        height={30}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -415,21 +453,45 @@ export default class NWCConnectionDetails extends React.Component<
                                                   )
                                         }
                                     />
-                                    {connection.maxAmountSats && (
+
+                                    {connection.maxAmountSats ? (
                                         <KeyValue
                                             keyValue={localeString(
                                                 'views.Settings.NostrWalletConnect.budget'
                                             )}
-                                            value={`${connection.maxAmountSats.toLocaleString()} ${localeString(
-                                                'general.sats'
-                                            )}${
-                                                connection.budgetRenewal !==
-                                                'never'
-                                                    ? ` (${connection.budgetRenewal})`
-                                                    : ''
-                                            }`}
+                                            value={
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        flexShrink: 1,
+                                                        gap: 4
+                                                    }}
+                                                >
+                                                    <Amount
+                                                        sats={
+                                                            connection.maxAmountSats
+                                                        }
+                                                        toggleable
+                                                    />
+                                                    {connection.budgetRenewal !==
+                                                        'never' && (
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {`(${connection.budgetRenewal})`}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                            }
                                         />
-                                    )}
+                                    ) : null}
 
                                     {connection.maxAmountSats && (
                                         <>
@@ -437,18 +499,44 @@ export default class NWCConnectionDetails extends React.Component<
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.totalSpent'
                                                 )}
-                                                value={`${connection.totalSpendSats.toLocaleString()} ${localeString(
-                                                    'general.sats'
-                                                )}`}
+                                                value={
+                                                    <Amount
+                                                        sats={
+                                                            connection.totalSpendSats
+                                                        }
+                                                        toggleable
+                                                        debit
+                                                    />
+                                                }
+                                            />
+
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.NostrWalletConnect.totalReceived'
+                                                )}
+                                                value={
+                                                    <Amount
+                                                        credit
+                                                        sats={
+                                                            connection.totalReceivedActivitySats
+                                                        }
+                                                        toggleable
+                                                    />
+                                                }
                                             />
 
                                             <KeyValue
                                                 keyValue={localeString(
                                                     'views.Settings.NostrWalletConnect.remainingBudget'
                                                 )}
-                                                value={`${connection.remainingBudget.toLocaleString()} ${localeString(
-                                                    'general.sats'
-                                                )}`}
+                                                value={
+                                                    <Amount
+                                                        sats={
+                                                            connection.remainingBudget
+                                                        }
+                                                        toggleable
+                                                    />
+                                                }
                                             />
                                         </>
                                     )}
@@ -592,17 +680,12 @@ export default class NWCConnectionDetails extends React.Component<
                             </View>
                         </ScrollView>
 
-                        <View
-                            style={[
-                                styles.bottomContainer,
-                                { backgroundColor: themeColor('background') }
-                            ]}
-                        >
+                        <View style={styles.bottomContainer}>
                             <Button
                                 title={localeString(
                                     'views.Settings.NostrWalletConnect.regenerateConnection'
                                 )}
-                                onPress={this.regenerateConnection}
+                                onPress={this.confirmRegenerateConnection}
                                 disabled={regenerating}
                                 secondary={regenerating}
                                 noUppercase

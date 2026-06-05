@@ -18,7 +18,6 @@
 		0FF34B98A6FF4E299A2F4B38 /* Rabbit.svg in Resources */ = {isa = PBXBuildFile; fileRef = 806332CB14FC4FD5A93268B8 /* Rabbit.svg */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB11A68108700A75B9A /* LaunchScreen.xib */; };
-		13B07FBD1A6810BG00A75B9A /* BackgroundTaskManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		13B56D1900B8453796EF0EDA /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8968C5A47BF6473DAAADAAB6 /* Lato-Regular.ttf */; };
@@ -223,6 +222,17 @@
 		FC88310264684B759C49A8BC /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9D769B3657474C57B214C324 /* Channels.svg */; };
 		FEEEEFC0248849C8BFB0F9A4 /* ldk.png in Resources */ = {isa = PBXBuildFile; fileRef = CEF377B5DB424EBBB4249CA4 /* ldk.png */; };
 		FF3AC496C4DE4B86AEC22CA7 /* MintToken.svg in Resources */ = {isa = PBXBuildFile; fileRef = C06B8930D07546EA8605E869 /* MintToken.svg */; };
+		NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */ = {isa = PBXBuildFile; fileRef = NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */; };
+		NWCAUDIO0000000000000011 /* Fireplace.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000015 /* Fireplace.m4a */; };
+		NWCAUDIO0000000000000012 /* White Noise.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000016 /* White Noise.m4a */; };
+		NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.m4a */; };
+		NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000007 /* NWCWidgetAttributes.swift */; };
+		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
+		NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */; };
+		NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */; };
+		NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000004 /* NWCWidgetIntent.swift */; };
+		NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000006 /* NWCAmbientTracks.swift */; };
+		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -401,6 +411,13 @@
 			remoteGlobalIDString = 358F4ED71D1E81A9004DF814;
 			remoteInfo = RCTBlob;
 		};
+		NWCLA000000000000000019 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = NWCLA000000000000000011;
+			remoteInfo = NWCWidget;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -411,6 +428,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				5134B5512EB7C1B000A6AD03 /* ShareQR.appex in Embed Foundation Extensions */,
+				NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -439,7 +457,7 @@
 		01471298AE544A2F89251D67 /* PinFilled.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PinFilled.svg; path = ../assets/images/SVG/PinFilled.svg; sourceTree = "<group>"; };
 		01BF3E64C8AC4C2381848E18 /* Nostrich_not-found.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nostrich_not-found.svg"; path = "../assets/images/SVG/Nostrich_not-found.svg"; sourceTree = "<group>"; };
 		023F51CB19944C63B62124C1 /* Eye On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Eye On.svg"; path = "../assets/images/SVG/Eye On.svg"; sourceTree = "<group>"; };
-		025239BA55454B4DA98E12B5 /* Watchtower.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Watchtower.svg; path = ../assets/images/SVG/Watchtower.svg; sourceTree = "<group>"; };
+		025239BA55454B4DA98E12B5 /* Watchtower.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Watchtower.svg; path = ../assets/images/SVG/Watchtower.svg; sourceTree = "<group>"; };
 		095808991E764378BE2D3052 /* Send.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Send.svg; path = ../assets/images/SVG/Send.svg; sourceTree = "<group>"; };
 		0AB2FC627AB849D7B561CF98 /* Gallery.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gallery.svg; path = ../assets/images/SVG/Gallery.svg; sourceTree = "<group>"; };
 		0BE581979450495B86FA8D7F /* cln.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = cln.jpg; path = ../assets/images/cln.jpg; sourceTree = "<group>"; };
@@ -450,31 +468,29 @@
 		13B07F961A680F5B00A75B9A /* zeus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zeus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = zeus/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = zeus/AppDelegate.mm; sourceTree = "<group>"; };
-		13B07FB01A6810BE00A75B9A /* BackgroundTaskManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BackgroundTaskManager.h; path = zeus/BackgroundTaskManager.h; sourceTree = "<group>"; };
-		13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = BackgroundTaskManager.m; path = zeus/BackgroundTaskManager.m; sourceTree = "<group>"; };
 		13B07FB21A68108700A75B9A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = zeus/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = zeus/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = main.m; path = zeus/main.m; sourceTree = "<group>"; };
 		16305D1EA8FA48288C57F6A7 /* Arrow_down.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Arrow_down.svg; path = ../assets/images/SVG/Arrow_down.svg; sourceTree = "<group>"; };
-		17F8758C5DA84ADA825F11E6 /* journey.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = journey.jpeg; path = ../assets/images/onboarding/journey.jpeg; sourceTree = "<group>"; };
+		17F8758C5DA84ADA825F11E6 /* journey.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = journey.jpeg; path = ../assets/images/onboarding/journey.jpeg; sourceTree = "<group>"; };
 		181286498B7D40C5B0AF1621 /* TresArrows.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = TresArrows.svg; path = ../assets/images/SVG/TresArrows.svg; sourceTree = "<group>"; };
 		1821EDAC9D344E9E881EC74A /* pay_z_white.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = pay_z_white.png; path = ../assets/images/pay_z_white.png; sourceTree = "<group>"; };
 		18B00F64CC5A4074AB595A5C /* MaterialIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
 		18E41ED7967D4EC7B6CCC6C4 /* Lightning Bolt.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lightning Bolt.svg"; path = "../assets/images/SVG/Lightning Bolt.svg"; sourceTree = "<group>"; };
 		1AD743129802428BA25522C5 /* libReactNativePermissions.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libReactNativePermissions.a; sourceTree = "<group>"; };
-		1C34D99962B64E95B7AB8125 /* RebalanceIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = RebalanceIcon.svg; path = ../assets/images/SVG/RebalanceIcon.svg; sourceTree = "<group>"; };
-		1DE36B5AAF1B481DBE9B8718 /* qrscanner.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = qrscanner.png; path = ../assets/images/stealth/qrscanner.png; sourceTree = "<group>"; };
+		1C34D99962B64E95B7AB8125 /* RebalanceIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = RebalanceIcon.svg; path = ../assets/images/SVG/RebalanceIcon.svg; sourceTree = "<group>"; };
+		1DE36B5AAF1B481DBE9B8718 /* qrscanner.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = qrscanner.png; path = ../assets/images/stealth/qrscanner.png; sourceTree = "<group>"; };
 		1E37BAD14FEC4A9094A79FF5 /* lightning-pattern-full-random-loop.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "lightning-pattern-full-random-loop.json"; path = "../assets/images/Lottie/lightning-pattern-full-random-loop.json"; sourceTree = "<group>"; };
 		205957BBF0B74BDE836A1F0D /* Ecash.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ecash.svg; path = ../assets/images/SVG/Ecash.svg; sourceTree = "<group>"; };
-		2131584EC9AB4983AD48AB33 /* vpn.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = vpn.png; path = ../assets/images/stealth/vpn.png; sourceTree = "<group>"; };
+		2131584EC9AB4983AD48AB33 /* vpn.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = vpn.png; path = ../assets/images/stealth/vpn.png; sourceTree = "<group>"; };
 		22AF6FF7370740168BB11C43 /* onchain_white.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = onchain_white.png; path = ../assets/images/onchain_white.png; sourceTree = "<group>"; };
 		24096E86BD2D4234A2A6CF8B /* zeus_illustration_2a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_2a.jpg; path = ../assets/images/zeus_illustration_2a.jpg; sourceTree = "<group>"; };
 		24EAA047DE4942C1A1C5AB5F /* lnd.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lnd.jpg; path = ../assets/images/lnd.jpg; sourceTree = "<group>"; };
-		250818B6AC2243D18E7B7441 /* zeus.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = zeus.jpeg; path = ../assets/images/onboarding/zeus.jpeg; sourceTree = "<group>"; };
+		250818B6AC2243D18E7B7441 /* zeus.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus.jpeg; path = ../assets/images/onboarding/zeus.jpeg; sourceTree = "<group>"; };
 		255568932C014CB2BB7EB68C /* Nostrich_not-loaded.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Nostrich_not-loaded.svg"; path = "../assets/images/SVG/Nostrich_not-loaded.svg"; sourceTree = "<group>"; };
 		259C6F30DC5D40FF9E5DF839 /* Sweep.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Sweep.svg; path = ../assets/images/SVG/Sweep.svg; sourceTree = "<group>"; };
-		26A349CF082E4722BC0ECF0A /* eagle.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = eagle.jpeg; path = ../assets/images/onboarding/eagle.jpeg; sourceTree = "<group>"; };
+		26A349CF082E4722BC0ECF0A /* eagle.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = eagle.jpeg; path = ../assets/images/onboarding/eagle.jpeg; sourceTree = "<group>"; };
 		277D06BED9884EA9AE74230C /* Caret Up.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Up.svg"; path = "../assets/images/SVG/Caret Up.svg"; sourceTree = "<group>"; };
 		29D6E5A55A7840A6B32ED432 /* EvilIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = EvilIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf"; sourceTree = "<group>"; };
 		2D02E47B1E0B4A5D006451C7 /* zeus-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "zeus-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -491,12 +507,12 @@
 		3CE88FE7B3B24F39AAA8C50F /* zeus_illustration_5a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_5a.jpg; path = ../assets/images/zeus_illustration_5a.jpg; sourceTree = "<group>"; };
 		3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = zeus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3D59A2AA7B0142ACBD9EA7D6 /* Select On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Select On.svg"; path = "../assets/images/SVG/Select On.svg"; sourceTree = "<group>"; };
-		3DCA69808AEE48D88F8D6EAD /* calculator.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = calculator.png; path = ../assets/images/stealth/calculator.png; sourceTree = "<group>"; };
+		3DCA69808AEE48D88F8D6EAD /* calculator.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = calculator.png; path = ../assets/images/stealth/calculator.png; sourceTree = "<group>"; };
 		3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "DroidSansMono Apache License.txt"; path = "../assets/fonts/DroidSansMono Apache License.txt"; sourceTree = "<group>"; };
-		40E6C5F2754A46DDBD65494A /* gift.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = gift.svg; path = ../assets/images/SVG/gift.svg; sourceTree = "<group>"; };
+		40E6C5F2754A46DDBD65494A /* gift.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = gift.svg; path = ../assets/images/SVG/gift.svg; sourceTree = "<group>"; };
 		40F4A5039C1D4227B0638700 /* columns.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = columns.json; path = ../assets/images/Lottie/columns.json; sourceTree = "<group>"; };
 		437DCF69B6CF4C98AD8655B8 /* hyper.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = hyper.jpg; path = ../assets/images/hyper.jpg; sourceTree = "<group>"; };
-		4420998C178F40A8BF8F441D /* NFC-alt.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "NFC-alt.svg"; path = "../assets/images/SVG/NFC-alt.svg"; sourceTree = "<group>"; };
+		4420998C178F40A8BF8F441D /* NFC-alt.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "NFC-alt.svg"; path = "../assets/images/SVG/NFC-alt.svg"; sourceTree = "<group>"; };
 		4473313D956D45C09134B919 /* Stopwatch.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Stopwatch.svg; path = ../assets/images/SVG/Stopwatch.svg; sourceTree = "<group>"; };
 		44AA4B9E77FB4B7E92D6E495 /* lightning1.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lightning1.json; path = ../assets/images/Lottie/lightning1.json; sourceTree = "<group>"; };
 		45039F6424D74D91AEF4F17E /* nostr.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = nostr.jpg; path = ../assets/images/nostr.jpg; sourceTree = "<group>"; };
@@ -532,7 +548,7 @@
 		62458EE70D8546B7AE7F87DF /* Node On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node On.svg"; path = "../assets/images/SVG/Node On.svg"; sourceTree = "<group>"; };
 		6544AEC784014F60A8DA9EE9 /* cashu.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = cashu.jpg; path = ../assets/images/cashu.jpg; sourceTree = "<group>"; };
 		662F3CE13986425FAECE00A8 /* Pie.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pie.svg; path = ../assets/images/SVG/Pie.svg; sourceTree = "<group>"; };
-		66C5E78E600A459194369DDB /* Turtle.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Turtle.svg; path = ../assets/images/SVG/Turtle.svg; sourceTree = "<group>"; };
+		66C5E78E600A459194369DDB /* Turtle.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Turtle.svg; path = ../assets/images/SVG/Turtle.svg; sourceTree = "<group>"; };
 		6701DD0AA3BF42DA83D6CF9E /* Caret Right alt.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right alt.svg"; path = "../assets/images/SVG/Caret Right alt.svg"; sourceTree = "<group>"; };
 		67621A6F1F0042C7ACE3E84F /* Delete.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Delete.svg; path = ../assets/images/SVG/Delete.svg; sourceTree = "<group>"; };
 		68A3779A5E4AA70403E9BB76 /* Pods-zeus.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.release.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.release.xcconfig"; sourceTree = "<group>"; };
@@ -582,7 +598,7 @@
 		7E8369274D1141658F86FCBE /* zeus_illustration_1a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_1a.jpg; path = ../assets/images/zeus_illustration_1a.jpg; sourceTree = "<group>"; };
 		7F9ACB23845C4FA8BA11CEE5 /* zeus_illustration_3b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_3b.jpg; path = ../assets/images/zeus_illustration_3b.jpg; sourceTree = "<group>"; };
 		7FE4DFA6CD064723B106677B /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
-		806332CB14FC4FD5A93268B8 /* Rabbit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Rabbit.svg; path = ../assets/images/SVG/Rabbit.svg; sourceTree = "<group>"; };
+		806332CB14FC4FD5A93268B8 /* Rabbit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Rabbit.svg; path = ../assets/images/SVG/Rabbit.svg; sourceTree = "<group>"; };
 		817B9C904C2843D4A8E8339F /* Add.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Add.svg; path = ../assets/images/SVG/Add.svg; sourceTree = "<group>"; };
 		832341B01AAA6A8300B99B32 /* RCTText.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTText.xcodeproj; path = "../node_modules/react-native/Libraries/Text/RCTText.xcodeproj"; sourceTree = "<group>"; };
 		8482FEAD9AED48E49C8F2960 /* Edit.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Edit.svg; path = ../assets/images/SVG/Edit.svg; sourceTree = "<group>"; };
@@ -595,7 +611,7 @@
 		8BC64AD0AA824A8E8A6A3BE7 /* Star.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Star.svg; path = ../assets/images/SVG/Star.svg; sourceTree = "<group>"; };
 		8CA64666372746E689C302BE /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../assets/fonts/Lato-Bold.ttf"; sourceTree = "<group>"; };
 		8DA42A65AA9D406CBB84A659 /* lightning_black.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lightning_black.png; path = ../assets/images/lightning_black.png; sourceTree = "<group>"; };
-		8DEB9D669C694320B603F9DE /* zeus_icon.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_icon.jpg; path = ../assets/images/zeus_icon.jpg; sourceTree = "<group>"; };
+		8DEB9D669C694320B603F9DE /* zeus_icon.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_icon.jpg; path = ../assets/images/zeus_icon.jpg; sourceTree = "<group>"; };
 		8F531F57A66C4D86B3D226D7 /* Verified Account.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Verified Account.svg"; path = "../assets/images/SVG/Verified Account.svg"; sourceTree = "<group>"; };
 		90FC9B311888404098848E43 /* QR.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = QR.svg; path = ../assets/images/SVG/QR.svg; sourceTree = "<group>"; };
 		9176A321EE9D4653BBE6E680 /* Cloud.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Cloud.svg; path = ../assets/images/SVG/Cloud.svg; sourceTree = "<group>"; };
@@ -621,15 +637,15 @@
 		97F6D47722054E640030F13B /* MaterialIcons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = MaterialIcons.ttf; sourceTree = "<group>"; };
 		9888056290564C60BD300E91 /* Entypo.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Entypo.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Entypo.ttf"; sourceTree = "<group>"; };
 		98C73B933E8449BCA1011C68 /* Flash On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Flash On.svg"; path = "../assets/images/SVG/Flash On.svg"; sourceTree = "<group>"; };
-		98D929A2B9454CF19AB15CC0 /* nwc-logo.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "nwc-logo.svg"; path = "../assets/images/SVG/nwc-logo.svg"; sourceTree = "<group>"; };
+		98D929A2B9454CF19AB15CC0 /* nwc-logo.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "nwc-logo.svg"; path = "../assets/images/SVG/nwc-logo.svg"; sourceTree = "<group>"; };
 		9A0EFD93FB154656AF4F21E4 /* zeus_illustration_4a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_4a.jpg; path = ../assets/images/zeus_illustration_4a.jpg; sourceTree = "<group>"; };
-		9A761AB76F2743C4B2AB140B /* OnChain.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = OnChain.svg; path = ../assets/images/SVG/OnChain.svg; sourceTree = "<group>"; };
+		9A761AB76F2743C4B2AB140B /* OnChain.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = OnChain.svg; path = ../assets/images/SVG/OnChain.svg; sourceTree = "<group>"; };
 		9B066550A2EA4AC794CA089B /* Swap.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Swap.svg; path = ../assets/images/SVG/Swap.svg; sourceTree = "<group>"; };
 		9B296C83A5824B67B160A850 /* Pen.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pen.svg; path = ../assets/images/SVG/Pen.svg; sourceTree = "<group>"; };
-		9B484D89138740CFB1DD157F /* Upgrade.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Upgrade.svg; path = ../assets/images/SVG/Upgrade.svg; sourceTree = "<group>"; };
+		9B484D89138740CFB1DD157F /* Upgrade.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Upgrade.svg; path = ../assets/images/SVG/Upgrade.svg; sourceTree = "<group>"; };
 		9D769B3657474C57B214C324 /* Channels.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Channels.svg; path = ../assets/images/SVG/Channels.svg; sourceTree = "<group>"; };
 		9D7BECF54A9B4DA78AF0F25F /* Foundation.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Foundation.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Foundation.ttf"; sourceTree = "<group>"; };
-		A187C2D9BF3C4FAC913D6C10 /* Gazelle.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Gazelle.svg; path = ../assets/images/SVG/Gazelle.svg; sourceTree = "<group>"; };
+		A187C2D9BF3C4FAC913D6C10 /* Gazelle.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gazelle.svg; path = ../assets/images/SVG/Gazelle.svg; sourceTree = "<group>"; };
 		A1B2C3D42D36C88800000001 /* LDKNodeFFI.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = LDKNodeFFI.xcframework; path = LdkNodeMobile/LDKNodeFFI.xcframework; sourceTree = "<group>"; };
 		A4C4406966A64A0191896B8D /* Text.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Text.svg; path = ../assets/images/SVG/Text.svg; sourceTree = "<group>"; };
 		A50EF69A05534B4984110D51 /* ExportImport.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ExportImport.svg; path = ../assets/images/SVG/ExportImport.svg; sourceTree = "<group>"; };
@@ -637,7 +653,7 @@
 		A57D0E3456774F37BD4CD2F8 /* POS.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = POS.svg; path = ../assets/images/SVG/POS.svg; sourceTree = "<group>"; };
 		A5BC3ADC78784B888F34B25B /* libRNCamera.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libRNCamera.a; sourceTree = "<group>"; };
 		A646C62F32F44D17969235E5 /* Scan.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Scan.svg; path = ../assets/images/SVG/Scan.svg; sourceTree = "<group>"; };
-		A73C4A353D9343E996D01046 /* notepad.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = notepad.png; path = ../assets/images/stealth/notepad.png; sourceTree = "<group>"; };
+		A73C4A353D9343E996D01046 /* notepad.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = notepad.png; path = ../assets/images/stealth/notepad.png; sourceTree = "<group>"; };
 		A9A528B089AC4D0B845498D5 /* AtSign.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AtSign.svg; path = ../assets/images/SVG/AtSign.svg; sourceTree = "<group>"; };
 		AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PinHollow.svg; path = ../assets/images/SVG/PinHollow.svg; sourceTree = "<group>"; };
 		AA93B1E45F6E4C3AAC4923A0 /* eye_opened.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = eye_opened.svg; path = ../assets/images/SVG/eye_opened.svg; sourceTree = "<group>"; };
@@ -650,7 +666,7 @@
 		B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LdkNodeModule.swift; sourceTree = "<group>"; };
 		B1C2D3E82D36C99900000005 /* LdkNodeModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LdkNodeModule.m; sourceTree = "<group>"; };
 		B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogFileObserver.swift; sourceTree = "<group>"; };
-		B362E70907794D2F924BCB42 /* temple.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = temple.jpeg; path = ../assets/images/onboarding/temple.jpeg; sourceTree = "<group>"; };
+		B362E70907794D2F924BCB42 /* temple.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = temple.jpeg; path = ../assets/images/onboarding/temple.jpeg; sourceTree = "<group>"; };
 		B36D434AE9B14EE7AD5E6BCE /* Routing.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Routing.svg; path = ../assets/images/SVG/Routing.svg; sourceTree = "<group>"; };
 		B4C39762C9B748E39BFDA90F /* ExchangeBitcoin.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ExchangeBitcoin.svg; path = ../assets/images/SVG/ExchangeBitcoin.svg; sourceTree = "<group>"; };
 		B4D00602022C4AE1BFA1A2C1 /* Hourglass.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Hourglass.svg; path = ../assets/images/SVG/Hourglass.svg; sourceTree = "<group>"; };
@@ -671,7 +687,7 @@
 		CE0235666BAA4B108E838374 /* DeleteKey.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = DeleteKey.svg; path = ../assets/images/SVG/DeleteKey.svg; sourceTree = "<group>"; };
 		CE4931FF962B4189AC3F3EEB /* Dice.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Dice.svg; path = ../assets/images/SVG/Dice.svg; sourceTree = "<group>"; };
 		CE60F60AE34649628EB4D675 /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
-		CEF377B5DB424EBBB4249CA4 /* ldk.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ldk.png; path = ../assets/images/ldk.png; sourceTree = "<group>"; };
+		CEF377B5DB424EBBB4249CA4 /* ldk.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ldk.png; path = ../assets/images/ldk.png; sourceTree = "<group>"; };
 		D1418EE4DB29450299558B85 /* Sync.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Sync.svg; path = ../assets/images/SVG/Sync.svg; sourceTree = "<group>"; };
 		D1CC4D2B22DB40E3819DD70B /* Globe.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Globe.svg; path = ../assets/images/SVG/Globe.svg; sourceTree = "<group>"; };
 		D26645019BD7465E8DFC129D /* errorzeus.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = errorzeus.png; path = ../assets/images/errorzeus.png; sourceTree = "<group>"; };
@@ -686,11 +702,11 @@
 		DAFA8FD2E22247F09449BA7D /* Mint.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mint.svg; path = ../assets/images/SVG/Mint.svg; sourceTree = "<group>"; };
 		DD64CA87612F416B940C8B7C /* Gear.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gear.svg; path = ../assets/images/SVG/Gear.svg; sourceTree = "<group>"; };
 		DFF1D2DEE7664CDFBF9491AB /* zeus_illustration_7b.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_7b.jpg; path = ../assets/images/zeus_illustration_7b.jpg; sourceTree = "<group>"; };
-		E143BD8453E34712B3C978E3 /* Olympus.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Olympus.svg; path = ../assets/images/SVG/Olympus.svg; sourceTree = "<group>"; };
+		E143BD8453E34712B3C978E3 /* Olympus.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Olympus.svg; path = ../assets/images/SVG/Olympus.svg; sourceTree = "<group>"; };
 		E30C8201B5B64E99A22BBCE0 /* loader.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = loader.json; path = ../assets/images/Lottie/loader.json; sourceTree = "<group>"; };
 		E3B5C8BBBB8F44458FB67CDA /* albyhub.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = albyhub.jpg; path = ../assets/images/albyhub.jpg; sourceTree = "<group>"; };
 		E67CFE95171542C0BC19BDB4 /* btcpay.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = btcpay.jpg; path = ../assets/images/btcpay.jpg; sourceTree = "<group>"; };
-		E7A5621B1182453EA576F259 /* Pause.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Pause.svg; path = ../assets/images/SVG/Pause.svg; sourceTree = "<group>"; };
+		E7A5621B1182453EA576F259 /* Pause.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pause.svg; path = ../assets/images/SVG/Pause.svg; sourceTree = "<group>"; };
 		E8DB23DEAD0B4DDAA7EFD389 /* Caret Right-3.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-3.svg"; path = "../assets/images/SVG/Caret Right-3.svg"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EF00F35A868F4C26B9288D74 /* Receive.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Receive.svg; path = ../assets/images/SVG/Receive.svg; sourceTree = "<group>"; };
@@ -700,6 +716,18 @@
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		F840E2B2E8BB45209B057E42 /* Filter On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter On.svg"; path = "../assets/images/SVG/Filter On.svg"; sourceTree = "<group>"; };
 		FDE09436C88E4DCA980DA7DE /* zeus_illustration_6a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_6a.jpg; path = ../assets/images/zeus_illustration_6a.jpg; sourceTree = "<group>"; };
+		NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NWCAudioKeepAlive.m; path = zeus/NWCAudioKeepAlive.m; sourceTree = "<group>"; };
+		NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NWCAudioKeepAlive.h; path = zeus/NWCAudioKeepAlive.h; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000015 /* Fireplace.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = Fireplace.m4a; path = zeus/Fireplace.m4a; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000016 /* White Noise.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = "White Noise.m4a"; path = "zeus/White Noise.m4a"; sourceTree = "<group>"; };
+		NWCAUDIO0000000000000017 /* Gentle Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = "audio.x-m4a"; name = "Gentle Rain.m4a"; path = "zeus/Gentle Rain.m4a"; sourceTree = "<group>"; };
+		NWCLA000000000000000006 /* NWCWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NWCWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		NWCLA000000000000000007 /* NWCWidgetAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetAttributes.swift; path = NWCWidget/NWCWidgetAttributes.swift; sourceTree = "<group>"; };
+		NWCLA000000000000000009 /* NWCActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCActivityManager.swift; path = zeus/NWCActivityManager.swift; sourceTree = "<group>"; };
+		NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityBridge.swift; path = zeus/NWCLiveActivityBridge.swift; sourceTree = "<group>"; };
+		NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityShared.swift; path = NWCWidget/NWCLiveActivityShared.swift; sourceTree = "<group>"; };
+		NWCLIS000000000000000004 /* NWCWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetIntent.swift; path = NWCWidget/NWCWidgetIntent.swift; sourceTree = "<group>"; };
+		NWCLIS000000000000000006 /* NWCAmbientTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCAmbientTracks.swift; path = NWCWidget/NWCAmbientTracks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -710,6 +738,13 @@
 			);
 			target = 5134B5462EB7C1B000A6AD03 /* ShareQR */;
 		};
+		NWCLA000000000000000013 /* Exceptions for "NWCWidget" folder in "NWCWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = NWCLA000000000000000011 /* NWCWidget */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -719,6 +754,14 @@
 				5134B5522EB7C1B000A6AD03 /* Exceptions for "ShareQR" folder in "ShareQR" target */,
 			);
 			path = ShareQR;
+			sourceTree = "<group>";
+		};
+		NWCLA000000000000000015 /* NWCWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				NWCLA000000000000000013 /* Exceptions for "NWCWidget" folder in "NWCWidget" target */,
+			);
+			path = NWCWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -766,6 +809,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5134B5442EB7C1B000A6AD03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		NWCLA00000000000000001B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -866,8 +916,17 @@
 				85477FC5256D5D3400A4EAD1 /* dummy.swift */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
-				13B07FB01A6810BE00A75B9A /* BackgroundTaskManager.h */,
-				13B07FB01A6810BF00A75B9A /* BackgroundTaskManager.m */,
+				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
+				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
+				NWCLA000000000000000009 /* NWCActivityManager.swift */,
+				NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */,
+				NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */,
+				NWCLIS000000000000000006 /* NWCAmbientTracks.swift */,
+				NWCLIS000000000000000004 /* NWCWidgetIntent.swift */,
+				NWCLA000000000000000007 /* NWCWidgetAttributes.swift */,
+				NWCAUDIO0000000000000015 /* Fireplace.m4a */,
+				NWCAUDIO0000000000000016 /* White Noise.m4a */,
+				NWCAUDIO0000000000000017 /* Gentle Rain.m4a */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
@@ -973,6 +1032,7 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				00E356EF1AD99517003FC87E /* zeusTests */,
 				5134B5482EB7C1B000A6AD03 /* ShareQR */,
+				NWCLA000000000000000015 /* NWCWidget */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				C313040DFF224D8A9EC46990 /* Resources */,
@@ -994,6 +1054,7 @@
 				2D02E47B1E0B4A5D006451C7 /* zeus-tvOS.app */,
 				2D02E4901E0B4A5D006451C7 /* zeus-tvOSTests.xctest */,
 				5134B5472EB7C1B000A6AD03 /* ShareQR.appex */,
+				NWCLA000000000000000006 /* NWCWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1309,6 +1370,7 @@
 			);
 			dependencies = (
 				5134B5502EB7C1B000A6AD03 /* PBXTargetDependency */,
+				NWCLA000000000000000020 /* PBXTargetDependency */,
 			);
 			name = zeus;
 			productName = "Hello World";
@@ -1371,6 +1433,26 @@
 			productReference = 5134B5472EB7C1B000A6AD03 /* ShareQR.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		NWCLA000000000000000011 /* NWCWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = NWCLA000000000000000016 /* Build configuration list for PBXNativeTarget "NWCWidget" */;
+			buildPhases = (
+				NWCLA000000000000000012 /* Sources */,
+				NWCLA00000000000000001B /* Frameworks */,
+				NWCLA000000000000000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				NWCLA000000000000000015 /* NWCWidget */,
+			);
+			name = NWCWidget;
+			productName = NWCWidget;
+			productReference = NWCLA000000000000000006 /* NWCWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1401,6 +1483,9 @@
 						TestTargetID = 2D02E47A1E0B4A5D006451C7;
 					};
 					5134B5462EB7C1B000A6AD03 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					NWCLA000000000000000011 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -1469,6 +1554,7 @@
 				2D02E47A1E0B4A5D006451C7 /* zeus-tvOS */,
 				2D02E48F1E0B4A5D006451C7 /* zeus-tvOSTests */,
 				5134B5462EB7C1B000A6AD03 /* ShareQR */,
+				NWCLA000000000000000011 /* NWCWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -1645,6 +1731,9 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
+				NWCAUDIO0000000000000011 /* Fireplace.m4a in Resources */,
+				NWCAUDIO0000000000000012 /* White Noise.m4a in Resources */,
+				NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */,
 				74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */,
 				74C5F97A2D5311BC003840C4 /* PPNeueMontreal-Bold.otf in Resources */,
 				74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */,
@@ -1838,6 +1927,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		NWCLA000000000000000014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -1879,9 +1975,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1896,9 +1996,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1977,7 +2081,13 @@
 				B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */,
 				745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
-				13B07FBD1A6810BG00A75B9A /* BackgroundTaskManager.m in Sources */,
+				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
+				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
+				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
+				NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */,
+				NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */,
+				NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */,
+				NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */,
 				745388442A54C2B6000927CE /* lightning.pb.swift in Sources */,
 				74B637822A5A350B00750202 /* LncModule.mm in Sources */,
 				74B637842A5A350B00750202 /* Callback.mm in Sources */,
@@ -2013,6 +2123,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		NWCLA000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -2030,6 +2147,11 @@
 			isa = PBXTargetDependency;
 			target = 5134B5462EB7C1B000A6AD03 /* ShareQR */;
 			targetProxy = 5134B54F2EB7C1B000A6AD03 /* PBXContainerItemProxy */;
+		};
+		NWCLA000000000000000020 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = NWCLA000000000000000011 /* NWCWidget */;
+			targetProxy = NWCLA000000000000000019 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -2554,6 +2676,98 @@
 			};
 			name = Release;
 		};
+		NWCLA000000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = NWCWidget/NWCWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9TU7M3555F;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NWCWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zeus NWC";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 13.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus.NWCWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		NWCLA000000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = NWCWidget/NWCWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9TU7M3555F;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NWCWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Zeus NWC";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 13.1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus.NWCWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -2607,6 +2821,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		NWCLA000000000000000016 /* Build configuration list for PBXNativeTarget "NWCWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				NWCLA000000000000000017 /* Debug */,
+				NWCLA000000000000000018 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
