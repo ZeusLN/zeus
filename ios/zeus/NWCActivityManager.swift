@@ -44,7 +44,7 @@ import UIKit
 
     // MARK: - Private
 
-    private var staleDate: Date { Date().addingTimeInterval(3600) }
+    private var staleDate: Date { Date().addingTimeInterval(30) }
 
     private func runOnMain(_ block: @escaping () -> Void) {
         if Thread.isMainThread {
@@ -186,7 +186,7 @@ import UIKit
     private func startRefreshTimer() {
         stopRefreshTimer()
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 15, repeating: 15)
+        timer.schedule(deadline: .now() + 10, repeating: 10)
         timer.setEventHandler { [weak self] in
             guard let self else { return }
             guard self.resolveLiveActivity() != nil else { return }

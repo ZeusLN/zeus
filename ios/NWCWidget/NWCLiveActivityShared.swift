@@ -128,7 +128,7 @@ enum NWCLiveActivityShared {
         )
         let content = ActivityContent(
             state: state,
-            staleDate: Date().addingTimeInterval(3600)
+            staleDate: Date().addingTimeInterval(30)
         )
         await act.update(content)
         NSLog("[NWCLiveActivityShared] pushed – track=%@ muted=%d rev=%u",

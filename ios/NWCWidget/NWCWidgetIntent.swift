@@ -56,6 +56,9 @@ struct NWCStopIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop NWC"
     func perform() async throws -> some IntentResult {
         postDarwin(kNWCStop)
+        if #available(iOS 16.2, *) {
+            await NWCLiveActivityShared.endDuplicateActivities(keepingId: nil)
+        }
         return .result()
     }
 }

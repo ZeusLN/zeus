@@ -110,37 +110,98 @@ private struct NWCExpandedView: View {
     }
 }
 
+private struct NWCStaleView: View {
+    var body: some View {
+        Button(intent: NWCStopIntent()) {
+            HStack(spacing: 12) {
+                ZeusIcon(size: 28)
+                    .opacity(0.35)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Session ended")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                    Text("Tap to dismiss")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.red.opacity(0.75))
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct NWCWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NWCLiveActivityAttributes.self) { context in
-            NWCExpandedView(context: context)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(Color.black)
+            Group {
+                if context.isStale {
+                    NWCStaleView()
+                } else {
+                    NWCExpandedView(context: context)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(Color.black)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
-                    NWCExpandedView(context: context)
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 6)
+                    Group {
+                        if context.isStale {
+                            NWCStaleView()
+                        } else {
+                            NWCExpandedView(context: context)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 6)
                 }
             } compactLeading: {
                 ZeusIcon(size: 20)
+                    .opacity(context.isStale ? 0.35 : 1)
             } compactTrailing: {
-                Button(intent: NWCToggleMuteIntent()) {
-                    Image(systemName: context.state.isMuted
-                          ? "speaker.slash.fill"
-                          : "speaker.wave.2.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(context.state.isMuted ? .orange : .white)
+                if context.isStale {
+                    Button(intent: NWCStopIntent()) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.red.opacity(0.85))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 2)
+                } else {
+                    Button(intent: NWCToggleMuteIntent()) {
+                        Image(systemName: context.state.isMuted
+                              ? "speaker.slash.fill"
+                              : "speaker.wave.2.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(context.state.isMuted ? .orange : .white)
+                    }
+                    .id(context.state.contentRevision)
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 2)
                 }
-                .id(context.state.contentRevision)
-                .buttonStyle(.plain)
-                .padding(.trailing, 2)
             } minimal: {
-                ZeusIcon(size: 16)
+                if context.isStale {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.red.opacity(0.85))
+                } else {
+                    ZeusIcon(size: 16)
+                }
             }
-            .keylineTint(Color(red: 1, green: 0.82, blue: 0))
+            .keylineTint(context.isStale
+                         ? Color.gray.opacity(0.5)
+                         : Color(red: 1, green: 0.82, blue: 0))
         }
     }
 }
