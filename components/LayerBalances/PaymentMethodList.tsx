@@ -12,6 +12,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { decodeNoffer, NofferPriceType } from '../../utils/ClinkUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -30,6 +31,7 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
+    clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     onchainBalance?: number | string;
@@ -61,6 +63,7 @@ const LAYER_LOCALE_MAP: Record<string, string> = {
     'Lightning via ecash': 'components.LayerBalances.lightningViaEcash',
     'Lightning address': 'general.lightningAddress',
     Offer: 'views.Settings.Bolt12Offer',
+    CLINK: 'views.Settings.Noffer',
     'On-chain': 'general.onchain'
 };
 
@@ -74,7 +77,7 @@ const getGradientColors = (): [string, string] => {
 const LayerIcon = ({ layer }: { layer: string }) => {
     if (layer === 'Lightning via ecash') return <EcashSvg />;
     if (layer === 'On-chain') return <OnChainSvg />;
-    if (['Lightning', 'Lightning address', 'Offer'].includes(layer))
+    if (['Lightning', 'Lightning address', 'Offer', 'CLINK'].includes(layer))
         return <LightningSvg />;
     return <OnChainSvg />;
 };
@@ -166,6 +169,7 @@ const SwipeableRow = ({
     lightning,
     lightningAddress,
     offer,
+    clinkNoffer,
     lnurlParams
 }: {
     item: DataRow;
@@ -177,6 +181,7 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
+    clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
@@ -235,6 +240,24 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'CLINK') {
+        // The row's balance/satAmount (when populated for Fixed noffers)
+        // already reflects the larger of lightning and ecash, so the
+        // standard insufficient-balance check is correct here. For
+        // Variable/Spontaneous noffers item.balance is unset and only
+        // item.disabled (driven by a fully empty combined balance) applies.
+        return (
+            <LightningSwipeableRow
+                navigation={navigation}
+                clinkNoffer={clinkNoffer}
+                locked={true}
+                disabled={rowDisabled}
+            >
+                <Row item={item} />
+            </LightningSwipeableRow>
+        );
+    }
+
     if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
@@ -263,6 +286,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams,
             lightningBalance,
             onchainBalance,
@@ -341,6 +365,54 @@ export default class PaymentMethodList extends Component<
                 });
             }
         }
+
+        // Rendered after the balance-backed rows so the UI groups
+        // "buckets you can spend from" together up top, with the noffer
+        // (which spans lightning + ecash and may have no known amount)
+        // sitting beneath them.
+        if (clinkNoffer) {
+            // Only Fixed-price noffers carry the amount in the bech32 itself.
+            // Variable and Spontaneous noffers have no amount until the
+            // service returns a bolt11, so a balance comparison here would
+            // be meaningless.
+            let embeddedAmount: number | undefined;
+            try {
+                const decoded = decodeNoffer(clinkNoffer);
+                if (
+                    decoded.priceType === NofferPriceType.Fixed &&
+                    typeof decoded.price === 'number' &&
+                    decoded.price > 0
+                ) {
+                    embeddedAmount = decoded.price;
+                }
+            } catch {}
+            // ClinkPay can settle the returned bolt11 via either the
+            // lightning balance or ecash, so the row's balance is the
+            // larger of the two (ecash only counts when cashu is enabled).
+            // Using the max means the row is enabled iff at least one
+            // bucket alone can cover the amount.
+            const ecashAvailable =
+                BackendUtils.supportsCashuWallet() &&
+                settingsStore?.settings?.ecash?.enableCashu;
+            const clinkBalance = Math.max(
+                Number(lightningBalance ?? 0),
+                ecashAvailable ? Number(ecashBalance ?? 0) : 0
+            );
+            DATA.push({
+                layer: 'CLINK',
+                subtitle: clinkNoffer,
+                // No funds in either bucket means no path to pay,
+                // regardless of the noffer's pricing type.
+                disabled: clinkBalance === 0,
+                ...(embeddedAmount !== undefined && {
+                    balance: clinkBalance,
+                    // Compare against the noffer's embedded price (the
+                    // amount that will actually be paid) rather than any
+                    // BIP21 `amount=` that may have come in separately.
+                    satAmount: embeddedAmount
+                })
+            });
+        }
         return DATA;
     };
 
@@ -353,6 +425,7 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
+            clinkNoffer,
             lnurlParams
         } = this.props;
         const satAmountNum =
@@ -380,6 +453,7 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
+                            clinkNoffer={clinkNoffer}
                             lnurlParams={lnurlParams}
                         />
                     )}

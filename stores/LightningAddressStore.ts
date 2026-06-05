@@ -71,6 +71,7 @@ export default class LightningAddressStore {
     @observable public lightningAddressDomain: string;
     @observable public lightningAddressType: string;
     @observable public lightningAddressActivated: boolean = false;
+    @observable public noffer: string | null = null;
     @observable public zeusPlusExpiresAt: any;
     @observable public zeusPlusAnnualFeeSats: any;
     @observable public zeusPlusDiscount: any;
@@ -639,7 +640,8 @@ export default class LightningAddressStore {
                 perks,
                 deviceToken,
                 image,
-                bio
+                bio,
+                noffer
             } = statusData;
 
             runInAction(() => {
@@ -667,6 +669,7 @@ export default class LightningAddressStore {
                 this.perks = perks;
                 this.image = image || null;
                 this.bio = bio || null;
+                this.noffer = noffer || null;
                 this.serviceDeviceToken = deviceToken;
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;

@@ -144,6 +144,7 @@ export default class LightningAddress extends React.Component<
             lightningAddressHandle,
             lightningAddressDomain,
             lightningAddressType,
+            noffer,
             zeusPlusExpiresAt,
             availableHashes,
             localHashes,
@@ -211,19 +212,26 @@ export default class LightningAddress extends React.Component<
 
         const QRButton = () => {
             const address = `${lightningAddressHandle}@${lightningAddressDomain}`;
+            const logo = themeColor('invertQrIcons')
+                ? require('../../assets/images/pay_z_white.png')
+                : require('../../assets/images/pay_z_black.png');
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        navigation.navigate('QR', {
-                            value: `lightning:${address}`,
-                            copyValue: address,
-                            label: address,
-                            hideText: true,
-                            labelBottom: true,
-                            logo: themeColor('invertQrIcons')
-                                ? require('../../assets/images/pay_z_white.png')
-                                : require('../../assets/images/pay_z_black.png')
-                        })
+                        noffer
+                            ? navigation.navigate('LightningAddressQR', {
+                                  address,
+                                  noffer,
+                                  logo
+                              })
+                            : navigation.navigate('QR', {
+                                  value: `lightning:${address}`,
+                                  copyValue: address,
+                                  label: address,
+                                  hideText: true,
+                                  labelBottom: true,
+                                  logo
+                              })
                     }
                     style={{ margin: 10 }}
                 >

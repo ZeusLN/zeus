@@ -69,6 +69,7 @@ import Transaction from './views/Transaction';
 import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import LnurlPay from './views/LnurlPay/LnurlPay';
+import ClinkPay from './views/ClinkPay/ClinkPay';
 import LnurlChannel from './views/LnurlChannel';
 import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
@@ -147,6 +148,7 @@ import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
 import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
 import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
+import LightningAddressQR from './views/LightningAddress/LightningAddressQR';
 import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
 import Attestation from './views/LightningAddress/Attestation';
 import Attestations from './views/LightningAddress/Attestations';
@@ -816,6 +818,12 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
+                                                                name="ClinkPay" // @ts-ignore:next-line
+                                                                component={
+                                                                    ClinkPay
+                                                                }
+                                                            />
+                                                            <Stack.Screen
                                                                 name="Receive" // @ts-ignore:next-line
                                                                 component={
                                                                     Receive
@@ -1262,6 +1270,12 @@ export default class App extends React.PureComponent {
                                                                 name="LightningAddress" // @ts-ignore:next-line
                                                                 component={
                                                                     LightningAddress
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LightningAddressQR" // @ts-ignore:next-line
+                                                                component={
+                                                                    LightningAddressQR
                                                                 }
                                                             />
                                                             <Stack.Screen

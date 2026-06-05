@@ -19,6 +19,7 @@ import Header from '../../components/Header';
 import { ContactAvatar } from '../../components/ContactAvatar';
 
 import { confirmAction } from '../../utils/ActionUtils';
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -27,6 +28,7 @@ import Storage from '../../storage';
 import Contact from '../../models/Contact';
 
 import ContactStore, { CONTACTS_KEY } from '../../stores/ContactStore';
+import { settingsStore } from '../../stores/Stores';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
@@ -78,6 +80,7 @@ export default class Contacts extends React.Component<
             hasLnAddress,
             hasBolt12Address,
             hasBolt12Offer,
+            hasNoffer,
             hasOnchainAddress,
             hasPubkey,
             hasCashuPubkey,
@@ -100,6 +103,7 @@ export default class Contacts extends React.Component<
         if (hasLnAddress) return item.lnAddress[0];
         if (hasBolt12Address) return item.bolt12Address[0];
         if (hasBolt12Offer) return item.bolt12Offer[0];
+        if (hasNoffer) return item.noffer[0];
         if (hasOnchainAddress) return item.onchainAddress[0];
         if (hasPubkey) return item.pubkey[0];
         if (hasCashuPubkey) return item.cashuPubkey[0];
@@ -193,6 +197,13 @@ export default class Contacts extends React.Component<
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Offer[0],
                                 contactName: item.name
+                            });
+                        } else if (contact.isSingleNoffer) {
+                            this.props.navigation.navigate('ClinkPay', {
+                                noffer: item.noffer[0],
+                                ecash:
+                                    BackendUtils.supportsCashuWallet() &&
+                                    settingsStore?.settings?.ecash?.enableCashu
                             });
                         } else if (contact.isSingleOnchainAddress) {
                             this.props.navigation.navigate('Send', {

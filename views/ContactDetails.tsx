@@ -530,6 +530,21 @@ export default class ContactDetails extends React.Component<
                                 )}
 
                             {!fromCashuLockSettings &&
+                                contact.hasNoffer &&
+                                contact.noffer.map(
+                                    (address: string, index: number) => (
+                                        <AddressRow
+                                            key={`noffer-${index}`}
+                                            address={address}
+                                            onPress={() =>
+                                                this.sendAddress(address)
+                                            }
+                                            icon={<LightningBolt />}
+                                        />
+                                    )
+                                )}
+
+                            {!fromCashuLockSettings &&
                                 contact.hasPubkey &&
                                 contact.pubkey.map(
                                     (address: string, index: number) => (
