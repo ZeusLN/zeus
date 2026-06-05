@@ -256,6 +256,25 @@ RCT_EXPORT_METHOD(setTrack:(NSInteger)index
     resolve([self currentStatusDict]);
 }
 
+// Updates the preferred track without restarting playback. Used when the
+// settings UI changes selection during an active NWC session — the user's
+// pick should persist (app group, in-memory) so the next start uses it,
+// but the currently playing ambient track must not be interrupted.
+RCT_EXPORT_METHOD(setTrackPreference:(NSInteger)index
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    if (index < 0 || index >= (NSInteger)self.trackNames.count) {
+        reject(@"INVALID_TRACK", @"Track index out of range", nil);
+        return;
+    }
+
+    self.currentTrackIndex = index;
+    [NWCLiveActivityBridge syncAppGroupFromAudioWithTrackIndex:index
+                                                      isMuted:self.isMuted];
+
+    resolve([self currentStatusDict]);
+}
+
 RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSInteger next = (self.currentTrackIndex + 1) % (NSInteger)self.trackNames.count;
