@@ -19,4 +19,18 @@ import Foundation
             revision: revision
         )
     }
+
+    /// Returns the persisted preferred track index, or `fallback` if unset.
+    /// Distinct from the display-state track index so the Live Activity
+    /// refresh timer doesn't surface the preference while a different track
+    /// is actually playing.
+    @objc(preferredTrackIndexWithFallback:)
+    static func preferredTrackIndex(fallback: Int) -> Int {
+        NWCLiveActivityShared.readPreferredTrackIndex() ?? fallback
+    }
+
+    @objc(setPreferredTrackIndex:)
+    static func setPreferredTrackIndex(_ index: Int) {
+        NWCLiveActivityShared.writePreferredTrackIndex(index)
+    }
 }
