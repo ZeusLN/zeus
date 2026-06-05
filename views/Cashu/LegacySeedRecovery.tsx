@@ -184,6 +184,7 @@ export default class LegacySeedRecovery extends React.Component<
                             disableRandom
                             navigation={navigation}
                             hideAmount
+                            isReceiveView
                             disabled={checking}
                         />
                     </View>

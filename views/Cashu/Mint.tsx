@@ -41,7 +41,10 @@ import MintAvatar from '../../components/MintAvatar';
 
 interface MintProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'Mint', { mint: any; lookup?: boolean }>;
+    route: Route<
+        'Mint',
+        { mint: any; lookup?: boolean; isMultiMintView?: boolean }
+    >;
     CashuStore: CashuStore;
 }
 
@@ -590,6 +593,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
         } = CashuStore;
         const mint = route.params?.mint;
         const lookup = route.params?.lookup;
+        const isMultiMintView = route.params?.isMultiMintView;
 
         const mintInfo = mint;
 
@@ -948,8 +952,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {lookup ? (
                             <View
                                 style={{
-                                    paddingVertical: 10,
-                                    backgroundColor: themeColor('background')
+                                    paddingVertical: 10
                                 }}
                             >
                                 <View
@@ -1032,12 +1035,10 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             <>
                                 <View
                                     style={{
-                                        paddingVertical: 10,
-                                        backgroundColor:
-                                            themeColor('background')
+                                        paddingVertical: 10
                                     }}
                                 >
-                                    {!isselectedMint && (
+                                    {!isselectedMint && !isMultiMintView && (
                                         <View
                                             style={{
                                                 width: '100%',

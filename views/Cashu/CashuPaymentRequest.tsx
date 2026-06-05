@@ -23,6 +23,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 
 import BalanceStore from '../../stores/BalanceStore';
@@ -77,6 +78,7 @@ interface CashuPaymentRequestState {
     donationAmount: any;
     selectedIndex: number | null;
     swipeButtonKey: number;
+    multiMintEnabled: boolean;
 }
 
 @inject(
@@ -96,6 +98,7 @@ export default class CashuPaymentRequest extends React.Component<
     isComponentMounted: boolean = false;
     focusListener: any = null;
     payReqDisposer: any;
+    donationLockRequest?: string;
     state = {
         customAmount: '',
         satAmount: '',
@@ -105,7 +108,8 @@ export default class CashuPaymentRequest extends React.Component<
         donationPercentage: 0,
         donationAmount: 0,
         selectedIndex: null,
-        swipeButtonKey: 0
+        swipeButtonKey: 0,
+        multiMintEnabled: false
     };
 
     async componentDidMount() {
@@ -118,38 +122,60 @@ export default class CashuPaymentRequest extends React.Component<
             () => CashuStore.payReq,
             (payReq) => {
                 if (payReq?.getRequestAmount) {
+                    const currentRequest = CashuStore.paymentRequest;
+
+                    if (
+                        currentRequest &&
+                        this.donationLockRequest === currentRequest
+                    ) {
+                        return;
+                    }
+
+                    const defaultPct = Number(defaultDonationPercentage) || 0;
+
                     const requestAmount = payReq.getRequestAmount;
                     const donationAmount = calculateDonationAmount(
                         requestAmount,
-                        Number(defaultDonationPercentage) || 0
+                        defaultPct
                     );
                     const index = findDonationPercentageIndex(
-                        Number(defaultDonationPercentage) || 0,
+                        defaultPct,
                         [5, 10, 20]
                     );
 
                     this.setState({
                         donationAmount,
                         selectedIndex: index,
-                        donationPercentage:
-                            Number(defaultDonationPercentage) || 0
+                        donationPercentage: defaultPct
                     });
+
+                    this.donationLockRequest = currentRequest;
                 }
-            }
+            },
+            { fireImmediately: true }
         );
 
         const { paymentRequest, getPayReq } = CashuStore;
+        const enabledBySetting = !!settings?.ecash?.enableMultiMint;
+        const hasMultipleSelectedMints =
+            Array.isArray(CashuStore.multiMintSelectedUrls) &&
+            CashuStore.multiMintSelectedUrls.length > 1;
 
         this.setState({
-            slideToPayThreshold: settings?.payments?.slideToPayThreshold
+            slideToPayThreshold: settings?.payments?.slideToPayThreshold,
+            multiMintEnabled: enabledBySetting && hasMultipleSelectedMints
         });
 
         // Reset state when screen comes into focus (e.g., after navigating back)
         this.focusListener = this.props.navigation.addListener('focus', () => {
             getPayReq(paymentRequest!!);
-            this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
-            });
+            this.setState((prevState) => ({
+                swipeButtonKey: prevState.swipeButtonKey + 1,
+                multiMintEnabled:
+                    !!SettingsStore.settings?.ecash?.enableMultiMint &&
+                    Array.isArray(CashuStore.multiMintSelectedUrls) &&
+                    CashuStore.multiMintSelectedUrls.length > 1
+            }));
         });
     }
 
@@ -186,8 +212,36 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { LnurlPayStore } = this.props;
-        const { satAmount } = this.state;
+        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
+            this.props;
+        const { satAmount, multiMintEnabled, donationAmount } = this.state;
+        const requestAmount = CashuStore.payReq?.getRequestAmount;
+        const paymentAmount = satAmount
+            ? satAmount.toString()
+            : requestAmount
+            ? requestAmount.toString()
+            : undefined;
+
+        const enableDonations =
+            Platform.OS !== 'ios' &&
+            SettingsStore.settings?.payments?.enableDonations;
+
+        const isMultiMint =
+            multiMintEnabled &&
+            Array.isArray(CashuStore?.multiMintSelectedUrls) &&
+            CashuStore!.multiMintSelectedUrls.length > 1;
+
+        if (isMultiMint) {
+            navigation.navigate('MultimintPayment', {
+                paymentAmount,
+                enableDonations,
+                ...(enableDonations &&
+                    donationAmount > 0 && {
+                        donationAmount: donationAmount.toString()
+                    })
+            });
+            return;
+        }
 
         // Zaplocker
         const { isZaplocker } = LnurlPayStore;
@@ -197,8 +251,53 @@ export default class CashuPaymentRequest extends React.Component<
 
         // Call sendPayment with the freshest values
         this.sendPayment({
-            amount: satAmount ? satAmount.toString() : undefined
+            amount: paymentAmount
         });
+    };
+
+    handleMultiMintToggle = async (enabled: boolean) => {
+        const { CashuStore } = this.props;
+        const supportsMultiMint = (mintUrl: string) => {
+            const normalized = mintUrl.endsWith('/')
+                ? mintUrl.slice(0, -1)
+                : mintUrl;
+            const mintInfo =
+                CashuStore.mintInfos[mintUrl] ||
+                CashuStore.mintInfos[normalized];
+
+            const nut15 = mintInfo?.nuts?.[15] || mintInfo?.nuts?.['15'];
+            const methods = Array.isArray(nut15) ? nut15 : nut15?.methods || [];
+
+            return methods.some(
+                (method: any) =>
+                    method?.method?.toLowerCase() === 'bolt11' &&
+                    method?.unit?.toLowerCase() === 'sat'
+            );
+        };
+
+        this.setState({ multiMintEnabled: enabled });
+
+        if (enabled) {
+            const selected = CashuStore.selectedMintUrls || [];
+            const source =
+                selected.length > 1 ? selected : CashuStore.mintUrls || [];
+            const nextSelection = Array.from(
+                new Set(source.filter(supportsMultiMint))
+            );
+
+            if (nextSelection.length > 1) {
+                await CashuStore.setMultiMintSelectedUrls(nextSelection);
+            }
+        } else {
+            const selectedMintUrl = CashuStore.selectedMintUrl;
+            await CashuStore.setMultiMintSelectedUrls(
+                selectedMintUrl ? [selectedMintUrl] : []
+            );
+        }
+
+        if (CashuStore.paymentRequest) {
+            await CashuStore.getPayReq(CashuStore.paymentRequest);
+        }
     };
 
     render() {
@@ -210,7 +309,8 @@ export default class CashuPaymentRequest extends React.Component<
             slideToPayThreshold,
             donationsToggle,
             donationAmount,
-            donationPercentage
+            donationPercentage,
+            multiMintEnabled
         } = this.state;
         const {
             payReq,
@@ -249,8 +349,10 @@ export default class CashuPaymentRequest extends React.Component<
         const { implementation, settings } = SettingsStore;
 
         const isNoAmountInvoice: boolean = !requestAmount;
+        const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
+        const hasPayReqError = !!getPayReqError;
 
         const enableDonations =
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
@@ -283,6 +385,7 @@ export default class CashuPaymentRequest extends React.Component<
                 requestAmount ?? 0,
                 percentage
             );
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: percentage,
                 donationAmount,
@@ -299,7 +402,7 @@ export default class CashuPaymentRequest extends React.Component<
                 value,
                 donationPercentageOptions
             );
-
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: value,
                 donationAmount,
@@ -354,19 +457,24 @@ export default class CashuPaymentRequest extends React.Component<
 
                 <View style={{ flex: 1 }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
-                        {!!getPayReqError && (
-                            <View style={styles.content}>
-                                <Text
-                                    style={{
-                                        ...styles.label,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.PaymentRequest.error')}
-                                    : {getPayReqError}
-                                </Text>
-                            </View>
-                        )}
+                        {!loading &&
+                            !loadingFeeEstimate &&
+                            !payReq &&
+                            !!getPayReqError && (
+                                <View style={styles.content}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.PaymentRequest.error'
+                                        )}
+                                        : {getPayReqError}
+                                    </Text>
+                                </View>
+                            )}
 
                         {!loading && !loadingFeeEstimate && !!payReq && (
                             <View style={styles.content}>
@@ -415,6 +523,18 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
+                                    {!!getPayReqError && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={getPayReqError}
+                                            />
+                                        </View>
+                                    )}
                                     {isNoAmountInvoice ? (
                                         <AmountInput
                                             amount={customAmount}
@@ -853,25 +973,62 @@ export default class CashuPaymentRequest extends React.Component<
                                     marginBottom: 30
                                 }}
                             >
-                                <Text
+                                <Row
+                                    justify="space-between"
+                                    style={{ alignItems: 'center' }}
+                                >
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.CashuPaymentRequest.sendingFrom'
+                                        )}
+                                    </Text>
+                                    {showMultiMintToggle && (
+                                        <Row style={{ alignItems: 'center' }}>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontSize: 15,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    marginRight: 8
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Cashu.CashuPaymentRequest.multiMint'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={multiMintEnabled}
+                                                onValueChange={
+                                                    this.handleMultiMintToggle
+                                                }
+                                            />
+                                        </Row>
+                                    )}
+                                </Row>
+                                <View
                                     style={{
-                                        ...styles.label,
-                                        color: themeColor('secondaryText')
+                                        marginTop: 10
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Cashu.CashuPaymentRequest.sendingFrom'
-                                    )}
-                                </Text>
-                                <View style={{ marginTop: 10 }}>
                                     <EcashMintPicker
                                         disableRandom
+                                        isMultiMintView={multiMintEnabled}
                                         navigation={navigation}
                                     />
                                 </View>
                             </View>
                             {requestAmount &&
-                            requestAmount >= slideToPayThreshold ? (
+                            requestAmount >= slideToPayThreshold &&
+                            !SettingsStore.settingsUpdateInProgress &&
+                            !hasPayReqError ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -887,6 +1044,16 @@ export default class CashuPaymentRequest extends React.Component<
                                         backgroundColor: themeColor('text')
                                     }}
                                 />
+                            ) : requestAmount &&
+                              requestAmount >= slideToPayThreshold ? (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.PaymentRequest.slideToPay'
+                                        )}
+                                        disabled
+                                    />
+                                </View>
                             ) : (
                                 <View style={styles.button}>
                                     <Button
@@ -898,6 +1065,10 @@ export default class CashuPaymentRequest extends React.Component<
                                             size: 25
                                         }}
                                         onPress={this.triggerPayment}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress ||
+                                            hasPayReqError
+                                        }
                                     />
                                 </View>
                             )}

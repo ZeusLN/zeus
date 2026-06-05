@@ -352,7 +352,11 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 <Button
                                     title={localeString('cashu.tapToConfigure')}
                                     warning
-                                    onPress={() => navigation.navigate('Mints')}
+                                    onPress={() =>
+                                        navigation.navigate('Mints', {
+                                            forceSingleMint: true
+                                        })
+                                    }
                                 />
                             </View>
                         ) : (

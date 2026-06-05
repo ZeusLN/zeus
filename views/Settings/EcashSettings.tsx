@@ -31,6 +31,7 @@ interface EcashSettingsProps {
 interface EcashSettingsState {
     loading: boolean;
     enableCashu: boolean;
+    enableMultiMint: boolean;
     automaticallySweep: boolean;
     sweepThresholdSats: string;
 }
@@ -44,6 +45,7 @@ export default class EcashSettings extends React.Component<
     state = {
         loading: false,
         enableCashu: false,
+        enableMultiMint: false,
         automaticallySweep: false,
         sweepThresholdSats: '0'
     };
@@ -58,6 +60,11 @@ export default class EcashSettings extends React.Component<
                 settings?.ecash?.enableCashu !== null &&
                 settings?.ecash?.enableCashu !== undefined
                     ? settings.ecash.enableCashu
+                    : false,
+            enableMultiMint:
+                settings?.ecash?.enableMultiMint !== null &&
+                settings?.ecash?.enableMultiMint !== undefined
+                    ? settings.ecash.enableMultiMint
                     : false,
             automaticallySweep:
                 settings?.ecash?.automaticallySweep !== null &&
@@ -98,8 +105,13 @@ export default class EcashSettings extends React.Component<
     render() {
         const { navigation, CashuStore, ChannelsStore, SettingsStore } =
             this.props;
-        const { loading, enableCashu, automaticallySweep, sweepThresholdSats } =
-            this.state;
+        const {
+            loading,
+            enableCashu,
+            enableMultiMint,
+            automaticallySweep,
+            sweepThresholdSats
+        } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
         const hasOpenChannels = ChannelsStore.channels.length > 0;
 
@@ -167,17 +179,78 @@ export default class EcashSettings extends React.Component<
                                     await updateSettings({
                                         ecash: {
                                             ...settings.ecash,
-                                            enableCashu: !enableCashu
+                                            enableCashu: !enableCashu,
+                                            enableMultiMint: !enableCashu
+                                                ? enableMultiMint
+                                                : false
                                         }
                                     });
                                     if (!enableCashu) {
                                         await CashuStore.initializeWallets();
                                     }
                                     this.setState({
+                                        enableMultiMint: !enableCashu
+                                            ? enableMultiMint
+                                            : false,
                                         loading: false
                                     });
                                 }}
                                 disabled={
+                                    SettingsStore.settingsUpdateInProgress ||
+                                    loading
+                                }
+                            />
+                        </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                marginRight: 10
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: enableCashu
+                                        ? themeColor('text')
+                                        : 'gray',
+                                    fontSize: 17
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Ecash.enableMultiMintSends'
+                                )}
+                            </Text>
+                        </View>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                marginLeft: 5
+                            }}
+                        >
+                            <Switch
+                                value={enableMultiMint}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableMultiMint: !enableMultiMint,
+                                        loading: true
+                                    });
+
+                                    await updateSettings({
+                                        ecash: {
+                                            ...settings.ecash,
+                                            enableMultiMint: !enableMultiMint
+                                        }
+                                    });
+
+                                    this.setState({
+                                        loading: false
+                                    });
+                                }}
+                                disabled={
+                                    !enableCashu ||
                                     SettingsStore.settingsUpdateInProgress ||
                                     loading
                                 }
