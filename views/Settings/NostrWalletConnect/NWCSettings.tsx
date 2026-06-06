@@ -238,7 +238,11 @@ export default class NWCSettings extends React.Component<
             this.state.previewingIndex !== null ||
             NostrWalletConnectStore.iosAudioKeepAliveActive;
 
-        if (!sessionActive) {
+        if (sessionActive) {
+            // Persist the pick without interrupting active playback —
+            // preview / next-session start will pick it up.
+            await IOSAudioKeepAliveUtils.setTrackPreference(index);
+        } else {
             await IOSAudioKeepAliveUtils.setTrack(index);
         }
     };

@@ -63,6 +63,7 @@ interface NWCAudioKeepAliveModule {
     getStatus(): Promise<AudioKeepAliveStatus>;
     getAvailableTracks(): Promise<AudioTrack[]>;
     setTrack(index: number): Promise<AudioKeepAliveStatus>;
+    setTrackPreference(index: number): Promise<AudioKeepAliveStatus>;
     nextTrack(): Promise<AudioKeepAliveStatus>;
     previousTrack(): Promise<AudioKeepAliveStatus>;
     setMuted(muted: boolean): Promise<AudioKeepAliveStatus>;
@@ -164,6 +165,19 @@ class IOSAudioKeepAliveUtils {
             return await mod.setTrack(index);
         } catch (e) {
             console.error('[NWCAudio] setTrack() failed:', e);
+            return null;
+        }
+    }
+
+    async setTrackPreference(
+        index: number
+    ): Promise<AudioKeepAliveStatus | null> {
+        const mod = this.getModule();
+        if (!mod) return null;
+        try {
+            return await mod.setTrackPreference(index);
+        } catch (e) {
+            console.error('[NWCAudio] setTrackPreference() failed:', e);
             return null;
         }
     }

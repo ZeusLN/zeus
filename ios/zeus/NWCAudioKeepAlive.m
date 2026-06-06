@@ -117,7 +117,17 @@ RCT_EXPORT_MODULE();
         _hasListeners      = NO;
         _disconnectCount   = 0;
         _trackNames        = [NWCAmbientTracks trackNames];
-        _currentTrackIndex = 0;
+
+        // Restore the user's preferred track. Preference key wins; fall back
+        // to the display-state index (which reflects in-session changes made
+        // from the Dynamic Island) if the user never picked in settings.
+        NSInteger fallback = [NWCLiveActivityBridge appGroupTrackIndex];
+        NSInteger persisted = [NWCLiveActivityBridge preferredTrackIndexWithFallback:fallback];
+        NSInteger count = (NSInteger)_trackNames.count;
+        _currentTrackIndex = (count > 0 && persisted >= 0 && persisted < count)
+            ? persisted
+            : 0;
+
         _isMuted           = NO;
         _iosVersion        = [[UIDevice currentDevice] systemVersion];
         _deviceModel       = [self deviceModelIdentifier];
@@ -247,6 +257,25 @@ RCT_EXPORT_METHOD(setTrack:(NSInteger)index
     resolve([self currentStatusDict]);
 }
 
+// Updates the preferred track without restarting playback. Used when the
+// settings UI changes selection during an active NWC session — the user's
+// pick should persist so the next start uses it, but the currently playing
+// ambient track and the Dynamic Island must not be interrupted. Writes only
+// the preference key in the app group; the display-state index (which the
+// Live Activity refresh timer reads every 15s) is intentionally left alone.
+RCT_EXPORT_METHOD(setTrackPreference:(NSInteger)index
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    if (index < 0 || index >= (NSInteger)self.trackNames.count) {
+        reject(@"INVALID_TRACK", @"Track index out of range", nil);
+        return;
+    }
+
+    [NWCLiveActivityBridge setPreferredTrackIndex:index];
+
+    resolve([self currentStatusDict]);
+}
+
 RCT_EXPORT_METHOD(nextTrack:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
     NSInteger next = (self.currentTrackIndex + 1) % (NSInteger)self.trackNames.count;
@@ -317,6 +346,7 @@ RCT_EXPORT_METHOD(disarmNWCAudio:(RCTPromiseResolveBlock)resolve
 
     [NWCLiveActivityBridge syncAppGroupFromAudioWithTrackIndex:index
                                                       isMuted:self.isMuted];
+    [NWCLiveActivityBridge setPreferredTrackIndex:index];
 
     if (@available(iOS 16.1, *)) {
         NSString *trackName = self.trackNames[index];

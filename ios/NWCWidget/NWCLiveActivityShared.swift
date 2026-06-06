@@ -10,6 +10,7 @@ enum NWCLiveActivityShared {
     private static let keyIsMuted = "nwc.isMuted"
     private static let keyRevision = "nwc.contentRevision"
     private static let keyActivityId = "nwc.activityId"
+    private static let keyPreferredTrackIndex = "nwc.preferredTrackIndex"
 
     private static var defaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
@@ -34,6 +35,19 @@ enum NWCLiveActivityShared {
         d?.set(trackIndex, forKey: keyTrackIndex)
         d?.set(isMuted, forKey: keyIsMuted)
         d?.set(Int(revision), forKey: keyRevision)
+    }
+
+    /// Track the user prefers next start to play. Distinct from the display state
+    /// (`keyTrackIndex`) so picking in settings during an active session doesn't
+    /// race the refresh timer into showing a track the audio isn't actually playing.
+    static func readPreferredTrackIndex() -> Int? {
+        guard let d = defaults, d.object(forKey: keyPreferredTrackIndex) != nil
+        else { return nil }
+        return d.integer(forKey: keyPreferredTrackIndex)
+    }
+
+    static func writePreferredTrackIndex(_ index: Int) {
+        defaults?.set(index, forKey: keyPreferredTrackIndex)
     }
 
     static func setPreferredActivityId(_ id: String?) {
@@ -125,6 +139,7 @@ enum NWCLiveActivityShared {
     static func applyNextTrack() async {
         var (index, muted, _) = readDisplay()
         index = (index + 1) % max(tracks.count, 1)
+        writePreferredTrackIndex(index)
         await pushLiveActivity(trackIndex: index, isMuted: muted)
     }
 
@@ -133,6 +148,7 @@ enum NWCLiveActivityShared {
         var (index, muted, _) = readDisplay()
         let count = max(tracks.count, 1)
         index = (index - 1 + count) % count
+        writePreferredTrackIndex(index)
         await pushLiveActivity(trackIndex: index, isMuted: muted)
     }
 
