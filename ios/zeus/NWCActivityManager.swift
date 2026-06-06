@@ -36,9 +36,19 @@ import UIKit
     @objc func endAllActivitiesImmediately() {
         stopRefreshTimer()
         activity = nil
+
+        // Synchronous wait so `applicationWillTerminate:` doesn't return
+        // before ActivityKit's async `end()` lands. iOS gives ~5s before
+        // SIGKILL; cap at 3s to leave headroom.
+        let sem = DispatchSemaphore(value: 0)
         Task.detached(priority: .userInitiated) {
             await Self.endEveryNWCLiveActivity()
-            NSLog("[NWCActivity] ended all (immediate)")
+            sem.signal()
+        }
+        if sem.wait(timeout: .now() + 3.0) == .timedOut {
+            NSLog("[NWCActivity] end-all timed out after 3s")
+        } else {
+            NSLog("[NWCActivity] ended all (sync)")
         }
     }
 
