@@ -45,6 +45,14 @@ export interface DecodedBolt11 {
 }
 
 class Bolt11Utils {
+    // Decoding triggers ECDSA pubkey recovery via @noble/secp256k1, which is
+    // ~5–20 ms per call on a phone. The Activity view calls decode() repeatedly
+    // for the same payment_request strings (once per invoice, sometimes twice),
+    // so an LRU cache keyed by the raw input collapses those into a single
+    // recovery per unique invoice.
+    private readonly CACHE_LIMIT = 256;
+    private cache: Map<string, DecodedBolt11> = new Map();
+
     constructor() {
         for (
             let i = 0, keys = Object.keys(this.TAGCODES);
@@ -62,6 +70,15 @@ class Bolt11Utils {
             throw new Error('Lightning Payment Request must be string');
         if (paymentRequest.slice(0, 2).toLowerCase() !== 'ln')
             throw new Error('Not a proper lightning payment request');
+
+        const cacheKey = paymentRequest.toLowerCase();
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            // Move to MRU position by re-inserting.
+            this.cache.delete(cacheKey);
+            this.cache.set(cacheKey, cached);
+            return cached;
+        }
 
         const sections: Bolt11Section[] = [];
         const decoded = bech32.decode(paymentRequest, Number.MAX_SAFE_INTEGER);
@@ -258,6 +275,12 @@ class Bolt11Utils {
         } catch (e) {
             // Malformed signature — leave destination undefined and return the rest of the decoded fields.
         }
+
+        if (this.cache.size >= this.CACHE_LIMIT) {
+            const oldestKey = this.cache.keys().next().value;
+            if (oldestKey !== undefined) this.cache.delete(oldestKey);
+        }
+        this.cache.set(cacheKey, result);
 
         return result;
     };

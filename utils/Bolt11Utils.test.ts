@@ -123,4 +123,18 @@ describe('decode', () => {
         expect(sectionNames).toContain('payment_hash');
         expect(sectionNames).toContain('expiry');
     });
+
+    it('returns the same object on repeat decodes (LRU cache hit)', () => {
+        const first = Bolt11Utils.decode(REGTEST_FIXTURE);
+        const second = Bolt11Utils.decode(REGTEST_FIXTURE);
+
+        expect(second).toBe(first);
+    });
+
+    it('treats casing as equivalent for cache lookups', () => {
+        const lower = Bolt11Utils.decode(REGTEST_FIXTURE);
+        const upper = Bolt11Utils.decode(REGTEST_FIXTURE.toUpperCase());
+
+        expect(upper).toBe(lower);
+    });
 });
