@@ -867,6 +867,142 @@ export default class NostrConnectUtils {
         );
     }
 
+    static isInFlightPaymentStatus(
+        status: string | number | null | undefined
+    ): boolean {
+        return status === 'IN_FLIGHT' || status === 1 || status === '1';
+    }
+
+    static isPaymentTimedOutMessage(message?: string | null): boolean {
+        if (!message) return false;
+        const normalized = message.toLowerCase();
+        return (
+            normalized.includes('timed out') ||
+            message ===
+                localeString('views.SendingLightning.paymentTimedOut') ||
+            message === localeString('error.paymentTimedOut')
+        );
+    }
+
+    static isSettledPayment(payment: Payment): boolean {
+        return !payment.isIncomplete && !payment.isFailed;
+    }
+
+    static isListedPaymentInTransit(payment: Payment): boolean {
+        if (NostrConnectUtils.isSettledPayment(payment)) return false;
+        if (payment.isInTransit) return true;
+
+        const hasInFlightStatus =
+            NostrConnectUtils.isInFlightPaymentStatus(payment.status) ||
+            payment.status === 'pending';
+
+        return hasInFlightStatus && payment.isIncomplete && !payment.isFailed;
+    }
+
+    static findPaymentForInvoice(
+        invoice: string,
+        payments: Payment[],
+        paymentHash?: string | null
+    ): Payment | undefined {
+        return payments.find(
+            (p) =>
+                p.getPaymentRequest === invoice ||
+                (!!paymentHash && p.paymentHash === paymentHash)
+        );
+    }
+
+    static findInTransitPaymentForInvoice(
+        invoice: string,
+        payments: Payment[],
+        paymentHash?: string | null
+    ): Payment | undefined {
+        return payments.find((p) => {
+            const matchesInvoice =
+                p.getPaymentRequest === invoice ||
+                (!!paymentHash && p.paymentHash === paymentHash);
+            return (
+                matchesInvoice && NostrConnectUtils.isListedPaymentInTransit(p)
+            );
+        });
+    }
+
+    static isTransactionsStorePaymentInTransit(state: {
+        status: string | number | null;
+        isIncomplete: boolean | null;
+        error: boolean;
+        payment_error: string | null;
+        loading: boolean;
+    }): boolean {
+        if (NostrConnectUtils.isInFlightPaymentStatus(state.status)) {
+            return true;
+        }
+
+        return (
+            state.isIncomplete === true &&
+            !state.error &&
+            !state.payment_error &&
+            !state.loading
+        );
+    }
+
+    static resolveLightningPaymentInTransit({
+        invoice,
+        payments,
+        paymentHash,
+        paymentState
+    }: {
+        invoice: string;
+        payments: Payment[];
+        paymentHash?: string | null;
+        paymentState: {
+            status: string | number | null;
+            isIncomplete: boolean | null;
+            error: boolean;
+            payment_error: string | null;
+            loading: boolean;
+        };
+    }): { inTransit: boolean; payment?: Payment } {
+        if (
+            NostrConnectUtils.isTransactionsStorePaymentInTransit(paymentState)
+        ) {
+            const payment =
+                NostrConnectUtils.findInTransitPaymentForInvoice(
+                    invoice,
+                    payments,
+                    paymentHash
+                ) ||
+                NostrConnectUtils.findPaymentForInvoice(
+                    invoice,
+                    payments,
+                    paymentHash
+                );
+
+            if (payment && NostrConnectUtils.isSettledPayment(payment)) {
+                return { inTransit: false, payment };
+            }
+
+            return { inTransit: true, payment };
+        }
+
+        const timedOutOrStillLoading =
+            NostrConnectUtils.isPaymentTimedOutMessage(
+                paymentState.payment_error
+            ) || paymentState.loading;
+
+        if (timedOutOrStillLoading || paymentState.isIncomplete) {
+            const payment = NostrConnectUtils.findInTransitPaymentForInvoice(
+                invoice,
+                payments,
+                paymentHash
+            );
+            if (payment) {
+                return { inTransit: true, payment };
+            }
+        }
+
+        return { inTransit: false };
+    }
+
     private static extractInvoiceFromActivity(
         activity: ConnectionActivity
     ): string {
