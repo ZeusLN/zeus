@@ -4,7 +4,7 @@ import humanizeDuration from 'humanize-duration';
 import BaseModel from './BaseModel';
 import Base64Utils from '../utils/Base64Utils';
 import DateTimeUtils from '../utils/DateTimeUtils';
-import Bolt11Utils from '../utils/Bolt11Utils';
+import Bolt11Utils, { DecodedBolt11 } from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
 import { notesStore } from '../stores/Stores';
 
@@ -375,21 +375,24 @@ export default class Invoice extends BaseModel {
         return false;
     }
 
-    @computed public get originalTimeUntilExpiryInSeconds():
-        | number
-        | undefined {
+    @computed private get decodedPaymentRequest(): DecodedBolt11 | undefined {
         try {
-            const decodedPaymentRequest = Bolt11Utils.decode(
-                this.getPaymentRequest
-            );
-            if (this.expires_at != null) {
-                // expiry is missing in payment request in Core Lightning
-                return this.expires_at - decodedPaymentRequest.timestamp;
-            }
-            return decodedPaymentRequest.expiry;
+            return Bolt11Utils.decode(this.getPaymentRequest);
         } catch (e) {
             return undefined;
         }
+    }
+
+    @computed public get originalTimeUntilExpiryInSeconds():
+        | number
+        | undefined {
+        const decoded = this.decodedPaymentRequest;
+        if (!decoded) return undefined;
+        if (this.expires_at != null) {
+            // expiry is missing in payment request in Core Lightning
+            return this.expires_at - decoded.timestamp;
+        }
+        return decoded.expiry;
     }
 
     public determineFormattedOriginalTimeUntilExpiry(
@@ -445,20 +448,12 @@ export default class Invoice extends BaseModel {
     private getExpiryUnixTimestamp(): number | undefined {
         const originalTimeUntilExpiryInSeconds =
             this.originalTimeUntilExpiryInSeconds;
+        if (originalTimeUntilExpiryInSeconds == null) return undefined;
 
-        if (originalTimeUntilExpiryInSeconds == null) {
-            return undefined;
-        }
+        const decoded = this.decodedPaymentRequest;
+        if (!decoded) return undefined;
 
-        try {
-            const paymentRequestTimestamp = Bolt11Utils.decode(
-                this.getPaymentRequest
-            ).timestamp;
-
-            return paymentRequestTimestamp + originalTimeUntilExpiryInSeconds;
-        } catch (e) {
-            return undefined;
-        }
+        return decoded.timestamp + originalTimeUntilExpiryInSeconds;
     }
 
     private formatHumanReadableDuration(
