@@ -452,10 +452,29 @@ export default class NWCConnectionsList extends React.Component<
                             <View
                                 style={{
                                     flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 8
+                                    alignItems: 'center'
                                 }}
                             >
+                                {isNwcSettingsAvailable && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('NWCSettings')
+                                        }
+                                        accessibilityLabel={localeString(
+                                            'views.Settings.title'
+                                        )}
+                                    >
+                                        <Gear
+                                            fill={themeColor('text')}
+                                            width={30}
+                                            height={30}
+                                            style={{
+                                                alignSelf: 'center',
+                                                marginRight: 15
+                                            }}
+                                        />
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
@@ -473,23 +492,6 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                {isNwcSettingsAvailable && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('NWCSettings')
-                                        }
-                                        accessibilityLabel={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                    >
-                                        <Gear
-                                            fill={themeColor('text')}
-                                            width={30}
-                                            height={30}
-                                            style={{ alignSelf: 'center' }}
-                                        />
-                                    </TouchableOpacity>
-                                )}
                             </View>
                         )
                     }
