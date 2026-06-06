@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 
@@ -8,9 +8,16 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import DropdownSetting from '../../components/DropdownSetting';
 import TextInput from '../../components/TextInput';
+import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import {
+    displayFromExpirySeconds,
+    localizedExpiryDuration
+} from '../../utils/ExpiryUtils';
+
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
@@ -54,6 +61,13 @@ export default class SwapSettings extends React.Component<
             proEnabled: settings.swaps?.proEnabled || false
         };
     }
+
+    getInvoiceExpiryDisplay = () => {
+        const { settings } = this.props.SettingsStore;
+        const expirySeconds = settings?.invoices?.expirySeconds || '3600';
+        const { expiry, timePeriod } = displayFromExpirySeconds(expirySeconds);
+        return localizedExpiryDuration(expiry, timePeriod);
+    };
 
     render() {
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
@@ -189,6 +203,44 @@ export default class SwapSettings extends React.Component<
                             </View>
                         </ListItem>
                     )}
+
+                    <TouchableOpacity
+                        style={{ paddingTop: 10 }}
+                        onPress={() => navigation.navigate('InvoicesSettings')}
+                    >
+                        <Row
+                            justify="space-between"
+                            style={{ alignItems: 'center' }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 16
+                                }}
+                            >
+                                {localeString(
+                                    'views.Swaps.Settings.invoiceExpiration'
+                                )}
+                            </Text>
+                            <Row style={{ alignItems: 'center' }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginRight: 6
+                                    }}
+                                >
+                                    {this.getInvoiceExpiryDisplay()}
+                                </Text>
+                                <CaretRight
+                                    fill={themeColor('text')}
+                                    width="20"
+                                    height="20"
+                                />
+                            </Row>
+                        </Row>
+                    </TouchableOpacity>
                 </View>
             </Screen>
         );
