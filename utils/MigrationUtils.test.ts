@@ -266,6 +266,24 @@ describe('MigrationUtils', () => {
                 }
             });
         });
+        it('backfills expirySeconds + timePeriod on pre-Feb-2024 installs with only `expiry: 3600`', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        invoices: {
+                            expiry: '3600'
+                        }
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                invoices: {
+                    expiry: '1',
+                    timePeriod: 'Hours',
+                    expirySeconds: '3600'
+                }
+            });
+        });
         it('leaves consistent invoice expiry settings untouched', async () => {
             await expect(
                 MigrationUtils.legacySettingsMigrations(
@@ -290,10 +308,12 @@ describe('MigrationUtils', () => {
 
     describe('migrateInvoiceExpiryDisplay', () => {
         const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
 
         beforeEach(() => {
             EncryptedStorage.getItem.mockReset();
             EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
         });
 
         it('repairs inconsistent expiry/timePeriod on v2 settings', async () => {
@@ -313,13 +333,48 @@ describe('MigrationUtils', () => {
                 timePeriod: 'Hours',
                 expirySeconds: '3600'
             });
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'invoices-expiry-display-fix',
+                'invoices-expiry-display-fix-v2',
                 'true'
             );
         });
 
-        it('leaves consistent settings untouched', async () => {
+        it('backfills missing expirySeconds + timePeriod for pre-Feb-2024 installs', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { invoices: { expiry: '3600' } };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            });
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'invoices-expiry-display-fix-v2',
+                'true'
+            );
+        });
+
+        it('backfills missing expirySeconds when expiry + timePeriod are valid', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                invoices: { expiry: '2', timePeriod: 'Hours' }
+            };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices).toEqual({
+                expiry: '2',
+                timePeriod: 'Hours',
+                expirySeconds: '7200'
+            });
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('leaves consistent settings untouched and does not rewrite storage', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 invoices: {
@@ -336,6 +391,11 @@ describe('MigrationUtils', () => {
                 timePeriod: 'Hours',
                 expirySeconds: '7200'
             });
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'invoices-expiry-display-fix-v2',
+                'true'
+            );
         });
 
         it('is a no-op when the migration flag is already set', async () => {
@@ -351,20 +411,41 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
 
             expect(settings.invoices.expiry).toBe('3600');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
-        it('does nothing when invoices.expirySeconds is missing', async () => {
+        it('only sets the flag when settings have no invoices block', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {};
 
             await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
 
             expect(settings).toEqual({});
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'invoices-expiry-display-fix',
+                'invoices-expiry-display-fix-v2',
                 'true'
             );
+        });
+
+        it('re-runs for users who already ran the v1 migration', async () => {
+            // v1 set 'invoices-expiry-display-fix' before the guard was
+            // fixed; v2 must run independently.
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                key === 'invoices-expiry-display-fix-v2'
+                    ? Promise.resolve(null)
+                    : Promise.resolve('true')
+            );
+            const settings: any = { invoices: { expiry: '3600' } };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            expect(settings.invoices).toEqual({
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            });
         });
     });
 
