@@ -2711,12 +2711,13 @@ export default class NostrWalletConnectStore {
         // Remove any stale listener before registering a new one
         this.teardownIOSAppStateMonitor();
 
-        // If we're already in the background (rare edge case), start immediately
-        if (AppState.currentState === 'background') {
-            this.startIOSAudioKeepAlive();
-        } else {
-            IOSAudioKeepAliveUtils.arm();
-        }
+        // Arm so the next foreground→background transition starts keep-alive.
+        // Don't auto-start when this method runs while already backgrounded —
+        // that happens when iOS cold-launches the app to service a Live
+        // Activity intent (e.g. user tapped "End Session" in the Dynamic
+        // Island). Starting here would restart audio and pop a fresh island
+        // the user just dismissed.
+        IOSAudioKeepAliveUtils.arm();
 
         let previousState: string = AppState.currentState;
 
