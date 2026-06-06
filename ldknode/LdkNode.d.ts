@@ -32,6 +32,8 @@ export interface PaymentKind {
     hash?: string;
     preimage?: string;
     secret?: string;
+    bolt11Invoice?: string;
+    description?: string;
     // Bolt11Jit specific
     counterpartySkimmedFeeMsat?: number;
     lspFeeLimits?: {

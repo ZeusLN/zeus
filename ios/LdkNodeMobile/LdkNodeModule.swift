@@ -1886,14 +1886,16 @@ class LdkNodeModule: RCTEventEmitter {
                 result["confirmationTimestamp"] = timestamp
             }
             return result
-        case .bolt11(let hash, let preimage, let secret):
+        case .bolt11(let hash, let preimage, let secret, let bolt11Invoice, let description):
             return [
                 "type": "bolt11",
                 "hash": hash,
                 "preimage": preimage as Any,
-                "secret": secret as Any
+                "secret": secret as Any,
+                "bolt11Invoice": bolt11Invoice as Any,
+                "description": description as Any
             ]
-        case .bolt11Jit(let hash, let preimage, let secret, let counterpartySkimmedFeeMsat, let lspFeeLimits):
+        case .bolt11Jit(let hash, let preimage, let secret, let counterpartySkimmedFeeMsat, let lspFeeLimits, let bolt11Invoice, let description):
             return [
                 "type": "bolt11Jit",
                 "hash": hash,
@@ -1903,7 +1905,9 @@ class LdkNodeModule: RCTEventEmitter {
                 "lspFeeLimits": [
                     "maxTotalOpeningFeeMsat": lspFeeLimits.maxTotalOpeningFeeMsat as Any,
                     "maxProportionalOpeningFeePpmMsat": lspFeeLimits.maxProportionalOpeningFeePpmMsat as Any
-                ]
+                ],
+                "bolt11Invoice": bolt11Invoice as Any,
+                "description": description as Any
             ]
         case .bolt12Offer(let hash, let preimage, let secret, let offerId, let payerNote, let quantity):
             return [
