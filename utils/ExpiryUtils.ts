@@ -92,7 +92,7 @@ export const localizedExpiryDuration = (
     const unitKeys: {
         [key: string]: { singular: string; plural: string };
     } = {
-        Seconds: { singular: 'time.seconds', plural: 'time.seconds' },
+        Seconds: { singular: 'time.second', plural: 'time.seconds' },
         Minutes: { singular: 'time.minute', plural: 'time.minutes' },
         Hours: { singular: 'time.hour', plural: 'time.hours' },
         Days: { singular: 'time.day', plural: 'time.days' },

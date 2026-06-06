@@ -219,9 +219,9 @@ export default class SwapSettings extends React.Component<
                                     fontSize: 16
                                 }}
                             >
-                                {`${localeString(
-                                    'views.Invoice.title'
-                                )} ${localeString('views.Receive.expiration')}`}
+                                {localeString(
+                                    'views.Swaps.Settings.invoiceExpiration'
+                                )}
                             </Text>
                             <Row style={{ alignItems: 'center' }}>
                                 <Text

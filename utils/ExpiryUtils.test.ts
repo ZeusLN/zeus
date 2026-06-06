@@ -10,6 +10,7 @@ import {
 jest.mock('./LocaleUtils', () => {
     const locale: { [key: string]: string } = {
         'time.seconds': 'Segundos',
+        'time.second': 'Segundo',
         'time.minute': 'Minuto',
         'time.minutes': 'Minutos',
         'time.hour': 'Hora',
@@ -157,11 +158,15 @@ describe('ExpiryUtils', () => {
 
     describe('localizedExpiryDuration', () => {
         it('uses the singular unit for a value of 1', () => {
+            expect(localizedExpiryDuration('1', 'Seconds')).toBe('1 Segundo');
             expect(localizedExpiryDuration('1', 'Hours')).toBe('1 Hora');
             expect(localizedExpiryDuration('1', 'Days')).toBe('1 Día');
         });
 
         it('uses the plural unit for values other than 1', () => {
+            expect(localizedExpiryDuration('30', 'Seconds')).toBe(
+                '30 Segundos'
+            );
             expect(localizedExpiryDuration('2', 'Hours')).toBe('2 Horas');
             expect(localizedExpiryDuration('10', 'Minutes')).toBe('10 Minutos');
         });
