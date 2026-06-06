@@ -238,7 +238,11 @@ export default class ChoosePaymentMethod extends React.Component<
         } = this.state;
 
         const { accounts } = UTXOsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const {
+            totalBlockchainBalance,
+            lightningBalance,
+            reservedBalanceAnchorChan
+        } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
 
         const hasInsufficientFunds = this.hasInsufficientFunds();
@@ -318,6 +322,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     // balance data
                     lightningBalance={lightningBalance}
                     onchainBalance={totalBlockchainBalance}
+                    onchainReserve={reservedBalanceAnchorChan}
                     ecashBalance={totalBalanceSats}
                     accounts={accounts}
                 />
