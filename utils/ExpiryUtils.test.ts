@@ -6,17 +6,18 @@ import {
     localizedExpiryDuration
 } from './ExpiryUtils';
 
+// Mock with the Spanish locale to verify translation works across locales
 jest.mock('./LocaleUtils', () => {
     const locale: { [key: string]: string } = {
-        'time.seconds': 'Seconds',
-        'time.minute': 'Minute',
-        'time.minutes': 'Minutes',
-        'time.hour': 'Hour',
-        'time.hours': 'Hours',
-        'time.day': 'Day',
-        'time.days': 'Days',
-        'time.week': 'Week',
-        'time.weeks': 'Weeks'
+        'time.seconds': 'Segundos',
+        'time.minute': 'Minuto',
+        'time.minutes': 'Minutos',
+        'time.hour': 'Hora',
+        'time.hours': 'Horas',
+        'time.day': 'Día',
+        'time.days': 'Dias',
+        'time.week': 'Semana',
+        'time.weeks': 'Semanas'
     };
     return {
         localeString: (key: string) => locale[key] || key
@@ -156,13 +157,13 @@ describe('ExpiryUtils', () => {
 
     describe('localizedExpiryDuration', () => {
         it('uses the singular unit for a value of 1', () => {
-            expect(localizedExpiryDuration('1', 'Hours')).toBe('1 Hour');
-            expect(localizedExpiryDuration('1', 'Days')).toBe('1 Day');
+            expect(localizedExpiryDuration('1', 'Hours')).toBe('1 Hora');
+            expect(localizedExpiryDuration('1', 'Days')).toBe('1 Día');
         });
 
         it('uses the plural unit for values other than 1', () => {
-            expect(localizedExpiryDuration('2', 'Hours')).toBe('2 Hours');
-            expect(localizedExpiryDuration('10', 'Minutes')).toBe('10 Minutes');
+            expect(localizedExpiryDuration('2', 'Hours')).toBe('2 Horas');
+            expect(localizedExpiryDuration('10', 'Minutes')).toBe('10 Minutos');
         });
     });
 });
