@@ -91,6 +91,10 @@ const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
 const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
+/** Min time a pay_invoice must stay pending before getActivities polls the node */
+const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
+/** Per-connection debounce for pending pay_invoice status refresh in getActivities */
+const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -161,6 +165,14 @@ export default class NostrWalletConnectStore {
     private androidLogListener: EmitterSubscription | null = null;
     private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
     private resetInFlight: Promise<void> | null = null;
+    private lastPendingPaymentStatusFetchByConnection = new Map<
+        string,
+        number
+    >();
+    private lastPendingInvoiceStatusFetchByConnection = new Map<
+        string,
+        number
+    >();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -923,6 +935,7 @@ export default class NostrWalletConnectStore {
             }
         }
         const pendingLightningInvoiceActivities: ConnectionActivity[] = [];
+        const pendingCashuInvoiceActivities: ConnectionActivity[] = [];
 
         for (const activity of connection.activity) {
             if (activity?.invoice) {
@@ -948,13 +961,22 @@ export default class NostrWalletConnectStore {
                             !paymentRequestFirstMatchNotCashu.has(pr) &&
                             firstCashuPaidByPaymentRequest.get(pr) === true;
                         if (invoiceAlreadyPaid) {
+                            const paidInvoice = cashuInvoices.find(
+                                (inv) =>
+                                    inv.getPaymentRequest === pr && inv.isPaid
+                            );
                             runInAction(() => {
                                 activity.status = 'success';
+                                if (paidInvoice) {
+                                    activity.invoice = paidInvoice;
+                                }
                             });
                         } else if (activity.invoice.isExpired) {
                             runInAction(() => {
                                 activity.status = 'expired';
                             });
+                        } else {
+                            pendingCashuInvoiceActivities.push(activity);
                         }
                     } else {
                         pendingLightningInvoiceActivities.push(activity);
@@ -998,6 +1020,68 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        if (
+            pendingCashuInvoiceActivities.length > 0 &&
+            this.isCashuConfigured &&
+            this.shouldRefreshPendingCashuInvoices(
+                connectionId,
+                pendingCashuInvoiceActivities
+            )
+        ) {
+            await Promise.all(
+                pendingCashuInvoiceActivities.map(async (activity) => {
+                    const cashuInv = activity.invoice as
+                        | CashuInvoice
+                        | undefined;
+                    const quote = cashuInv?.quote;
+                    if (!quote || !cashuInv) return;
+
+                    try {
+                        const result = await this.cashuStore.checkInvoicePaid(
+                            quote,
+                            cashuInv.mintUrl,
+                            undefined,
+                            true
+                        );
+                        runInAction(() => {
+                            if (result.isPaid) {
+                                activity.status = 'success';
+                                const updated =
+                                    result.updatedInvoice ||
+                                    this.cashuStore.invoices?.find(
+                                        (inv) => inv.quote === quote
+                                    );
+                                if (updated) {
+                                    activity.invoice = updated;
+                                }
+                                const paidSats = Math.floor(
+                                    Number(result.amtSat) || 0
+                                );
+                                if (
+                                    paidSats > 0 &&
+                                    (!activity.satAmount ||
+                                        activity.satAmount <= 0)
+                                ) {
+                                    activity.satAmount = paidSats;
+                                }
+                            } else if (cashuInv.isExpired) {
+                                activity.status = 'expired';
+                            }
+                        });
+                    } catch (err) {
+                        console.error(
+                            'NWC: failed to refresh cashu make_invoice status:',
+                            err
+                        );
+                    }
+                })
+            );
+            this.lastPendingInvoiceStatusFetchByConnection.set(
+                connectionId,
+                Date.now()
+            );
+        }
+
         const pendingPayInvoiceActivities = connection.activity.filter(
             (activity) =>
                 activity.type === 'pay_invoice' && activity.status === 'pending'
@@ -1007,8 +1091,11 @@ export default class NostrWalletConnectStore {
                 (activity) => activity.payment_source !== 'cashu'
             );
             if (lightningPending.length > 0) {
-                await this.paymentsStore.getPayments();
-                const payments = this.paymentsStore.payments || [];
+                const payments =
+                    await this.getPaymentsForPendingPayInvoiceRefresh(
+                        connectionId,
+                        lightningPending
+                    );
                 for (const activity of lightningPending) {
                     const payment = payments.find(
                         (p) =>
@@ -1021,17 +1108,12 @@ export default class NostrWalletConnectStore {
                     runInAction(() => {
                         activity.payment = new Payment(payment);
                         if (!payment.isIncomplete) {
-                            const wasPending = activity.status === 'pending';
                             activity.status = 'success';
-                            if (wasPending) {
-                                const amountSats =
-                                    Math.floor(Number(activity.satAmount)) ||
-                                    Math.floor(
-                                        Number(activity.payment?.getAmount) || 0
-                                    );
-                                if (amountSats > 0) {
-                                    connection.trackSpending(amountSats);
-                                }
+                            const amountSats =
+                                Math.floor(Number(activity.satAmount)) ||
+                                Math.floor(Number(payment.getAmount) || 0);
+                            if (amountSats > 0) {
+                                connection.trackSpending(amountSats);
                             }
                         } else if (payment.isFailed) {
                             activity.status = 'failed';
@@ -1845,6 +1927,7 @@ export default class NostrWalletConnectStore {
                 inTransitResult.payment?.getFee ||
                 0;
 
+            // NIP-47 requires preimage; empty string means HTLC is out but not settled (hodl/in-flight).
             return {
                 result: {
                     preimage: '',
@@ -2013,11 +2096,10 @@ export default class NostrWalletConnectStore {
             amount: amountSats.toString()
         });
 
-        const cashuInTransit = cashuInvoice?.isInTransit;
         if (
             !cashuInvoice ||
             cashuInvoice.isFailed ||
-            (this.cashuStore.paymentError && !cashuInTransit)
+            this.cashuStore.paymentError
         ) {
             const paymentErrorMsg =
                 this.cashuStore.paymentErrorMsg ||
@@ -2041,16 +2123,9 @@ export default class NostrWalletConnectStore {
             (p) => p.getPaymentRequest === request.invoice
         );
 
-        if (cashuInTransit) {
-            await this.recordPendingPayment({
-                rawInvoice: request.invoice,
-                connection,
-                amountSats,
-                payment_source: 'cashu',
-                payment,
-                paymentHash: payment?.paymentHash
-            });
-        } else if (payment) {
+        // CashuStore does not surface IN_FLIGHT melts yet; add recordPendingPayment
+        // plus getActivities cashu reconciliation when it does.
+        if (payment) {
             await this.finalizePayment({
                 id: request.invoice,
                 decoded: payment,
@@ -2143,6 +2218,65 @@ export default class NostrWalletConnectStore {
             };
         }
         return { success: true };
+    }
+
+    /**
+     * Gates Cashu make_invoice status polling in getActivities (mint round-trip)
+     * using the same min-age and per-connection debounce as pay_invoice refresh.
+     */
+    private shouldRefreshPendingCashuInvoices(
+        connectionId: string,
+        pendingCashuInvoices: ConnectionActivity[]
+    ): boolean {
+        const now = Date.now();
+        const oldestPendingMs = Math.max(
+            0,
+            ...pendingCashuInvoices.map(
+                (activity) => now - (activity.createdAt?.getTime() ?? now)
+            )
+        );
+
+        if (oldestPendingMs < PENDING_PAYMENT_STATUS_MIN_AGE_MS) {
+            return false;
+        }
+
+        const lastFetch =
+            this.lastPendingInvoiceStatusFetchByConnection.get(connectionId) ??
+            0;
+        if (now - lastFetch < PENDING_PAYMENT_STATUS_REFRESH_MS) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async getPaymentsForPendingPayInvoiceRefresh(
+        connectionId: string,
+        lightningPending: ConnectionActivity[]
+    ): Promise<Payment[]> {
+        const cached = this.paymentsStore.payments || [];
+        const now = Date.now();
+        const oldestPendingMs = Math.max(
+            0,
+            ...lightningPending.map(
+                (activity) => now - (activity.createdAt?.getTime() ?? now)
+            )
+        );
+
+        if (oldestPendingMs < PENDING_PAYMENT_STATUS_MIN_AGE_MS) {
+            return cached;
+        }
+
+        const lastFetch =
+            this.lastPendingPaymentStatusFetchByConnection.get(connectionId) ??
+            0;
+        if (now - lastFetch < PENDING_PAYMENT_STATUS_REFRESH_MS) {
+            return cached;
+        }
+
+        await this.paymentsStore.getPayments();
+        this.lastPendingPaymentStatusFetchByConnection.set(connectionId, now);
+        return this.paymentsStore.payments || [];
     }
 
     private getTransactionsStorePaymentState() {
@@ -2291,7 +2425,7 @@ export default class NostrWalletConnectStore {
         amountSats,
         payment_source,
         payment,
-        paymentHash
+        paymentHash: passedPaymentHash
     }: {
         rawInvoice: string;
         connection: NWCConnection;
@@ -2300,13 +2434,20 @@ export default class NostrWalletConnectStore {
         payment?: Payment | CashuPayment | null;
         paymentHash?: string;
     }): Promise<void> {
-        const { paymentRequest } = await NostrConnectUtils.decodeInvoiceTags(
-            rawInvoice
-        );
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex((conn) => conn.id === id);
+        const index = connection.activity.findIndex(
+            (activity) => activity.id === id
+        );
         const activity = index !== -1 ? connection.activity[index] : undefined;
         if (activity?.status === 'success') return;
+
+        const paymentHash =
+            passedPaymentHash ||
+            decodedPaymentHash ||
+            payment?.paymentHash ||
+            undefined;
 
         runInAction(() => {
             const record: ConnectionActivity = {
@@ -2315,8 +2456,8 @@ export default class NostrWalletConnectStore {
                 satAmount: amountSats,
                 status: 'pending',
                 payment_source,
-                paymentHash,
-                createdAt: new Date()
+                createdAt: new Date(),
+                ...(paymentHash ? { paymentHash } : {})
             };
 
             if (payment) {
@@ -2345,7 +2486,7 @@ export default class NostrWalletConnectStore {
         amountSats,
         payment_source,
         errorMessage = localeString('error.paymentFailed'),
-        paymentHash
+        paymentHash: passedPaymentHash
     }: {
         rawInvoice: string;
         connection: NWCConnection;
@@ -2355,13 +2496,18 @@ export default class NostrWalletConnectStore {
         paymentHash?: string;
     }): Promise<void> {
         if (NostrConnectUtils.isIgnorableError(errorMessage || '')) return;
-        const { paymentRequest } = await NostrConnectUtils.decodeInvoiceTags(
-            rawInvoice
-        );
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex((conn) => conn.id === id);
+        const index = connection.activity.findIndex(
+            (activity) => activity.id === id
+        );
         const activity = index !== -1 ? connection.activity[index] : undefined;
         if (activity?.status === 'success') return;
+
+        const paymentHash =
+            passedPaymentHash || decodedPaymentHash || undefined;
+
         runInAction(() => {
             const record: ConnectionActivity = {
                 id,
@@ -2370,8 +2516,8 @@ export default class NostrWalletConnectStore {
                 status: 'failed',
                 payment_source,
                 error: errorMessage,
-                paymentHash,
-                createdAt: new Date()
+                createdAt: new Date(),
+                ...(paymentHash ? { paymentHash } : {})
             };
             if (index !== -1) {
                 connection.activity[index] = {

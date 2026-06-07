@@ -870,12 +870,14 @@ export default class NostrConnectUtils {
     static isInFlightPaymentStatus(
         status: string | number | null | undefined
     ): boolean {
+        // 1 / '1' = lnrpc.Payment.PaymentStatus.IN_FLIGHT (embedded-lnd enum + stringified)
         return status === 'IN_FLIGHT' || status === 1 || status === '1';
     }
 
     static isPaymentTimedOutMessage(message?: string | null): boolean {
         if (!message) return false;
         const normalized = message.toLowerCase();
+        // English substring catches raw backend/LND strings; localized paths use localeString equality below.
         return (
             normalized.includes('timed out') ||
             message ===
