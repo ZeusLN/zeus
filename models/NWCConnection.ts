@@ -222,6 +222,38 @@ export default class NWCConnection extends BaseModel {
         return Math.min(100, (this.totalSpendSats / this.maxAmountSats!) * 100);
     }
 
+    private resolveMakeInvoiceActivitySats(a: ConnectionActivity): number {
+        const fromSat = Math.floor(Number(a.satAmount) || 0);
+        if (fromSat > 0) return fromSat;
+
+        if (a.invoice != null) {
+            const inv =
+                a.invoice instanceof CashuInvoice
+                    ? a.invoice
+                    : a.invoice instanceof Invoice
+                    ? a.invoice
+                    : a.payment_source === 'cashu'
+                    ? new CashuInvoice(a.invoice)
+                    : new Invoice(a.invoice);
+            const fromInvoice = Math.floor(Number(inv.getAmount) || 0);
+            if (fromInvoice > 0) return fromInvoice;
+        }
+
+        if (a.payment != null) {
+            const pay =
+                a.payment instanceof CashuPayment
+                    ? a.payment
+                    : a.payment instanceof Payment
+                    ? a.payment
+                    : a.payment_source === 'cashu'
+                    ? new CashuPayment(a.payment)
+                    : new Payment(a.payment);
+            return Math.floor(Number(pay.getAmount) || 0);
+        }
+
+        return 0;
+    }
+
     /**
      * Sum of settled incoming invoice amounts recorded on this connection's
      * activity log (successful make_invoice only).
@@ -233,20 +265,7 @@ export default class NWCConnection extends BaseModel {
             if (a.type !== 'make_invoice' || a.status !== 'success') {
                 return sum;
             }
-            const fromInvoice =
-                a.invoice != null
-                    ? Math.floor(Number(a.invoice.getAmount) || 0)
-                    : 0;
-            const fromPayment =
-                a.payment != null
-                    ? Math.floor(Number(a.payment.getAmount) || 0)
-                    : 0;
-            const fromSat = Math.floor(Number(a.satAmount) || 0);
-            let sats = 0;
-            if (fromInvoice > 0) sats = fromInvoice;
-            else if (fromSat > 0) sats = fromSat;
-            else sats = fromPayment;
-            return sum + Math.max(0, sats);
+            return sum + Math.max(0, this.resolveMakeInvoiceActivitySats(a));
         }, 0);
     }
 
