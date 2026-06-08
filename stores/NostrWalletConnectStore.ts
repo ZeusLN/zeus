@@ -630,6 +630,8 @@ export default class NostrWalletConnectStore {
             }
             await this.deleteClientKeys(connection.pubkey);
             this.unsubscribeFromConnection(connectionId);
+            this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
+            this.lastPendingInvoiceStatusFetchByConnection.delete(connectionId);
             runInAction(() => {
                 this.connections.splice(index, 1);
             });

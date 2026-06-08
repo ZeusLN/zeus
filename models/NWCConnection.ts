@@ -224,6 +224,7 @@ export default class NWCConnection extends BaseModel {
 
     private resolveMakeInvoiceActivitySats(a: ConnectionActivity): number {
         const fromSat = Math.floor(Number(a.satAmount) || 0);
+        // satAmount first: amountless invoices report 0 from bolt11
         if (fromSat > 0) return fromSat;
 
         if (a.invoice != null) {
