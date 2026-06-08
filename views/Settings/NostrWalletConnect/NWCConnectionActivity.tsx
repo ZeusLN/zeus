@@ -72,6 +72,8 @@ export default class NWCConnectionActivity extends React.Component<
     ConnectionActivityProps,
     ConnectionActivityState
 > {
+    private unsubscribeFocus?: () => void;
+
     constructor(props: ConnectionActivityProps) {
         super(props);
         this.state = {
@@ -84,9 +86,18 @@ export default class NWCConnectionActivity extends React.Component<
         };
     }
 
-    async componentDidMount() {
-        const { connectionId } = this.props.route.params;
-        await this.loadActivities(connectionId);
+    componentDidMount() {
+        const { navigation, route } = this.props;
+        const { connectionId } = route.params;
+        this.unsubscribeFocus = navigation.addListener('focus', () => {
+            this.loadActivities(connectionId);
+        });
+    }
+
+    componentWillUnmount() {
+        if (this.unsubscribeFocus) {
+            this.unsubscribeFocus();
+        }
     }
 
     loadActivities = async (connectionId: string) => {
