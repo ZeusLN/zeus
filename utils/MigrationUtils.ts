@@ -486,37 +486,52 @@ class MigrationsUtils {
         return settings;
     }
 
-    // Repair invoice expiry display fields when out of sync with the
-    // authoritative `expirySeconds` (e.g. older installs that defaulted
-    // `expiry` to '3600' instead of '1', causing the UI to read
-    // "3600 hours" while the invoice actually expired in one hour).
-    // Must run on both the legacy and modern (zeus-settings-v2) paths,
-    // since affected users may already have migrated to v2 carrying the
-    // stale value forward.
+    // Repair invoice expiry display fields when out of sync with
+    // `expirySeconds`. Older installs default `expiry: '3600'` and
+    // never stored `timePeriod`/`expirySeconds`, so once Receive.tsx's
+    // fallback for `timePeriod` became 'Hours' the UI rendered
+    // "3600 hours" while invoices still expired in one hour. Derive a
+    // canonical seconds value (stored → derived from expiry+timePeriod
+    // → '3600') and rewrite all three fields from it when anything is
+    // missing or inconsistent. Must run on both the legacy and modern
+    // (zeus-settings-v2) paths.
     public async migrateInvoiceExpiryDisplay(settings: any) {
-        const MOD_KEY_INVOICE_EXPIRY = 'invoices-expiry-display-fix';
+        const MOD_KEY_INVOICE_EXPIRY = 'invoices-expiry-display-fix-v2';
         const modInvoiceExpiry = await EncryptedStorage.getItem(
             MOD_KEY_INVOICE_EXPIRY
         );
         if (modInvoiceExpiry) return settings;
 
         const invoices: any = settings?.invoices;
-        const expirySeconds = invoices?.expirySeconds;
-        if (expirySeconds) {
+        if (invoices) {
+            const storedValid = Number(invoices.expirySeconds) > 0;
+            const derivable = invoices.expiry && invoices.timePeriod;
+            const canonical = storedValid
+                ? invoices.expirySeconds
+                : derivable
+                ? expirySecondsFromInput(
+                      invoices.expiry,
+                      invoices.timePeriod as TimePeriod
+                  )
+                : '3600';
+
             const inconsistent =
                 !invoices.expiry ||
                 !invoices.timePeriod ||
+                invoices.expirySeconds !== canonical ||
                 expirySecondsFromInput(
                     invoices.expiry,
                     invoices.timePeriod as TimePeriod
-                ) !== expirySeconds;
+                ) !== canonical;
+
             if (inconsistent) {
-                const repaired = displayFromExpirySeconds(expirySeconds);
+                const repaired = displayFromExpirySeconds(canonical);
                 invoices.expiry = repaired.expiry;
                 invoices.timePeriod = repaired.timePeriod;
+                invoices.expirySeconds = canonical;
+                await settingsStore.setSettings(JSON.stringify(settings));
             }
         }
-        await settingsStore.setSettings(JSON.stringify(settings));
         await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
         return settings;
     }
