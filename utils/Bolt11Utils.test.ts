@@ -1,3 +1,5 @@
+import * as secp from '@noble/secp256k1';
+
 import Bolt11Utils from './Bolt11Utils';
 
 const REGTEST_FIXTURE =
@@ -122,5 +124,120 @@ describe('decode', () => {
         expect(sectionNames).toContain('timestamp');
         expect(sectionNames).toContain('payment_hash');
         expect(sectionNames).toContain('expiry');
+    });
+
+    it('returns the same object on repeat decodes (LRU cache hit)', () => {
+        const first = Bolt11Utils.decode(REGTEST_FIXTURE);
+        const second = Bolt11Utils.decode(REGTEST_FIXTURE);
+
+        expect(second).toBe(first);
+    });
+
+    it('treats casing as equivalent for cache lookups', () => {
+        const lower = Bolt11Utils.decode(REGTEST_FIXTURE);
+        const upper = Bolt11Utils.decode(REGTEST_FIXTURE.toUpperCase());
+
+        expect(upper).toBe(lower);
+    });
+});
+
+describe('lazy signature recovery', () => {
+    beforeEach(() => {
+        // Reset the LRU cache so each test sees a fresh, un-materialized result.
+        (Bolt11Utils as any).cache.clear();
+    });
+
+    it('installs a lazy getter for destination on a fresh decode', () => {
+        const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
+        const descriptor = Object.getOwnPropertyDescriptor(
+            decoded,
+            'destination'
+        );
+
+        expect(descriptor?.get).toBeDefined();
+        expect(descriptor?.value).toBeUndefined();
+    });
+
+    it('replaces the getter with a plain value after first access', () => {
+        const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
+        void decoded.destination;
+        const descriptor = Object.getOwnPropertyDescriptor(
+            decoded,
+            'destination'
+        );
+
+        expect(descriptor?.get).toBeUndefined();
+        expect(typeof descriptor?.value).toBe('string');
+    });
+
+    it('does not run secp256k1 recovery when only non-destination fields are read', () => {
+        const spy = jest.spyOn(secp, 'recoverPublicKey');
+        try {
+            const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
+            void decoded.timestamp;
+            void decoded.expiry;
+            void decoded.description;
+            void decoded.payment_hash;
+            void decoded.payment_secret;
+            void decoded.satoshis;
+            void decoded.network;
+
+            expect(spy).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('runs secp256k1 recovery exactly once when destination is read multiple times', () => {
+        const spy = jest.spyOn(secp, 'recoverPublicKey');
+        try {
+            const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
+            const first = decoded.destination;
+            const second = decoded.destination;
+            const third = decoded.payeeNodeKey;
+
+            expect(spy).toHaveBeenCalledTimes(1);
+            expect(first).toBe(second);
+            expect(third).toBe(first);
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('preserves tag-populated fields and only installs getters for the missing ones', () => {
+        // Simulates an invoice where the tag loop already populated destination
+        // and payeeNodeKey from an explicit payee tag. The lazy installer must
+        // leave those values alone and only expose signature / recoveryFlag as
+        // getters so the public DecodedBolt11 contract still holds.
+        const result: any = {
+            destination: 'PRE_POPULATED_DESTINATION',
+            payeeNodeKey: 'PRE_POPULATED_DESTINATION'
+        };
+
+        (Bolt11Utils as any).defineLazyRecoveryFields(result, 'lnbc', [], []);
+
+        const destDescriptor = Object.getOwnPropertyDescriptor(
+            result,
+            'destination'
+        );
+        const payeeDescriptor = Object.getOwnPropertyDescriptor(
+            result,
+            'payeeNodeKey'
+        );
+        const sigDescriptor = Object.getOwnPropertyDescriptor(
+            result,
+            'signature'
+        );
+        const recoveryFlagDescriptor = Object.getOwnPropertyDescriptor(
+            result,
+            'recoveryFlag'
+        );
+
+        expect(destDescriptor?.value).toBe('PRE_POPULATED_DESTINATION');
+        expect(destDescriptor?.get).toBeUndefined();
+        expect(payeeDescriptor?.value).toBe('PRE_POPULATED_DESTINATION');
+        expect(payeeDescriptor?.get).toBeUndefined();
+        expect(sigDescriptor?.get).toBeDefined();
+        expect(recoveryFlagDescriptor?.get).toBeDefined();
     });
 });

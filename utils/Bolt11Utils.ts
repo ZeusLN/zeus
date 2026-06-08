@@ -45,6 +45,14 @@ export interface DecodedBolt11 {
 }
 
 class Bolt11Utils {
+    // Decoding triggers ECDSA pubkey recovery via @noble/secp256k1, which is
+    // ~5–20 ms per call on a phone. The Activity view calls decode() repeatedly
+    // for the same payment_request strings (once per invoice, sometimes twice),
+    // so an LRU cache keyed by the raw input collapses those into a single
+    // recovery per unique invoice.
+    private readonly CACHE_LIMIT = 256;
+    private cache: Map<string, DecodedBolt11> = new Map();
+
     constructor() {
         for (
             let i = 0, keys = Object.keys(this.TAGCODES);
@@ -62,6 +70,15 @@ class Bolt11Utils {
             throw new Error('Lightning Payment Request must be string');
         if (paymentRequest.slice(0, 2).toLowerCase() !== 'ln')
             throw new Error('Not a proper lightning payment request');
+
+        const cacheKey = paymentRequest.toLowerCase();
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            // Move to MRU position by re-inserting.
+            this.cache.delete(cacheKey);
+            this.cache.set(cacheKey, cached);
+            return cached;
+        }
 
         const sections: Bolt11Section[] = [];
         const decoded = bech32.decode(paymentRequest, Number.MAX_SAFE_INTEGER);
@@ -220,47 +237,128 @@ class Bolt11Utils {
             result.timeExpireDate = timestamp + result.expiry;
         }
 
-        // Recover payee pubkey from signature when no explicit payee tag was given.
+        // Defer the signature-recovery cost: callers reading only timestamp /
+        // description / expiry / payment_hash (the Activity list path) should
+        // pay zero secp256k1 cost. The destination / payeeNodeKey / signature
+        // / recoveryFlag fields are installed as lazy getters that only run
+        // recovery on first access. Fields that the tag loop already populated
+        // (e.g. destination / payeeNodeKey when an explicit payee tag is
+        // present) are left in place and the matching getter is skipped.
+        this.defineLazyRecoveryFields(
+            result,
+            prefix,
+            sigWords,
+            decoded.words.slice(0, -104)
+        );
+
+        if (this.cache.size >= this.CACHE_LIMIT) {
+            const oldestKey = this.cache.keys().next().value;
+            if (oldestKey !== undefined) this.cache.delete(oldestKey);
+        }
+        this.cache.set(cacheKey, result);
+
+        return result;
+    };
+
+    private recoverPayeeFromSignature(
+        prefix: string,
+        sigWords: number[],
+        dataWords: number[]
+    ): { destination?: string; signature?: string; recoveryFlag?: number } {
         // The signed preimage is sha256( utf8(prefix) || convertBits(dataWords, 5, 8, pad=true) )
         // where dataWords are the 5-bit words excluding the trailing 104-word signature.
         try {
             const sigBytes = bech32.fromWordsUnsafe(sigWords);
-            if (sigBytes && sigBytes.length === 65) {
-                const signature = Uint8Array.from(sigBytes.slice(0, 64));
-                const recoveryFlag = sigBytes[64];
-                const dataWords = decoded.words.slice(0, -104);
-                const dataBytes = this.convertBits(dataWords, 5, 8, true);
-                const prefixBytes = base64Utils.utf8ToBytes(prefix);
-                const toSign = new Uint8Array(
-                    prefixBytes.length + dataBytes.length
-                );
-                toSign.set(prefixBytes, 0);
-                toSign.set(dataBytes, prefixBytes.length);
-                const hash = sha256(toSign);
-                const pubkey = secp.recoverPublicKey(
-                    hash,
-                    signature,
-                    recoveryFlag,
-                    true
-                );
-                const payeeHex = base64Utils.bytesToHex(Array.from(pubkey));
-                result.signature = base64Utils.bytesToHex(
-                    Array.from(signature)
-                );
-                result.recoveryFlag = recoveryFlag;
-                if (!result.payeeNodeKey) {
-                    result.payeeNodeKey = payeeHex;
-                }
-                if (!result.destination) {
-                    result.destination = payeeHex;
-                }
-            }
-        } catch (e) {
-            // Malformed signature — leave destination undefined and return the rest of the decoded fields.
+            if (!sigBytes || sigBytes.length !== 65) return {};
+            const signature = Uint8Array.from(sigBytes.slice(0, 64));
+            const recoveryFlag = sigBytes[64];
+            const dataBytes = this.convertBits(dataWords, 5, 8, true);
+            const prefixBytes = base64Utils.utf8ToBytes(prefix);
+            const toSign = new Uint8Array(
+                prefixBytes.length + dataBytes.length
+            );
+            toSign.set(prefixBytes, 0);
+            toSign.set(dataBytes, prefixBytes.length);
+            const hash = sha256(toSign);
+            const pubkey = secp.recoverPublicKey(
+                hash,
+                signature,
+                recoveryFlag,
+                true
+            );
+            return {
+                destination: base64Utils.bytesToHex(Array.from(pubkey)),
+                signature: base64Utils.bytesToHex(Array.from(signature)),
+                recoveryFlag
+            };
+        } catch {
+            return {};
         }
+    }
 
-        return result;
-    };
+    private defineLazyRecoveryFields(
+        result: DecodedBolt11,
+        prefix: string,
+        sigWords: number[],
+        dataWords: number[]
+    ): void {
+        let recovered:
+            | {
+                  destination?: string;
+                  signature?: string;
+                  recoveryFlag?: number;
+              }
+            | undefined;
+        const ensure = () => {
+            if (!recovered) {
+                recovered = this.recoverPayeeFromSignature(
+                    prefix,
+                    sigWords,
+                    dataWords
+                );
+            }
+            return recovered;
+        };
+
+        type LazyKey =
+            | 'destination'
+            | 'payeeNodeKey'
+            | 'signature'
+            | 'recoveryFlag';
+        const lazyFields: Array<{
+            key: LazyKey;
+            extract: (
+                r: ReturnType<typeof ensure>
+            ) => string | number | undefined;
+        }> = [
+            { key: 'destination', extract: (r) => r.destination },
+            { key: 'payeeNodeKey', extract: (r) => r.destination },
+            { key: 'signature', extract: (r) => r.signature },
+            { key: 'recoveryFlag', extract: (r) => r.recoveryFlag }
+        ];
+
+        for (const { key, extract } of lazyFields) {
+            // Preserve any value the tag loop already set (e.g. destination
+            // and payeeNodeKey from an explicit payee tag).
+            if (result[key] !== undefined) continue;
+            Object.defineProperty(result, key, {
+                configurable: true,
+                enumerable: true,
+                get() {
+                    const value = extract(ensure());
+                    // Replace the getter with a plain value so subsequent
+                    // reads (including post-cache-hit) are O(1).
+                    Object.defineProperty(result, key, {
+                        value,
+                        enumerable: true,
+                        writable: true,
+                        configurable: true
+                    });
+                    return value;
+                }
+            });
+        }
+    }
 
     private DEFAULTNETWORK: Bolt11Network = {
         bech32: 'bc',
