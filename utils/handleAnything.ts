@@ -274,7 +274,7 @@ const handleAnything = async (
         if (!AddressUtils.isValidNoffer(clinkNoffer)) {
             throw new Error(localeString('utils.handleAnything.invalidNoffer'));
         }
-        return ['ClinkPay', { noffer: clinkNoffer, ecash }];
+        return ['ClinkPay', { noffer: clinkNoffer }];
     } else if (offer) {
         if (isClipboardValue) return true;
         return [
@@ -400,7 +400,7 @@ const handleAnything = async (
         ];
     } else if (!hasAt && AddressUtils.isValidNoffer(value)) {
         if (isClipboardValue) return true;
-        return ['ClinkPay', { noffer: value, ecash }];
+        return ['ClinkPay', { noffer: value }];
     } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
         const { host, port, rune, implementation, enableTor } =

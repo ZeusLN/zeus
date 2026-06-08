@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // @ts-ignore:next-line
@@ -13,9 +13,6 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
-import CashuStore from '../../stores/CashuStore';
-import InvoicesStore from '../../stores/InvoicesStore';
-
 import ClinkUtils, {
     ClinkRequestError,
     NofferData,
@@ -24,21 +21,14 @@ import ClinkUtils, {
     isNofferSuccess
 } from '../../utils/ClinkUtils';
 import { errorToUserFriendly } from '../../utils/ErrorUtils';
+import handleAnything from '../../utils/handleAnything';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getAmountFromSats } from '../../utils/AmountUtils';
 
 interface ClinkPayProps {
     navigation: NativeStackNavigationProp<any, any>;
-    InvoicesStore: InvoicesStore;
-    CashuStore: CashuStore;
-    route: Route<
-        'ClinkPay',
-        {
-            noffer: string;
-            ecash?: boolean;
-        }
-    >;
+    route: Route<'ClinkPay', { noffer: string }>;
 }
 
 interface ClinkPayState {
@@ -107,7 +97,6 @@ const errorCodeToLocaleKey = (code?: NofferErrorCode): string | null => {
     }
 };
 
-@inject('InvoicesStore', 'CashuStore')
 @observer
 export default class ClinkPay extends React.Component<
     ClinkPayProps,
@@ -154,8 +143,7 @@ export default class ClinkPay extends React.Component<
     }
 
     confirm = async () => {
-        const { navigation, InvoicesStore, CashuStore, route } = this.props;
-        const ecash = route.params?.ecash;
+        const { navigation } = this.props;
         const { nofferData, satAmount } = this.state;
         if (!nofferData) return;
 
@@ -235,32 +223,9 @@ export default class ClinkPay extends React.Component<
         }
 
         try {
-            if (ecash) {
-                // Load both stores so ChoosePaymentMethod can offer the
-                // Lightning and ecash routes side-by-side. Mirrors LnurlPay.
-                await Promise.all([
-                    InvoicesStore.getPayReq(res.bolt11),
-                    CashuStore.getPayReq(res.bolt11)
-                ]);
-                this.setState({ loading: false });
-                if (CashuStore.getPayReqError) {
-                    Alert.alert(
-                        localeString('views.ClinkPay.title'),
-                        CashuStore.getPayReqError,
-                        [{ text: localeString('general.ok') }],
-                        { cancelable: false }
-                    );
-                    return;
-                }
-                navigation.navigate('ChoosePaymentMethod', {
-                    lightning: res.bolt11,
-                    locked: true
-                });
-            } else {
-                await InvoicesStore.getPayReq(res.bolt11);
-                this.setState({ loading: false });
-                navigation.navigate('PaymentRequest');
-            }
+            const [route, params] = await handleAnything(res.bolt11);
+            this.setState({ loading: false });
+            navigation.navigate(route, params);
         } catch (e: any) {
             this.setState({ loading: false });
             Alert.alert(
