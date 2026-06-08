@@ -19,7 +19,6 @@ import Header from '../../components/Header';
 import { ContactAvatar } from '../../components/ContactAvatar';
 
 import { confirmAction } from '../../utils/ActionUtils';
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -28,7 +27,6 @@ import Storage from '../../storage';
 import Contact from '../../models/Contact';
 
 import ContactStore, { CONTACTS_KEY } from '../../stores/ContactStore';
-import { settingsStore } from '../../stores/Stores';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
@@ -200,10 +198,7 @@ export default class Contacts extends React.Component<
                             });
                         } else if (contact.isSingleNoffer) {
                             this.props.navigation.navigate('ClinkPay', {
-                                noffer: item.noffer[0],
-                                ecash:
-                                    BackendUtils.supportsCashuWallet() &&
-                                    settingsStore?.settings?.ecash?.enableCashu
+                                noffer: item.noffer[0]
                             });
                         } else if (contact.isSingleOnchainAddress) {
                             this.props.navigation.navigate('Send', {
