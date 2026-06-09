@@ -2048,18 +2048,20 @@ export default class WalletConfiguration extends React.Component<
                                                 flex: 1,
                                                 marginRight: 15
                                             }}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    nostrWalletConnectUrl: text
+                                            onChangeText={(text: string) => {
+                                                const nostrWalletConnectUrl =
+                                                    text
                                                         .trim()
-                                                        .replace(/\s+/g, ' '),
+                                                        .replace(/\s+/g, ' ');
+                                                this.setState({
+                                                    nostrWalletConnectUrl,
                                                     nostrWalletConnectUrlError:
-                                                        !text.startsWith(
-                                                            'nostr+walletconnect://'
+                                                        !ValidationUtils.isValidNostrWalletConnectUrl(
+                                                            nostrWalletConnectUrl
                                                         ),
                                                     saved: false
-                                                })
-                                            }
+                                                });
+                                            }}
                                             locked={loading}
                                             autoCorrect={false}
                                         />
@@ -3405,6 +3407,11 @@ export default class WalletConfiguration extends React.Component<
                                                     pairingPhrase
                                                 )) ||
                                             nostrWalletConnectUrlError ||
+                                            (implementation ===
+                                                'nostr-wallet-connect' &&
+                                                !ValidationUtils.isValidNostrWalletConnectUrl(
+                                                    nostrWalletConnectUrl
+                                                )) ||
                                             // Required input check
                                             // Port is optional, it will fallback to 80 or 443
                                             (implementation === 'lndhub' &&
