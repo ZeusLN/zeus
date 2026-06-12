@@ -179,7 +179,28 @@ export default class NWCSettings extends React.Component<
                 localeString(
                     'views.Settings.NostrWalletConnect.persistentNWCServiceInfoRestart'
                 )
-            ]
+            ],
+            link: 'https://docs.zeusln.app/nostr-wallet-connect/background',
+            showHelpButton: true
+        });
+    };
+
+    showBackgroundAudioInfo = () => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString(
+                'views.Settings.NostrWalletConnect.backgroundAudioInfoTitle'
+            ),
+            text: [
+                localeString(
+                    'views.Settings.NostrWalletConnect.backgroundAudioInfoBody'
+                ),
+                localeString(
+                    'views.Settings.NostrWalletConnect.backgroundAudioInfoLiveActivity'
+                )
+            ],
+            link: 'https://docs.zeusln.app/nostr-wallet-connect/background',
+            showHelpButton: true
         });
     };
 
@@ -330,17 +351,28 @@ export default class NWCSettings extends React.Component<
 
         return (
             <View style={{ marginTop: 28 }}>
-                <Text
-                    style={{
-                        color: textColor,
-                        fontSize: 17,
-                        fontFamily: 'PPNeueMontreal-Book'
-                    }}
-                >
-                    {localeString(
-                        'views.Settings.NostrWalletConnect.backgroundAudio'
-                    )}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text
+                        style={{
+                            color: textColor,
+                            fontSize: 17,
+                            fontFamily: 'PPNeueMontreal-Book',
+                            flexShrink: 1
+                        }}
+                    >
+                        {localeString(
+                            'views.Settings.NostrWalletConnect.backgroundAudio'
+                        )}
+                    </Text>
+                    <Icon
+                        name="info"
+                        onPress={this.showBackgroundAudioInfo}
+                        color={textColor}
+                        underlayColor="transparent"
+                        size={24}
+                        containerStyle={{ marginLeft: 8 }}
+                    />
+                </View>
                 <Text
                     style={{
                         color: secondaryText,
