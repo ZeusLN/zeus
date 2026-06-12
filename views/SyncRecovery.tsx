@@ -1,16 +1,15 @@
 import React from 'react';
-import { Dimensions, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import CircularProgress from 'react-native-circular-progress-indicator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Screen from '../components/Screen';
 import Header from '../components/Header';
+import SyncCircularProgress from '../components/SyncCircularProgress';
 
 import SyncStore from '../stores/SyncStore';
 
-import { formatProgressPercentage } from '../utils/FormatUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -29,7 +28,9 @@ export default class SyncRecovery extends React.PureComponent<
         const { navigation, SyncStore } = this.props;
         const { recoveryProgress } = SyncStore;
 
-        const { width } = Dimensions.get('window');
+        const progressValue = recoveryProgress
+            ? (Math.floor(recoveryProgress * 1000) / 1000) * 100
+            : 0;
 
         return (
             <Screen>
@@ -46,32 +47,7 @@ export default class SyncRecovery extends React.PureComponent<
                 />
                 <View style={{ flex: 1, justifyContent: 'center' }}>
                     <View style={{ alignItems: 'center', marginBottom: 40 }}>
-                        <CircularProgress
-                            value={
-                                recoveryProgress
-                                    ? Number(
-                                          Math.floor(recoveryProgress * 1000) /
-                                              1000
-                                      ) * 100
-                                    : 0
-                            }
-                            radius={width / 3}
-                            inActiveStrokeOpacity={0.5}
-                            activeStrokeWidth={width / 20}
-                            inActiveStrokeWidth={width / 40}
-                            progressValueStyle={{
-                                fontWeight: '100',
-                                color: 'white'
-                            }}
-                            activeStrokeColor={themeColor('highlight')}
-                            activeStrokeSecondaryColor={themeColor('error')}
-                            inActiveStrokeColor={themeColor(
-                                'secondaryBackground'
-                            )}
-                            duration={500}
-                            progressFormatter={formatProgressPercentage}
-                            valueSuffix="%"
-                        />
+                        <SyncCircularProgress value={progressValue} />
                     </View>
                 </View>
                 <View style={{ bottom: 15 }}>
