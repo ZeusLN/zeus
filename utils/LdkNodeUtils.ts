@@ -189,7 +189,8 @@ async function initNode({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssServerUrl
+    vssServerUrl,
+    paymentRetryTimeoutSecs
 }: {
     storagePath: string;
     mnemonic: string;
@@ -206,6 +207,7 @@ async function initNode({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    paymentRetryTimeoutSecs?: number;
 }): Promise<{ vssError?: string }> {
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
@@ -233,7 +235,8 @@ async function initNode({
             url: vssUrl,
             storeId: vssStoreId
         },
-        vssKey
+        vssKey,
+        paymentRetryTimeoutSecs
     });
 }
 
@@ -251,7 +254,8 @@ export async function createLdkNodeWallet({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssServerUrl
+    vssServerUrl,
+    paymentRetryTimeoutSecs
 }: {
     nodeDir: string;
     seedMnemonic?: string;
@@ -268,6 +272,7 @@ export async function createLdkNodeWallet({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    paymentRetryTimeoutSecs?: number;
 }): Promise<{
     mnemonic: string;
     storagePath: string;
@@ -293,7 +298,8 @@ export async function createLdkNodeWallet({
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
-        vssServerUrl
+        vssServerUrl,
+        paymentRetryTimeoutSecs
     });
 
     return {
@@ -318,6 +324,7 @@ export async function startLdkNodeWallet({
     lsps1Config,
     trustedPeers0conf,
     vssServerUrl,
+    paymentRetryTimeoutSecs,
     skipInit,
     onSyncStart
 }: {
@@ -336,6 +343,7 @@ export async function startLdkNodeWallet({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    paymentRetryTimeoutSecs?: number;
     skipInit?: boolean;
     onSyncStart?: () => void;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
@@ -354,7 +362,8 @@ export async function startLdkNodeWallet({
             listeningAddresses,
             lsps1Config,
             trustedPeers0conf,
-            vssServerUrl
+            vssServerUrl,
+            paymentRetryTimeoutSecs
         });
         vssError = result.vssError;
     }

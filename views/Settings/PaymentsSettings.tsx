@@ -14,6 +14,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
@@ -324,7 +325,8 @@ export default class PaymentsSettings extends React.Component<
                     />
 
                     {(BackendUtils.isLNDBased() ||
-                        implementation === 'cln-rest') && (
+                        implementation === 'cln-rest' ||
+                        implementation === 'ldk-node') && (
                         <>
                             <Text
                                 style={{
@@ -342,16 +344,19 @@ export default class PaymentsSettings extends React.Component<
                             <TextInput
                                 keyboardType="numeric"
                                 value={timeoutSeconds}
-                                onChangeText={async (text: string) => {
-                                    this.setState({
-                                        timeoutSeconds: text
-                                    });
+                                onChangeText={(text: string) => {
+                                    this.setState({ timeoutSeconds: text });
+                                }}
+                                onBlur={async () => {
                                     await updateSettings({
                                         payments: {
                                             ...settings.payments,
-                                            timeoutSeconds: text
+                                            timeoutSeconds
                                         }
                                     });
+                                    if (implementation === 'ldk-node') {
+                                        restartNeeded();
+                                    }
                                 }}
                             />
                         </>

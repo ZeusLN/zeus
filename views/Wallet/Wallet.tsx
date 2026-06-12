@@ -673,6 +673,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     lsps1Config,
                     trustedPeers0conf: trustedPeers,
                     vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                    paymentRetryTimeoutSecs: settings?.payments?.timeoutSeconds
+                        ? parseInt(settings.payments.timeoutSeconds, 10)
+                        : undefined,
                     skipInit: justCreated,
                     onSyncStart: () => {
                         SettingsStore.ldkNodeSyncing = true;

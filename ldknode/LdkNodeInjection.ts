@@ -123,6 +123,12 @@ const setVssBuildTimeout = async (timeoutSeconds: number): Promise<void> => {
     return await LdkNodeModule.setVssBuildTimeout(timeoutSeconds);
 };
 
+const setPaymentRetryTimeout = async (
+    timeoutSeconds: number
+): Promise<void> => {
+    return await LdkNodeModule.setPaymentRetryTimeout(timeoutSeconds);
+};
+
 // ============================================================================
 // Mnemonic Functions
 // ============================================================================
@@ -816,7 +822,8 @@ const initializeNode = async ({
     lsps1Config,
     trustedPeers0conf,
     vssConfig,
-    vssKey
+    vssKey,
+    paymentRetryTimeoutSecs
 }: {
     network: Network;
     storagePath: string;
@@ -837,6 +844,7 @@ const initializeNode = async ({
         storeId: string;
     };
     vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
+    paymentRetryTimeoutSecs?: number;
 }): Promise<{ vssError?: string }> => {
     const t0 = Date.now();
     const elapsed = () => `${Date.now() - t0}ms`;
@@ -959,6 +967,13 @@ const initializeNode = async ({
         })`
     );
 
+    if (paymentRetryTimeoutSecs !== undefined) {
+        await setPaymentRetryTimeout(paymentRetryTimeoutSecs);
+        console.log(
+            `LDK Node: [${elapsed()}] Payment retry timeout set to ${paymentRetryTimeoutSecs}s`
+        );
+    }
+
     console.log(`LDK Node: [${elapsed()}] Starting buildNode...`);
     const tBuild = Date.now();
     const buildResult = await buildNode(mnemonic, passphrase);
@@ -1012,6 +1027,7 @@ export interface ILdkNodeInjections {
             headers?: Record<string, string>
         ) => Promise<void>;
         setVssBuildTimeout: (timeoutSeconds: number) => Promise<void>;
+        setPaymentRetryTimeout: (timeoutSeconds: number) => Promise<void>;
     };
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
@@ -1244,6 +1260,7 @@ export interface ILdkNodeInjections {
                 privateKey: Uint8Array;
                 publicKey: Uint8Array;
             };
+            paymentRetryTimeoutSecs?: number;
         }) => Promise<{ vssError?: string }>;
     };
 }
@@ -1266,7 +1283,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         setLiquiditySourceLsps2,
         setTrustedPeers0conf,
         setVssServer,
-        setVssBuildTimeout
+        setVssBuildTimeout,
+        setPaymentRetryTimeout
     },
     mnemonic: {
         generateMnemonic

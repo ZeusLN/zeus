@@ -44,6 +44,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var storedVssStoreId: String? = null
     private var storedVssHeaders: Map<String, String> = emptyMap()
     private var storedVssBuildTimeoutSeconds: Long = 30
+    private var storedPaymentRetryTimeoutSecs: Long = 10
 
     override fun getName(): String {
         return "LdkNodeModule"
@@ -75,6 +76,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedVssStoreId = null
         storedVssHeaders = emptyMap()
         storedVssBuildTimeoutSeconds = 30
+        storedPaymentRetryTimeoutSecs = 10
     }
 
     // Extract clean error message from NodeException or other exceptions
@@ -278,6 +280,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         promise.resolve(null)
     }
 
+    @ReactMethod
+    fun setPaymentRetryTimeout(timeoutSeconds: Double, promise: Promise) {
+        this.storedPaymentRetryTimeoutSecs = timeoutSeconds.toLong()
+        Log.d("LdkNodeModule", "Payment retry timeout set to ${this.storedPaymentRetryTimeoutSecs}s")
+        promise.resolve(null)
+    }
+
     // Crypto Methods
 
     /**
@@ -379,7 +388,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     trustedPeers0conf = this@LdkNodeModule.storedTrustedPeers0conf,
                     probingLiquidityLimitMultiplier = 3UL,
                     anchorChannelsConfig = anchorConfig,
-                    routeParameters = null
+                    routeParameters = null,
+                    paymentRetryTimeoutSecs = this@LdkNodeModule.storedPaymentRetryTimeoutSecs.toULong()
                 )
 
                 val nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic, passphrase)
