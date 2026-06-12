@@ -67,6 +67,8 @@ and
 - [x] Watch-only accounts
 - [x] Contact list for easier payments
 - [x] Nostr contact import
+- [x] [Nostr Wallet Connect service](https://docs.zeusln.app/nostr-wallet-connect)
+- [x] [Nostr Wallet Connect client](https://docs.zeusln.app/nostr-wallet-connect/client)
 - [x] Point of Sale (Standalone and Square integration)
 - [x] Lightning address receive
 - [x] Taproot support 

@@ -5,8 +5,7 @@ import {
     FlatList,
     TouchableOpacity,
     Text,
-    RefreshControl,
-    Platform
+    RefreshControl
 } from 'react-native';
 import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -14,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
+import Button from '../../../components/Button';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Amount from '../../../components/Amount';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
@@ -25,7 +25,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 
 import NWCConnection, {
     ConnectionWarningType
@@ -106,6 +106,22 @@ export default class NWCConnectionsList extends React.Component<
     handleFocus = async () => {
         await this.getConnections();
     };
+
+    openNWCDocs = () => {
+        UrlUtils.goToUrl('https://docs.zeusln.app/nostr-wallet-connect');
+    };
+
+    renderLearnMoreButton = () => (
+        <View style={{ marginTop: 20, width: '100%' }}>
+            <Button
+                title={localeString(
+                    'views.Settings.NostrWalletConnect.learnMore'
+                )}
+                onPress={this.openNWCDocs}
+            />
+        </View>
+    );
+
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;
         return [
@@ -398,17 +414,16 @@ export default class NWCConnectionsList extends React.Component<
             />
             <Text
                 style={[
-                    styles.emptyStateTitle,
+                    styles.emptyStateSubtitle,
                     { color: themeColor('secondaryText') }
                 ]}
             >
-                {localeString(
-                    'views.Settings.NostrWalletConnect.noConnections'
-                )}
+                {localeString('views.Settings.NostrWalletConnect.description')}
             </Text>
+            {this.renderLearnMoreButton()}
             <Text
                 style={[
-                    styles.emptyStateSubtitle,
+                    styles.emptyStateHint,
                     { color: themeColor('secondaryText') }
                 ]}
             >
@@ -420,16 +435,9 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation, SettingsStore } =
-            this.props;
+        const { NostrWalletConnectStore, navigation } = this.props;
         const { connections, loading } = NostrWalletConnectStore;
         const { connectionsLoading, error } = this.state;
-        const { settings } = SettingsStore;
-        const isNwcSettingsAvailable =
-            Platform.OS === 'android' ||
-            (BackendUtils.supportsCashuWallet() &&
-                !!settings?.ecash?.enableCashu) ||
-            !!settings?.lightningAddress?.enabled;
         return (
             <Screen>
                 <Header
@@ -455,26 +463,22 @@ export default class NWCConnectionsList extends React.Component<
                                     alignItems: 'center'
                                 }}
                             >
-                                {isNwcSettingsAvailable && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('NWCSettings')
-                                        }
-                                        accessibilityLabel={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                    >
-                                        <Gear
-                                            fill={themeColor('text')}
-                                            width={30}
-                                            height={30}
-                                            style={{
-                                                alignSelf: 'center',
-                                                marginRight: 15
-                                            }}
-                                        />
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('NWCSettings')
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'views.Settings.NostrWalletConnect.nwcSettings'
+                                    )}
+                                    style={{ marginRight: 8 }}
+                                >
+                                    <Gear
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
@@ -500,13 +504,13 @@ export default class NWCConnectionsList extends React.Component<
 
                 {error && <ErrorMessage message={error} dismissable />}
 
-                <View style={{ marginTop: 20 }}>
+                <View style={{ marginTop: 16, paddingHorizontal: 5 }}>
                     {connectionsLoading ? (
                         <View style={styles.connectionsLoadingContainer}>
                             <LoadingIndicator />
                         </View>
                     ) : (
-                        <View style={{ paddingHorizontal: 5 }}>
+                        <View>
                             {connections.length > 0 && (
                                 <>
                                     <SearchBar
@@ -748,22 +752,21 @@ const styles = StyleSheet.create({
     emptyState: {
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 60
-    },
-    emptyStateTitle: {
-        textAlign: 'center',
-        fontSize: 18,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontWeight: '600',
-        marginBottom: 8
+        paddingHorizontal: 30,
+        paddingVertical: 48
     },
     emptyStateSubtitle: {
         textAlign: 'center',
         fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book',
+        lineHeight: 20
+    },
+    emptyStateHint: {
+        textAlign: 'center',
+        fontSize: 14,
+        fontFamily: 'PPNeueMontreal-Book',
         lineHeight: 20,
-        marginBottom: 10
+        marginTop: 24
     },
     emptySearch: {
         justifyContent: 'center',
