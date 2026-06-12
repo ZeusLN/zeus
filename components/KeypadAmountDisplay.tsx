@@ -283,7 +283,7 @@ export default class KeypadAmountDisplay extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            alignItems: 'flex-end',
+                            alignItems: 'baseline',
                             justifyContent: 'center'
                         }}
                     >
@@ -303,7 +303,7 @@ export default class KeypadAmountDisplay extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                alignItems: 'baseline',
+                                alignItems: 'flex-end',
                                 height: scaledLineHeight,
                                 overflow: 'hidden',
                                 zIndex: 0
@@ -348,22 +348,22 @@ export default class KeypadAmountDisplay extends React.Component<
                                     {decimalPlaceholder.string}
                                 </Text>
                             ) : null}
-                            {suffix ? (
-                                <Animated.Text
-                                    style={{
-                                        zIndex: 1,
-                                        color: textColor,
-                                        fontSize: Math.max(
-                                            scaledFontSize * 0.2,
-                                            12
-                                        ),
-                                        fontFamily: 'PPNeueMontreal-Medium'
-                                    }}
-                                >
-                                    {suffix}
-                                </Animated.Text>
-                            ) : null}
                         </View>
+                        {suffix ? (
+                            <Animated.Text
+                                style={{
+                                    zIndex: 1,
+                                    color: textColor,
+                                    fontSize: Math.max(
+                                        scaledFontSize * 0.2,
+                                        12
+                                    ),
+                                    fontFamily: 'PPNeueMontreal-Medium'
+                                }}
+                            >
+                                {suffix}
+                            </Animated.Text>
+                        ) : null}
                     </View>
                 </Animated.View>
 
