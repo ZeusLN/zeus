@@ -15032,6 +15032,8 @@ sealed class PaymentKind {
         val `hash`: PaymentHash,
         val `preimage`: PaymentPreimage?,
         val `secret`: PaymentSecret?,
+        val `bolt11Invoice`: kotlin.String?,
+        val `description`: kotlin.String?,
     ) : PaymentKind() {
         companion object
     }
@@ -15042,6 +15044,8 @@ sealed class PaymentKind {
         val `secret`: PaymentSecret?,
         val `counterpartySkimmedFeeMsat`: kotlin.ULong?,
         val `lspFeeLimits`: LspFeeLimits,
+        val `bolt11Invoice`: kotlin.String?,
+        val `description`: kotlin.String?,
     ) : PaymentKind() {
         companion object
     }
@@ -15095,6 +15099,8 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                     FfiConverterTypePaymentHash.read(buf),
                     FfiConverterOptionalTypePaymentPreimage.read(buf),
                     FfiConverterOptionalTypePaymentSecret.read(buf),
+                    FfiConverterOptionalString.read(buf),
+                    FfiConverterOptionalString.read(buf),
                 )
             }
 
@@ -15105,6 +15111,8 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                     FfiConverterOptionalTypePaymentSecret.read(buf),
                     FfiConverterOptionalULong.read(buf),
                     FfiConverterTypeLSPFeeLimits.read(buf),
+                    FfiConverterOptionalString.read(buf),
+                    FfiConverterOptionalString.read(buf),
                 )
             }
 
@@ -15158,7 +15166,9 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                     4UL +
                         FfiConverterTypePaymentHash.allocationSize(value.`hash`) +
                         FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
-                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
+                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`) +
+                        FfiConverterOptionalString.allocationSize(value.`bolt11Invoice`) +
+                        FfiConverterOptionalString.allocationSize(value.`description`)
                 )
             }
 
@@ -15170,7 +15180,9 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                         FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
                         FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`) +
                         FfiConverterOptionalULong.allocationSize(value.`counterpartySkimmedFeeMsat`) +
-                        FfiConverterTypeLSPFeeLimits.allocationSize(value.`lspFeeLimits`)
+                        FfiConverterTypeLSPFeeLimits.allocationSize(value.`lspFeeLimits`) +
+                        FfiConverterOptionalString.allocationSize(value.`bolt11Invoice`) +
+                        FfiConverterOptionalString.allocationSize(value.`description`)
                 )
             }
 
@@ -15226,6 +15238,8 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                 FfiConverterTypePaymentHash.write(value.`hash`, buf)
                 FfiConverterOptionalTypePaymentPreimage.write(value.`preimage`, buf)
                 FfiConverterOptionalTypePaymentSecret.write(value.`secret`, buf)
+                FfiConverterOptionalString.write(value.`bolt11Invoice`, buf)
+                FfiConverterOptionalString.write(value.`description`, buf)
                 Unit
             }
 
@@ -15236,6 +15250,8 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> 
                 FfiConverterOptionalTypePaymentSecret.write(value.`secret`, buf)
                 FfiConverterOptionalULong.write(value.`counterpartySkimmedFeeMsat`, buf)
                 FfiConverterTypeLSPFeeLimits.write(value.`lspFeeLimits`, buf)
+                FfiConverterOptionalString.write(value.`bolt11Invoice`, buf)
+                FfiConverterOptionalString.write(value.`description`, buf)
                 Unit
             }
 

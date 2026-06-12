@@ -1877,10 +1877,12 @@ export default class LdkNode {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || payment.id;
         const preimage = payment.kind.preimage || '';
+        const bolt11 = payment.kind.bolt11Invoice || '';
         const feeMsat = payment.feePaidMsat || 0;
 
         return {
             payment_hash: hash,
+            payment_request: bolt11,
             value: payment.amountMsat
                 ? new BigNumber(payment.amountMsat).dividedBy(1000).toString()
                 : '0',
@@ -1907,9 +1909,12 @@ export default class LdkNode {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || '';
         const preimage = payment.kind.preimage || '';
+        const bolt11 = payment.kind.bolt11Invoice || '';
+        const description = payment.kind.description || '';
 
         return {
-            memo: '',
+            memo: description,
+            description,
             r_preimage: preimage,
             r_hash: hash,
             value: payment.amountMsat
@@ -1921,7 +1926,7 @@ export default class LdkNode {
             settle_date: isSettled
                 ? payment.latestUpdateTimestamp.toString()
                 : '0',
-            payment_request: '',
+            payment_request: bolt11,
             expiry: '3600',
             cltv_expiry: '40',
             private: false,

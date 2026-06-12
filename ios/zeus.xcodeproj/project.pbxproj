@@ -228,11 +228,11 @@
 		NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = NWCAUDIO0000000000000017 /* Gentle Rain.m4a */; };
 		NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000007 /* NWCWidgetAttributes.swift */; };
 		NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000009 /* NWCActivityManager.swift */; };
+		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */; };
 		NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */; };
 		NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000004 /* NWCWidgetIntent.swift */; };
 		NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000006 /* NWCAmbientTracks.swift */; };
-		NWCLA000000000000000005 /* NWCWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = NWCLA000000000000000006 /* NWCWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1975,13 +1975,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1996,13 +1992,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

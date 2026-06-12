@@ -1656,6 +1656,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     putString("hash", kind.hash)
                     kind.preimage?.let { putString("preimage", it) }
                     kind.secret?.let { putString("secret", it) }
+                    kind.bolt11Invoice?.let { putString("bolt11Invoice", it) }
+                    kind.description?.let { putString("description", it) }
                 }
                 is PaymentKind.Bolt11Jit -> {
                     putString("type", "bolt11Jit")
@@ -1670,6 +1672,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         }
                         putMap("lspFeeLimits", limitsMap)
                     }
+                    kind.bolt11Invoice?.let { putString("bolt11Invoice", it) }
+                    kind.description?.let { putString("description", it) }
                 }
                 is PaymentKind.Bolt12Offer -> {
                     putString("type", "bolt12Offer")
