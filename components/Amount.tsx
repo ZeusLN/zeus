@@ -20,7 +20,12 @@ import {
 } from '../utils/UnitsUtils';
 import type { Units } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
+import {
+    processSatsAmount,
+    getUnformattedAmount,
+    getSatsUnitLabel,
+    shouldUseSatsSymbol
+} from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
@@ -50,6 +55,7 @@ interface AmountDisplayProps {
     accessibilityLabel?: string;
     roundAmount?: boolean;
     separatorSwap?: boolean;
+    useSatsSymbol?: boolean;
     onPendingPress?: () => void;
 }
 
@@ -77,6 +83,7 @@ function AmountDisplay({
     accessibilityLabel,
     roundAmount = false,
     separatorSwap = false,
+    useSatsSymbol = false,
     onPendingPress
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
@@ -177,9 +184,19 @@ function AmountDisplay({
 
     const renderSatsAmount = (
         displayAmount: string,
-        shouldShowRounding: boolean
+        shouldShowRounding: boolean,
+        useSatsSymbol: boolean
     ) => {
         const isPlural = displayAmount !== '1';
+        // β is a unit symbol and scales 1:1 with the digits. The "sat"/"sats"
+        // word is a secondary label and should stay smaller than the digits.
+        // When the caller passes a numeric fontSize for scaling, preserve that
+        // visual hierarchy by computing a proportionally smaller word size
+        // (the 0.4× ratio matches the original 16/40 jumbo defaults).
+        const labelFontSize =
+            useSatsSymbol || fontSize === undefined
+                ? fontSize
+                : Math.max(12, Math.round(fontSize * 0.4));
 
         return (
             <Row
@@ -201,18 +218,19 @@ function AmountDisplay({
                         {negative ? '-' : ''}
                         {displayAmount}
                     </Body>
-                    <Spacer width={2} />
+                    {useSatsSymbol ? <TextSpace /> : <Spacer width={2} />}
                     <View accessible={accessible}>
                         <Body
                             secondary
-                            small={!jumboText && !fontSize}
+                            small={!jumboText && !fontSize && !useSatsSymbol}
+                            jumbo={useSatsSymbol ? jumboText : false}
                             defaultSize={defaultTextSize}
-                            fontSize={fontSize}
+                            fontSize={labelFontSize}
                             color={color}
                             colorOverride={colorOverride}
                             accessible={accessible}
                         >
-                            {isPlural ? 'sats' : 'sat'}
+                            {getSatsUnitLabel(isPlural, useSatsSymbol)}
                             {fee
                                 ? ' ' +
                                   formatInlineNoun(
@@ -332,7 +350,11 @@ function AmountDisplay({
                 roundAmount,
                 fee || forceMsats
             );
-            return renderSatsAmount(displayAmount, shouldShowRounding);
+            return renderSatsAmount(
+                displayAmount,
+                shouldShowRounding,
+                useSatsSymbol
+            );
         case 'BTC':
         case 'fiat':
             return renderCurrencyAmount();
@@ -411,6 +433,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
 
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
+        const useSatsSymbol = shouldUseSatsSymbol();
 
         const unformattedAmount = getUnformattedAmount({
             sats: value,
@@ -533,6 +556,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
                         roundAmount={roundAmount}
+                        useSatsSymbol={useSatsSymbol}
                         onPendingPress={pending ? onPendingPress : undefined}
                     />
                 </TouchableOpacity>
@@ -554,6 +578,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 accessible={accessible}
                 accessibilityLabel={accessibilityLabel}
                 roundAmount={roundAmount}
+                useSatsSymbol={useSatsSymbol}
                 onPendingPress={pending ? onPendingPress : undefined}
             />
         );

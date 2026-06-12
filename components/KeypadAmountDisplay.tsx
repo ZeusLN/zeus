@@ -16,6 +16,7 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../utils/UnitsUtils';
+import { getSatsUnitLabel, shouldUseSatsSymbol } from '../utils/AmountUtils';
 
 interface KeypadAmountDisplayState {
     exitingDigit: null | { char: string; key: number };
@@ -191,6 +192,7 @@ export default class KeypadAmountDisplay extends React.Component<
             UnitsStore,
             children
         } = this.props;
+        const useSatsSymbol = shouldUseSatsSymbol();
         const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl } =
             units === 'fiat'
@@ -220,7 +222,7 @@ export default class KeypadAmountDisplay extends React.Component<
         if (units === 'BTC') {
             prefix = '₿';
         } else if (units === 'sats') {
-            suffix = ` ${isSingularSat ? 'sat' : 'sats'}`;
+            suffix = ` ${getSatsUnitLabel(!isSingularSat, useSatsSymbol)}`;
         } else if (units === 'fiat') {
             if (rtl) {
                 suffix = `${space ? ' ' : ''}${symbol}`;
@@ -303,7 +305,7 @@ export default class KeypadAmountDisplay extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                alignItems: 'baseline',
+                                alignItems: 'flex-end',
                                 height: scaledLineHeight,
                                 overflow: 'hidden',
                                 zIndex: 0
@@ -348,21 +350,49 @@ export default class KeypadAmountDisplay extends React.Component<
                                     {decimalPlaceholder.string}
                                 </Text>
                             ) : null}
-                            {suffix ? (
-                                <Animated.Text
-                                    style={{
-                                        zIndex: 1,
-                                        color: textColor,
-                                        fontSize: Math.max(
-                                            scaledFontSize * 0.2,
-                                            12
-                                        ),
-                                        fontFamily: 'PPNeueMontreal-Medium'
-                                    }}
-                                >
-                                    {suffix}
-                                </Animated.Text>
-                            ) : null}
+                            {suffix
+                                ? (() => {
+                                      const suffixFontSize = Math.max(
+                                          scaledFontSize *
+                                              (useSatsSymbol ? 1 : 0.2),
+                                          12
+                                      );
+                                      // alignItems on the parent is 'flex-end'
+                                      // (baseline triggers a Fabric crash on
+                                      // re-render of paragraph nodes). When
+                                      // the suffix is much smaller than the
+                                      // digits, its baseline sits below the
+                                      // digit baseline; nudge it up to fake
+                                      // baseline alignment.
+                                      const suffixMarginBottom = useSatsSymbol
+                                          ? 0
+                                          : Math.max(
+                                                0,
+                                                Math.round(
+                                                    scaledFontSize * 0.25 -
+                                                        suffixFontSize * 0.3
+                                                )
+                                            );
+                                      return (
+                                          <Animated.Text
+                                              style={{
+                                                  zIndex: 1,
+                                                  color: textColor,
+                                                  fontSize: suffixFontSize,
+                                                  fontFamily:
+                                                      'PPNeueMontreal-Medium',
+                                                  lineHeight: useSatsSymbol
+                                                      ? scaledLineHeight
+                                                      : undefined,
+                                                  marginBottom:
+                                                      suffixMarginBottom
+                                              }}
+                                          >
+                                              {suffix}
+                                          </Animated.Text>
+                                      );
+                                  })()
+                                : null}
                         </View>
                     </View>
                 </Animated.View>

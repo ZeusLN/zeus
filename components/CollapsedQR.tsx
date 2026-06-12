@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
+import { observer } from 'mobx-react';
 import { ButtonGroup } from '@rneui/themed';
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
@@ -25,6 +26,10 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
+import {
+    getUnformattedAmount,
+    shouldUseSatsSymbol
+} from '../utils/AmountUtils';
 import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
 
 import Turtle from '../assets/images/SVG/Turtle.svg';
@@ -69,6 +74,97 @@ const ForwardedQRCode = React.forwardRef<QRCodeElement, ExtendedQRCodeProps>(
         />
     )
 ) as React.FC<ExtendedQRCodeProps>;
+
+const QR_AMOUNT_CARD_PADDING = 15;
+const QR_AMOUNT_BASE_FONT_SIZE = 40;
+const QR_AMOUNT_MIN_FONT_SIZE = 20;
+// Approximate average glyph width (em ratio) for PPNeueMontreal-Medium across
+// the digit-heavy strings rendered here. Calibrated to fit the worst case
+// (`100,000,000 β`) within a 75%-of-screen-width card on the narrowest phones.
+const QR_AMOUNT_CHAR_WIDTH_RATIO = 0.6;
+// Locks the card height so toggling between units (which can shrink the
+// amount fontSize) doesn't make the card jump vertically.
+//   amount lineHeight at base size (~1.25×) + conversion line (~20) + padding
+const QR_AMOUNT_CARD_MIN_HEIGHT =
+    Math.round(QR_AMOUNT_BASE_FONT_SIZE * 1.25) +
+    20 +
+    QR_AMOUNT_CARD_PADDING * 2;
+
+const QrAmountCard = observer(function QrAmountCard({
+    satAmount,
+    qrSize
+}: {
+    satAmount: string | number;
+    qrSize: number;
+}) {
+    const availableWidth = qrSize - QR_AMOUNT_CARD_PADDING * 2;
+    const useSatsSymbol = shouldUseSatsSymbol();
+    const unformatted = getUnformattedAmount({ sats: satAmount });
+    const numberLen = String(unformatted.amount ?? '').length;
+
+    let suffixLen: number;
+    switch (unformatted.unit) {
+        case 'sats':
+            // " β" or " sats" / " sat"
+            suffixLen = useSatsSymbol ? 2 : unformatted.plural ? 5 : 4;
+            break;
+        case 'BTC':
+            suffixLen = 1; // ₿
+            break;
+        case 'fiat':
+        default:
+            suffixLen =
+                (unformatted.symbol?.length ?? 1) + (unformatted.space ? 1 : 0);
+            break;
+    }
+
+    const totalLen = Math.max(1, numberLen + suffixLen);
+    const naturalWidth =
+        totalLen * QR_AMOUNT_BASE_FONT_SIZE * QR_AMOUNT_CHAR_WIDTH_RATIO;
+    const fontSize =
+        naturalWidth > availableWidth
+            ? Math.max(
+                  QR_AMOUNT_MIN_FONT_SIZE,
+                  Math.floor(
+                      availableWidth / (totalLen * QR_AMOUNT_CHAR_WIDTH_RATIO)
+                  )
+              )
+            : QR_AMOUNT_BASE_FONT_SIZE;
+
+    return (
+        <View
+            style={{
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                alignSelf: 'center',
+                backgroundColor:
+                    themeColor('buttonBackground') || themeColor('secondary'),
+                width: qrSize,
+                minHeight: QR_AMOUNT_CARD_MIN_HEIGHT,
+                borderBottomLeftRadius: 12,
+                borderBottomRightRadius: 12,
+                marginTop: -10,
+                margin: 15,
+                padding: QR_AMOUNT_CARD_PADDING
+            }}
+        >
+            <Amount
+                sats={satAmount}
+                toggleable
+                jumboText
+                fontSize={fontSize}
+                colorOverride={themeColor('buttonText')}
+            />
+            <View>
+                <Conversion
+                    sats={satAmount}
+                    colorOverride={themeColor('buttonText')}
+                />
+            </View>
+        </View>
+    );
+});
 
 function ValueText({ value, truncateLongValue, valueStyle }: ValueTextProps) {
     const [state, setState] = React.useState<{
@@ -350,37 +446,10 @@ export default class CollapsedQR extends React.Component<
                         {satAmount != null &&
                             satAmount != 0 &&
                             this.props.displayAmount && (
-                                <View
-                                    style={{
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        alignSelf: 'center',
-                                        backgroundColor:
-                                            themeColor('buttonBackground') ||
-                                            themeColor('secondary'),
-                                        width: qrSize,
-                                        borderBottomLeftRadius: 12,
-                                        borderBottomRightRadius: 12,
-                                        marginTop: -10,
-                                        margin: 15,
-                                        padding: 15
-                                    }}
-                                >
-                                    <Amount
-                                        sats={satAmount}
-                                        toggleable
-                                        jumboText
-                                        colorOverride={themeColor('buttonText')}
-                                    ></Amount>
-                                    <View>
-                                        <Conversion
-                                            sats={satAmount}
-                                            colorOverride={themeColor(
-                                                'buttonText'
-                                            )}
-                                        />
-                                    </View>
-                                </View>
+                                <QrAmountCard
+                                    satAmount={satAmount}
+                                    qrSize={qrSize}
+                                />
                             )}
                         {labelBottom && (
                             <View

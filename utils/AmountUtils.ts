@@ -87,6 +87,27 @@ export function shouldHideMillisatoshiAmounts(): boolean {
 }
 
 /**
+ * Whether the user prefers the β symbol for satoshi amounts over the
+ * "sat"/"sats" word. Defaults to true.
+ */
+export function shouldUseSatsSymbol(): boolean {
+    return settingsStore?.settings?.display?.useSatsSymbol ?? true;
+}
+
+/**
+ * Resolves the satoshi unit label, respecting the β symbol preference.
+ * β is invariant, so the `plural` argument is only consulted when the
+ * word form is rendered.
+ *
+ * @param plural - true when the amount renders as anything other than 1 / -1
+ * @param useSymbol - explicit override; when undefined, reads the setting
+ */
+export function getSatsUnitLabel(plural: boolean, useSymbol?: boolean): string {
+    const symbolMode = useSymbol ?? shouldUseSatsSymbol();
+    return symbolMode ? 'β' : plural ? 'sats' : 'sat';
+}
+
+/**
  * Gets the fiat entry from fiatStore for a given currency code
  * @param currencyCode - The currency code to look up (e.g., 'USD', 'EUR')
  * @returns The fiat entry object or undefined if not found
@@ -220,9 +241,11 @@ export function getAmountFromSats(
 
         return `₿${FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC)}`;
     } else if (units === 'sats') {
-        const sats = `${numberWithCommas(wholeSats || value) || 0} ${
-            Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
-        }`;
+        const numericValue = Number(value);
+        const plural = numericValue !== 1 && numericValue !== -1;
+        const sats = `${
+            numberWithCommas(wholeSats || value) || 0
+        } ${getSatsUnitLabel(plural)}`;
         return sats;
     } else if (units === 'fiat' && fiat) {
         if (fiatStore.fiatRates) {
@@ -279,9 +302,11 @@ export function getFormattedAmount(
         return `₿${FeeUtils.toFixed(Number(value || 0))}`;
     } else if (units === 'sats') {
         const [wholeSats] = value.toString().split('.');
-        const sats = `${numberWithCommas(wholeSats || value) || 0} ${
-            Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
-        }`;
+        const numericValue = Number(value);
+        const plural = numericValue !== 1 && numericValue !== -1;
+        const sats = `${
+            numberWithCommas(wholeSats || value) || 0
+        } ${getSatsUnitLabel(plural)}`;
         return sats;
     } else if (units === 'fiat' && fiat) {
         if (fiatStore.fiatRates) {
