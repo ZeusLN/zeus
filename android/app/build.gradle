@@ -100,7 +100,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 128
-        versionName "13.1.0-beta2"
+        versionName "13.1.0-rc1"
         multiDexEnabled true
         ndk {
             abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
