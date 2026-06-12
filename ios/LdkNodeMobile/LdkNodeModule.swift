@@ -15,6 +15,7 @@ class LdkNodeModule: RCTEventEmitter {
     private var storedStorageDirPath: String = ""
     private var storedListeningAddresses: [SocketAddress]?
     private var storedTrustedPeers0conf: [PublicKey] = []
+    private var storedPaymentRetryTimeoutSecs: UInt64 = 10
 
     // Stored builder settings (not part of Config)
     private var storedEsploraServerUrl: String?
@@ -94,6 +95,7 @@ class LdkNodeModule: RCTEventEmitter {
         storedVssStoreId = nil
         storedVssHeaders = [:]
         storedVssBuildTimeout = 30
+        storedPaymentRetryTimeoutSecs = 10
     }
 
     // MARK: - Builder Methods
@@ -213,6 +215,13 @@ class LdkNodeModule: RCTEventEmitter {
     func setVssBuildTimeout(_ timeoutSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         self.storedVssBuildTimeout = timeoutSeconds.doubleValue
         NSLog("LdkNodeModule: VSS build timeout set to \(self.storedVssBuildTimeout)s")
+        resolve(["status": "ok"])
+    }
+
+    @objc(setPaymentRetryTimeout:resolver:rejecter:)
+    func setPaymentRetryTimeout(_ timeoutSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        self.storedPaymentRetryTimeoutSecs = timeoutSeconds.uint64Value
+        NSLog("LdkNodeModule: Payment retry timeout set to \(self.storedPaymentRetryTimeoutSecs)s")
         resolve(["status": "ok"])
     }
 
@@ -389,7 +398,8 @@ class LdkNodeModule: RCTEventEmitter {
                     trustedPeers0conf: self.storedTrustedPeers0conf,
                     probingLiquidityLimitMultiplier: 3,
                     anchorChannelsConfig: anchorConfig,
-                    routeParameters: nil
+                    routeParameters: nil,
+                    paymentRetryTimeoutSecs: self.storedPaymentRetryTimeoutSecs
                 )
 
                 let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
