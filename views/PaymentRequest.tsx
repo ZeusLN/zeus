@@ -1296,35 +1296,34 @@ export default class PaymentRequest extends React.Component<
                                         )}
 
                                         {(BackendUtils.supportsCustomFeeLimit() ||
-                                            isCLightning) &&
-                                            !isLdkNode && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            ...styles.label,
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Settings.Payments.timeoutSeconds'
-                                                        )}
-                                                    </Text>
-                                                    <TextInput
-                                                        keyboardType="numeric"
-                                                        value={timeoutSeconds}
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) =>
-                                                            this.setState({
-                                                                timeoutSeconds:
-                                                                    text
-                                                            })
-                                                        }
-                                                    />
-                                                </>
-                                            )}
+                                            isCLightning ||
+                                            isLdkNode) && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.label,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Payments.timeoutSeconds'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    value={timeoutSeconds}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            timeoutSeconds: text
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )}
                                     </Accordion>
                                 )}
                                 {!(

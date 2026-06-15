@@ -93,6 +93,8 @@ ios/ZeusRestoreLibZipFile
 ios/CashuDevKit/zeus_cashu_restore.swift
 
 # LDK Node binaries
+android/ldk-node/ldk-node-android-jniLibs.zip
+android/app/src/main/jniLibs/
 ios/LdkNodeMobile/LDKNodeFFI.xcframework
 ios/LdkNodeLibZipFile
 ios/LdkNodeMobile/__MACOSX/

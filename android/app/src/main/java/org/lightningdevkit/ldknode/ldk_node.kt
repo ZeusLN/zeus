@@ -1047,6 +1047,7 @@ internal interface UniffiLib : Library {
         `ptr`: Pointer,
         `invoice`: Pointer,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1070,6 +1071,7 @@ internal interface UniffiLib : Library {
         `invoice`: Pointer,
         `amountMsat`: Long,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1211,6 +1213,7 @@ internal interface UniffiLib : Library {
         `quantity`: RustBuffer.ByValue,
         `payerNote`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
 
@@ -1247,6 +1250,7 @@ internal interface UniffiLib : Library {
         `quantity`: RustBuffer.ByValue,
         `payerNote`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1257,6 +1261,7 @@ internal interface UniffiLib : Library {
         `quantity`: RustBuffer.ByValue,
         `payerNote`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2193,6 +2198,7 @@ internal interface UniffiLib : Library {
         `amountMsat`: Long,
         `nodeId`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2209,6 +2215,7 @@ internal interface UniffiLib : Library {
         `nodeId`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
         `customTlvs`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2218,6 +2225,7 @@ internal interface UniffiLib : Library {
         `nodeId`: RustBuffer.ByValue,
         `preimage`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2228,6 +2236,7 @@ internal interface UniffiLib : Library {
         `customTlvs`: RustBuffer.ByValue,
         `preimage`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2253,6 +2262,7 @@ internal interface UniffiLib : Library {
         `ptr`: Pointer,
         `uriStr`: RustBuffer.ByValue,
         `routeParameters`: RustBuffer.ByValue,
+        `paymentTimeoutSecs`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2981,7 +2991,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 12953.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 53480.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes() != 19286.toShort()) {
@@ -2990,7 +3000,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount() != 5976.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 42793.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 5087.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds() != 28589.toShort()) {
@@ -3056,7 +3066,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient() != 14695.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 15019.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 7581.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive() != 59252.toShort()) {
@@ -3071,10 +3081,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment() != 43248.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send() != 27679.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send() != 28842.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 33255.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 51025.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server() != 20921.toShort()) {
@@ -3422,25 +3432,25 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_refund_refund_description() != 39295.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 27905.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 28477.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes() != 25937.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 17876.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 42451.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 30854.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 64194.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 12104.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 22212.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_unifiedqrpayment_receive() != 913.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_unifiedqrpayment_send() != 28285.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_unifiedqrpayment_send() != 40901.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers() != 7788.toShort()) {
@@ -4416,6 +4426,7 @@ public interface Bolt11PaymentInterface {
     fun `send`(
         `invoice`: Bolt11Invoice,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `sendProbes`(
@@ -4433,6 +4444,7 @@ public interface Bolt11PaymentInterface {
         `invoice`: Bolt11Invoice,
         `amountMsat`: kotlin.ULong,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     companion object
@@ -4723,6 +4735,7 @@ open class Bolt11Payment :
     override fun `send`(
         `invoice`: Bolt11Invoice,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -4731,6 +4744,7 @@ open class Bolt11Payment :
                         it,
                         FfiConverterTypeBolt11Invoice.lower(`invoice`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -4774,6 +4788,7 @@ open class Bolt11Payment :
         `invoice`: Bolt11Invoice,
         `amountMsat`: kotlin.ULong,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -4783,6 +4798,7 @@ open class Bolt11Payment :
                         FfiConverterTypeBolt11Invoice.lower(`invoice`),
                         FfiConverterULong.lower(`amountMsat`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -5369,6 +5385,7 @@ public interface Bolt12PaymentInterface {
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): Refund
 
     fun `receive`(
@@ -5392,6 +5409,7 @@ public interface Bolt12PaymentInterface {
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `sendUsingAmount`(
@@ -5400,6 +5418,7 @@ public interface Bolt12PaymentInterface {
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray)
@@ -5512,6 +5531,7 @@ open class Bolt12Payment :
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): Refund =
         FfiConverterTypeRefund.lift(
             callWithPointer {
@@ -5523,6 +5543,7 @@ open class Bolt12Payment :
                         FfiConverterOptionalULong.lower(`quantity`),
                         FfiConverterOptionalString.lower(`payerNote`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -5599,6 +5620,7 @@ open class Bolt12Payment :
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -5609,6 +5631,7 @@ open class Bolt12Payment :
                         FfiConverterOptionalULong.lower(`quantity`),
                         FfiConverterOptionalString.lower(`payerNote`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -5622,6 +5645,7 @@ open class Bolt12Payment :
         `quantity`: kotlin.ULong?,
         `payerNote`: kotlin.String?,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -5633,6 +5657,7 @@ open class Bolt12Payment :
                         FfiConverterOptionalULong.lower(`quantity`),
                         FfiConverterOptionalString.lower(`payerNote`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -10156,6 +10181,7 @@ public interface SpontaneousPaymentInterface {
         `amountMsat`: kotlin.ULong,
         `nodeId`: PublicKey,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `sendProbes`(
@@ -10168,6 +10194,7 @@ public interface SpontaneousPaymentInterface {
         `nodeId`: PublicKey,
         `routeParameters`: RouteParametersConfig?,
         `customTlvs`: List<CustomTlvRecord>,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `sendWithPreimage`(
@@ -10175,6 +10202,7 @@ public interface SpontaneousPaymentInterface {
         `nodeId`: PublicKey,
         `preimage`: PaymentPreimage,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     fun `sendWithPreimageAndCustomTlvs`(
@@ -10183,6 +10211,7 @@ public interface SpontaneousPaymentInterface {
         `customTlvs`: List<CustomTlvRecord>,
         `preimage`: PaymentPreimage,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId
 
     companion object
@@ -10277,6 +10306,7 @@ open class SpontaneousPayment :
         `amountMsat`: kotlin.ULong,
         `nodeId`: PublicKey,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -10286,6 +10316,7 @@ open class SpontaneousPayment :
                         FfiConverterULong.lower(`amountMsat`),
                         FfiConverterTypePublicKey.lower(`nodeId`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -10313,6 +10344,7 @@ open class SpontaneousPayment :
         `nodeId`: PublicKey,
         `routeParameters`: RouteParametersConfig?,
         `customTlvs`: List<CustomTlvRecord>,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -10323,6 +10355,7 @@ open class SpontaneousPayment :
                         FfiConverterTypePublicKey.lower(`nodeId`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
                         FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -10335,6 +10368,7 @@ open class SpontaneousPayment :
         `nodeId`: PublicKey,
         `preimage`: PaymentPreimage,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -10345,6 +10379,7 @@ open class SpontaneousPayment :
                         FfiConverterTypePublicKey.lower(`nodeId`),
                         FfiConverterTypePaymentPreimage.lower(`preimage`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -10358,6 +10393,7 @@ open class SpontaneousPayment :
         `customTlvs`: List<CustomTlvRecord>,
         `preimage`: PaymentPreimage,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): PaymentId =
         FfiConverterTypePaymentId.lift(
             callWithPointer {
@@ -10369,6 +10405,7 @@ open class SpontaneousPayment :
                         FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),
                         FfiConverterTypePaymentPreimage.lower(`preimage`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }
@@ -10511,6 +10548,7 @@ public interface UnifiedQrPaymentInterface {
     fun `send`(
         `uriStr`: kotlin.String,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): QrPaymentResult
 
     companion object
@@ -10624,6 +10662,7 @@ open class UnifiedQrPayment :
     override fun `send`(
         `uriStr`: kotlin.String,
         `routeParameters`: RouteParametersConfig?,
+        `paymentTimeoutSecs`: kotlin.ULong?,
     ): QrPaymentResult =
         FfiConverterTypeQrPaymentResult.lift(
             callWithPointer {
@@ -10632,6 +10671,7 @@ open class UnifiedQrPayment :
                         it,
                         FfiConverterString.lower(`uriStr`),
                         FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterOptionalULong.lower(`paymentTimeoutSecs`),
                         _status,
                     )
                 }

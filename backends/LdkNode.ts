@@ -1251,6 +1251,9 @@ export default class LdkNode {
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
+            : undefined;
 
         let paymentId: string;
 
@@ -1259,13 +1262,15 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
         } else {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11({
                 invoice: data.payment_request,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
         }
 
@@ -1291,13 +1296,17 @@ export default class LdkNode {
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
+            : undefined;
 
         const paymentId =
             await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
                 nodeId: pubkey,
                 amountMsat: amt * 1000,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
 
         const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);

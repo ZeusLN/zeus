@@ -861,13 +861,13 @@ public protocol Bolt11PaymentProtocol : AnyObject {
     
     func receiveViaJitChannelForHash(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, maxLspFeeLimitMsat: UInt64?, paymentHash: PaymentHash) throws  -> Bolt11Invoice
     
-    func send(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func send(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
     func sendProbes(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?) throws 
     
     func sendProbesUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, routeParameters: RouteParametersConfig?) throws 
     
-    func sendUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func sendUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
 }
 
@@ -1021,11 +1021,12 @@ open func receiveViaJitChannelForHash(amountMsat: UInt64, description: Bolt11Inv
 })
 }
     
-open func send(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func send(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt11payment_send(self.uniffiClonePointer(),
         FfiConverterTypeBolt11Invoice.lower(invoice),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -1047,12 +1048,13 @@ open func sendProbesUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, rout
 }
 }
     
-open func sendUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func sendUsingAmount(invoice: Bolt11Invoice, amountMsat: UInt64, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(self.uniffiClonePointer(),
         FfiConverterTypeBolt11Invoice.lower(invoice),
         FfiConverterUInt64.lower(amountMsat),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -1417,7 +1419,7 @@ public protocol Bolt12PaymentProtocol : AnyObject {
     
     func blindedPathsForAsyncRecipient(recipientId: Data) throws  -> Data
     
-    func initiateRefund(amountMsat: UInt64, expirySecs: UInt32, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?) throws  -> Refund
+    func initiateRefund(amountMsat: UInt64, expirySecs: UInt32, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> Refund
     
     func receive(amountMsat: UInt64, description: String, expirySecs: UInt32?, quantity: UInt64?) throws  -> Offer
     
@@ -1427,9 +1429,9 @@ public protocol Bolt12PaymentProtocol : AnyObject {
     
     func requestRefundPayment(refund: Refund) throws  -> Bolt12Invoice
     
-    func send(offer: Offer, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func send(offer: Offer, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
-    func sendUsingAmount(offer: Offer, amountMsat: UInt64, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func sendUsingAmount(offer: Offer, amountMsat: UInt64, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
     func setPathsToStaticInvoiceServer(paths: Data) throws 
     
@@ -1493,14 +1495,15 @@ open func blindedPathsForAsyncRecipient(recipientId: Data)throws  -> Data {
 })
 }
     
-open func initiateRefund(amountMsat: UInt64, expirySecs: UInt32, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?)throws  -> Refund {
+open func initiateRefund(amountMsat: UInt64, expirySecs: UInt32, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> Refund {
     return try  FfiConverterTypeRefund.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterUInt32.lower(expirySecs),
         FfiConverterOptionUInt64.lower(quantity),
         FfiConverterOptionString.lower(payerNote),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -1540,25 +1543,27 @@ open func requestRefundPayment(refund: Refund)throws  -> Bolt12Invoice {
 })
 }
     
-open func send(offer: Offer, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func send(offer: Offer, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt12payment_send(self.uniffiClonePointer(),
         FfiConverterTypeOffer.lower(offer),
         FfiConverterOptionUInt64.lower(quantity),
         FfiConverterOptionString.lower(payerNote),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
     
-open func sendUsingAmount(offer: Offer, amountMsat: UInt64, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func sendUsingAmount(offer: Offer, amountMsat: UInt64, quantity: UInt64?, payerNote: String?, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(self.uniffiClonePointer(),
         FfiConverterTypeOffer.lower(offer),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterOptionUInt64.lower(quantity),
         FfiConverterOptionString.lower(payerNote),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -4182,15 +4187,15 @@ public func FfiConverterTypeRefund_lower(_ value: Refund) -> UnsafeMutableRawPoi
 
 public protocol SpontaneousPaymentProtocol : AnyObject {
     
-    func send(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func send(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
     func sendProbes(amountMsat: UInt64, nodeId: PublicKey) throws 
     
-    func sendWithCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, customTlvs: [CustomTlvRecord]) throws  -> PaymentId
+    func sendWithCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, customTlvs: [CustomTlvRecord], paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
-    func sendWithPreimage(amountMsat: UInt64, nodeId: PublicKey, preimage: PaymentPreimage, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func sendWithPreimage(amountMsat: UInt64, nodeId: PublicKey, preimage: PaymentPreimage, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
-    func sendWithPreimageAndCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, customTlvs: [CustomTlvRecord], preimage: PaymentPreimage, routeParameters: RouteParametersConfig?) throws  -> PaymentId
+    func sendWithPreimageAndCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, customTlvs: [CustomTlvRecord], preimage: PaymentPreimage, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
 }
 
@@ -4244,12 +4249,13 @@ open class SpontaneousPayment:
     
 
     
-open func send(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func send(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_spontaneouspayment_send(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterTypePublicKey.lower(nodeId),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -4262,36 +4268,39 @@ open func sendProbes(amountMsat: UInt64, nodeId: PublicKey)throws  {try rustCall
 }
 }
     
-open func sendWithCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, customTlvs: [CustomTlvRecord])throws  -> PaymentId {
+open func sendWithCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, routeParameters: RouteParametersConfig?, customTlvs: [CustomTlvRecord], paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
-        FfiConverterSequenceTypeCustomTlvRecord.lower(customTlvs),$0
+        FfiConverterSequenceTypeCustomTlvRecord.lower(customTlvs),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
     
-open func sendWithPreimage(amountMsat: UInt64, nodeId: PublicKey, preimage: PaymentPreimage, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func sendWithPreimage(amountMsat: UInt64, nodeId: PublicKey, preimage: PaymentPreimage, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterTypePaymentPreimage.lower(preimage),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
     
-open func sendWithPreimageAndCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, customTlvs: [CustomTlvRecord], preimage: PaymentPreimage, routeParameters: RouteParametersConfig?)throws  -> PaymentId {
+open func sendWithPreimageAndCustomTlvs(amountMsat: UInt64, nodeId: PublicKey, customTlvs: [CustomTlvRecord], preimage: PaymentPreimage, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> PaymentId {
     return try  FfiConverterTypePaymentId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterSequenceTypeCustomTlvRecord.lower(customTlvs),
         FfiConverterTypePaymentPreimage.lower(preimage),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -4357,7 +4366,7 @@ public protocol UnifiedQrPaymentProtocol : AnyObject {
     
     func receive(amountSats: UInt64, message: String, expirySec: UInt32) throws  -> String
     
-    func send(uriStr: String, routeParameters: RouteParametersConfig?) throws  -> QrPaymentResult
+    func send(uriStr: String, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> QrPaymentResult
     
 }
 
@@ -4421,11 +4430,12 @@ open func receive(amountSats: UInt64, message: String, expirySec: UInt32)throws 
 })
 }
     
-open func send(uriStr: String, routeParameters: RouteParametersConfig?)throws  -> QrPaymentResult {
+open func send(uriStr: String, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?)throws  -> QrPaymentResult {
     return try  FfiConverterTypeQrPaymentResult.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_unifiedqrpayment_send(self.uniffiClonePointer(),
         FfiConverterString.lower(uriStr),
-        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),$0
+        FfiConverterOptionTypeRouteParametersConfig.lower(routeParameters),
+        FfiConverterOptionUInt64.lower(paymentTimeoutSecs),$0
     )
 })
 }
@@ -13137,7 +13147,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt11payment_send() != 12953) {
+    if (uniffi_ldk_node_checksum_method_bolt11payment_send() != 53480) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt11payment_send_probes() != 19286) {
@@ -13146,7 +13156,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount() != 5976) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 42793) {
+    if (uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 5087) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds() != 28589) {
@@ -13212,7 +13222,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient() != 14695) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 15019) {
+    if (uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 7581) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt12payment_receive() != 59252) {
@@ -13227,10 +13237,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment() != 43248) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt12payment_send() != 27679) {
+    if (uniffi_ldk_node_checksum_method_bolt12payment_send() != 28842) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 33255) {
+    if (uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 51025) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server() != 20921) {
@@ -13578,25 +13588,25 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_refund_refund_description() != 39295) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 27905) {
+    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 28477) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes() != 25937) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 17876) {
+    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 42451) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 30854) {
+    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 64194) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 12104) {
+    if (uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 22212) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_unifiedqrpayment_receive() != 913) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_unifiedqrpayment_send() != 28285) {
+    if (uniffi_ldk_node_checksum_method_unifiedqrpayment_send() != 40901) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers() != 7788) {

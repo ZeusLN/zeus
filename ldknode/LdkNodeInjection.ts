@@ -439,16 +439,19 @@ const receiveVariableAmountBolt11 = async ({
 const sendBolt11 = async ({
     invoice,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     invoice: string;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendBolt11(
         invoice,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.paymentId;
 };
@@ -457,18 +460,21 @@ const sendBolt11UsingAmount = async ({
     invoice,
     amountMsat,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     invoice: string;
     amountMsat: number;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendBolt11UsingAmount(
         invoice,
         amountMsat,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.paymentId;
 };
@@ -520,18 +526,21 @@ const sendSpontaneousPayment = async ({
     nodeId,
     amountMsat,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     nodeId: string;
     amountMsat: number;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendSpontaneousPayment(
         nodeId,
         amountMsat,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.paymentId;
 };
@@ -573,18 +582,21 @@ const bolt12Send = async ({
     offer,
     payerNote,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     offer: string;
     payerNote?: string | null;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result = await LdkNodeModule.bolt12Send(
         offer,
         payerNote ?? null,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.paymentId;
 };
@@ -594,20 +606,23 @@ const bolt12SendUsingAmount = async ({
     amountMsat,
     payerNote,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     offer: string;
     amountMsat: number;
     payerNote?: string | null;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result = await LdkNodeModule.bolt12SendUsingAmount(
         offer,
         amountMsat,
         payerNote ?? null,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.paymentId;
 };
@@ -616,18 +631,21 @@ const bolt12InitiateRefund = async ({
     amountMsat,
     expirySecs,
     maxTotalRoutingFeeMsat,
-    maxPathCount
+    maxPathCount,
+    paymentTimeoutSecs
 }: {
     amountMsat: number;
     expirySecs: number;
     maxTotalRoutingFeeMsat?: number;
     maxPathCount?: number;
+    paymentTimeoutSecs?: number;
 }): Promise<string> => {
     const result = await LdkNodeModule.bolt12InitiateRefund(
         amountMsat,
         expirySecs,
         maxTotalRoutingFeeMsat ?? -1,
-        maxPathCount ?? -1
+        maxPathCount ?? -1,
+        paymentTimeoutSecs ?? -1
     );
     return result.refund;
 };
@@ -1112,12 +1130,14 @@ export interface ILdkNodeInjections {
             invoice: string;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
         sendBolt11UsingAmount: (params: {
             invoice: string;
             amountMsat: number;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
         sendBolt11Probes: (params: {
             invoice: string;
@@ -1137,6 +1157,7 @@ export interface ILdkNodeInjections {
             amountMsat: number;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
     };
     bolt12: {
@@ -1154,6 +1175,7 @@ export interface ILdkNodeInjections {
             payerNote?: string | null;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
         bolt12SendUsingAmount: (params: {
             offer: string;
@@ -1161,12 +1183,14 @@ export interface ILdkNodeInjections {
             payerNote?: string | null;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
         bolt12InitiateRefund: (params: {
             amountMsat: number;
             expirySecs: number;
             maxTotalRoutingFeeMsat?: number;
             maxPathCount?: number;
+            paymentTimeoutSecs?: number;
         }) => Promise<string>;
         bolt12RequestRefundPayment: (refundStr: string) => Promise<string>;
     };
