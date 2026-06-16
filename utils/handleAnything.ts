@@ -2,7 +2,12 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
+import {
+    nodeInfoStore,
+    invoicesStore,
+    settingsStore,
+    brantaStore
+} from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -220,8 +225,15 @@ const handleAnything = async (
     const network = getNetworkString();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    let { value, satAmount, lightning, offer, clinkNoffer }: any =
-        AddressUtils.processBIP21Uri(data);
+    let {
+        value,
+        satAmount,
+        lightning,
+        offer,
+        clinkNoffer,
+        brantaId,
+        brantaSecret
+    }: any = AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
         (value && lightning) ||
@@ -348,13 +360,20 @@ const handleAnything = async (
         )
     ) {
         if (isClipboardValue) return true;
+
+        let brantaVerification = null;
+        if (brantaId && brantaSecret) {
+            brantaVerification = await brantaStore.verifyPayment(data);
+        }
+
         return [
             'Send',
             {
                 destination: value,
                 satAmount,
                 transactionType: 'On-chain',
-                isValid: true
+                isValid: true,
+                brantaVerification
             }
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
