@@ -1919,6 +1919,11 @@
     "@noble/hashes" "^1.1.5"
     "@noble/secp256k1" "^1.7.1"
 
+"@branta-ops/branta@^3.1.3":
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/@branta-ops/branta/-/branta-3.1.3.tgz#fed87952a0ef3d95f1b71dbb760d52a16b763fb6"
+  integrity sha512-rcyDBYnYD+cmvQWylJ+n3JdR65FiHP1tVPtWQMhKLmcXx56czL8Ez7+I9jy7pmLBIVwP6mS1EsUqSrvQi22v1w==
+
 "@eggjs/yauzl@^2.11.0":
   version "2.11.0"
   resolved "https://registry.yarnpkg.com/@eggjs/yauzl/-/yauzl-2.11.0.tgz#b8e4413f50fc7c51451f770f152de4c1137aa99b"
