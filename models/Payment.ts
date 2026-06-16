@@ -328,11 +328,18 @@ export default class Payment extends BaseModel {
                             const pubKey = hop.pub_key;
                             const alias = nodes[pubKey]?.alias;
                             const nodeLabel = alias || pubKey;
+                            // Prefer the msat fields. lnrpc.Hop.amt_to_forward
+                            // (sats) is deprecated and is scheduled for
+                            // removal in lnd v0.22; the non-msat fallback
+                            // only matters for non-LND backends.
                             const enhancedHop = {
                                 alias,
                                 pubKey,
                                 node: nodeLabel,
-                                forwarded: hop.amt_to_forward,
+                                forwarded:
+                                    hop.amt_to_forward_msat !== undefined
+                                        ? Number(hop.amt_to_forward_msat) / 1000
+                                        : hop.amt_to_forward,
                                 fee: hop.fee_msat
                                     ? Number(hop.fee_msat) / 1000
                                     : 0
