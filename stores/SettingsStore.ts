@@ -177,6 +177,10 @@ interface EcashSettings {
     initialMintUrls?: string[];
 }
 
+interface BrantaSettings {
+    enabled: boolean;
+}
+
 interface SwapsSettings {
     hostMainnet: string;
     hostTestnet: string;
@@ -255,6 +259,7 @@ export interface Settings {
     selectNodeOnStartup: boolean;
     ecash: EcashSettings;
     networking?: NetworkingSettings;
+    branta: BrantaSettings;
 }
 
 interface NetworkingSettings {
@@ -1609,7 +1614,10 @@ export default class SettingsStore {
         networking: {
             disableOfflineCheck: false
         },
-        selectNodeOnStartup: false
+        selectNodeOnStartup: false,
+        branta: {
+            enabled: true
+        }
     };
     @observable public posStatus: string = 'unselected';
     @observable public posWasEnabled: boolean = false;
