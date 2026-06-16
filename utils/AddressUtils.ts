@@ -29,13 +29,15 @@ const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* BIP-21 */
 const bip21Uri =
-    /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*)))*))?/;
+    /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER|ndebit|NDEBIT)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER|ndebit|NDEBIT)=([^&]*)))*))?/;
 
 /* BOLT 12 */
 const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 
 /* CLINK noffer — Nostr Offer (https://github.com/shocknet/clink) */
 const noffer = /^(?:noffer1[02-9ac-hj-np-z]{6,}|NOFFER1[02-9AC-HJ-NP-Z]{6,})$/;
+/* CLINK ndebit — Nostr Debit pointer (https://github.com/shocknet/clink) */
+const ndebit = /^(?:ndebit1[02-9ac-hj-np-z]{6,}|NDEBIT1[02-9AC-HJ-NP-Z]{6,})$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
@@ -86,7 +88,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let satAmount, lightning, offer, clinkNoffer;
+    let satAmount, lightning, offer, clinkNoffer, clinkNdebit;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -117,12 +119,16 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         clinkNoffer = result.noffer || result.NOFFER;
     }
 
-    return [value, satAmount, lightning, offer, clinkNoffer];
+    if (result.ndebit || result.NDEBIT) {
+        clinkNdebit = result.ndebit || result.NDEBIT;
+    }
+
+    return [value, satAmount, lightning, offer, clinkNoffer, clinkNdebit];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, satAmount, lightning, offer, clinkNoffer;
+        let value, satAmount, lightning, offer, clinkNoffer, clinkNdebit;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
@@ -134,7 +140,8 @@ class AddressUtils {
                 parsedSatAmount,
                 parsedLightning,
                 parsedOffer,
-                parsedClinkNoffer
+                parsedClinkNoffer,
+                parsedClinkNdebit
             ] = bitcoinQrParser(
                 input,
                 input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
@@ -156,6 +163,10 @@ class AddressUtils {
             if (parsedClinkNoffer) {
                 clinkNoffer = parsedClinkNoffer;
             }
+
+            if (parsedClinkNdebit) {
+                clinkNdebit = parsedClinkNdebit;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -166,7 +177,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, satAmount, lightning, offer, clinkNoffer };
+        return { value, satAmount, lightning, offer, clinkNoffer, clinkNdebit };
     };
 
     processLNDHubAddress = (input: string) => {
@@ -214,6 +225,7 @@ class AddressUtils {
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
     isValidLightningOffer = (input: string) => lnOffer.test(input);
     isValidNoffer = (input: string) => noffer.test(input);
+    isValidNdebit = (input: string) => ndebit.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 
