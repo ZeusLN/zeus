@@ -33,6 +33,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import AmountInput from '../components/AmountInput';
+import BrantaVerificationComponent from '../components/BrantaVerification';
 import Button from '../components/Button';
 import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import FeeLimit from '../components/FeeLimit';
@@ -720,7 +721,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             utxos,
             nfcSupported,
             timeoutSeconds,
-            fiatError
+            fiatError,
+            brantaVerification
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -888,6 +890,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     marginBottom: 10
                                 }}
                             />
+                            {brantaVerification && (
+                                <BrantaVerificationComponent
+                                    verification={brantaVerification}
+                                />
+                            )}
                         </>
                     ) : (
                         <>
