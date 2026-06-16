@@ -86,12 +86,16 @@ export default class CurrencyConverterContent extends React.Component<
     }
 
     componentDidMount() {
+        // Fetch rates on entry only if we don't already have them.
+        if (isEmpty(this.props.FiatStore?.fiatRates)) {
+            this.props.FiatStore?.getFiatRates?.();
+        }
         this.retrieveInputValues();
         this.addDefaultCurrenciesToStorage();
     }
 
     componentDidUpdate(
-        _prevProps: CurrencyConverterContentProps,
+        prevProps: CurrencyConverterContentProps,
         prevState: CurrencyConverterContentState
     ) {
         const { onInputValuesChanged } = this.props;
@@ -101,7 +105,26 @@ export default class CurrencyConverterContent extends React.Component<
         ) {
             onInputValuesChanged(Object.keys(this.state.inputValues).length);
         }
+        // Backfill  fields once rates arrive (e.g. user typed BTC before rates loaded).
+        if (
+            isEmpty(prevProps.FiatStore?.fiatRates) &&
+            !isEmpty(this.props.FiatStore?.fiatRates)
+        ) {
+            this.syncConversions();
+        }
     }
+
+    syncConversions = () => {
+        if (isEmpty(this.props.FiatStore?.fiatRates)) return;
+
+        const { inputValues } = this.state;
+        const source = Object.keys(inputValues).find(
+            (key) => inputValues[key].replace(/,/g, '').trim() !== ''
+        );
+        if (!source) return;
+
+        this.handleInputChange(inputValues[source], source);
+    };
 
     public addCurrency = (currency: string) => {
         this.handleCurrencySelect(currency);
@@ -135,7 +158,9 @@ export default class CurrencyConverterContent extends React.Component<
             }
 
             await Storage.setItem(CURRENCY_CODES_KEY, existingInputValues);
-            this.setState({ inputValues: existingInputValues });
+            this.setState({ inputValues: existingInputValues }, () => {
+                this.syncConversions();
+            });
         } catch (error) {
             console.error('Error adding default currencies:', error);
         }
@@ -154,7 +179,9 @@ export default class CurrencyConverterContent extends React.Component<
             const inputValuesString = await Storage.getItem(CURRENCY_CODES_KEY);
             if (inputValuesString) {
                 const inputValues = JSON.parse(inputValuesString);
-                this.setState({ inputValues });
+                this.setState({ inputValues }, () => {
+                    this.syncConversions();
+                });
             }
         } catch (error) {
             console.error('Error retrieving input values:', error);
@@ -168,6 +195,7 @@ export default class CurrencyConverterContent extends React.Component<
             const updatedInputValues = { ...inputValues, [currency]: '' };
             this.setState({ inputValues: updatedInputValues }, () => {
                 this.saveInputValues();
+                this.syncConversions();
             });
         }
     };
@@ -454,7 +482,7 @@ export default class CurrencyConverterContent extends React.Component<
                             <AddButton />
                         </Row>
                     )}
-                    {loading && (
+                    {loading && ratesNotFetched && (
                         <View style={{ flex: 1, padding: 15 }}>
                             <LoadingIndicator />
                         </View>
