@@ -1,9 +1,9 @@
 import { action, observable, runInAction } from 'mobx';
 import { BrantaServerBaseUrl, PrivacyMode } from '@branta-ops/branta';
+// @ts-ignore: module resolution workaround for subpath export
+import { BrantaService } from '@branta-ops/branta/v2';
 
 import SettingsStore from './SettingsStore';
-
-const { BrantaService } = require('@branta-ops/branta/v2');
 
 interface Payment {
     description?: string;
@@ -40,7 +40,7 @@ export default class BrantaStore {
     @observable public loading: boolean = false;
 
     settingsStore: SettingsStore;
-    private service: InstanceType<typeof BrantaService>;
+    private service: BrantaService;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
@@ -77,7 +77,11 @@ export default class BrantaStore {
 
             const payment: Payment = result.payments[0];
 
-            if (!payment.platform || !payment.platformLogoUrl) {
+            if (
+                !payment.platform ||
+                !payment.platformLogoUrl ||
+                !result.verifyUrl
+            ) {
                 runInAction(() => {
                     this.loading = false;
                     this.verification = null;
