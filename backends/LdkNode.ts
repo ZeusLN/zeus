@@ -1274,7 +1274,10 @@ export default class LdkNode {
             });
         }
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1309,7 +1312,10 @@ export default class LdkNode {
                 paymentTimeoutSecs
             });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1690,7 +1696,10 @@ export default class LdkNode {
             paymentTimeoutSecs
         });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1776,10 +1785,16 @@ export default class LdkNode {
      * Returns the completed payment or throws on failure/timeout.
      */
     private awaitPaymentCompletion = async (
-        paymentId: string
+        paymentId: string,
+        paymentTimeoutSecs?: number
     ): Promise<{ hash: string; preimage: string }> => {
-        const maxAttempts = 60;
         const delayMs = 1000;
+        // Size polling to LDK's timeout plus a small grace period so the
+        // terminal PaymentFailed/PaymentSuccessful event can land before we
+        // give up — otherwise the UI can show failure while LDK is still
+        // routing, risking a double-pay on keysend/BOLT12.
+        const timeoutSecs = paymentTimeoutSecs ?? 60;
+        const maxAttempts = timeoutSecs + 5;
         let payment = null;
         let failureReason: PaymentFailureReason | undefined;
 
