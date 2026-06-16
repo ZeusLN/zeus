@@ -171,7 +171,8 @@ describe('handleAnything', () => {
                     destination: 'some address',
                     satAmount: 123,
                     transactionType: 'On-chain',
-                    isValid: true
+                    isValid: true,
+                    brantaVerification: null
                 }
             ]);
         });
