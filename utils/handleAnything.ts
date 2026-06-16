@@ -362,7 +362,11 @@ const handleAnything = async (
         if (isClipboardValue) return true;
 
         let brantaVerification = null;
-        if (brantaId && brantaSecret) {
+        if (
+            brantaId &&
+            brantaSecret &&
+            settingsStore?.settings?.branta?.enabled !== false
+        ) {
             brantaVerification = await brantaStore.verifyPayment(data);
         }
 
