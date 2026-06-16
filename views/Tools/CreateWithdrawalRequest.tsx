@@ -18,6 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import ModalStore from '../../stores/ModalStore';
+import SettingsStore from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -32,6 +33,7 @@ interface CreateWithdrawalRequestProps {
     ChannelsStore: ChannelsStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
+    SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }
 
@@ -44,9 +46,16 @@ interface CreateWithdrawalRequestState {
     loading: boolean;
     error_msg: string | null;
     withdrawalRequestCreationError: boolean;
+    timeoutSeconds: string;
 }
 
-@inject('ChannelsStore', 'InvoicesStore', 'ModalStore', 'UnitsStore')
+@inject(
+    'ChannelsStore',
+    'InvoicesStore',
+    'ModalStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class CreateWithdrawalRequest extends Component<
     CreateWithdrawalRequestProps,
@@ -62,8 +71,16 @@ export default class CreateWithdrawalRequest extends Component<
             showQR: false,
             loading: false,
             error_msg: null,
-            withdrawalRequestCreationError: false
+            withdrawalRequestCreationError: false,
+            timeoutSeconds: '60'
         };
+    }
+
+    async componentDidMount() {
+        const settings = await this.props.SettingsStore.getSettings();
+        this.setState({
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
+        });
     }
 
     handleInputChange = (key: 'amount' | 'description', value: string) => {
@@ -98,12 +115,13 @@ export default class CreateWithdrawalRequest extends Component<
     };
 
     generateInvoice = async () => {
-        const { description, satsAmount } = this.state;
+        const { description, satsAmount, timeoutSeconds } = this.state;
         this.setState({ loading: true, error_msg: null }, async () => {
             try {
                 const response = await BackendUtils.createWithdrawalRequest({
                     amount: satsAmount,
-                    description
+                    description,
+                    timeoutSeconds
                 });
 
                 if (response && response.bolt12) {
@@ -139,8 +157,10 @@ export default class CreateWithdrawalRequest extends Component<
     };
 
     render() {
-        const { navigation, ChannelsStore, ModalStore } = this.props;
-        const { amount, description, satsAmount } = this.state;
+        const { navigation, ChannelsStore, ModalStore, SettingsStore } =
+            this.props;
+        const { amount, description, satsAmount, timeoutSeconds } = this.state;
+        const isLdkNode = SettingsStore.implementation === 'ldk-node';
         const hasBalance = ChannelsStore.totalOutbound > 0;
         const disabled =
             !description || !amount || this.state.loading || !hasBalance;
@@ -284,6 +304,29 @@ export default class CreateWithdrawalRequest extends Component<
                                     }
                                 />
                             </View>
+
+                            {isLdkNode && (
+                                <View style={{ paddingBottom: 15 }}>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Payments.timeoutSeconds'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={timeoutSeconds}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                timeoutSeconds: text
+                                            })
+                                        }
+                                    />
+                                </View>
+                            )}
 
                             <View style={{ paddingTop: 10 }}>
                                 <Button

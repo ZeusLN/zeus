@@ -1677,11 +1677,17 @@ export default class LdkNode {
 
     fetchInvoiceFromOffer = async (
         bolt12: string,
-        amountSatoshis: string
+        amountSatoshis: string,
+        timeoutSeconds?: number | string
     ): Promise<any> => {
+        const paymentTimeoutSecs = timeoutSeconds
+            ? Number(timeoutSeconds)
+            : undefined;
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: bolt12,
-            amountMsat: Number(amountSatoshis) * 1000
+            amountMsat: Number(amountSatoshis) * 1000,
+            paymentTimeoutSecs
         });
 
         const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
@@ -1695,14 +1701,21 @@ export default class LdkNode {
 
     createWithdrawalRequest = async ({
         amount,
-        description: _description
+        description: _description,
+        timeoutSeconds
     }: {
         amount: string;
         description: string;
+        timeoutSeconds?: number | string;
     }): Promise<any> => {
+        const paymentTimeoutSecs = timeoutSeconds
+            ? Number(timeoutSeconds)
+            : undefined;
+
         const refundStr = await LdkNodeInjection.bolt12.bolt12InitiateRefund({
             amountMsat: Number(amount) * 1000,
-            expirySecs: 3600
+            expirySecs: 3600,
+            paymentTimeoutSecs
         });
 
         return { bolt12: refundStr };
