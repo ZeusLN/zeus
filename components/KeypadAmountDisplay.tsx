@@ -141,7 +141,8 @@ export default class KeypadAmountDisplay extends React.Component<
         formattedNumber: string,
         textColor: Animated.AnimatedInterpolation<string> | string,
         fontSize: number,
-        lineHeight: number
+        lineHeight: number,
+        isPlaceholderZero: boolean
     ) {
         let digitIndex = 0;
         const textStyle = {
@@ -154,6 +155,23 @@ export default class KeypadAmountDisplay extends React.Component<
             if (isDigit) {
                 const key = `digit_${digitIndex}`;
                 digitIndex++;
+                if (isPlaceholderZero) {
+                    return (
+                        <View
+                            key={key}
+                            style={{
+                                height: lineHeight,
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Animated.Text
+                                style={[textStyle, { color: textColor }]}
+                            >
+                                {char}
+                            </Animated.Text>
+                        </View>
+                    );
+                }
                 return (
                     <AnimatedDigit
                         key={key}
@@ -313,7 +331,8 @@ export default class KeypadAmountDisplay extends React.Component<
                                 formattedNumber,
                                 textColor,
                                 scaledFontSize,
-                                scaledLineHeight
+                                scaledLineHeight,
+                                amount === '0'
                             )}
                             {this.state.exitingDigit ? (
                                 <AnimatedDigit
