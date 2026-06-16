@@ -107,6 +107,7 @@ interface SendState {
     maxShardAmt: string;
     feeLimitSat: string;
     maxFeePercent: string;
+    timeoutSeconds: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
@@ -180,6 +181,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt: '',
             feeLimitSat: '100',
             maxFeePercent: '5.0',
+            timeoutSeconds: '60',
             message: '',
             enableAtomicMultiPathPayment: false,
             clipboard: '',
@@ -304,7 +306,11 @@ export default class Send extends React.Component<SendProps, SendState> {
     async componentDidMount() {
         const { SettingsStore, route } = this.props;
         const { getSettings } = SettingsStore;
-        await getSettings();
+        const settings = await getSettings();
+
+        this.setState({
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
+        });
 
         if (route.params?.fromGraphSync) {
             clearPendingPaymentData().catch((error) => {
@@ -479,7 +485,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        const { satAmount, bolt12 } = this.state;
+        const { satAmount, bolt12, timeoutSeconds } = this.state;
         if (!bolt12) {
             this.setState({
                 loading: false,
@@ -506,7 +512,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 // grok out overstring from Bitcoin URI
                 // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
                 split[1] || bolt12,
-                satAmount
+                satAmount,
+                timeoutSeconds
             );
             if (res.payment_hash) {
                 // LDK Node: payment already completed directly
@@ -720,7 +727,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account,
             validAmountToSwap,
             utxos,
-            nfcSupported
+            nfcSupported,
+            timeoutSeconds
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -1387,6 +1395,25 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             satAmount
                                         });
                                     }}
+                                />
+                                <Text
+                                    style={{
+                                        ...styles.label,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.timeoutSeconds'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={timeoutSeconds}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            timeoutSeconds: text
+                                        })
+                                    }
                                 />
                             </React.Fragment>
                         )}

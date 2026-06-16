@@ -6,6 +6,7 @@ EMBEDDED_LND_VERSION=$(jq "['embedded-lnd']['version']")
 EMBEDDED_LND_ANDROID_SHA256=$(jq "['embedded-lnd']['androidSha256']")
 EMBEDDED_LND_IOS_SHA256=$(jq "['embedded-lnd']['iosSha256']")
 LDK_NODE_VERSION=$(jq "['ldk-node']['version']")
+LDK_NODE_ANDROID_SHA256=$(jq "['ldk-node']['androidSha256']")
 LDK_NODE_IOS_SHA256=$(jq "['ldk-node']['iosSha256']")
 CDK_VERSION=$(jq "['cdk']['version']")
 CDK_ANDROID_SHA256=$(jq "['cdk']['androidSha256']")
@@ -23,6 +24,8 @@ EMBEDDED_LND_ANDROID_LINK=$EMBEDDED_LND_FILE_PATH$EMBEDDED_LND_ANDROID_FILE
 EMBEDDED_LND_IOS_LINK=$EMBEDDED_LND_FILE_PATH$EMBEDDED_LND_IOS_FILE.zip
 
 # LDK Node
+LDK_NODE_ANDROID_FILE=ldk-node-android-jniLibs.zip
+LDK_NODE_ANDROID_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_ANDROID_FILE
 LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
 LDK_NODE_IOS_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
 
@@ -269,6 +272,32 @@ echo "Downloading Zeus Cashu Restore Kotlin bindings..." >&2
 curl -L "$RESTORE_KOTLIN_BINDINGS_URL" > "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
 
 echo "Zeus Cashu Restore Kotlin bindings updated to v$RESTORE_VERSION"
+
+#####################
+# LDK Node Android  #
+#####################
+
+mkdir -p android/app/src/main/jniLibs
+
+if ! echo "$LDK_NODE_ANDROID_SHA256 android/ldk-node/$LDK_NODE_ANDROID_FILE" | sha256sum -c -; then
+    echo "LDK Node Android library file missing or checksum failed" >&2
+
+    rm -f android/ldk-node/$LDK_NODE_ANDROID_FILE
+    mkdir -p android/ldk-node
+
+    curl -L $LDK_NODE_ANDROID_LINK > android/ldk-node/$LDK_NODE_ANDROID_FILE
+
+    if ! echo "$LDK_NODE_ANDROID_SHA256 android/ldk-node/$LDK_NODE_ANDROID_FILE" | sha256sum -c -; then
+        echo "LDK Node Android checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# extract .so files into jniLibs
+rm -rf android/app/src/main/jniLibs/arm64-v8a/libldk_node.so
+rm -rf android/app/src/main/jniLibs/armeabi-v7a/libldk_node.so
+rm -rf android/app/src/main/jniLibs/x86_64/libldk_node.so
+unzip -o android/ldk-node/$LDK_NODE_ANDROID_FILE -d android/app/src/main/
 
 ################
 # LDK Node iOS #

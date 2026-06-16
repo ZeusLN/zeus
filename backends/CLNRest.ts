@@ -484,11 +484,15 @@ export default class CLNRest {
         });
     disableOffer = ({ offer_id }: { offer_id: string }) =>
         this.postRequest('/v1/disableoffer', { offer_id });
-    fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
+    fetchInvoiceFromOffer = async (
+        bolt12: string,
+        amountSatoshis: string,
+        timeoutSeconds?: number | string
+    ) => {
         return await this.postRequest('/v1/fetchinvoice', {
             offer: bolt12,
             amount_msat: Number(amountSatoshis) * 1000,
-            timeout: 60
+            timeout: timeoutSeconds ? Number(timeoutSeconds) : 60
         });
     };
     getRoutes = ({

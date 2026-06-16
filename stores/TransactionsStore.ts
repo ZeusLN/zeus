@@ -646,10 +646,11 @@ export default class TransactionsStore {
             data.max_fee_percent = max_fee_percent;
         }
 
-        // payment timeout for LND and CLN
+        // payment timeout for LND, CLN, and ldk-node
         if (
             BackendUtils.isLNDBased() ||
-            this.settingsStore.implementation === 'cln-rest'
+            this.settingsStore.implementation === 'cln-rest' ||
+            this.settingsStore.implementation === 'ldk-node'
         ) {
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
@@ -697,10 +698,11 @@ export default class TransactionsStore {
             data.max_parts = max_parts || '16';
         }
 
-        // payment timeout and fee limit for LND and CLN
+        // payment timeout and fee limit for LND, CLN, and ldk-node
         if (
             BackendUtils.isLNDBased() ||
-            this.settingsStore.implementation === 'cln-rest'
+            this.settingsStore.implementation === 'cln-rest' ||
+            this.settingsStore.implementation === 'ldk-node'
         ) {
             data.fee_limit_sat = Number(fee_limit_sat) || 100;
             data.timeout_seconds = Number(timeout_seconds) || 60;

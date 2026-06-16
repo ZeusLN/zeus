@@ -1286,14 +1286,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendBolt11(invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun sendBolt11(invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt11 = node.bolt11Payment()
                 val invoiceObj = Bolt11Invoice.fromStr(invoice)
-                val paymentId = bolt11.send(invoiceObj, routeParams)
+                val paymentId = bolt11.send(invoiceObj, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1309,14 +1310,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendBolt11UsingAmount(invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun sendBolt11UsingAmount(invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt11 = node.bolt11Payment()
                 val invoiceObj = Bolt11Invoice.fromStr(invoice)
-                val paymentId = bolt11.sendUsingAmount(invoiceObj, amountMsat.toLong().toULong(), routeParams)
+                val paymentId = bolt11.sendUsingAmount(invoiceObj, amountMsat.toLong().toULong(), routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1376,12 +1378,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     // Spontaneous Payment Methods
 
     @ReactMethod
-    fun sendSpontaneousPayment(nodeId: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun sendSpontaneousPayment(nodeId: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val paymentId = node.spontaneousPayment().send(amountMsat.toLong().toULong(), nodeId, routeParams)
+                val paymentId = node.spontaneousPayment().send(amountMsat.toLong().toULong(), nodeId, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1433,14 +1436,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun bolt12Send(offerStr: String, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun bolt12Send(offerStr: String, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt12 = node.bolt12Payment()
                 val offer = Offer.fromStr(offerStr)
-                val paymentId = bolt12.send(offer, null, payerNote, routeParams)
+                val paymentId = bolt12.send(offer, null, payerNote, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1456,14 +1460,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun bolt12SendUsingAmount(offerStr: String, amountMsat: Double, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun bolt12SendUsingAmount(offerStr: String, amountMsat: Double, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt12 = node.bolt12Payment()
                 val offer = Offer.fromStr(offerStr)
-                val paymentId = bolt12.sendUsingAmount(offer, amountMsat.toLong().toULong(), null, payerNote, routeParams)
+                val paymentId = bolt12.sendUsingAmount(offer, amountMsat.toLong().toULong(), null, payerNote, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1479,12 +1484,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun bolt12InitiateRefund(amountMsat: Double, expirySecs: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, promise: Promise) {
+    fun bolt12InitiateRefund(amountMsat: Double, expirySecs: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
+        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt12 = node.bolt12Payment()
-            val refund = bolt12.initiateRefund(amountMsat.toLong().toULong(), expirySecs.toInt().toUInt(), null, null, routeParams)
+            val refund = bolt12.initiateRefund(amountMsat.toLong().toULong(), expirySecs.toInt().toUInt(), null, null, routeParams, timeoutSecs)
             val result = Arguments.createMap().apply { putString("refund", refund.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {

@@ -560,13 +560,15 @@ export interface ILdkNodeModule {
     sendBolt11(
         invoice: string,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<string>;
     sendBolt11UsingAmount(
         invoice: string,
         amountMsat: number,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<string>;
 
     // Probe Methods
@@ -587,7 +589,8 @@ export interface ILdkNodeModule {
         nodeId: string,
         amountMsat: number,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<{ paymentId: string }>;
 
     // BOLT12 Payment Methods
@@ -604,20 +607,23 @@ export interface ILdkNodeModule {
         offerStr: string,
         payerNote: string | null,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<{ paymentId: string }>;
     bolt12SendUsingAmount(
         offerStr: string,
         amountMsat: number,
         payerNote: string | null,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<{ paymentId: string }>;
     bolt12InitiateRefund(
         amountMsat: number,
         expirySecs: number,
         maxTotalRoutingFeeMsat: number,
-        maxPathCount: number
+        maxPathCount: number,
+        paymentTimeoutSecs: number
     ): Promise<{ refund: string }>;
     bolt12RequestRefundPayment(refundStr: string): Promise<{ invoice: string }>;
 

@@ -1251,6 +1251,9 @@ export default class LdkNode {
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
+            : undefined;
 
         let paymentId: string;
 
@@ -1259,17 +1262,22 @@ export default class LdkNode {
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
         } else {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11({
                 invoice: data.payment_request,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
         }
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1291,16 +1299,23 @@ export default class LdkNode {
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
+            : undefined;
 
         const paymentId =
             await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
                 nodeId: pubkey,
                 amountMsat: amt * 1000,
                 maxTotalRoutingFeeMsat,
-                maxPathCount
+                maxPathCount,
+                paymentTimeoutSecs
             });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1668,14 +1683,23 @@ export default class LdkNode {
 
     fetchInvoiceFromOffer = async (
         bolt12: string,
-        amountSatoshis: string
+        amountSatoshis: string,
+        timeoutSeconds?: number | string
     ): Promise<any> => {
+        const paymentTimeoutSecs = timeoutSeconds
+            ? Number(timeoutSeconds)
+            : undefined;
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: bolt12,
-            amountMsat: Number(amountSatoshis) * 1000
+            amountMsat: Number(amountSatoshis) * 1000,
+            paymentTimeoutSecs
         });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(
+            paymentId,
+            paymentTimeoutSecs
+        );
 
         return {
             payment_hash: hash,
@@ -1686,14 +1710,21 @@ export default class LdkNode {
 
     createWithdrawalRequest = async ({
         amount,
-        description: _description
+        description: _description,
+        timeoutSeconds
     }: {
         amount: string;
         description: string;
+        timeoutSeconds?: number | string;
     }): Promise<any> => {
+        const paymentTimeoutSecs = timeoutSeconds
+            ? Number(timeoutSeconds)
+            : undefined;
+
         const refundStr = await LdkNodeInjection.bolt12.bolt12InitiateRefund({
             amountMsat: Number(amount) * 1000,
-            expirySecs: 3600
+            expirySecs: 3600,
+            paymentTimeoutSecs
         });
 
         return { bolt12: refundStr };
@@ -1754,10 +1785,16 @@ export default class LdkNode {
      * Returns the completed payment or throws on failure/timeout.
      */
     private awaitPaymentCompletion = async (
-        paymentId: string
+        paymentId: string,
+        paymentTimeoutSecs?: number
     ): Promise<{ hash: string; preimage: string }> => {
-        const maxAttempts = 60;
         const delayMs = 1000;
+        // Size polling to LDK's timeout plus a small grace period so the
+        // terminal PaymentFailed/PaymentSuccessful event can land before we
+        // give up — otherwise the UI can show failure while LDK is still
+        // routing, risking a double-pay on keysend/BOLT12.
+        const timeoutSecs = paymentTimeoutSecs ?? 60;
+        const maxAttempts = timeoutSecs + 5;
         let payment = null;
         let failureReason: PaymentFailureReason | undefined;
 

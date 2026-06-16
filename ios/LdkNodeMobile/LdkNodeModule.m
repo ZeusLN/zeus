@@ -63,22 +63,22 @@ RCT_EXTERN_METHOD(sendAllToOnchainAddressWithUtxos:(NSString *)address retainRes
 // BOLT11 Payment Methods
 RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // Probe Methods
 RCT_EXTERN_METHOD(sendBolt11Probes:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11ProbesUsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // Spontaneous Payment Methods
-RCT_EXTERN_METHOD(sendSpontaneousPayment:(NSString *)nodeId amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendSpontaneousPayment:(NSString *)nodeId amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // BOLT12 Payment Methods
 RCT_EXTERN_METHOD(bolt12Receive:(double)amountMsat description:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(bolt12ReceiveVariableAmount:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(bolt12Send:(NSString *)offerStr payerNote:(NSString *)payerNote maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(bolt12SendUsingAmount:(NSString *)offerStr amountMsat:(double)amountMsat payerNote:(NSString *)payerNote maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(bolt12InitiateRefund:(double)amountMsat expirySecs:(double)expirySecs maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12Send:(NSString *)offerStr payerNote:(NSString *)payerNote maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12SendUsingAmount:(NSString *)offerStr amountMsat:(double)amountMsat payerNote:(NSString *)payerNote maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12InitiateRefund:(double)amountMsat expirySecs:(double)expirySecs maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(bolt12RequestRefundPayment:(NSString *)refundStr resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // Payment Methods
