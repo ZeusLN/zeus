@@ -3,7 +3,6 @@ import { BrantaServerBaseUrl, PrivacyMode } from '@branta-ops/branta';
 
 import SettingsStore from './SettingsStore';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BrantaService } = require('@branta-ops/branta/v2');
 
 interface Payment {
