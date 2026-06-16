@@ -21,6 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
 import BalanceStore from '../stores/BalanceStore';
+import { BrantaVerification } from '../stores/BrantaStore';
 import ContactStore from '../stores/ContactStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
@@ -87,6 +88,7 @@ interface SendProps {
             contactName: string;
             clearOnBackPress: boolean;
             fromGraphSync: boolean;
+            brantaVerification: BrantaVerification | null;
         }
     >;
 }
@@ -122,6 +124,7 @@ interface SendState {
     fundMax: boolean;
     nfcSupported: boolean;
     swipeButtonKey: number;
+    brantaVerification: BrantaVerification | null;
 }
 
 @inject(
@@ -152,7 +155,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             isValid,
             contactName,
-            bolt12
+            bolt12,
+            brantaVerification
         } = route.params ?? {};
         const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
@@ -193,7 +197,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             additionalOutputs: [],
             fundMax: false,
             nfcSupported: false,
-            swipeButtonKey: 0
+            swipeButtonKey: 0,
+            brantaVerification: brantaVerification || null
         };
     }
 
@@ -208,7 +213,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount,
                 fee,
                 transactionType,
-                contactName
+                contactName,
+                brantaVerification
             } = route.params ?? {};
 
             if (transactionType === 'Lightning') {
@@ -220,7 +226,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 destination,
                 bolt12,
                 isValid: true,
-                contactName
+                contactName,
+                brantaVerification: brantaVerification || null
             };
 
             if (satAmount) {
