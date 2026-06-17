@@ -6,11 +6,12 @@ import {
     Animated,
     Easing,
     ScrollView,
-    FlatListProps
+    FlatListProps,
+    Text
 } from 'react-native';
 
 import { observer, inject } from 'mobx-react';
-import Svg, { Text } from 'react-native-svg';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from '@rneui/themed';
@@ -90,7 +91,6 @@ export default class CurrencyConverterContent extends React.Component<
         if (isEmpty(this.props.FiatStore?.fiatRates)) {
             this.props.FiatStore?.getFiatRates?.();
         }
-        this.retrieveInputValues();
         this.addDefaultCurrenciesToStorage();
     }
 
@@ -118,9 +118,12 @@ export default class CurrencyConverterContent extends React.Component<
         if (isEmpty(this.props.FiatStore?.fiatRates)) return;
 
         const { inputValues } = this.state;
-        const source = Object.keys(inputValues).find(
-            (key) => inputValues[key].replace(/,/g, '').trim() !== ''
-        );
+        const source = Object.keys(inputValues).find((key) => {
+            const val = inputValues[key];
+            return (
+                typeof val === 'string' && val.replace(/,/g, '').trim() !== ''
+            );
+        });
         if (!source) return;
 
         this.handleInputChange(inputValues[source], source);
@@ -573,50 +576,11 @@ export default class CurrencyConverterContent extends React.Component<
                                                         : null
                                                 ]}
                                             >
-                                                <View
-                                                    style={{
-                                                        position: 'absolute',
-                                                        right: [
-                                                            'BTC',
-                                                            'sats'
-                                                        ].includes(item)
-                                                            ? 20
-                                                            : 16,
-                                                        zIndex: 1
-                                                    }}
-                                                >
-                                                    {['BTC', 'sats'].includes(
-                                                        item
-                                                    ) ? (
-                                                        <BitcoinIcon
-                                                            height={20}
-                                                            width={20}
-                                                        />
-                                                    ) : (
-                                                        <Svg
-                                                            height="24"
-                                                            width="24"
-                                                        >
-                                                            <Text
-                                                                fontSize="16"
-                                                                x="0"
-                                                                y="18"
-                                                            >
-                                                                {getFlagEmoji(
-                                                                    item
-                                                                )}
-                                                            </Text>
-                                                        </Svg>
-                                                    )}
-                                                </View>
-
                                                 <TextInput
                                                     keyboardType="numeric"
-                                                    suffix={item}
                                                     style={{
                                                         flex: 1
                                                     }}
-                                                    right={80}
                                                     placeholder={localeString(
                                                         'views.Settings.CurrencyConverter.enterAmount'
                                                     )}
@@ -630,6 +594,50 @@ export default class CurrencyConverterContent extends React.Component<
                                                         )
                                                     }
                                                     autoCapitalize="none"
+                                                    trailing={
+                                                        <View
+                                                            style={
+                                                                styles.currencyTrailing
+                                                            }
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.currencyLabel,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {item}
+                                                            </Text>
+                                                            {[
+                                                                'BTC',
+                                                                'sats'
+                                                            ].includes(item) ? (
+                                                                <BitcoinIcon
+                                                                    height={20}
+                                                                    width={20}
+                                                                />
+                                                            ) : (
+                                                                <Svg
+                                                                    height="24"
+                                                                    width="24"
+                                                                >
+                                                                    <SvgText
+                                                                        fontSize="16"
+                                                                        x="0"
+                                                                        y="18"
+                                                                    >
+                                                                        {getFlagEmoji(
+                                                                            item
+                                                                        )}
+                                                                    </SvgText>
+                                                                </Svg>
+                                                            )}
+                                                        </View>
+                                                    }
                                                 />
                                             </Animated.View>
 
@@ -696,9 +704,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     inputBox: {
-        flex: 1,
-        flexDirection: 'row-reverse',
-        alignItems: 'center'
+        flex: 1
     },
     deleteIcon: {
         marginRight: 16,
@@ -712,5 +718,14 @@ const styles = StyleSheet.create({
     dragHandle: {
         marginLeft: 16,
         marginRight: 0
+    },
+    currencyTrailing: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8
+    },
+    currencyLabel: {
+        fontSize: 20,
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });
