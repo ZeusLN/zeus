@@ -566,11 +566,11 @@
 		744BE042F00E4B16BDC79870 /* eye_closed.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = eye_closed.svg; path = ../assets/images/SVG/eye_closed.svg; sourceTree = "<group>"; };
 		745388382A54C2B6000927CE /* lightning.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = lightning.pb.swift; sourceTree = "<group>"; };
 		745388392A54C2B6000927CE /* LndMobileScheduledSync.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LndMobileScheduledSync.swift; sourceTree = "<group>"; };
-		7453883A2A54C2B6000927CE /* LndMobile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LndMobile.m; sourceTree = "<group>"; };
-		7453883B2A54C2B6000927CE /* LndMobileScheduledSync.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LndMobileScheduledSync.m; sourceTree = "<group>"; };
+		7453883A2A54C2B6000927CE /* LndMobile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LndMobile.m; sourceTree = "<group>"; };
+		7453883B2A54C2B6000927CE /* LndMobileScheduledSync.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LndMobileScheduledSync.m; sourceTree = "<group>"; };
 		7453883C2A54C2B6000927CE /* LndMobile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LndMobile.swift; sourceTree = "<group>"; };
 		7453883E2A54C2B6000927CE /* walletunlocker.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = walletunlocker.pb.swift; sourceTree = "<group>"; };
-		7453883F2A54C2B6000927CE /* LndMobileTools.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LndMobileTools.m; sourceTree = "<group>"; };
+		7453883F2A54C2B6000927CE /* LndMobileTools.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LndMobileTools.m; sourceTree = "<group>"; };
 		745388402A54C2B6000927CE /* Lnd.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lnd.swift; sourceTree = "<group>"; };
 		745388412A54C2B6000927CE /* LndMobileTools.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LndMobileTools.swift; sourceTree = "<group>"; };
 		745E06A9295CB0E500597EE8 /* Caret Down.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Caret Down.svg"; path = "../assets/images/SVG/Caret Down.svg"; sourceTree = "<group>"; };
@@ -2589,6 +2589,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(inherited)",
 					"-DRCT_REMOVE_LEGACY_ARCH=1",
+					"-fcxx-modules",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
@@ -2657,6 +2658,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(inherited)",
 					"-DRCT_REMOVE_LEGACY_ARCH=1",
+					"-fcxx-modules",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
