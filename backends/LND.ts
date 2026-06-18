@@ -228,12 +228,17 @@ export default class LND {
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
+
+        // Tor provides transport-layer encryption, so cert verification
+        // is neither necessary nor possible for self-signed certs
+        const effectiveCertVerification = enableTor ? false : certVerification;
+
         return this.restReq(
             headers,
             url,
             method,
             data,
-            certVerification,
+            effectiveCertVerification,
             enableTor,
             timeout
         );

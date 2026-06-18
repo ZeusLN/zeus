@@ -1861,7 +1861,7 @@ export default class SettingsStore {
             this.dismissCustodialWarning = node.dismissCustodialWarning;
             this.implementation = node.implementation || 'lnd';
             this.certVerification = node.certVerification || false;
-            this.enableTor = node.enableTor;
+            this.enableTor = node.enableTor || false;
             // LNC
             this.pairingPhrase = node.pairingPhrase;
             this.mailboxServer = node.mailboxServer;
@@ -1899,6 +1899,7 @@ export default class SettingsStore {
             // stale references to deleted wallets
             this.implementation = 'lnd';
             this.certVerification = false;
+            this.enableTor = false;
             this.ldkNodeDir = undefined;
             this.ldkMnemonic = undefined;
             this.ldkPassphrase = undefined;
