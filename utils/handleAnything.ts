@@ -487,6 +487,12 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
+
+        let brantaVerification = null;
+        if (!ecash && settingsStore?.settings?.branta?.enabled !== false) {
+            brantaVerification = await brantaStore.verifyPayment(data);
+        }
+
         if (ecash && !isAmountlessInvoice(value || lightning)) {
             return [
                 'ChoosePaymentMethod',
@@ -497,7 +503,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return ['PaymentRequest', {}];
+            return ['PaymentRequest', { brantaVerification }];
         }
     } else if (
         !hasAt &&
