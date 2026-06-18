@@ -93,7 +93,8 @@ jest.mock('./ConnectionFormatUtils', () => ({
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
     invoicesStore: { getPayReq: jest.fn() },
-    settingsStore: { settings: { locale: 'en' } }
+    settingsStore: { settings: { locale: 'en', branta: { enabled: true } } },
+    brantaStore: { verifyPayment: jest.fn().mockResolvedValue(null) }
 }));
 jest.mock('react-native-blob-util', () => ({
     fetch: (...args: any[]) => mockBlobUtilFetch(...args)
@@ -216,7 +217,10 @@ describe('handleAnything', () => {
 
             const result = await handleAnything(data);
 
-            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(result).toEqual([
+                'PaymentRequest',
+                { brantaVerification: null }
+            ]);
             expect(invoicesStore.getPayReq).toHaveBeenCalledWith(
                 'some payment request'
             );
