@@ -73,6 +73,7 @@ export default class CurrencyConverterContent extends React.Component<
     CurrencyConverterContentProps,
     CurrencyConverterContentState
 > {
+    private blurListener: (() => void) | undefined;
     constructor(props: CurrencyConverterContentProps) {
         super(props);
         this.state = {
@@ -92,6 +93,16 @@ export default class CurrencyConverterContent extends React.Component<
             this.props.FiatStore?.getFiatRates?.();
         }
         this.addDefaultCurrenciesToStorage();
+
+        this.blurListener = this.props.navigation?.addListener?.(
+            'blur',
+            this.saveInputValues
+        );
+    }
+
+    componentWillUnmount() {
+        this.blurListener?.();
+        this.saveInputValues();
     }
 
     componentDidUpdate(
@@ -232,7 +243,10 @@ export default class CurrencyConverterContent extends React.Component<
                 }
             });
 
-            this.setState({ inputValues: convertedValues });
+            this.setState(
+                { inputValues: convertedValues },
+                this.saveInputValues
+            );
             return;
         }
 
@@ -310,7 +324,7 @@ export default class CurrencyConverterContent extends React.Component<
             }
         });
 
-        this.setState({ inputValues: convertedValues });
+        this.setState({ inputValues: convertedValues }, this.saveInputValues);
     };
 
     handleDeleteCurrency = async (currency: string) => {
