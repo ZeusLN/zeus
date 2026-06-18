@@ -33,7 +33,6 @@ interface TextInputProps {
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
-    right?: number;
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
     onFocus?: any;

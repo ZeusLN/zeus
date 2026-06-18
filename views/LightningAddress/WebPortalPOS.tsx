@@ -331,7 +331,6 @@ export default class WebPortalPOS extends React.Component<
                                         });
                                     }}
                                     suffix="%"
-                                    right={20}
                                 />
                             </View>
                             <ListItem

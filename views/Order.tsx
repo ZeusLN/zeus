@@ -1019,7 +1019,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     <TextInput
                                         suffix="%"
                                         keyboardType="numeric"
-                                        right={25}
                                         placeholder={
                                             DEFAULT_CUSTOM_TIP_PERCENTAGE
                                         }
