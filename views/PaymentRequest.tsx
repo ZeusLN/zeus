@@ -15,6 +15,7 @@ import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
+import BrantaVerificationComponent from '../components/BrantaVerification';
 import Button from '../components/Button';
 import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import SwipeButton from '../components/SwipeButton';
@@ -34,6 +35,8 @@ import {
     ErrorMessage,
     WarningMessage
 } from '../components/SuccessErrorMessage';
+
+import { BrantaVerification } from '../stores/BrantaStore';
 
 import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
@@ -62,7 +65,13 @@ import QR from '../assets/images/SVG/QR.svg';
 interface InvoiceProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'PaymentRequest', { fromGraphSync?: boolean }>;
+    route: Route<
+        'PaymentRequest',
+        {
+            fromGraphSync?: boolean;
+            brantaVerification?: BrantaVerification | null;
+        }
+    >;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
@@ -496,7 +505,8 @@ export default class PaymentRequest extends React.Component<
             SettingsStore,
             NodeInfoStore,
             TransactionsStore,
-            navigation
+            navigation,
+            route
         } = this.props;
         const {
             enableMultiPathPayment,
@@ -526,6 +536,7 @@ export default class PaymentRequest extends React.Component<
         if (pay_req) pay_req.determineFormattedOriginalTimeUntilExpiry(locale);
 
         const isPayReqExpired = !!pay_req && pay_req.isExpiredNow();
+        const brantaVerification = route?.params?.brantaVerification;
 
         // variables cannot be destructured traditionally here
         // due to how we clear the pay_req from the store upon
@@ -831,6 +842,12 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                         value={destination}
                                         showCopyIcon
+                                    />
+                                )}
+
+                                {brantaVerification && (
+                                    <BrantaVerificationComponent
+                                        verification={brantaVerification}
                                     />
                                 )}
 
