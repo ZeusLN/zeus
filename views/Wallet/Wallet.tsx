@@ -1278,7 +1278,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ) {
                 await LSPStore.getLSPInfo();
             }
-            if (BackendUtils.supportsLSPScustomMessage()) {
+            if (
+                BackendUtils.supportsLSPScustomMessage() &&
+                !BackendUtils.supportsLSPS1rest()
+            ) {
+                // Only subscribe at startup when the backend uses custom messages
+                // for LSPS1 (e.g. embedded-lnd). Backends that use REST for LSPS1
+                // (LND REST, LNC) do not need this at startup — for them the
+                // subscription is set up lazily from the channels reaction when
+                // LSPS7 channel extension is about to be attempted.
                 LSPStore.subscribeCustomMessages();
             }
             LSPStore.initChannelAcceptor();
