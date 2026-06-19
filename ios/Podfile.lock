@@ -2044,7 +2044,7 @@ PODS:
     - React-utils (= 0.85.3)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.85.3)
-  - ReactNativeNitroTor (0.5.3):
+  - ReactNativeNitroTor (0.6.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2956,7 +2956,7 @@ SPEC CHECKSUMS:
   ReactCodegen: c8f81e6c6f762dcf442a6203a1fb58f7dafc8014
   ReactCommon: 7dfc3250793bf36cf221096ff59e1179e13eef7f
   ReactNativeDependencies: 3b1913a9f473170b145a700f1d50f32e575cb0b3
-  ReactNativeNitroTor: c208c7d0faff06e22124c8e01c311f4697e51e73
+  ReactNativeNitroTor: 3a55374c5816550e4b24f65e9380a5e315797899
   RNCAsyncStorage: 2ad919e88b8bc2cd80e8697ce66d04d006743283
   RNCClipboard: 715fa7c6c8366f17d00f05a439ee7488f390fa5f
   RNCPicker: d74667bdfc08ed389a2a277d95b8faf2349290a9

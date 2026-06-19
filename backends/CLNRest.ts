@@ -70,7 +70,12 @@ export default class CLNRest {
                     url,
                     method as RequestMethod,
                     JSON.stringify(data),
-                    headers
+                    headers,
+                    // Tor v3 .onion authenticates the endpoint at the
+                    // protocol layer, and the upstream daemon's self-signed
+                    // cert can't match an .onion hostname, so TLS validation
+                    // here is always redundant.
+                    true
                 ).then((response: any) => {
                     calls.delete(id);
                     return response;

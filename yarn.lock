@@ -9217,10 +9217,10 @@ react-native-nfc-manager@3.17.2:
   resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-3.17.2.tgz#81924946b7fe381bbf85bfb16af90cb05cac4944"
   integrity sha512-0NryP/Iw2hzw4MVH5KCngoRerNUrnRok6VfLrlFcFZRKyTQ7KTgpsdDxCB6cR33qYNyEDrWGBayfAI+ym5gt8Q==
 
-react-native-nitro-tor@0.5.3:
-  version "0.5.3"
-  resolved "https://registry.yarnpkg.com/react-native-nitro-tor/-/react-native-nitro-tor-0.5.3.tgz#f4b57dff15230e7f83bc3a72a7ec42bd5dd5c870"
-  integrity sha512-GHCgxrotKz+EaT3mF5dvepWtmx0MaVxYaeteYZUWYKAkLBhfXwPIWpGDWAu9ugwLYfoMNZ3b2Iuy1Sn+aaGenw==
+react-native-nitro-tor@0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-tor/-/react-native-nitro-tor-0.6.0.tgz#30ab0ab07ce71f1147fe91ddf2da4e79095a3ab8"
+  integrity sha512-ul9KNC7NDMbNWp89MF5Epp+75ajI63DjZJakt/LaVmYQYoI5AqM7ae9Oaiy+LqAvqh1WmPcwWct4v8H9GHqyXg==
   dependencies:
     craby-modules "^0.1.0-rc.5"
 
