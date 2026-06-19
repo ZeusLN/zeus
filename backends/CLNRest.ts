@@ -157,10 +157,11 @@ export default class CLNRest {
         headers['Content-Type'] = 'application/json';
 
         const url = this.getURL(host, port, route);
+        const effectiveUrl = enableTor ? url.replace('https://', 'http://') : url;
 
         return this.restReq(
             headers,
-            url,
+            effectiveUrl,
             method,
             data,
             certVerification,

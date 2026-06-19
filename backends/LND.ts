@@ -228,9 +228,10 @@ export default class LND {
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
+        const effectiveUrl = enableTor ? url.replace('https://', 'http://') : url;
         return this.restReq(
             headers,
-            url,
+            effectiveUrl,
             method,
             data,
             certVerification,
