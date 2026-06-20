@@ -407,7 +407,6 @@ export default class ProductDetails extends React.Component<
                                                 );
                                             }}
                                             suffix="%"
-                                            right={20}
                                             style={styles.textInput}
                                         />
                                         <DropdownSetting

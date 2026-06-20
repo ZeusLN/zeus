@@ -488,7 +488,6 @@ export default class PointOfSale extends React.Component<
                                         });
                                     }}
                                     suffix="%"
-                                    right={20}
                                 />
                             </>
                         )}

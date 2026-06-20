@@ -6,11 +6,12 @@ import {
     Animated,
     Easing,
     ScrollView,
-    FlatListProps
+    FlatListProps,
+    Text
 } from 'react-native';
 
 import { observer, inject } from 'mobx-react';
-import Svg, { Text } from 'react-native-svg';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from '@rneui/themed';
@@ -72,6 +73,7 @@ export default class CurrencyConverterContent extends React.Component<
     CurrencyConverterContentProps,
     CurrencyConverterContentState
 > {
+    private blurListener: (() => void) | undefined;
     constructor(props: CurrencyConverterContentProps) {
         super(props);
         this.state = {
@@ -86,12 +88,25 @@ export default class CurrencyConverterContent extends React.Component<
     }
 
     componentDidMount() {
-        this.retrieveInputValues();
+        // Fetch rates on entry only if we don't already have them.
+        if (isEmpty(this.props.FiatStore?.fiatRates)) {
+            this.props.FiatStore?.getFiatRates?.();
+        }
         this.addDefaultCurrenciesToStorage();
+
+        this.blurListener = this.props.navigation?.addListener?.(
+            'blur',
+            this.saveInputValues
+        );
+    }
+
+    componentWillUnmount() {
+        this.blurListener?.();
+        this.saveInputValues();
     }
 
     componentDidUpdate(
-        _prevProps: CurrencyConverterContentProps,
+        prevProps: CurrencyConverterContentProps,
         prevState: CurrencyConverterContentState
     ) {
         const { onInputValuesChanged } = this.props;
@@ -101,7 +116,29 @@ export default class CurrencyConverterContent extends React.Component<
         ) {
             onInputValuesChanged(Object.keys(this.state.inputValues).length);
         }
+        // Backfill  fields once rates arrive (e.g. user typed BTC before rates loaded).
+        if (
+            isEmpty(prevProps.FiatStore?.fiatRates) &&
+            !isEmpty(this.props.FiatStore?.fiatRates)
+        ) {
+            this.syncConversions();
+        }
     }
+
+    syncConversions = () => {
+        if (isEmpty(this.props.FiatStore?.fiatRates)) return;
+
+        const { inputValues } = this.state;
+        const source = Object.keys(inputValues).find((key) => {
+            const val = inputValues[key];
+            return (
+                typeof val === 'string' && val.replace(/,/g, '').trim() !== ''
+            );
+        });
+        if (!source) return;
+
+        this.handleInputChange(inputValues[source], source);
+    };
 
     public addCurrency = (currency: string) => {
         this.handleCurrencySelect(currency);
@@ -135,7 +172,9 @@ export default class CurrencyConverterContent extends React.Component<
             }
 
             await Storage.setItem(CURRENCY_CODES_KEY, existingInputValues);
-            this.setState({ inputValues: existingInputValues });
+            this.setState({ inputValues: existingInputValues }, () => {
+                this.syncConversions();
+            });
         } catch (error) {
             console.error('Error adding default currencies:', error);
         }
@@ -154,7 +193,9 @@ export default class CurrencyConverterContent extends React.Component<
             const inputValuesString = await Storage.getItem(CURRENCY_CODES_KEY);
             if (inputValuesString) {
                 const inputValues = JSON.parse(inputValuesString);
-                this.setState({ inputValues });
+                this.setState({ inputValues }, () => {
+                    this.syncConversions();
+                });
             }
         } catch (error) {
             console.error('Error retrieving input values:', error);
@@ -168,6 +209,7 @@ export default class CurrencyConverterContent extends React.Component<
             const updatedInputValues = { ...inputValues, [currency]: '' };
             this.setState({ inputValues: updatedInputValues }, () => {
                 this.saveInputValues();
+                this.syncConversions();
             });
         }
     };
@@ -201,7 +243,10 @@ export default class CurrencyConverterContent extends React.Component<
                 }
             });
 
-            this.setState({ inputValues: convertedValues });
+            this.setState(
+                { inputValues: convertedValues },
+                this.saveInputValues
+            );
             return;
         }
 
@@ -279,7 +324,7 @@ export default class CurrencyConverterContent extends React.Component<
             }
         });
 
-        this.setState({ inputValues: convertedValues });
+        this.setState({ inputValues: convertedValues }, this.saveInputValues);
     };
 
     handleDeleteCurrency = async (currency: string) => {
@@ -454,7 +499,7 @@ export default class CurrencyConverterContent extends React.Component<
                             <AddButton />
                         </Row>
                     )}
-                    {loading && (
+                    {loading && ratesNotFetched && (
                         <View style={{ flex: 1, padding: 15 }}>
                             <LoadingIndicator />
                         </View>
@@ -545,50 +590,11 @@ export default class CurrencyConverterContent extends React.Component<
                                                         : null
                                                 ]}
                                             >
-                                                <View
-                                                    style={{
-                                                        position: 'absolute',
-                                                        right: [
-                                                            'BTC',
-                                                            'sats'
-                                                        ].includes(item)
-                                                            ? 20
-                                                            : 16,
-                                                        zIndex: 1
-                                                    }}
-                                                >
-                                                    {['BTC', 'sats'].includes(
-                                                        item
-                                                    ) ? (
-                                                        <BitcoinIcon
-                                                            height={20}
-                                                            width={20}
-                                                        />
-                                                    ) : (
-                                                        <Svg
-                                                            height="24"
-                                                            width="24"
-                                                        >
-                                                            <Text
-                                                                fontSize="16"
-                                                                x="0"
-                                                                y="18"
-                                                            >
-                                                                {getFlagEmoji(
-                                                                    item
-                                                                )}
-                                                            </Text>
-                                                        </Svg>
-                                                    )}
-                                                </View>
-
                                                 <TextInput
                                                     keyboardType="numeric"
-                                                    suffix={item}
                                                     style={{
                                                         flex: 1
                                                     }}
-                                                    right={80}
                                                     placeholder={localeString(
                                                         'views.Settings.CurrencyConverter.enterAmount'
                                                     )}
@@ -602,6 +608,50 @@ export default class CurrencyConverterContent extends React.Component<
                                                         )
                                                     }
                                                     autoCapitalize="none"
+                                                    trailing={
+                                                        <View
+                                                            style={
+                                                                styles.currencyTrailing
+                                                            }
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.currencyLabel,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {item}
+                                                            </Text>
+                                                            {[
+                                                                'BTC',
+                                                                'sats'
+                                                            ].includes(item) ? (
+                                                                <BitcoinIcon
+                                                                    height={20}
+                                                                    width={20}
+                                                                />
+                                                            ) : (
+                                                                <Svg
+                                                                    height="24"
+                                                                    width="24"
+                                                                >
+                                                                    <SvgText
+                                                                        fontSize="16"
+                                                                        x="0"
+                                                                        y="18"
+                                                                    >
+                                                                        {getFlagEmoji(
+                                                                            item
+                                                                        )}
+                                                                    </SvgText>
+                                                                </Svg>
+                                                            )}
+                                                        </View>
+                                                    }
                                                 />
                                             </Animated.View>
 
@@ -668,9 +718,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     inputBox: {
-        flex: 1,
-        flexDirection: 'row-reverse',
-        alignItems: 'center'
+        flex: 1
     },
     deleteIcon: {
         marginRight: 16,
@@ -684,5 +732,14 @@ const styles = StyleSheet.create({
     dragHandle: {
         marginLeft: 16,
         marginRight: 0
+    },
+    currencyTrailing: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8
+    },
+    currencyLabel: {
+        fontSize: 20,
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

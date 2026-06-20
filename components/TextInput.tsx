@@ -33,12 +33,12 @@ interface TextInputProps {
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
-    right?: number;
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
     onFocus?: any;
     onBlur?: any;
     onSubmitEditing?: () => void;
+    trailing?: React.ReactNode;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
@@ -64,10 +64,10 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             suffix,
             toggleUnits,
             onPressIn,
-            right,
             error,
             onFocus,
-            onBlur
+            onBlur,
+            trailing
         } = props;
         const defaultStyle = numberOfLines
             ? {
@@ -110,15 +110,17 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     toggleUnits
                         ? {
                               ...styles.unit,
+                              flexShrink: 0,
+                              marginLeft: 8,
                               paddingLeft: 5,
                               paddingRight: 5,
-                              right: right || 45,
                               color: themeColor('text'),
                               backgroundColor: themeColor('background')
                           }
                         : {
                               ...styles.unit,
-                              right: right || 45,
+                              flexShrink: 0,
+                              marginLeft: 8,
                               color: themeColor('text')
                           }
                 }
@@ -164,6 +166,8 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     style={{
                         ...StyleSheet.flatten(textInputStyle),
                         ...styles.input,
+                        flex: 1,
+                        minWidth: 0,
                         color:
                             textColor ||
                             (locked
@@ -197,6 +201,9 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                         <Suffix />
                     )
                 ) : null}
+                {trailing ? (
+                    <View style={styles.trailing}>{trailing}</View>
+                ) : null}
             </View>
         );
     }
@@ -221,8 +228,13 @@ const styles = StyleSheet.create({
     },
     input: {
         fontSize: 20,
-        width: '100%',
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    trailing: {
+        flexShrink: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 8
     }
 });
 
