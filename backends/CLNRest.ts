@@ -15,7 +15,11 @@ import {
 } from './CoreLightningRequestHandler';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import {
+    doTorRequest,
+    isOnionHttpsUrl,
+    RequestMethod
+} from '../utils/TorUtils';
 
 const calls = new Map<string, Promise<any>>();
 
@@ -71,11 +75,12 @@ export default class CLNRest {
                     method as RequestMethod,
                     JSON.stringify(data),
                     headers,
-                    // Tor v3 .onion authenticates the endpoint at the
-                    // protocol layer, and the upstream daemon's self-signed
-                    // cert can't match an .onion hostname, so TLS validation
-                    // here is always redundant.
-                    true
+                    // .onion-over-Tor: bypass TLS validation (the .onion
+                    // address authenticates at the Tor layer, upstream
+                    // self-signed certs can't match anyway).
+                    // Clearnet-over-Tor: keep strict TLS because exit
+                    // nodes can MITM.
+                    isOnionHttpsUrl(url)
                 ).then((response: any) => {
                     calls.delete(id);
                     return response;

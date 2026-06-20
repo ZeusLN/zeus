@@ -1,6 +1,10 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { settingsStore, nodeInfoStore } from '../stores/Stores';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import {
+    doTorRequest,
+    isOnionHttpsUrl,
+    RequestMethod
+} from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
@@ -48,11 +52,12 @@ export default class LND {
                     method as RequestMethod,
                     JSON.stringify(data),
                     headers,
-                    // Tor v3 .onion authenticates the endpoint at the
-                    // protocol layer, and the upstream daemon's self-signed
-                    // cert can't match an .onion hostname, so TLS validation
-                    // here is always redundant.
-                    true
+                    // .onion-over-Tor: bypass TLS validation (the .onion
+                    // address authenticates at the Tor layer, upstream
+                    // self-signed certs can't match anyway).
+                    // Clearnet-over-Tor: keep strict TLS because exit
+                    // nodes can MITM.
+                    isOnionHttpsUrl(url)
                 ).then((response: any) => {
                     calls.delete(id);
                     return response;
