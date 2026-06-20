@@ -19,6 +19,27 @@ const headersToString = (headers?: any): string => {
     return JSON.stringify(headers);
 };
 
+// Whether a URL targets a Tor v3 hidden service over HTTPS. For such
+// endpoints the .onion address itself authenticates the peer at the
+// Tor protocol layer, so TLS hostname/CA validation against the
+// upstream daemon's (typically self-signed) cert is redundant and
+// can be safely bypassed.
+//
+// Returns false for clearnet hosts routed via Tor — TLS validation
+// there still matters because exit nodes can MITM. Returns false on
+// any URL that won't parse, so the caller defaults to strict TLS.
+const isOnionHttpsUrl = (url: string): boolean => {
+    try {
+        const u = new URL(url);
+        return (
+            u.protocol === 'https:' &&
+            u.hostname.toLowerCase().endsWith('.onion')
+        );
+    } catch {
+        return false;
+    }
+};
+
 let startPromise: Promise<void> | null = null;
 
 const ensureTorStarted = (): Promise<void> => {
@@ -45,10 +66,23 @@ const doTorRequest = async (
     url: string,
     method: RequestMethod,
     data?: string,
-    headers?: any
+    headers?: any,
+    trustInvalidCerts: boolean = false
 ) => {
     await ensureTorStarted();
     const headerStr = headersToString(headers);
+
+    // Defense in depth: only honor trustInvalidCerts for HTTPS .onion
+    // URLs. If a caller passes true for a clearnet URL we drop it on
+    // the floor and warn, so that exit-node MITM defenses stay in
+    // place even if a future call site forgets to gate the param.
+    const effectiveTrustInvalidCerts =
+        trustInvalidCerts && isOnionHttpsUrl(url);
+    if (trustInvalidCerts && !effectiveTrustInvalidCerts) {
+        console.warn(
+            `doTorRequest: ignoring trust_invalid_certs=true for non-.onion URL (${url}) — clearnet-over-Tor must validate TLS to defend against exit-node MITM`
+        );
+    }
 
     let response;
     switch (method) {
@@ -56,7 +90,8 @@ const doTorRequest = async (
             response = await RnTor.httpGet({
                 url,
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS
+                timeout_ms: REQUEST_TIMEOUT_MS,
+                trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
         case RequestMethod.POST:
@@ -64,14 +99,16 @@ const doTorRequest = async (
                 url,
                 body: data || '',
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS
+                timeout_ms: REQUEST_TIMEOUT_MS,
+                trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
         case RequestMethod.DELETE:
             response = await RnTor.httpDelete({
                 url,
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS
+                timeout_ms: REQUEST_TIMEOUT_MS,
+                trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
         default:
@@ -112,4 +149,4 @@ const restartTor = async () => {
     await ensureTorStarted();
 };
 
-export { doTorRequest, restartTor, RequestMethod };
+export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
