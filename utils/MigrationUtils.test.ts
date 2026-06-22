@@ -340,6 +340,27 @@ describe('MigrationUtils', () => {
             );
         });
 
+        it('persists the settings object rather than a JSON string', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                invoices: {
+                    expiry: '3600',
+                    timePeriod: 'Hours',
+                    expirySeconds: '3600'
+                }
+            };
+
+            await MigrationUtils.migrateInvoiceExpiryDisplay(settings);
+
+            // Guards against regressing #4150: passing a stringified payload
+            // briefly turns the MobX `settings` observable into a string,
+            // which can crash observers reading nested keys.
+            const persistedSettings =
+                settingsStore.setSettings.mock.calls[0][0];
+            expect(typeof persistedSettings).not.toBe('string');
+            expect(persistedSettings).toBe(settings);
+        });
+
         it('backfills missing expirySeconds + timePeriod for pre-Feb-2024 installs', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = { invoices: { expiry: '3600' } };
