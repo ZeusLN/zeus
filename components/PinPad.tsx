@@ -50,6 +50,13 @@ export default function PinPad({
     const [pinValueLength, setPinValueLength] = useState(0);
 
     React.useEffect(() => {
+        // For PIN entry we clear the value when the app is backgrounded so the
+        // PIN isn't visible in the OS task-switcher snapshot. Amount input has
+        // no such security concern, and clearing it on backgrounding loses
+        // typed values when the user briefly switches apps (e.g. to check an
+        // amount from another app).
+        if (amount) return;
+
         const subscription = AppState.addEventListener(
             'change',
             (nextAppState) => {
@@ -61,7 +68,7 @@ export default function PinPad({
         );
 
         return () => subscription.remove();
-    }, []);
+    }, [amount]);
 
     const bigKeypadButtons =
         settingsStore.settings &&

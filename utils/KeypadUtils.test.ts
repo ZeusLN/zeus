@@ -2,7 +2,8 @@ import {
     getDecimalLimit,
     validateKeypadInput,
     getAmountFontSize,
-    deleteLastCharacter
+    deleteLastCharacter,
+    parseClipboardAmount
 } from './KeypadUtils';
 
 // Mock stores
@@ -11,7 +12,16 @@ const createMockFiatStore = (decimalPlaces?: number) => ({
         .fn()
         .mockReturnValue(
             decimalPlaces !== undefined ? { decimalPlaces } : undefined
-        )
+        ),
+    getSymbol: jest.fn().mockReturnValue({ separatorSwap: false })
+});
+
+const createMockFiatStoreWithSwap = (
+    decimalPlaces: number = 2,
+    separatorSwap: boolean = true
+) => ({
+    symbolLookup: jest.fn().mockReturnValue({ decimalPlaces }),
+    getSymbol: jest.fn().mockReturnValue({ separatorSwap })
 });
 
 const createMockSettingsStore = (fiat: string = 'USD') => ({
@@ -469,6 +479,226 @@ describe('KeypadUtils', () => {
                     40
                 );
             });
+        });
+    });
+
+    describe('parseClipboardAmount', () => {
+        const settingsStore = createMockSettingsStore();
+
+        it('returns null for empty input', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('parses a plain integer', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '12345',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('12345');
+        });
+
+        it('strips US-style thousands separators', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '1,234,567',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('1234567');
+        });
+
+        it('strips currency symbols and whitespace', () => {
+            const fiatStore = createMockFiatStore(2);
+            expect(
+                parseClipboardAmount(
+                    '$ 19.99',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('19.99');
+        });
+
+        it('strips unit suffix labels', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '50000 sats',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('50000');
+        });
+
+        it('strips the active fiat currency code', () => {
+            const fiatStore = createMockFiatStore(2);
+            expect(
+                parseClipboardAmount(
+                    '100 USD',
+                    'fiat',
+                    fiatStore as any,
+                    createMockSettingsStore('USD') as any
+                )
+            ).toBe('100');
+        });
+
+        it('rejects non-active fiat currency codes', () => {
+            const fiatStore = createMockFiatStore(2);
+            expect(
+                parseClipboardAmount(
+                    '50 EUR',
+                    'fiat',
+                    fiatStore as any,
+                    createMockSettingsStore('USD') as any
+                )
+            ).toBeNull();
+        });
+
+        it('honours comma decimal separator for fiat with separatorSwap', () => {
+            const fiatStore = createMockFiatStoreWithSwap(2, true);
+            expect(
+                parseClipboardAmount(
+                    '1.234,56',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('1234.56');
+        });
+
+        it('truncates excess decimal places to unit limit', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '0.123456789',
+                    'BTC',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('0.12345678');
+        });
+
+        it('truncates excess decimal places for sats', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '5.123456',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('5.123');
+        });
+
+        it('drops decimals entirely for zero-decimal fiat (JPY)', () => {
+            const fiatStore = createMockFiatStore(0);
+            expect(
+                parseClipboardAmount(
+                    '500.99',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('500');
+        });
+
+        it('rejects amounts exceeding BTC integer length', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '123456789',
+                    'BTC',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('rejects amounts exceeding sats max supply', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '2100000000000001',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('rejects BOLT11 invoices', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    'lnbc1500u1p3xnpsapp5q...',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('rejects on-chain addresses', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('rejects non-numeric garbage', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    'hello world',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBeNull();
+        });
+
+        it('normalizes leading zeros', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '0000123',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('123');
+        });
+
+        it('handles bare decimal like ".5"', () => {
+            const fiatStore = createMockFiatStore();
+            expect(
+                parseClipboardAmount(
+                    '.5',
+                    'BTC',
+                    fiatStore as any,
+                    settingsStore as any
+                )
+            ).toBe('0.5');
         });
     });
 

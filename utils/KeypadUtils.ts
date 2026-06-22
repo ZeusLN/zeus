@@ -279,3 +279,88 @@ export const deleteLastCharacter = (amount: string): string => {
     }
     return amount.substring(0, amount.length - 1);
 };
+
+/**
+ * Parses a free-form clipboard string into a keypad-compatible amount in the
+ * given unit. Strips currency symbols, unit suffixes ("sats", "BTC", ...) and
+ * thousands separators, honours the decimal separator implied by the active
+ * currency (e.g. "1.234,56" for EUR), truncates excess decimal places, and
+ * enforces the same integer-length and capacity caps as keypad entry.
+ *
+ * Returns null when the clipboard does not contain a usable numeric amount.
+ */
+export const parseClipboardAmount = (
+    clipboardValue: string,
+    units: Units | string,
+    fiatStore: FiatStore,
+    settingsStore: SettingsStore
+): string | null => {
+    if (!clipboardValue) return null;
+
+    // Reject clipboard content that obviously isn't a number — e.g. BOLT11
+    // invoices, on-chain addresses, or BIP-21 URIs would otherwise have their
+    // alphabetic chars stripped and the leftover digits parsed as an amount.
+    // Strip recognised unit/currency labels first so "100 USD" or "50000 sats"
+    // pass the alphabetic-content check.
+    let withoutUnitLabels = clipboardValue.replace(
+        /sats?|satoshis?|btc|bitcoin|msats?/gi,
+        ''
+    );
+    const activeFiat = settingsStore?.settings?.fiat;
+    if (activeFiat) {
+        withoutUnitLabels = withoutUnitLabels.replace(
+            new RegExp(`\\b${activeFiat}\\b`, 'gi'),
+            ''
+        );
+    }
+    if (/[a-z]{2,}/i.test(withoutUnitLabels)) return null;
+
+    const useCommaAsDecimal =
+        units === 'fiat' && !!fiatStore.getSymbol().separatorSwap;
+
+    let cleaned = clipboardValue.trim();
+    if (useCommaAsDecimal) {
+        cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.');
+    } else {
+        cleaned = cleaned.replace(/,/g, '');
+    }
+    cleaned = cleaned.replace(/[^0-9.]/g, '');
+
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+        cleaned =
+            cleaned.substring(0, firstDot + 1) +
+            cleaned.substring(firstDot + 1).replace(/\./g, '');
+    }
+
+    if (!cleaned || cleaned === '.') return null;
+
+    const parts = cleaned.split('.');
+    let intPart = parts[0].replace(/^0+/, '') || '0';
+    let decPart: string | undefined = parts[1];
+
+    const decimalLimit = getDecimalLimit(units, fiatStore, settingsStore);
+    if (decPart !== undefined) {
+        if (decimalLimit === 0) {
+            decPart = undefined;
+        } else if (decimalLimit !== null && decPart.length > decimalLimit) {
+            decPart = decPart.substring(0, decimalLimit);
+        }
+    }
+
+    if (units === 'BTC' && intPart.length > 8) return null;
+    if (units === 'sats' && intPart.length > 12) return null;
+    if (units === 'fiat' && intPart.length > 10) return null;
+
+    const finalAmount =
+        decPart !== undefined && decPart !== ''
+            ? `${intPart}.${decPart}`
+            : intPart;
+
+    const bn = new BigNumber(finalAmount);
+    if (bn.isNaN()) return null;
+    if (units === 'BTC' && bn.gt(21000000)) return null;
+    if (units === 'sats' && bn.gt(2100000000000000)) return null;
+
+    return finalAmount;
+};
