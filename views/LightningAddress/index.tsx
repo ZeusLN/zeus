@@ -104,7 +104,7 @@ export default class LightningAddress extends React.Component<
 
         const skipStatus = route.params?.skipStatus;
 
-        if (!skipStatus) status();
+        if (!skipStatus) status().catch(this.handleStatusError);
 
         ChannelsStore.enrichedChannels?.every((channel) => {
             if (channel.remotePubkey === DEFAULT_LSPS1_PUBKEY_MAINNET) {
@@ -129,8 +129,17 @@ export default class LightningAddress extends React.Component<
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
         } else {
-            this.props.LightningAddressStore.status();
+            this.props.LightningAddressStore.status().catch(
+                this.handleStatusError
+            );
         }
+    };
+
+    // status() records the failure in the store's observable error/error_msg
+    // (which the UI renders) and then re-throws, so fire-and-forget call sites
+    // must catch the rejection to avoid an unhandled promise rejection.
+    private handleStatusError = (error: any) => {
+        console.error('LightningAddressStore.status() failed', error);
     };
 
     render() {
@@ -1171,7 +1180,11 @@ export default class LightningAddress extends React.Component<
                                                 margin: 15,
                                                 alignItems: 'center'
                                             }}
-                                            onPress={() => status()}
+                                            onPress={() =>
+                                                status().catch(
+                                                    this.handleStatusError
+                                                )
+                                            }
                                         >
                                             <Text
                                                 style={{
@@ -1235,7 +1248,11 @@ export default class LightningAddress extends React.Component<
                                             ListFooterComponent={
                                                 <Spacer height={100} />
                                             }
-                                            onRefresh={() => status()}
+                                            onRefresh={() =>
+                                                status().catch(
+                                                    this.handleStatusError
+                                                )
+                                            }
                                             refreshing={loading}
                                             keyExtractor={(_, index) =>
                                                 `${index}`
