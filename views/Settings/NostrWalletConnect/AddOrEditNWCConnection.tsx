@@ -304,6 +304,26 @@ export default class AddOrEditNWCConnection extends React.Component<
         return true;
     };
 
+    validateConnectionInputs = () => {
+        const { connectionName, selectedPermissions } = this.state;
+
+        if (!connectionName.trim()) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.validation.connectionNameRequired'
+                )
+            );
+        }
+
+        if (selectedPermissions.length === 0) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.validation.atLeastOnePermissionRequired'
+                )
+            );
+        }
+    };
+
     selectPermissionType = (permissionType: PermissionType) => {
         if (this.state.selectedPermissionType === permissionType) {
             this.updateStateWithChangeTracking({
@@ -475,6 +495,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     buildConnectionParams = async (isEdit: boolean, connectionId?: string) => {
+        this.validateConnectionInputs();
         const {
             connectionName,
             selectedRelayUrl,
