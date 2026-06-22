@@ -20,7 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ZaplockerPayment from './ZaplockerPayment';
 import CashuPayment from './CashuPayment';
 
-import CopiedToast from '../../components/CopiedToast';
+import { showCopiedToast } from '../../components/CopiedToast';
 
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
@@ -63,7 +63,6 @@ interface LightningAddressProps {
 
 interface LightningAddressState {
     hasZeusLspChannel: boolean;
-    showCopiedToast: boolean;
 }
 
 @inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore')
@@ -75,15 +74,13 @@ export default class LightningAddress extends React.Component<
     private pan: Animated.ValueXY;
     private panResponder: PanResponderInstance;
     private scrollViewRef = React.createRef<ScrollView>();
-    private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
     isInitialFocus = true;
 
     constructor(props: LightningAddressProps) {
         super(props);
         this.state = {
-            hasZeusLspChannel: false,
-            showCopiedToast: false
+            hasZeusLspChannel: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -130,7 +127,6 @@ export default class LightningAddress extends React.Component<
     componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
     }
 
     handleFocus = () => {
@@ -149,17 +145,12 @@ export default class LightningAddress extends React.Component<
             `${lightningAddressHandle}@${lightningAddressDomain}`
         );
         Vibration.vibrate(50);
-        this.setState({ showCopiedToast: true });
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(
-            () => this.setState({ showCopiedToast: false }),
-            2000
-        );
+        showCopiedToast();
     };
 
     render() {
         const { navigation, LightningAddressStore, SettingsStore } = this.props;
-        const { hasZeusLspChannel, showCopiedToast } = this.state;
+        const { hasZeusLspChannel } = this.state;
         const {
             status,
             redeemAllOpenPaymentsZaplocker,
@@ -385,7 +376,6 @@ export default class LightningAddress extends React.Component<
                                             </Text>
                                         </Row>
                                     </TouchableOpacity>
-                                    <CopiedToast visible={showCopiedToast} />
                                     <Row
                                         style={{
                                             alignSelf: 'center',

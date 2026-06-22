@@ -10,7 +10,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 
 import { Body } from './text/Body';
-import CopiedToast from './CopiedToast';
+import { showCopiedToast } from './CopiedToast';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -38,37 +38,15 @@ interface KeyValueProps {
     SettingsStore?: SettingsStore;
 }
 
-interface KeyValueState {
-    showCopiedToast: boolean;
-}
-
 @inject('ModalStore', 'SettingsStore')
 @observer
-export default class KeyValue extends React.Component<
-    KeyValueProps,
-    KeyValueState
-> {
-    private toastTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    state = {
-        showCopiedToast: false
-    };
-
+export default class KeyValue extends React.Component<KeyValueProps> {
     copyText = () => {
         const { value } = this.props;
         Clipboard.setString(value.toString());
         Vibration.vibrate(50);
-        this.setState({ showCopiedToast: true });
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(
-            () => this.setState({ showCopiedToast: false }),
-            2000
-        );
+        showCopiedToast();
     };
-
-    componentWillUnmount() {
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-    }
 
     render() {
         const {
@@ -209,12 +187,9 @@ export default class KeyValue extends React.Component<
         );
 
         return (
-            <>
-                <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                    <KeyValueRow />
-                </View>
-                <CopiedToast visible={this.state.showCopiedToast} />
-            </>
+            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                <KeyValueRow />
+            </View>
         );
     }
 }

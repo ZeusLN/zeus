@@ -1,55 +1,65 @@
 import * as React from 'react';
-import { Dimensions, Modal, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@rneui/themed';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-interface CopiedToastProps {
-    visible: boolean;
+const DURATION = 2000;
+
+let listeners: Array<(visible: boolean) => void> = [];
+let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+export function showCopiedToast() {
+    if (hideTimeout) clearTimeout(hideTimeout);
+    listeners.forEach((l) => l(true));
+    hideTimeout = setTimeout(() => {
+        listeners.forEach((l) => l(false));
+        hideTimeout = null;
+    }, DURATION);
 }
 
-export default function CopiedToast({ visible }: CopiedToastProps) {
+export default function CopiedToastHost() {
+    const [visible, setVisible] = React.useState(false);
+    React.useEffect(() => {
+        listeners.push(setVisible);
+        return () => {
+            listeners = listeners.filter((l) => l !== setVisible);
+        };
+    }, []);
+
+    if (!visible) return null;
     return (
-        <Modal
-            transparent
-            visible={visible}
-            animationType="fade"
-            onRequestClose={() => {}}
-        >
-            <View style={styles.container}>
-                <View
+        <View pointerEvents="none" style={styles.container}>
+            <View
+                style={[styles.toast, { backgroundColor: themeColor('text') }]}
+            >
+                <Icon
+                    name="check"
+                    size={18}
+                    color={themeColor('background')}
+                    containerStyle={{ marginRight: 6 }}
+                />
+                <Text
                     style={[
-                        styles.toast,
-                        { backgroundColor: themeColor('text') }
+                        styles.toastText,
+                        { color: themeColor('background') }
                     ]}
                 >
-                    <Icon
-                        name="check"
-                        size={18}
-                        color={themeColor('background')}
-                        containerStyle={{ marginRight: 6 }}
-                    />
-                    <Text
-                        style={[
-                            styles.toastText,
-                            { color: themeColor('background') }
-                        ]}
-                    >
-                        {localeString('components.CopyButton.copied')}
-                    </Text>
-                </View>
+                    {localeString('components.CopyButton.copied')}
+                </Text>
             </View>
-        </Modal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        paddingBottom: Math.max(Dimensions.get('window').height * 0.15, 160)
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: Math.max(Dimensions.get('window').height * 0.15, 160),
+        alignItems: 'center'
     },
     toast: {
         borderRadius: 8,

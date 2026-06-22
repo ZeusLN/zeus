@@ -53,6 +53,7 @@ import PushNotificationManager from './PushNotificationManager';
 import StealthModeUtils from './utils/StealthModeUtils';
 import StealthModeWrapper from './components/StealthModeWrapper';
 import { AppContainer } from './components/layout/AppContainer';
+import CopiedToastHost from './components/CopiedToast';
 import AlertModal from './components/Modals/AlertModal';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
@@ -1811,6 +1812,7 @@ export default class App extends React.PureComponent {
                                 <RatingModal />
                                 {/* @ts-ignore:next-line */}
                                 <RestoreChannelModal />
+                                <CopiedToastHost />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
                     </AppContainer>
