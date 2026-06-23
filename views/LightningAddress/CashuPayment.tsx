@@ -1,6 +1,12 @@
 import React from 'react';
-import { Alert, Animated, StyleSheet, TouchableOpacity } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import Animated, {
+    Extrapolation,
+    interpolate,
+    SharedValue,
+    useAnimatedStyle
+} from 'react-native-reanimated';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { ListItem } from '@rneui/themed';
 import moment from 'moment';
 
@@ -44,41 +50,12 @@ export default function CashuPayment(props: any) {
     };
 
     const renderRightActions = (
-        _progress: Animated.AnimatedInterpolation<number>,
-        dragX: Animated.AnimatedInterpolation<number>
-    ) => {
-        const trans = dragX.interpolate({
-            inputRange: [-90, 0],
-            outputRange: [0, 90],
-            extrapolate: 'clamp'
-        });
-
-        return (
-            <Animated.View
-                style={[
-                    styles.rightActionsContainer,
-                    { transform: [{ translateX: trans }] }
-                ]}
-            >
-                <Button
-                    onPress={confirmDelete}
-                    icon={{
-                        name: 'delete',
-                        size: 25,
-                        color: themeColor('text')
-                    }}
-                    containerStyle={{
-                        ...styles.deleteButton,
-                        backgroundColor: themeColor('delete')
-                    }}
-                    iconOnly
-                />
-            </Animated.View>
-        );
-    };
+        _progress: SharedValue<number>,
+        translation: SharedValue<number>
+    ) => <RightActions translation={translation} onDelete={confirmDelete} />;
 
     return (
-        <Swipeable renderRightActions={renderRightActions}>
+        <ReanimatedSwipeable renderRightActions={renderRightActions}>
             <ListItem
                 containerStyle={{
                     flex: 1,
@@ -153,9 +130,47 @@ export default function CashuPayment(props: any) {
                     </Row>
                 </ListItem.Content>
             </ListItem>
-        </Swipeable>
+        </ReanimatedSwipeable>
     );
 }
+
+const RightActions = ({
+    translation,
+    onDelete
+}: {
+    translation: SharedValue<number>;
+    onDelete: () => void;
+}) => {
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            {
+                translateX: interpolate(
+                    translation.value,
+                    [-90, 0],
+                    [0, 90],
+                    Extrapolation.CLAMP
+                )
+            }
+        ]
+    }));
+    return (
+        <Animated.View style={[styles.rightActionsContainer, animatedStyle]}>
+            <Button
+                onPress={onDelete}
+                icon={{
+                    name: 'delete',
+                    size: 25,
+                    color: themeColor('text')
+                }}
+                containerStyle={{
+                    ...styles.deleteButton,
+                    backgroundColor: themeColor('delete')
+                }}
+                iconOnly
+            />
+        </Animated.View>
+    );
+};
 
 const styles = StyleSheet.create({
     rightActionsContainer: {
