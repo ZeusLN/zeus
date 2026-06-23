@@ -13,6 +13,7 @@ import { Icon } from '@rneui/themed';
 import { observer } from 'mobx-react';
 
 import Button from './Button';
+import { showCopiedToast } from './CopiedToast';
 import LoadingIndicator from './LoadingIndicator';
 import ModalBox from './ModalBox';
 
@@ -34,7 +35,6 @@ interface MintReviewsModalProps {
 
 interface MintReviewsModalState {
     expandedReviews: Set<number>;
-    showCopiedToast: boolean;
 }
 
 @observer
@@ -42,11 +42,8 @@ export default class MintReviewsModal extends React.Component<
     MintReviewsModalProps,
     MintReviewsModalState
 > {
-    private toastTimeout: ReturnType<typeof setTimeout> | null = null;
-
     state: MintReviewsModalState = {
-        expandedReviews: new Set(),
-        showCopiedToast: false
+        expandedReviews: new Set()
     };
 
     componentDidUpdate(prevProps: MintReviewsModalProps) {
@@ -54,10 +51,6 @@ export default class MintReviewsModal extends React.Component<
             this.setState({ expandedReviews: new Set() });
             this.fetchProfiles();
         }
-    }
-
-    componentWillUnmount() {
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
     }
 
     fetchProfiles = async () => {
@@ -70,12 +63,7 @@ export default class MintReviewsModal extends React.Component<
     copyToClipboard = (text: string) => {
         Clipboard.setString(text);
         Vibration.vibrate(50);
-        this.setState({ showCopiedToast: true });
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(
-            () => this.setState({ showCopiedToast: false }),
-            2000
-        );
+        showCopiedToast();
     };
 
     toggleReviewExpanded = (index: number) => {

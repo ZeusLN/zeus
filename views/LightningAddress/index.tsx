@@ -8,8 +8,10 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
+    Vibration,
     View
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -17,6 +19,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ZaplockerPayment from './ZaplockerPayment';
 import CashuPayment from './CashuPayment';
+
+import { showCopiedToast } from '../../components/CopiedToast';
 
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
@@ -131,6 +135,17 @@ export default class LightningAddress extends React.Component<
         } else {
             this.props.LightningAddressStore.status();
         }
+    };
+
+    copyLightningAddress = () => {
+        const { LightningAddressStore } = this.props;
+        const { lightningAddressHandle, lightningAddressDomain } =
+            LightningAddressStore;
+        Clipboard.setString(
+            `${lightningAddressHandle}@${lightningAddressDomain}`
+        );
+        Vibration.vibrate(50);
+        showCopiedToast();
     };
 
     render() {
@@ -341,9 +356,7 @@ export default class LightningAddress extends React.Component<
                                     }}
                                 >
                                     <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('ZeusPayPlus')
-                                        }
+                                        onPress={this.copyLightningAddress}
                                     >
                                         <Row
                                             style={{
@@ -362,13 +375,21 @@ export default class LightningAddress extends React.Component<
                                                 {`${lightningAddressHandle}@${lightningAddressDomain}`}
                                             </Text>
                                         </Row>
-                                        <Row
-                                            style={{
-                                                alignSelf: 'center',
-                                                marginTop: 15
-                                            }}
-                                        >
-                                            {!zeusPlus && (
+                                    </TouchableOpacity>
+                                    <Row
+                                        style={{
+                                            alignSelf: 'center',
+                                            marginTop: 15
+                                        }}
+                                    >
+                                        {!zeusPlus && (
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'ZeusPayPlus'
+                                                    )
+                                                }
+                                            >
                                                 <Pill
                                                     title={localeString(
                                                         'views.Settings.LightningAddress.upgrade'
@@ -383,8 +404,16 @@ export default class LightningAddress extends React.Component<
                                                     )}
                                                     borderWidth={1}
                                                 />
-                                            )}
-                                            {zeusPlus && (
+                                            </TouchableOpacity>
+                                        )}
+                                        {zeusPlus && (
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'ZeusPayPlus'
+                                                    )
+                                                }
+                                            >
                                                 <Pill
                                                     title="ZEUS Pay+"
                                                     width={100}
@@ -394,9 +423,9 @@ export default class LightningAddress extends React.Component<
                                                     )}
                                                     borderWidth={1}
                                                 />
-                                            )}
-                                        </Row>
-                                    </TouchableOpacity>
+                                            </TouchableOpacity>
+                                        )}
+                                    </Row>
                                     {lightningAddressType === 'zaplocker' && (
                                         <Row
                                             style={{
@@ -465,7 +494,7 @@ export default class LightningAddress extends React.Component<
                                     <Row
                                         style={{
                                             alignSelf: 'center',
-                                            marginTop: 5
+                                            marginTop: 30
                                         }}
                                     >
                                         <QRButton />
