@@ -325,7 +325,8 @@ export default class Receive extends React.Component<
                 settings.pos &&
                 settings.pos.confirmationPreference &&
                 settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn;
+            route.params?.forceLn ||
+            !BackendUtils.supportsOnchainReceiving();
         const onChainOnly = route.params?.forceOnChain;
 
         reset();
@@ -1295,7 +1296,8 @@ export default class Receive extends React.Component<
                 settings.pos &&
                 settings.pos.confirmationPreference &&
                 settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn;
+            route.params?.forceLn ||
+            !BackendUtils.supportsOnchainReceiving();
         const onChainOnly = route.params?.forceOnChain;
 
         const lnurl = route.params?.lnurlParams;
