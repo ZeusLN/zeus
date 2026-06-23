@@ -1,15 +1,22 @@
 import React, { Component } from 'react';
 import {
     Alert,
-    Animated,
     StyleSheet,
     Text,
     View,
     I18nManager,
     TouchableOpacity
 } from 'react-native';
+import Animated, {
+    interpolate,
+    SharedValue,
+    useAnimatedStyle
+} from 'react-native-reanimated';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import { RectButton } from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+    SwipeableMethods
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
@@ -24,6 +31,28 @@ import MintToken from '../../assets/images/SVG/MintToken.svg';
 import Mint from '../../assets/images/SVG/Mint.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';
+
+const ActionContainer = ({
+    x,
+    progress,
+    children
+}: {
+    x: number;
+    progress: SharedValue<number>;
+    children: React.ReactNode;
+}) => {
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(progress.value, [0.25, 1], [x, 0]) }
+        ],
+        opacity: interpolate(progress.value, [0, 1], [0, 1])
+    }));
+    return (
+        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+            {children}
+        </Animated.View>
+    );
+};
 
 interface EcashSwipeableRowProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -48,17 +77,9 @@ export default class EcashSwipeableRow extends Component<
     private renderAction = (
         text: string,
         x: number,
-        progress: Animated.AnimatedInterpolation<number>
+        progress: SharedValue<number>
     ) => {
         const { account, navigation } = this.props;
-        const transTranslateX = progress.interpolate({
-            inputRange: [0.25, 1],
-            outputRange: [x, 0]
-        });
-        const transOpacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-        });
         const pressHandler = () => {
             this.close();
 
@@ -74,13 +95,7 @@ export default class EcashSwipeableRow extends Component<
         };
 
         return (
-            <Animated.View
-                style={{
-                    flex: 1,
-                    transform: [{ translateX: transTranslateX }],
-                    opacity: transOpacity
-                }}
-            >
+            <ActionContainer x={x} progress={progress}>
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     <View
                         style={[styles.view]}
@@ -137,13 +152,11 @@ export default class EcashSwipeableRow extends Component<
                         </Text>
                     </View>
                 </RectButton>
-            </Animated.View>
+            </ActionContainer>
         );
     };
 
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>
-    ) => (
+    private renderActions = (progress: SharedValue<number>) => (
         <View
             style={{
                 marginLeft: 15,
@@ -166,10 +179,10 @@ export default class EcashSwipeableRow extends Component<
         </View>
     );
 
-    private swipeableRow?: Swipeable;
+    private swipeableRow?: SwipeableMethods;
 
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
+    private updateRef = (ref: SwipeableMethods | null) => {
+        this.swipeableRow = ref ?? undefined;
     };
 
     private close = () => {
@@ -269,7 +282,7 @@ export default class EcashSwipeableRow extends Component<
             );
 
         return (
-            <Swipeable
+            <ReanimatedSwipeable
                 ref={this.updateRef}
                 friction={2}
                 enableTrackpadTwoFingerGesture
@@ -291,7 +304,7 @@ export default class EcashSwipeableRow extends Component<
                 >
                     {children}
                 </TouchableOpacity>
-            </Swipeable>
+            </ReanimatedSwipeable>
         );
     }
 }
