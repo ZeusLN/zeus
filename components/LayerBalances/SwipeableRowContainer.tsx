@@ -1,11 +1,14 @@
 import * as React from 'react';
-import { Animated, StyleProp, TouchableOpacity, ViewStyle } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { StyleProp, TouchableOpacity, ViewStyle } from 'react-native';
+import { SharedValue } from 'react-native-reanimated';
+import ReanimatedSwipeable, {
+    SwipeableMethods
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 interface SwipeableRowContainerProps {
     children: React.ReactNode;
     renderLeftActions: (
-        progress: Animated.AnimatedInterpolation<number>,
+        progress: SharedValue<number>,
         close: () => void
     ) => React.ReactNode;
     onPress: (open: () => void) => void;
@@ -34,10 +37,10 @@ export default class SwipeableRowContainer extends React.Component<
 > {
     state = { expanded: false };
 
-    private swipeableRow?: Swipeable;
+    private swipeableRow?: SwipeableMethods;
 
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
+    private updateRef = (ref: SwipeableMethods | null) => {
+        this.swipeableRow = ref ?? undefined;
     };
 
     private close = () => {
@@ -59,7 +62,7 @@ export default class SwipeableRowContainer extends React.Component<
         const { expanded } = this.state;
 
         return (
-            <Swipeable
+            <ReanimatedSwipeable
                 ref={this.updateRef}
                 friction={2}
                 enableTrackpadTwoFingerGesture
@@ -91,7 +94,7 @@ export default class SwipeableRowContainer extends React.Component<
                 >
                     {children}
                 </TouchableOpacity>
-            </Swipeable>
+            </ReanimatedSwipeable>
         );
     }
 }
