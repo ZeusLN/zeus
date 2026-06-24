@@ -55,7 +55,7 @@ export default class CLNRest {
         url: string,
         method: any,
         data?: any,
-        certVerification?: boolean,
+        certVerification: boolean = false,
         useTor?: boolean,
         timeout?: number
     ) => {

@@ -37,7 +37,7 @@ export interface Node {
     rune?: string;
     accessKey?: string;
     implementation?: string;
-    certVerification?: boolean;
+    certVerification: boolean;
     enableTor?: boolean;
     nickname?: string;
     dismissCustodialWarning: boolean;
@@ -1628,7 +1628,7 @@ export default class SettingsStore {
     @observable rune: string;
     @observable accessKey: string;
     @observable implementation: Implementations;
-    @observable certVerification: boolean | undefined;
+    @observable certVerification: boolean = false;
     @observable public loggedIn = false;
     @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
@@ -1996,7 +1996,7 @@ export default class SettingsStore {
     @action
     public createAccount = (
         host: string,
-        certVerification?: boolean,
+        certVerification: boolean,
         enableTor?: boolean
     ) => {
         const url = `${host}/create`;
