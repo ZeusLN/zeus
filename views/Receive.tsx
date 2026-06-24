@@ -1448,7 +1448,7 @@ export default class Receive extends React.Component<
         );
 
         const buttons: any =
-            BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet
+            BackendUtils.supportsLightningAddress() && !NodeInfoStore.testnet
                 ? [
                       { element: unifiedButton },
                       { element: lightningButton },
