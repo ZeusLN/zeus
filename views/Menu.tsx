@@ -525,8 +525,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         )}
 
                     {selectedNode &&
-                        (BackendUtils.supportsCustomPreimages() ||
-                            BackendUtils.supportsCashuWallet()) &&
+                        BackendUtils.supportsLightningAddress() &&
                         !NodeInfoStore.testnet &&
                         !isChannelMigrating && (
                             <View

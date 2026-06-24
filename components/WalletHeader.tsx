@@ -636,6 +636,7 @@ export default class WalletHeader extends React.Component<
                             <MenuBadge navigation={navigation} />
                             {!isChannelMigrating &&
                                 !connecting &&
+                                BackendUtils.supportsLightningAddress() &&
                                 paid &&
                                 paid.length > 0 && (
                                     <TouchableOpacity

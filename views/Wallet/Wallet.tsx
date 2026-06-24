@@ -1198,7 +1198,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (lightningAddress.enabled && !NodeInfoStore.testnet) {
+        if (
+            lightningAddress.enabled &&
+            !NodeInfoStore.testnet &&
+            BackendUtils.supportsLightningAddress()
+        ) {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
@@ -1238,7 +1242,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             settings?.ecash?.enableCashu &&
             !lightningAddress.enabled &&
             (settings?.ecash?.initialMintUrls?.length ?? 0) > 0 &&
-            !NodeInfoStore.testnet
+            !NodeInfoStore.testnet &&
+            BackendUtils.supportsCashuWallet()
         ) {
             try {
                 const mintUrl = settings.ecash.initialMintUrls![0];
