@@ -254,6 +254,22 @@ export default class Receive extends React.Component<
         return defaultInvoiceType === DefaultInvoiceType.Lightning ? 1 : 0;
     };
 
+    private getReceiveModeFlags = (): {
+        lnOnly: boolean;
+        onChainOnly: boolean;
+    } => {
+        const { route, SettingsStore } = this.props;
+        const { posStatus, settings } = SettingsStore;
+        const lnOnly =
+            (settings &&
+                posStatus === 'active' &&
+                settings.pos?.confirmationPreference === 'lnOnly') ||
+            !!route.params?.forceLn ||
+            !BackendUtils.supportsOnchainReceiving();
+        const onChainOnly = !!route.params?.forceOnChain;
+        return { lnOnly, onChainOnly };
+    };
+
     async componentDidMount() {
         const {
             InvoicesStore,
@@ -263,7 +279,7 @@ export default class Receive extends React.Component<
             route
         } = this.props;
         const { reset } = InvoicesStore;
-        const { getSettings, posStatus } = SettingsStore;
+        const { getSettings } = SettingsStore;
         const { status, lightningAddressHandle } = LightningAddressStore;
 
         const settings = await getSettings();
@@ -318,16 +334,7 @@ export default class Receive extends React.Component<
             flowLspNotConfigured
         });
 
-        const lnOnly =
-            (settings &&
-                posStatus &&
-                posStatus === 'active' &&
-                settings.pos &&
-                settings.pos.confirmationPreference &&
-                settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn ||
-            !BackendUtils.supportsOnchainReceiving();
-        const onChainOnly = route.params?.forceOnChain;
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         reset();
 
@@ -1289,16 +1296,7 @@ export default class Receive extends React.Component<
             settings?.invoices?.defaultInvoiceType !==
             DefaultInvoiceType.Unified;
 
-        const lnOnly =
-            (settings &&
-                posStatus &&
-                posStatus === 'active' &&
-                settings.pos &&
-                settings.pos.confirmationPreference &&
-                settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn ||
-            !BackendUtils.supportsOnchainReceiving();
-        const onChainOnly = route.params?.forceOnChain;
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         const lnurl = route.params?.lnurlParams;
 
