@@ -584,57 +584,58 @@ export default class NWCSettings extends React.Component<
                                 </View>
                             )}
 
-                        {settings.lightningAddress?.enabled && (
-                            <View style={{ marginTop: 20 }}>
-                                <View style={{ flexDirection: 'row' }}>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            justifyContent: 'center'
-                                        }}
-                                    >
-                                        <Text
+                        {settings.lightningAddress?.enabled &&
+                            BackendUtils.supportsLightningAddress() && (
+                                <View style={{ marginTop: 20 }}>
+                                    <View style={{ flexDirection: 'row' }}>
+                                        <View
                                             style={{
-                                                color: themeColor('text'),
-                                                fontSize: 17
+                                                flex: 1,
+                                                justifyContent: 'center'
                                             }}
                                         >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrl'
-                                            )}
-                                        </Text>
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontSize: 17
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrl'
+                                                )}
+                                            </Text>
+                                        </View>
+                                        <View
+                                            style={{
+                                                alignSelf: 'center'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={lud16Enabled}
+                                                onValueChange={
+                                                    this.toggleLud16Enabled
+                                                }
+                                                disabled={
+                                                    SettingsStore.settingsUpdateInProgress ||
+                                                    loading
+                                                }
+                                            />
+                                        </View>
                                     </View>
-                                    <View
+                                    <Text
                                         style={{
-                                            alignSelf: 'center'
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 14,
+                                            marginTop: 8,
+                                            lineHeight: 20
                                         }}
                                     >
-                                        <Switch
-                                            value={lud16Enabled}
-                                            onValueChange={
-                                                this.toggleLud16Enabled
-                                            }
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress ||
-                                                loading
-                                            }
-                                        />
-                                    </View>
+                                        {localeString(
+                                            'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrlDescription'
+                                        )}
+                                    </Text>
                                 </View>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 14,
-                                        marginTop: 8,
-                                        lineHeight: 20
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.nwcIncludeLud16InUrlDescription'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
+                            )}
                         {Platform.OS === 'android' && (
                             <View style={{ marginTop: 20 }}>
                                 <View style={{ flexDirection: 'row' }}>
