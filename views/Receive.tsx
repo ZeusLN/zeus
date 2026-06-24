@@ -268,7 +268,11 @@ export default class Receive extends React.Component<
 
         const settings = await getSettings();
 
-        if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
+        if (
+            settings?.lightningAddress?.enabled &&
+            !lightningAddressHandle &&
+            BackendUtils.supportsLightningAddress()
+        ) {
             status();
         }
 

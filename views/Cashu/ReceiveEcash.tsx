@@ -51,6 +51,7 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import CashuInvoice from '../../models/CashuInvoice';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -149,7 +150,11 @@ export default class ReceiveEcash extends React.Component<
 
         const settings = await getSettings();
 
-        if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
+        if (
+            settings?.lightningAddress?.enabled &&
+            !lightningAddressHandle &&
+            BackendUtils.supportsLightningAddress()
+        ) {
             status();
         }
 

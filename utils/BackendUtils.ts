@@ -260,6 +260,8 @@ class BackendUtils {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
+    supportsLightningAddress = () =>
+        this.supportsCustomPreimages() || this.supportsCashuWallet();
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
     supportsSettingInvoiceExpiration = () =>
         this.call('supportsSettingInvoiceExpiration');

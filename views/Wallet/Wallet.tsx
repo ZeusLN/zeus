@@ -1198,7 +1198,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (lightningAddress.enabled && !NodeInfoStore.testnet) {
+        if (
+            lightningAddress.enabled &&
+            !NodeInfoStore.testnet &&
+            BackendUtils.supportsLightningAddress()
+        ) {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
