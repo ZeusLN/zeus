@@ -270,6 +270,14 @@ export default class Receive extends React.Component<
         return { lnOnly, onChainOnly };
     };
 
+    private getSkipOnchain = (): boolean => {
+        const { settings } = this.props.SettingsStore;
+        return (
+            settings?.invoices?.defaultInvoiceType !==
+            DefaultInvoiceType.Unified
+        );
+    };
+
     async componentDidMount() {
         const {
             InvoicesStore,
@@ -553,15 +561,12 @@ export default class Receive extends React.Component<
         addressType?: string,
         lspIsActive?: boolean
     ) => {
-        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { InvoicesStore, PosStore } = this.props;
         const { receiverName, orderId, orderTip, exchangeRate } = this.state;
         // Use passed lspIsActive parameter, fall back to state if not provided
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { settings } = SettingsStore;
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
         // POS invoice reuse logic
         const checkExistingInvoice = async () => {
@@ -682,14 +687,11 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, SettingsStore, route } = this.props;
+        const { navigation, InvoicesStore, route } = this.props;
         const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { settings } = SettingsStore;
         const satAmount = getSatAmount(route.params?.amount);
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
@@ -1292,9 +1294,7 @@ export default class Receive extends React.Component<
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
 
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
         const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
