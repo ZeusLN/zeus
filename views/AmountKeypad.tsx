@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { Animated, View, StyleSheet } from 'react-native';
+import { Animated, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -22,12 +23,15 @@ import {
     validateKeypadInput,
     getAmountFontSize,
     deleteLastCharacter,
+    parseClipboardAmount,
     resetKeypadTextAnimation,
     resetAllKeypadAnimations,
     startKeypadInvalidInputAnimation
 } from '../utils/KeypadUtils';
 import { getDecimalPlaceholder } from '../utils/UnitsUtils';
 import { localeString } from '../utils/LocaleUtils';
+
+import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 
 interface AmountKeypadProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -172,6 +176,26 @@ export default class AmountKeypad extends React.Component<
         this.clearValue();
     };
 
+    handlePaste = async () => {
+        const { FiatStore, SettingsStore } = this.props;
+        const clipboardValue = await Clipboard.getString();
+        const parsed = parseClipboardAmount(
+            clipboardValue,
+            this.getEffectiveUnits(),
+            FiatStore!,
+            SettingsStore!
+        );
+
+        if (parsed === null) {
+            this.startShake();
+            return;
+        }
+
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = parsed;
+        this.setState({ amount: parsed });
+    };
+
     getAmountFontSize = () => {
         const { amount } = this.state;
         const units = this.getEffectiveUnits();
@@ -187,6 +211,20 @@ export default class AmountKeypad extends React.Component<
 
         const fontSize = this.getAmountFontSize();
 
+        const PasteButton = (
+            <TouchableOpacity
+                onPress={this.handlePaste}
+                accessibilityLabel={localeString('general.paste')}
+                hitSlop={10}
+            >
+                <ClipboardSVG
+                    fill={themeColor('text')}
+                    width="24"
+                    height="30"
+                />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -198,6 +236,7 @@ export default class AmountKeypad extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={PasteButton}
                     navigation={navigation}
                 />
 
