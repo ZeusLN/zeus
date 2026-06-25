@@ -9,12 +9,22 @@ import {
     initialWindowMetrics
 } from 'react-native-safe-area-context';
 import {
+    AppState,
     BackHandler,
+    LogBox,
     NativeEventSubscription,
     Platform,
-    StatusBar,
-    AppState
+    StatusBar
 } from 'react-native';
+
+// Suppress upstream gesture-handler 3.1.0-nightly + worklets 0.10 strict-mode
+// dev assertion. ReanimatedSwipeable writes to `shouldEnableTap.value` from the
+// UI runtime, which Worklets 0.10 flags as a synchronous remote-function call.
+// Behaviour is unaffected; the assertion is dev-only. Track upstream and remove
+// once 3.1.0 stable ships with the fix.
+LogBox.ignoreLogs([
+    /\[Worklets\] Tried to synchronously call a Remote Function/
+]);
 
 import {
     activityStore,
