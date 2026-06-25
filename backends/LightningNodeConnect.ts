@@ -10,19 +10,11 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 
 import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
+import { toLnrpcAddressType } from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
 
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
-
-const ADDRESS_TYPES = [
-    'WITNESS_PUBKEY_HASH',
-    'NESTED_PUBKEY_HASH',
-    'UNUSED_WITNESS_PUBKEY_HASH',
-    'UNUSED_NESTED_PUBKEY_HASH',
-    'TAPROOT_PUBKEY',
-    'UNUSED_TAPROOT_PUBKEY'
-];
 
 const NEXT_ADDR_MAP: any = {
     WITNESS_PUBKEY_HASH: 0,
@@ -220,7 +212,7 @@ export default class LightningNodeConnect {
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
-                type: ADDRESS_TYPES[data.type] || data.type,
+                type: toLnrpcAddressType(data.type),
                 account: data.account || 'default'
             })
             .then((data: walletrpc.AddrRequest) => snakeize(data));

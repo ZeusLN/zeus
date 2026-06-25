@@ -9,6 +9,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { toLnrpcAddressType } from './../utils/LndUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -371,7 +372,13 @@ export default class LND {
             }`
         );
 
-    getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
+    getNewAddress = (data: any) => {
+        const params: any = { ...data };
+        const type = toLnrpcAddressType(params.type);
+        if (type !== undefined) params.type = type;
+        else delete params.type;
+        return this.getRequest('/v1/newaddress', params);
+    };
     getNewChangeAddress = (data: any) =>
         this.postRequest('/v2/wallet/address/next', data);
     openChannelSync = (data: OpenChannelRequest) => {

@@ -80,6 +80,8 @@ import {
     verifyMessageWithAddr as verifyMsgWithAddr
 } from '../lndmobile/wallet';
 
+import { toLnrpcAddressTypeNum } from '../utils/LndUtils';
+
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
@@ -123,7 +125,10 @@ export default class EmbeddedLND extends LND {
         reversed?: boolean;
     }) => await listPayments(params);
     getNewAddress = async (data: any) =>
-        await newAddress(data.type, data.account);
+        await newAddress(
+            toLnrpcAddressTypeNum(data?.type) as any,
+            data?.account
+        );
     getNewChangeAddress = async (data: any) =>
         await newChangeAddress(data.type, data.account);
     openChannelSync = async (data: OpenChannelRequest) =>

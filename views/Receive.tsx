@@ -278,6 +278,14 @@ export default class Receive extends React.Component<
         );
     };
 
+    private getAddressType = (): string => {
+        const { route, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        return (
+            route.params?.addressType || settings?.invoices?.addressType || '0'
+        );
+    };
+
     async componentDidMount() {
         const {
             InvoicesStore,
@@ -327,7 +335,7 @@ export default class Receive extends React.Component<
             false;
 
         this.setState({
-            addressType: settings?.invoices?.addressType || '0',
+            addressType: this.getAddressType(),
             expirationIndex,
             memo: settings?.invoices?.memo || '',
             receiverName: settings?.invoices?.receiverName || '',
@@ -371,8 +379,7 @@ export default class Receive extends React.Component<
             this.setState({ selectedIndex: this.getDefaultIndex() });
         }
 
-        const addressType =
-            route.params?.addressType || settings?.invoices?.addressType || '0';
+        const addressType = this.getAddressType();
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
