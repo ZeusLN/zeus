@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, FlatList, Text } from 'react-native';
+import { Dimensions, FlatList, Platform, Text } from 'react-native';
 import { Avatar, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -87,19 +87,21 @@ export default class Gods extends React.Component<GodsProps, {}> {
                             keyExtractor={(_item, index) => `message ${index}`}
                             style={{ alignSelf: 'center' }}
                         />
-                        <Button
-                            title={localeString(
-                                'views.Olympians.becomeASponsor'
-                            )}
-                            containerStyle={{
-                                margin: 10
-                            }}
-                            onPress={() =>
-                                UrlUtils.goToUrl(
-                                    'https://zeusln.com/wallet/sponsor'
-                                )
-                            }
-                        />
+                        {Platform.OS !== 'ios' && (
+                            <Button
+                                title={localeString(
+                                    'views.Olympians.becomeASponsor'
+                                )}
+                                containerStyle={{
+                                    margin: 10
+                                }}
+                                onPress={() =>
+                                    UrlUtils.goToUrl(
+                                        'https://zeusln.com/wallet/sponsor'
+                                    )
+                                }
+                            />
+                        )}
                     </>
                 )}
                 {sponsorsError && (
