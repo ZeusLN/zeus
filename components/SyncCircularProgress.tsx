@@ -39,7 +39,6 @@ export default function SyncCircularProgress({
                 duration={500}
             />
             <View
-                pointerEvents="none"
                 style={{
                     position: 'absolute',
                     left: 0,
@@ -47,6 +46,7 @@ export default function SyncCircularProgress({
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
+                    pointerEvents: 'none',
                     alignItems: 'center'
                 }}
             >
