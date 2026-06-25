@@ -264,7 +264,7 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
                 )}
 
                 {/* Overlay */}
-                <View style={styles.overlay} pointerEvents="none">
+                <View style={[styles.overlay, { pointerEvents: 'none' }]}>
                     <View style={styles.scanArea}>
                         {/* Corner markers */}
                         <View style={[styles.corner, styles.topLeft]} />
