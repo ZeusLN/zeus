@@ -11,14 +11,7 @@ import Animated, {
     SharedTransition
 } from 'react-native-reanimated';
 
-// Reanimated 4.4 typing regression: static modifier chain returns the base
-// `AnimationConfigBuilder` instead of `SharedTransition`. Cast to satisfy
-// `sharedTransitionStyle` until upstream restores the subclass return type.
-// Tracking: https://github.com/ZeusLN/zeus/issues/4184
-// Upstream: https://github.com/software-mansion/react-native-reanimated/issues/9706
-export const sharedTransition = SharedTransition.springify(400).dampingRatio(
-    1
-) as SharedTransition;
+export const sharedTransition = SharedTransition.springify(400).dampingRatio(1);
 export const sharedTransitionEntering = FadeIn.delay(350)
     .duration(220)
     .easing(Easing.out(Easing.cubic));
