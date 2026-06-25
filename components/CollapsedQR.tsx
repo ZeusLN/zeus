@@ -241,9 +241,9 @@ export default class CollapsedQR extends React.Component<
                             left: -10000,
                             top: -10000,
                             width: 800,
-                            height: 800
+                            height: 800,
+                            pointerEvents: 'none'
                         }}
-                        pointerEvents="none"
                     >
                         <ForwardedQRCode
                             ref={tempQRRef}

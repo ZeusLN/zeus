@@ -294,16 +294,20 @@ export default class LightningAddress extends React.Component<
                     <View style={{ flex: 1, margin: 5 }}>
                         {redeeming && (
                             <View
-                                pointerEvents="none"
-                                style={styles.loadingPatternWrapper}
+                                style={[
+                                    styles.loadingPatternWrapper,
+                                    { pointerEvents: 'none' }
+                                ]}
                             >
                                 <LightningLoadingPattern />
                             </View>
                         )}
                         {redeemingAll && !redeeming && (
                             <View
-                                pointerEvents="none"
-                                style={styles.loadingPatternWrapper}
+                                style={[
+                                    styles.loadingPatternWrapper,
+                                    { pointerEvents: 'none' }
+                                ]}
                             >
                                 <LightningLoadingPattern
                                     color={themeColor('text')}
