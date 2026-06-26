@@ -15,7 +15,7 @@ import { CheckBox } from '@rneui/themed';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { SharedText } from '../components/SharedTransition';
+import { SharedScreen, SharedText } from '../components/SharedTransition';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -547,133 +547,147 @@ export default class NostrContacts extends React.Component<
         );
 
         return (
-            <Screen>
-                <Header
-                    leftComponent="Back"
-                    centerComponent={{
-                        text: localeString('views.NostrContacts.nostrContacts'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }
-                    }}
-                    rightComponent={
-                        <Row>
-                            {contactsData.length > 0 && !loading && (
-                                <SelectButton />
-                            )}
-                        </Row>
-                    }
-                    onBack={
-                        contactsData.length > 0 ? this.resetSearch : undefined
-                    }
-                    navigateBackOnBackPress={contactsData.length === 0}
-                    navigation={navigation}
-                />
-
-                {error && <ErrorMessage message={error} dismissable />}
-
-                {contactsData.length === 0 && !loading && (
-                    <>
-                        <Text
-                            style={{
-                                marginLeft: 22,
-                                color: themeColor('secondaryText'),
-                                fontSize: 16
-                            }}
-                        >
-                            {localeString('views.NostrContacts.enterNpub')}
-                        </Text>
-                        <TextInput
-                            placeholder={
-                                'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+            <SharedScreen>
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.NostrContacts.nostrContacts'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
-                            value={account}
-                            style={{
-                                marginHorizontal: 22,
-                                borderColor:
-                                    !isValid && account.length > 0
-                                        ? themeColor('delete')
-                                        : 'transparent',
-                                borderWidth: 1
-                            }}
-                            onChangeText={(text: string) => {
-                                if (!text) {
-                                    this.setState({ isValid: true });
-                                }
-                                this.setState({ account: text, error: '' });
-                                this.handleNostrValidation(text);
-                            }}
-                            autoCapitalize="none"
-                        />
-
-                        <Button
-                            onPress={() => this.fetchNostrContacts()}
-                            title={localeString(
-                                'views.NostrContacts.lookUpContacts'
-                            )}
-                            containerStyle={{
-                                marginTop: 20,
-                                marginBottom: 8
-                            }}
-                            disabled={!isValid}
-                        />
-                    </>
-                )}
-
-                {loading ? (
-                    <View style={{ marginTop: 60 }}>
-                        <LoadingIndicator />
-                    </View>
-                ) : (
-                    <FlatList
-                        data={contactsData}
-                        extraData={this.state.selectedContacts}
-                        style={{ marginTop: 10 }}
-                        renderItem={this.renderContactItem}
-                        keyExtractor={(_, index) => index.toString()}
+                        }}
+                        rightComponent={
+                            <Row>
+                                {contactsData.length > 0 && !loading && (
+                                    <SelectButton />
+                                )}
+                            </Row>
+                        }
+                        onBack={
+                            contactsData.length > 0
+                                ? this.resetSearch
+                                : undefined
+                        }
+                        navigateBackOnBackPress={contactsData.length === 0}
+                        navigation={navigation}
                     />
-                )}
-                {!loading &&
-                    !isSelectionMode &&
-                    contactsData.length > 0 &&
-                    selectedContacts.length === 0 && (
-                        <Button
-                            title={localeString(
-                                'views.NostrContacts.importAllContacts'
-                            )}
-                            onPress={async () => {
-                                await this.importContacts();
-                                navigation.popTo('Contacts');
-                            }}
-                            containerStyle={{
-                                paddingBottom: 12,
-                                paddingTop: 8
-                            }}
-                            secondary
+
+                    {error && <ErrorMessage message={error} dismissable />}
+
+                    {contactsData.length === 0 && !loading && (
+                        <>
+                            <Text
+                                style={{
+                                    marginLeft: 22,
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 16
+                                }}
+                            >
+                                {localeString('views.NostrContacts.enterNpub')}
+                            </Text>
+                            <TextInput
+                                placeholder={
+                                    'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+                                }
+                                value={account}
+                                style={{
+                                    marginHorizontal: 22,
+                                    borderColor:
+                                        !isValid && account.length > 0
+                                            ? themeColor('delete')
+                                            : 'transparent',
+                                    borderWidth: 1
+                                }}
+                                onChangeText={(text: string) => {
+                                    if (!text) {
+                                        this.setState({ isValid: true });
+                                    }
+                                    this.setState({ account: text, error: '' });
+                                    this.handleNostrValidation(text);
+                                }}
+                                autoCapitalize="none"
+                            />
+
+                            <Button
+                                onPress={() => this.fetchNostrContacts()}
+                                title={localeString(
+                                    'views.NostrContacts.lookUpContacts'
+                                )}
+                                containerStyle={{
+                                    marginTop: 20,
+                                    marginBottom: 8
+                                }}
+                                disabled={!isValid}
+                            />
+                        </>
+                    )}
+
+                    {loading ? (
+                        <View style={{ marginTop: 60 }}>
+                            <LoadingIndicator />
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={contactsData}
+                            extraData={this.state.selectedContacts}
+                            style={{ marginTop: 10 }}
+                            renderItem={this.renderContactItem}
+                            keyExtractor={(_, index) => index.toString()}
                         />
                     )}
-                {!loading && isSelectionMode && selectedContacts.length >= 0 && (
-                    <Button
-                        title={`${localeString(
-                            'views.OpenChannel.import'
-                        )} ${localeString('views.Settings.Contacts.contacts')}${
-                            selectedContacts.length > 0
-                                ? ` (${selectedContacts.length})`
-                                : ''
-                        }`}
-                        onPress={async () => {
-                            await this.importContacts();
-                            navigation.popTo('Contacts');
-                        }}
-                        containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
-                        secondary
-                        disabled={
-                            isSelectionMode && selectedContacts.length === 0
-                        }
-                    />
-                )}
-            </Screen>
+                    {!loading &&
+                        !isSelectionMode &&
+                        contactsData.length > 0 &&
+                        selectedContacts.length === 0 && (
+                            <Button
+                                title={localeString(
+                                    'views.NostrContacts.importAllContacts'
+                                )}
+                                onPress={async () => {
+                                    await this.importContacts();
+                                    navigation.popTo('Contacts');
+                                }}
+                                containerStyle={{
+                                    paddingBottom: 12,
+                                    paddingTop: 8
+                                }}
+                                secondary
+                            />
+                        )}
+                    {!loading &&
+                        isSelectionMode &&
+                        selectedContacts.length >= 0 && (
+                            <Button
+                                title={`${localeString(
+                                    'views.OpenChannel.import'
+                                )} ${localeString(
+                                    'views.Settings.Contacts.contacts'
+                                )}${
+                                    selectedContacts.length > 0
+                                        ? ` (${selectedContacts.length})`
+                                        : ''
+                                }`}
+                                onPress={async () => {
+                                    await this.importContacts();
+                                    navigation.popTo('Contacts');
+                                }}
+                                containerStyle={{
+                                    paddingBottom: 12,
+                                    paddingTop: 8
+                                }}
+                                secondary
+                                disabled={
+                                    isSelectionMode &&
+                                    selectedContacts.length === 0
+                                }
+                            />
+                        )}
+                </Screen>
+            </SharedScreen>
         );
     }
 }

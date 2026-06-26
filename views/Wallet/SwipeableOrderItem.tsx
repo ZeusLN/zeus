@@ -1,6 +1,14 @@
 import * as React from 'react';
-import { TouchableHighlight, Animated, StyleSheet } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { TouchableHighlight, StyleSheet } from 'react-native';
+import Animated, {
+    Extrapolation,
+    interpolate,
+    SharedValue,
+    useAnimatedStyle
+} from 'react-native-reanimated';
+import ReanimatedSwipeable, {
+    SwipeableMethods
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
@@ -20,7 +28,57 @@ interface SwipeableOrderItemProps {
     onClickHide: () => void;
     onSwipeableOpen: () => void;
 }
-const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
+const RightActions = ({
+    translation,
+    onClickPaid,
+    onClickHide
+}: {
+    translation: SharedValue<number>;
+    onClickPaid: () => void;
+    onClickHide: () => void;
+}) => {
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            {
+                translateX: interpolate(
+                    translation.value,
+                    [-180, 0],
+                    [0, 180],
+                    Extrapolation.CLAMP
+                )
+            }
+        ]
+    }));
+    return (
+        <Animated.View style={[styles.rightActionsContainer, animatedStyle]}>
+            <Button
+                onPress={onClickPaid}
+                icon={{
+                    name: 'payments',
+                    size: 25,
+                    color: themeColor('text')
+                }}
+                containerStyle={styles.paidButton}
+                iconOnly
+            />
+            <Button
+                onPress={onClickHide}
+                icon={{
+                    name: 'delete',
+                    size: 25,
+                    color: themeColor('text')
+                }}
+                containerStyle={styles.deleteButton}
+                iconOnly
+            />
+        </Animated.View>
+    );
+};
+
+const SwipeableOrderItem = React.forwardRef<
+    SwipeableMethods,
+    SwipeableOrderItemProps
+>(
     (
         {
             item,
@@ -45,48 +103,18 @@ const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
         }
 
         const renderRightActions = (
-            _progress: Animated.AnimatedInterpolation<number>,
-            dragX: Animated.AnimatedInterpolation<number>
-        ) => {
-            const trans = dragX.interpolate({
-                inputRange: [-180, 0],
-                outputRange: [0, 180],
-                extrapolate: 'clamp'
-            });
-
-            return (
-                <Animated.View
-                    style={[
-                        styles.rightActionsContainer,
-                        { transform: [{ translateX: trans }] }
-                    ]}
-                >
-                    <Button
-                        onPress={onClickPaid}
-                        icon={{
-                            name: 'payments',
-                            size: 25,
-                            color: themeColor('text')
-                        }}
-                        containerStyle={styles.paidButton}
-                        iconOnly
-                    />
-                    <Button
-                        onPress={onClickHide}
-                        icon={{
-                            name: 'delete',
-                            size: 25,
-                            color: themeColor('text')
-                        }}
-                        containerStyle={styles.deleteButton}
-                        iconOnly
-                    />
-                </Animated.View>
-            );
-        };
+            _progress: SharedValue<number>,
+            translation: SharedValue<number>
+        ) => (
+            <RightActions
+                translation={translation}
+                onClickPaid={onClickPaid}
+                onClickHide={onClickHide}
+            />
+        );
 
         return (
-            <Swipeable
+            <ReanimatedSwipeable
                 ref={ref}
                 onSwipeableOpen={onSwipeableOpen}
                 renderRightActions={renderRightActions}
@@ -110,7 +138,7 @@ const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
                         date={item.getDisplayTime}
                     />
                 </TouchableHighlight>
-            </Swipeable>
+            </ReanimatedSwipeable>
         );
     }
 );
