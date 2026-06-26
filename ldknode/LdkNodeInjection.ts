@@ -932,7 +932,9 @@ const initializeNode = async ({
         );
     }
 
-    // Configure VSS (Versioned Storage Service) for cloud backup
+    // Configure VSS (Versioned Storage Service) for cloud backup.
+    // Gated on connectivity upstream (LdkNodeUtils.initNode skips VSS entirely
+    // when offline), so everything in here only runs when we're online.
     if (vssConfig && vssConfig.url && vssConfig.storeId) {
         let vssHeaders: Record<string, string> | undefined;
         try {
@@ -961,22 +963,20 @@ const initializeNode = async ({
                 Date.now() - tVssSet
             }ms)`
         );
-    }
 
-    // VSS itself is gated on connectivity upstream (LdkNodeUtils.initNode skips
-    // VSS entirely when offline), so this timeout only kicks in when we're
-    // online but VSS is sluggish. A tight 10s budget for existing nodes is
-    // enough for the typical incremental sync; restore-from-seed needs longer
-    // because every read falls through to VSS sequentially.
-    const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
-    const hasLocalDb = await RNFS.exists(localDbPath);
-    const vssBuildTimeout = hasLocalDb ? 10 : 60;
-    await setVssBuildTimeout(vssBuildTimeout);
-    console.log(
-        `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
-            hasLocalDb ? 'existing node' : 'restore / first run'
-        })`
-    );
+        // Tight 10s budget for existing nodes is enough for the typical
+        // incremental sync; restore-from-seed needs longer because every
+        // read falls through to VSS sequentially.
+        const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
+        const hasLocalDb = await RNFS.exists(localDbPath);
+        const vssBuildTimeout = hasLocalDb ? 10 : 60;
+        await setVssBuildTimeout(vssBuildTimeout);
+        console.log(
+            `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
+                hasLocalDb ? 'existing node' : 'restore / first run'
+            })`
+        );
+    }
 
     console.log(`LDK Node: [${elapsed()}] Starting buildNode...`);
     const tBuild = Date.now();
