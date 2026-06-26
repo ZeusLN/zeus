@@ -64,12 +64,18 @@ interface OnchainSwipeableRowProps {
     SyncStore?: SyncStore;
 }
 
+interface OnchainSwipeableRowState {
+    isOpen: boolean;
+}
+
 @inject('SyncStore')
 @observer
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
-    {}
+    OnchainSwipeableRowState
 > {
+    state: OnchainSwipeableRowState = { isOpen: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -235,9 +241,21 @@ export default class OnchainSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
                 containerStyle={{ width: '100%' }}
+                onSwipeableWillOpen={() => this.setState({ isOpen: true })}
+                onSwipeableWillClose={() => this.setState({ isOpen: false })}
             >
                 <TouchableOpacity
-                    onPress={() => (value ? this.sendToAddress() : this.open())}
+                    // See LightningSwipeableRow for the upstream gesture-handler
+                    // pointerEvents-propagation issue this works around.
+                    onPress={() => {
+                        if (this.state.isOpen) {
+                            this.close();
+                        } else if (value) {
+                            this.sendToAddress();
+                        } else {
+                            this.open();
+                        }
+                    }}
                     activeOpacity={1}
                 >
                     {children}

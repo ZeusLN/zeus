@@ -74,12 +74,18 @@ interface LightningSwipeableRowProps {
     SyncStore?: SyncStore;
 }
 
+interface LightningSwipeableRowState {
+    isOpen: boolean;
+}
+
 @inject('SyncStore')
 @observer
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
-    {}
+    LightningSwipeableRowState
 > {
+    state: LightningSwipeableRowState = { isOpen: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -419,13 +425,31 @@ export default class LightningSwipeableRow extends Component<
                 leftThreshold={30}
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
+                onSwipeableWillOpen={() => this.setState({ isOpen: true })}
+                onSwipeableWillClose={() => this.setState({ isOpen: false })}
             >
                 <TouchableOpacity
-                    onPress={() =>
-                        lightning || offer || clinkNoffer || lnurlParams
-                            ? this.fetchLnInvoice()
-                            : this.open()
-                    }
+                    // Tap-to-close fallback: upstream ReanimatedSwipeable's
+                    // built-in tap-to-close relies on a `pointerEvents`
+                    // useAnimatedStyle write that doesn't propagate to
+                    // descendants of v3 HostGestureDetector on Android Fabric
+                    // (see software-mansion/react-native-gesture-handler#4225).
+                    // Close explicitly from JS while we wait for the upstream
+                    // fix to ship in 3.1.0 stable.
+                    onPress={() => {
+                        if (this.state.isOpen) {
+                            this.close();
+                        } else if (
+                            lightning ||
+                            offer ||
+                            clinkNoffer ||
+                            lnurlParams
+                        ) {
+                            this.fetchLnInvoice();
+                        } else {
+                            this.open();
+                        }
+                    }}
                     activeOpacity={1}
                 >
                     {children}
