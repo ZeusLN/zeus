@@ -587,6 +587,10 @@ export default class Receive extends React.Component<
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
 
+        // Set synchronously so componentDidMount's initialLoad flip sees
+        // creatingInvoice=true before the checkExistingInvoice microtask runs.
+        InvoicesStore.creatingInvoice = true;
+
         // POS invoice reuse logic
         const checkExistingInvoice = async () => {
             if (orderId) {
@@ -617,7 +621,10 @@ export default class Receive extends React.Component<
         };
 
         checkExistingInvoice().then((canReuseInvoice) => {
-            if (canReuseInvoice) return;
+            if (canReuseInvoice) {
+                InvoicesStore.creatingInvoice = false;
+                return;
+            }
 
             createUnifiedInvoice({
                 memo: effectiveLspIsActive
