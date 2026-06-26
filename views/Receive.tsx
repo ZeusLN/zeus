@@ -1265,6 +1265,8 @@ export default class Receive extends React.Component<
         } = this.state;
 
         const { zeroConfFee, showLspSettings } = LSPStore;
+        const requiresChannelSetup =
+            zeroConfFee && new BigNumber(zeroConfFee).gt(2);
 
         const {
             createUnifiedInvoice,
@@ -1903,6 +1905,12 @@ export default class Receive extends React.Component<
                                                 style={{
                                                     backgroundColor:
                                                         themeColor('secondary'),
+                                                    borderColor:
+                                                        requiresChannelSetup
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
+                                                            : undefined,
                                                     borderRadius: 10,
                                                     top: 10,
                                                     margin: 10,
@@ -1915,7 +1923,9 @@ export default class Receive extends React.Component<
                                                         fontFamily:
                                                             'PPNeueMontreal-Medium',
                                                         color: themeColor(
-                                                            'text'
+                                                            requiresChannelSetup
+                                                                ? 'highlight'
+                                                                : 'text'
                                                         ),
                                                         marginBottom: 5
                                                     }}
