@@ -186,6 +186,8 @@ const LOCKED_EXPIRY = '1';
 const LOCKED_TIME_PERIOD = 'Hours';
 const LOCKED_EXPIRY_SECONDS = '3600';
 
+const LSP_MIN_CHANNEL_OPEN_FEE_SATS = 1000;
+
 @inject(
     'ChannelsStore',
     'InvoicesStore',
@@ -1281,6 +1283,9 @@ export default class Receive extends React.Component<
         } = this.state;
 
         const { zeroConfFee, showLspSettings } = LSPStore;
+        const requiresChannelSetup =
+            zeroConfFee &&
+            new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
 
         const {
             createUnifiedInvoice,
@@ -1898,7 +1903,9 @@ export default class Receive extends React.Component<
                                                 navigation.navigate(
                                                     new BigNumber(
                                                         zeroConfFee
-                                                    ).gt(1000)
+                                                    ).gte(
+                                                        LSP_MIN_CHANNEL_OPEN_FEE_SATS
+                                                    )
                                                         ? 'LspExplanationFees'
                                                         : 'LspExplanationRouting'
                                                 )
@@ -1908,6 +1915,12 @@ export default class Receive extends React.Component<
                                                 style={{
                                                     backgroundColor:
                                                         themeColor('secondary'),
+                                                    borderColor:
+                                                        requiresChannelSetup
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
+                                                            : undefined,
                                                     borderRadius: 10,
                                                     top: 10,
                                                     margin: 10,
@@ -1920,7 +1933,9 @@ export default class Receive extends React.Component<
                                                         fontFamily:
                                                             'PPNeueMontreal-Medium',
                                                         color: themeColor(
-                                                            'text'
+                                                            requiresChannelSetup
+                                                                ? 'highlight'
+                                                                : 'text'
                                                         ),
                                                         marginBottom: 5
                                                     }}
@@ -1928,7 +1943,9 @@ export default class Receive extends React.Component<
                                                     {localeString(
                                                         new BigNumber(
                                                             zeroConfFee
-                                                        ).gt(1000)
+                                                        ).gte(
+                                                            LSP_MIN_CHANNEL_OPEN_FEE_SATS
+                                                        )
                                                             ? selectedIndex ===
                                                               0
                                                                 ? 'views.Receive.lspExplainerUnified'
