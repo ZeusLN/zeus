@@ -114,6 +114,9 @@ export default class ConnectivityStore {
      * Intended to be awaited *before* wallet initialization so that
      * downstream code (LDK Node, CashuStore) sees the correct offline
      * state and can skip network-bound work.
+     *
+     * Sets verifyInFlight so a poll- or NetInfo-triggered check() that
+     * lands during startup bails instead of firing a redundant 5s probe.
      */
     public checkNow = async (
         timeoutMs: number = INITIAL_PROBE_TIMEOUT_MS
@@ -121,9 +124,14 @@ export default class ConnectivityStore {
         if (this.settingsStore.settings?.networking?.disableOfflineCheck) {
             return true;
         }
-        const online = await this.verifyConnectivity(timeoutMs);
-        this.setOnlineState(online);
-        return online;
+        this.verifyInFlight = true;
+        try {
+            const online = await this.verifyConnectivity(timeoutMs);
+            this.setOnlineState(online);
+            return online;
+        } finally {
+            this.verifyInFlight = false;
+        }
     };
 
     /**
