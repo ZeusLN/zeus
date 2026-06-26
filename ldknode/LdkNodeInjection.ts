@@ -932,7 +932,9 @@ const initializeNode = async ({
         );
     }
 
-    // Configure VSS (Versioned Storage Service) for cloud backup
+    // Configure VSS (Versioned Storage Service) for cloud backup.
+    // Gated on connectivity upstream (LdkNodeUtils.initNode skips VSS entirely
+    // when offline), so everything in here only runs when we're online.
     if (vssConfig && vssConfig.url && vssConfig.storeId) {
         let vssHeaders: Record<string, string> | undefined;
         try {
@@ -961,21 +963,20 @@ const initializeNode = async ({
                 Date.now() - tVssSet
             }ms)`
         );
-    }
 
-    // Use a longer timeout for restore-from-seed (no local DB yet) since
-    // every read falls through to VSS sequentially. Even existing nodes
-    // may have an incomplete local DB (e.g. after a previous fallback
-    // build), so the default is generous to avoid false alerts.
-    const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
-    const hasLocalDb = await RNFS.exists(localDbPath);
-    const vssBuildTimeout = hasLocalDb ? 30 : 60;
-    await setVssBuildTimeout(vssBuildTimeout);
-    console.log(
-        `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
-            hasLocalDb ? 'existing node' : 'restore / first run'
-        })`
-    );
+        // Tight 10s budget for existing nodes is enough for the typical
+        // incremental sync; restore-from-seed needs longer because every
+        // read falls through to VSS sequentially.
+        const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
+        const hasLocalDb = await RNFS.exists(localDbPath);
+        const vssBuildTimeout = hasLocalDb ? 10 : 60;
+        await setVssBuildTimeout(vssBuildTimeout);
+        console.log(
+            `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
+                hasLocalDb ? 'existing node' : 'restore / first run'
+            })`
+        );
+    }
 
     console.log(`LDK Node: [${elapsed()}] Starting buildNode...`);
     const tBuild = Date.now();
