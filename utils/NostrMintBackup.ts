@@ -196,18 +196,21 @@ function fetchFromRelay(
                 ]);
 
                 sub.on('event', (event: any) => {
+                    clearTimeout(timeout);
+                    sub.unsub();
+                    relay.close();
                     try {
                         const decrypted = nip44.decrypt(
                             event.content,
                             conversationKey
                         );
                         const data: MintBackupData = JSON.parse(decrypted);
-                        clearTimeout(timeout);
-                        sub.unsub();
-                        relay.close();
                         resolve(data);
                     } catch (e) {
+                        // Malformed/legacy event — don't sit on the timer
+                        // waiting for a second one that won't come.
                         console.warn('Failed to decrypt mint backup event:', e);
+                        resolve(null);
                     }
                 });
 
