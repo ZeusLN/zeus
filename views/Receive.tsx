@@ -254,6 +254,38 @@ export default class Receive extends React.Component<
         return defaultInvoiceType === DefaultInvoiceType.Lightning ? 1 : 0;
     };
 
+    private getReceiveModeFlags = (): {
+        lnOnly: boolean;
+        onChainOnly: boolean;
+    } => {
+        const { route, SettingsStore } = this.props;
+        const { posStatus, settings } = SettingsStore;
+        const lnOnly =
+            (settings &&
+                posStatus === 'active' &&
+                settings.pos?.confirmationPreference === 'lnOnly') ||
+            !!route.params?.forceLn ||
+            !BackendUtils.supportsOnchainReceiving();
+        const onChainOnly = !!route.params?.forceOnChain;
+        return { lnOnly, onChainOnly };
+    };
+
+    private getSkipOnchain = (): boolean => {
+        const { settings } = this.props.SettingsStore;
+        return (
+            settings?.invoices?.defaultInvoiceType !==
+            DefaultInvoiceType.Unified
+        );
+    };
+
+    private getAddressType = (): string => {
+        const { route, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        return (
+            route.params?.addressType || settings?.invoices?.addressType || '0'
+        );
+    };
+
     async componentDidMount() {
         const {
             InvoicesStore,
@@ -263,7 +295,7 @@ export default class Receive extends React.Component<
             route
         } = this.props;
         const { reset } = InvoicesStore;
-        const { getSettings, posStatus } = SettingsStore;
+        const { getSettings } = SettingsStore;
         const { status, lightningAddressHandle } = LightningAddressStore;
 
         const settings = await getSettings();
@@ -307,7 +339,7 @@ export default class Receive extends React.Component<
             false;
 
         this.setState({
-            addressType: settings?.invoices?.addressType || '0',
+            addressType: this.getAddressType(),
             expirationIndex,
             memo: settings?.invoices?.memo || '',
             receiverName: settings?.invoices?.receiverName || '',
@@ -322,16 +354,7 @@ export default class Receive extends React.Component<
             flowLspNotConfigured
         });
 
-        const lnOnly =
-            (settings &&
-                posStatus &&
-                posStatus === 'active' &&
-                settings.pos &&
-                settings.pos.confirmationPreference &&
-                settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn ||
-            !BackendUtils.supportsOnchainReceiving();
-        const onChainOnly = route.params?.forceOnChain;
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         reset();
 
@@ -360,8 +383,7 @@ export default class Receive extends React.Component<
             this.setState({ selectedIndex: this.getDefaultIndex() });
         }
 
-        const addressType =
-            route.params?.addressType || settings?.invoices?.addressType || '0';
+        const addressType = this.getAddressType();
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -550,15 +572,12 @@ export default class Receive extends React.Component<
         addressType?: string,
         lspIsActive?: boolean
     ) => {
-        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { InvoicesStore, PosStore } = this.props;
         const { receiverName, orderId, orderTip, exchangeRate } = this.state;
         // Use passed lspIsActive parameter, fall back to state if not provided
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { settings } = SettingsStore;
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
         // POS invoice reuse logic
         const checkExistingInvoice = async () => {
@@ -679,14 +698,11 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, SettingsStore, route } = this.props;
+        const { navigation, InvoicesStore, route } = this.props;
         const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { settings } = SettingsStore;
         const satAmount = getSatAmount(route.params?.amount);
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
@@ -1289,20 +1305,9 @@ export default class Receive extends React.Component<
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
 
-        const skipOnchain =
-            settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified;
+        const skipOnchain = this.getSkipOnchain();
 
-        const lnOnly =
-            (settings &&
-                posStatus &&
-                posStatus === 'active' &&
-                settings.pos &&
-                settings.pos.confirmationPreference &&
-                settings.pos.confirmationPreference === 'lnOnly') ||
-            route.params?.forceLn ||
-            !BackendUtils.supportsOnchainReceiving();
-        const onChainOnly = route.params?.forceOnChain;
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         const lnurl = route.params?.lnurlParams;
 
