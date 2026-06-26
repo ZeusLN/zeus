@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import {
+    SharedScreen,
     SharedText,
     sharedTransitionEntering
 } from '../components/SharedTransition';
@@ -376,7 +377,7 @@ export default class ContactDetails extends React.Component<
             this.props.route.params?.contactHasOnlyCashuPubkey;
 
         return (
-            <>
+            <SharedScreen>
                 {isLoading ? (
                     <Screen>
                         <Header
@@ -650,7 +651,7 @@ export default class ContactDetails extends React.Component<
                         )}
                     </Screen>
                 )}
-            </>
+            </SharedScreen>
         );
     }
 }
