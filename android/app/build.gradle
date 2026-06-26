@@ -99,8 +99,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 128
-        versionName "13.1.1-beta1"
+        versionCode 130
+        versionName "13.1.2-alpha"
         multiDexEnabled true
         ndk {
             abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
