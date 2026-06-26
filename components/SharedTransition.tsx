@@ -8,13 +8,38 @@ import {
 import Animated, {
     Easing,
     FadeIn,
-    SharedTransition
+    SharedTransition,
+    SharedTransitionBoundary
 } from 'react-native-reanimated';
+import { useIsFocused } from '@react-navigation/native';
 
 export const sharedTransition = SharedTransition.springify(400).dampingRatio(1);
 export const sharedTransitionEntering = FadeIn.delay(350)
     .duration(220)
     .easing(Easing.out(Easing.cubic));
+
+// ---------------------------------------------------------------------------
+// SharedScreen
+//
+// Reanimated 4.4+ requires a `SharedTransitionBoundary` to mark the source and
+// destination subtrees for shared element transitions; without it the
+// experimental layout proxy never collects `sharedTransitionTag`s and the
+// animation silently no-ops. Wrap the content of any screen that participates
+// in a shared transition with this component.
+// ---------------------------------------------------------------------------
+
+interface SharedScreenProps {
+    children?: React.ReactNode;
+}
+
+export const SharedScreen: React.FC<SharedScreenProps> = ({ children }) => {
+    const isFocused = useIsFocused();
+    return (
+        <SharedTransitionBoundary isActive={isFocused}>
+            {children}
+        </SharedTransitionBoundary>
+    );
+};
 
 interface SharedBaseProps {
     /** Unique tag that pairs the source and destination elements. */
