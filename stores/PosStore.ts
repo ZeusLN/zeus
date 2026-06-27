@@ -15,6 +15,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
+import CloverUtils from '../utils/CloverUtils';
 
 export interface orderPaymentInfo {
     orderId: string;
@@ -213,7 +214,7 @@ export default class PosStore {
         );
     };
 
-    public recordPayment = ({
+    public recordPayment = async ({
         orderId,
         orderTotal,
         orderTip,
@@ -222,7 +223,7 @@ export default class PosStore {
         type,
         tx,
         preimage
-    }: orderPaymentInfo) =>
+    }: orderPaymentInfo): Promise<void> => {
         Storage.setItem(`pos-${orderId}`, {
             orderId,
             orderTotal,
@@ -233,6 +234,34 @@ export default class PosStore {
             tx,
             preimage
         });
+
+        if (this.settingsStore.settings.pos.posEnabled == PosEnabled.Clover) {
+            this.recordCloverPayment(orderId, orderTip);
+        }
+    };
+
+    private recordCloverPayment = async (
+        orderId: string,
+        orderTip: string
+    ): Promise<void> => {
+        const storedCloverOrder: any = await Storage.getItem(
+            `pos-clover-order-${orderId}`
+        );
+
+        const cloverOrder = JSON.parse(storedCloverOrder);
+        if (cloverOrder) {
+            await CloverUtils.recordCloverPayment(
+                this.settingsStore,
+                cloverOrder.orderId,
+                cloverOrder.total,
+                orderTip ? Number(orderTip) - cloverOrder.total : undefined
+            );
+
+            await Storage.removeItem(`pos-clover-order-${orderId}`);
+        } else {
+            throw Error('Could not record clover payment');
+        }
+    };
 
     public recordInvoice = ({
         orderId,
@@ -435,6 +464,69 @@ export default class PosStore {
         this.clearCurrentOrder();
     };
 
+    @action
+    public saveCloverOrder = async (order: Order) => {
+        const { cloverMerchantId, cloverApiToken } =
+            this.settingsStore.settings.pos;
+
+        this.loading = true;
+        this.error = false;
+
+        const apiHost = CloverUtils.getCloverBaseUrl(this.settingsStore);
+
+        const lineItems = order.line_items.map((item) => ({
+            item: {
+                id: item.productId
+            }
+        }));
+
+        let createOrderRequest = {
+            orderCart: {
+                lineItems,
+                note: 'zeus_order'
+            }
+        };
+
+        ReactNativeBlobUtil.fetch(
+            'POST',
+            `${apiHost}/v3/merchants/${cloverMerchantId}/atomic_order/orders`,
+            {
+                authorization: `Bearer ${cloverApiToken}`,
+                'Content-Type': 'application/json'
+            },
+            JSON.stringify(createOrderRequest)
+        )
+            .then(async (response: any) => {
+                if (response.info().status == 200) {
+                    const cloverOrder = response.json();
+
+                    await Storage.setItem(`pos-clover-order-${order.id}`, {
+                        orderId: cloverOrder.id,
+                        total: cloverOrder.total
+                    });
+
+                    runInAction(() => {
+                        this.loading = false;
+                    });
+                } else {
+                    console.log('Could not save clover order');
+                    runInAction(() => {
+                        this.loading = false;
+                        this.error = true;
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log('Could not save clover order:', err);
+                runInAction(() => {
+                    this.loading = false;
+                    this.error = true;
+                });
+            });
+
+        this.clearCurrentOrder();
+    };
+
     public getOrders = async () => {
         switch (this.settingsStore.settings.pos.posEnabled) {
             case PosEnabled.Square:
@@ -442,6 +534,9 @@ export default class PosStore {
 
             case PosEnabled.Standalone:
                 return this.getStandaloneOrders();
+
+            case PosEnabled.Clover:
+                return this.getCloverOrders();
 
             default:
                 this.resetOrders();
@@ -514,6 +609,121 @@ export default class PosStore {
                         });
 
                     await this._enrichAndFilterOrders(orders);
+                } else {
+                    runInAction(() => {
+                        this.openOrders = [];
+                        this.paidOrders = [];
+                        this.loading = false;
+                        this.error = true;
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error('POS get orders err', err);
+                runInAction(() => {
+                    this.openOrders = [];
+                    this.paidOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                });
+            });
+    };
+
+    @action
+    private getCloverOrders = async () => {
+        const { cloverMerchantId, cloverApiToken } =
+            this.settingsStore.settings.pos;
+
+        this.loading = true;
+        this.error = false;
+
+        const apiHost = CloverUtils.getCloverBaseUrl(this.settingsStore);
+
+        let products;
+
+        try {
+            products = await CloverUtils.getCloverProducts(this.settingsStore);
+        } catch (err) {
+            console.error('Could not get products from clover.', err);
+            runInAction(() => {
+                this.openOrders = [];
+                this.paidOrders = [];
+                this.loading = false;
+                this.error = true;
+            });
+            return;
+        }
+
+        ReactNativeBlobUtil.fetch(
+            'GET',
+            `${apiHost}/v3/merchants/${cloverMerchantId}/orders?filter=note%3Dzeus_order&expand=lineItems%2Cpayments`,
+            {
+                authorization: `Bearer ${cloverApiToken}`
+            }
+        )
+            .then(async (response: any) => {
+                const status = response.info().status;
+
+                if (status == 200) {
+                    let orders = response.json().elements.map((order: any) => {
+                        return new Order({
+                            id: order.id,
+                            payment_state: order.paymentState,
+                            created_at: order.createdTime,
+                            updated_at: order.modifiedTime,
+                            total_money: {
+                                amount: order.total,
+                                currency: order.currency
+                            },
+                            line_items: order.lineItems.elements.map(
+                                (element: any) => {
+                                    const order: any = {
+                                        name: element.name,
+                                        quantity: 1,
+                                        base_price_money: {
+                                            amount: element.price
+                                        },
+                                        productId: element.item.id
+                                    };
+
+                                    if (!element.taxRemoved) {
+                                        order.taxPercentage = products.get(
+                                            element.item.id
+                                        )?.taxPercentage;
+                                    }
+
+                                    return order;
+                                }
+                            )
+                        });
+                    });
+
+                    const hiddenOrdersItem = await Storage.getItem(
+                        POS_HIDDEN_KEY
+                    );
+                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
+                    const openOrders = orders.filter((order: any) => {
+                        return (
+                            order.payment_state === 'OPEN' &&
+                            !hiddenOrders.includes(order.id)
+                        );
+                    });
+                    const paidOrders = orders.filter((order: any) => {
+                        return (
+                            order.payment_state === 'PAID' &&
+                            !hiddenOrders.includes(order.id)
+                        );
+                    });
+
+                    runInAction(() => {
+                        this.openOrders = openOrders;
+                        this.filteredOpenOrders = openOrders;
+                        this.paidOrders = paidOrders;
+                        this.filteredPaidOrders = paidOrders;
+
+                        this.loading = false;
+                    });
                 } else {
                     runInAction(() => {
                         this.openOrders = [];
