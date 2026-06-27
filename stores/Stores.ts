@@ -34,7 +34,8 @@ export const connectivityStore = new ConnectivityStore(settingsStore);
 export const modalStore = new ModalStore();
 export const offersStore = new OffersStore();
 export const fiatStore = new FiatStore(settingsStore);
-export const channelsStore = new ChannelsStore(settingsStore);
+export const balanceStore = new BalanceStore(settingsStore);
+export const channelsStore = new ChannelsStore(settingsStore, balanceStore);
 export const nodeInfoStore = new NodeInfoStore(channelsStore, settingsStore);
 export const alertStore = new AlertStore(settingsStore, nodeInfoStore);
 export const lspStore = new LSPStore(
@@ -52,7 +53,6 @@ export const invoicesStore = new InvoicesStore(
     channelsStore,
     nodeInfoStore
 );
-export const balanceStore = new BalanceStore(settingsStore);
 export const transactionsStore = new TransactionsStore(
     settingsStore,
     nodeInfoStore,
