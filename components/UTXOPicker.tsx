@@ -8,7 +8,9 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
+import { reaction } from 'mobx';
 
 import AccountFilter from '../components/AccountFilter';
 import Amount from './Amount';
@@ -45,6 +47,7 @@ interface UTXOPickerState {
 
 const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const FOOTER_PADDING_BOTTOM = 12;
 
 @inject('UTXOsStore')
 @observer
@@ -53,6 +56,7 @@ export default class UTXOPicker extends React.Component<
     UTXOPickerState
 > {
     private _isMounted = false;
+    private reactionDisposer: (() => void) | null = null;
 
     state: UTXOPickerState = {
         utxosSelected: [],
@@ -75,20 +79,23 @@ export default class UTXOPicker extends React.Component<
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
-    }
 
-    componentDidUpdate(prevProps: UTXOPickerProps) {
-        const { UTXOsStore } = this.props;
-        const prev = prevProps.UTXOsStore;
-        const utxosChanged = prev.utxos !== UTXOsStore.utxos;
-        const finishedLoading = prev.loading && !UTXOsStore.loading;
-        if (!UTXOsStore.loading && (utxosChanged || finishedLoading)) {
-            void this.loadLabels();
-        }
+        // The injected UTXOsStore is a singleton, so prevProps comparisons in
+        // componentDidUpdate never detect a change. Observe the utxos list via
+        // a MobX reaction so labels reload whenever the UTXO set changes.
+        this.reactionDisposer = reaction(
+            () => UTXOsStore.utxos.slice(),
+            () => {
+                void this.loadLabels();
+            },
+            { fireImmediately: true }
+        );
     }
 
     componentWillUnmount() {
         this._isMounted = false;
+        this.reactionDisposer?.();
+        this.reactionDisposer = null;
     }
 
     private async loadLabels() {
@@ -279,7 +286,11 @@ export default class UTXOPicker extends React.Component<
                     <Text
                         style={[
                             styles.utxoLabel,
-                            { color: themeColor('secondaryText') }
+                            {
+                                color: selected
+                                    ? themeColor('highlight')
+                                    : themeColor('secondaryText')
+                            }
                         ]}
                     >
                         {`${localeString('general.label')}: ${message}`}
@@ -454,46 +465,61 @@ export default class UTXOPicker extends React.Component<
                             )}
                         </View>
 
-                        <View style={styles.footer}>
-                            <View style={styles.footerButton}>
-                                <Button
-                                    title={localeString(
-                                        'components.UTXOPicker.modal.set'
-                                    )}
-                                    disabled={
-                                        loading ||
-                                        utxos.length === 0 ||
-                                        utxosSelected.length === 0
-                                    }
-                                    onPress={() => {
-                                        const {
-                                            utxosSelected,
-                                            selectedBalance
-                                        } = this.state;
-                                        this.setState({
-                                            showUtxoModal: false,
-                                            clearedDraftInModal: false,
-                                            utxosSet: utxosSelected,
-                                            setBalance: selectedBalance
-                                        });
+                        <SafeAreaInsetsContext.Consumer>
+                            {(insets) => (
+                                <View
+                                    style={[
+                                        styles.footer,
+                                        {
+                                            paddingBottom:
+                                                FOOTER_PADDING_BOTTOM +
+                                                (insets?.bottom || 0)
+                                        }
+                                    ]}
+                                >
+                                    <View style={styles.footerButton}>
+                                        <Button
+                                            title={localeString(
+                                                'components.UTXOPicker.modal.set'
+                                            )}
+                                            disabled={
+                                                loading ||
+                                                utxos.length === 0 ||
+                                                utxosSelected.length === 0
+                                            }
+                                            onPress={() => {
+                                                const {
+                                                    utxosSelected,
+                                                    selectedBalance
+                                                } = this.state;
+                                                this.setState({
+                                                    showUtxoModal: false,
+                                                    clearedDraftInModal: false,
+                                                    utxosSet: utxosSelected,
+                                                    setBalance: selectedBalance
+                                                });
 
-                                        onValueChange(
-                                            utxosSelected,
-                                            selectedBalance,
-                                            account
-                                        );
-                                    }}
-                                />
-                            </View>
+                                                onValueChange(
+                                                    utxosSelected,
+                                                    selectedBalance,
+                                                    account
+                                                );
+                                            }}
+                                        />
+                                    </View>
 
-                            <View style={styles.footerButton}>
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={this.closePicker}
-                                    secondary
-                                />
-                            </View>
-                        </View>
+                                    <View style={styles.footerButton}>
+                                        <Button
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
+                                            onPress={this.closePicker}
+                                            secondary
+                                        />
+                                    </View>
+                                </View>
+                            )}
+                        </SafeAreaInsetsContext.Consumer>
                     </View>
                 </ModalBox>
 
@@ -679,7 +705,7 @@ const styles = StyleSheet.create({
     },
     footer: {
         paddingTop: 8,
-        paddingBottom: 12
+        paddingBottom: FOOTER_PADDING_BOTTOM
     },
     footerButton: {
         paddingTop: 10,
