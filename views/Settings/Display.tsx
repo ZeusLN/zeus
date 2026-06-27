@@ -159,6 +159,29 @@ export default class Display extends React.Component<
                         values={DEFAULT_VIEW_KEYS}
                     />
 
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            marginTop: 20,
+                            minHeight: 31
+                        }}
+                        onPress={() => navigation.navigate('AppIcon')}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString('views.Settings.Display.appIcon')}
+                            </Text>
+                        </View>
+                        <ForwardIcon stroke={themeColor('secondaryText')} />
+                    </TouchableOpacity>
+
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>
                             <Text

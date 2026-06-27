@@ -103,6 +103,21 @@ interface DisplaySettings {
     dateFormat?: string;
     timeFormat?: string;
     showSeconds?: boolean;
+    appIcon?:
+        | 'maxGradient'
+        | 'maxFlat'
+        | 'maxYellow'
+        | 'maxGradientInverse'
+        | 'maxRed'
+        | 'maxGradientRed'
+        | 'maxBlackAndWhite'
+        | 'gradient'
+        | 'flat'
+        | 'yellow'
+        | 'gradientInverse'
+        | 'red'
+        | 'gradientRed'
+        | 'blackAndWhite';
 }
 
 export enum PosEnabled {
