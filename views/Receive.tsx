@@ -1022,7 +1022,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (implementation === 'lnd') {
+        if (implementation === 'lnd' || implementation === 'ldk-server') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
                     // only fetch the last 10 invoices

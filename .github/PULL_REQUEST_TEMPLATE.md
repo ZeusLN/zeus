@@ -45,6 +45,7 @@ Remote
 - [ ] Core Lightning (CLNRest)
 - [ ] Nostr Wallet Connect
 - [ ] LndHub
+- [ ] LDK Server
 
 ### Locales
 - [ ] I’ve added new locale text that requires translations
