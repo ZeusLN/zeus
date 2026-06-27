@@ -156,6 +156,97 @@
         </intent-filter>
       </activity-alias>
 
+      <!-- App Icon Variants -->
+      <!-- Gradient Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient"
+        android:roundIcon="@mipmap/ic_launcher_gradient_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Yellow Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconYellowActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_yellow"
+        android:roundIcon="@mipmap/ic_launcher_yellow_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Gradient Inverse Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientInverseActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient_inverse"
+        android:roundIcon="@mipmap/ic_launcher_gradient_inverse_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Red Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconRedActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_red"
+        android:roundIcon="@mipmap/ic_launcher_red_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Gradient Red Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientRedActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient_red"
+        android:roundIcon="@mipmap/ic_launcher_gradient_red_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Black and White Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconBlackAndWhiteActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_bw"
+        android:roundIcon="@mipmap/ic_launcher_bw_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
       <service
           android:name="com.reactnativehce.services.CardService"
           android:exported="true"
