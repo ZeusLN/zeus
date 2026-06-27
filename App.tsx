@@ -111,6 +111,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
+import AppIcon from './views/Settings/AppIcon';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -734,6 +735,12 @@ export default class App extends React.PureComponent {
                                                                 name="Display" // @ts-ignore:next-line
                                                                 component={
                                                                     Display
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="AppIcon" // @ts-ignore:next-line
+                                                                component={
+                                                                    AppIcon
                                                                 }
                                                             />
                                                             <Stack.Screen

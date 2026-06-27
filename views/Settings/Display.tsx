@@ -1,8 +1,10 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
+
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
@@ -162,6 +164,29 @@ export default class Display extends React.Component<
                         }}
                         values={DEFAULT_VIEW_KEYS}
                     />
+
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            marginTop: 20,
+                            minHeight: 31
+                        }}
+                        onPress={() => navigation.navigate('AppIcon')}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString('views.Settings.Display.appIcon')}
+                            </Text>
+                        </View>
+                        <ForwardIcon stroke={themeColor('secondaryText')} />
+                    </TouchableOpacity>
 
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>
