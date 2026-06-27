@@ -1787,7 +1787,7 @@
     "error.failureReasonTimeout": "There are more routes to try, but the payment timeout was exceeded.",
     "error.failureReasonNoRoute": "No route found",
     "error.failureReasonError": "A non-recoverable error has occured",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "Insufficient local balance",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
