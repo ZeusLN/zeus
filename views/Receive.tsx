@@ -144,6 +144,7 @@ interface ReceiveProps {
 }
 
 interface ReceiveState {
+    initialLoad: boolean;
     selectedIndex: number;
     expirationIndex: ExpirationPreset | null;
     addressType: string;
@@ -208,6 +209,7 @@ export default class Receive extends React.Component<
     constructor(props: ReceiveProps) {
         super(props);
         this.state = {
+            initialLoad: true,
             selectedIndex: props.route.params?.selectedIndex ?? 0,
             expirationIndex: 1,
             addressType: '0',
@@ -470,6 +472,10 @@ export default class Receive extends React.Component<
             this.autoGenerateOnChainAddress(account, addressType);
         }
 
+        this.setState({
+            initialLoad: false
+        });
+
         if (Platform.OS !== 'android') {
             return;
         }
@@ -581,6 +587,10 @@ export default class Receive extends React.Component<
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
 
+        // Set synchronously so componentDidMount's initialLoad flip sees
+        // creatingInvoice=true before the checkExistingInvoice microtask runs.
+        InvoicesStore.creatingInvoice = true;
+
         // POS invoice reuse logic
         const checkExistingInvoice = async () => {
             if (orderId) {
@@ -611,7 +621,10 @@ export default class Receive extends React.Component<
         };
 
         checkExistingInvoice().then((canReuseInvoice) => {
-            if (canReuseInvoice) return;
+            if (canReuseInvoice) {
+                InvoicesStore.creatingInvoice = false;
+                return;
+            }
 
             createUnifiedInvoice({
                 memo: effectiveLspIsActive
@@ -1300,7 +1313,10 @@ export default class Receive extends React.Component<
         } = InvoicesStore;
         const { implementation, posStatus, settings, updateSettings } =
             SettingsStore;
-        const loading = SettingsStore.loading || InvoicesStore.loading;
+        const loading =
+            SettingsStore.loading ||
+            InvoicesStore.loading ||
+            this.state.initialLoad;
         const address = onChainAddress;
         const { lightningAddress } = LightningAddressStore;
         const lightningAddressLoading = LightningAddressStore.loading;
@@ -2309,6 +2325,7 @@ export default class Receive extends React.Component<
                                 )}
                                 {!haveInvoice &&
                                     !creatingInvoice &&
+                                    !loading &&
                                     route.params?.selectedIndex !== 2 && (
                                         <>
                                             {BackendUtils.supportsFlowLSP() &&
