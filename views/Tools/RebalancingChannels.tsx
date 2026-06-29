@@ -12,6 +12,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
 import Screen from '../../components/Screen';
@@ -662,6 +663,8 @@ export default class RebalancingChannels extends React.Component<
                     </View>
                 )}
 
+                {!loading && <SafeAreaView edges={['top']} />}
+
                 {!loading && (
                     <ScrollView
                         style={styles.container}
@@ -768,163 +771,167 @@ export default class RebalancingChannels extends React.Component<
                             )}
                         </View>
 
-                        {success && (
-                            <View
-                                style={{
-                                    width: '100%',
-                                    marginBottom: 5,
-                                    bottom: 30
-                                }}
-                            >
-                                <Button
-                                    title={localeString(
-                                        'views.RebalancingChannels.rebalanceSummary'
-                                    )}
-                                    onPress={() =>
-                                        this.navigateToRebalanceSummary()
-                                    }
-                                    secondary
-                                    buttonStyle={{ height: 40 }}
-                                    containerStyle={{ width: '100%' }}
-                                />
-                            </View>
-                        )}
-
-                        {(paymentPathExists || noteKey) && (
-                            <Row
-                                align="flex-end"
-                                style={{
-                                    marginBottom: 5,
-                                    bottom: 25,
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {paymentPathExists && (
-                                    <Button
-                                        title={`${localeString(
-                                            'views.Payment.title'
-                                        )} ${
-                                            enhancedPath?.length > 1
-                                                ? `${localeString(
-                                                      'views.Payment.paths'
-                                                  )} (${enhancedPath.length})`
-                                                : localeString(
-                                                      'views.Payment.path'
-                                                  )
-                                        } `}
-                                        onPress={this.handleViewPath}
-                                        secondary
-                                        buttonStyle={{
-                                            height: 40,
-                                            width: '100%'
-                                        }}
-                                        containerStyle={{
-                                            maxWidth: noteKey ? '45%' : '100%',
-                                            paddingRight: noteKey ? 5 : 0
-                                        }}
-                                    />
-                                )}
-                                {noteKey && (
-                                    <Button
-                                        title={
-                                            storedNotes
-                                                ? localeString(
-                                                      'views.SendingLightning.UpdateNote'
-                                                  )
-                                                : localeString(
-                                                      'views.SendingLightning.AddANote'
-                                                  )
-                                        }
-                                        onPress={this.handleAddNote}
-                                        secondary
-                                        buttonStyle={{
-                                            height: 40,
-                                            width: '100%'
-                                        }}
-                                        containerStyle={{
-                                            maxWidth: paymentPathExists
-                                                ? '45%'
-                                                : '100%',
-                                            paddingLeft: paymentPathExists
-                                                ? 5
-                                                : 0
-                                        }}
-                                    />
-                                )}
-                            </Row>
-                        )}
-
-                        <View
-                            style={[
-                                styles.buttons,
-                                !(
-                                    (paymentPathExists || noteKey) &&
-                                    success
-                                ) && { marginTop: 14 }
-                            ]}
-                        >
-                            {!!error && (
-                                <>
-                                    <Button
-                                        title={localeString(
-                                            'views.SendingLightning.tryAgain'
-                                        )}
-                                        icon={{
-                                            name: 'rotate-ccw',
-                                            type: 'feather',
-                                            size: 25
-                                        }}
-                                        onPress={this.handleTryAgain}
-                                        buttonStyle={{
-                                            backgroundColor: 'white',
-                                            height: 40
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 3
-                                        }}
-                                    />
-                                </>
-                            )}
-
-                            {(!!error || !!success) && (
-                                <Row
-                                    align="flex-end"
+                        <>
+                            {success && (
+                                <View
                                     style={{
-                                        alignSelf: 'center'
+                                        width: '100%',
+                                        marginBottom: 5
                                     }}
                                 >
                                     <Button
                                         title={localeString(
-                                            'views.SendingLightning.goToWallet'
+                                            'views.RebalancingChannels.rebalanceSummary'
                                         )}
-                                        icon={{
-                                            name: 'list',
-                                            size: 25,
-                                            color: themeColor('background')
-                                        }}
-                                        onPress={() => {
-                                            navigation.popTo('Wallet');
-
-                                            if (success) {
-                                                this.props.ChannelsStore?.getChannels();
-                                            }
-                                        }}
-                                        buttonStyle={{
-                                            height: 40,
-                                            width: '100%'
-                                        }}
-                                        titleStyle={{
-                                            color: themeColor('background')
-                                        }}
-                                        containerStyle={{
-                                            maxWidth: '100%',
-                                            margin: 3
-                                        }}
+                                        onPress={() =>
+                                            this.navigateToRebalanceSummary()
+                                        }
+                                        secondary
+                                        buttonStyle={{ height: 40 }}
+                                        containerStyle={{ width: '100%' }}
                                     />
+                                </View>
+                            )}
+
+                            {(paymentPathExists || noteKey) && (
+                                <Row
+                                    align="flex-end"
+                                    style={{
+                                        marginBottom: 5,
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    {paymentPathExists && (
+                                        <Button
+                                            title={`${localeString(
+                                                'views.Payment.title'
+                                            )} ${
+                                                enhancedPath?.length > 1
+                                                    ? `${localeString(
+                                                          'views.Payment.paths'
+                                                      )} (${
+                                                          enhancedPath.length
+                                                      })`
+                                                    : localeString(
+                                                          'views.Payment.path'
+                                                      )
+                                            } `}
+                                            onPress={this.handleViewPath}
+                                            secondary
+                                            buttonStyle={{
+                                                height: 40,
+                                                width: '100%'
+                                            }}
+                                            containerStyle={{
+                                                maxWidth: noteKey
+                                                    ? '45%'
+                                                    : '100%',
+                                                paddingRight: noteKey ? 5 : 0
+                                            }}
+                                        />
+                                    )}
+                                    {noteKey && (
+                                        <Button
+                                            title={
+                                                storedNotes
+                                                    ? localeString(
+                                                          'views.SendingLightning.UpdateNote'
+                                                      )
+                                                    : localeString(
+                                                          'views.SendingLightning.AddANote'
+                                                      )
+                                            }
+                                            onPress={this.handleAddNote}
+                                            secondary
+                                            buttonStyle={{
+                                                height: 40,
+                                                width: '100%'
+                                            }}
+                                            containerStyle={{
+                                                maxWidth: paymentPathExists
+                                                    ? '45%'
+                                                    : '100%',
+                                                paddingLeft: paymentPathExists
+                                                    ? 5
+                                                    : 0
+                                            }}
+                                        />
+                                    )}
                                 </Row>
                             )}
-                        </View>
+
+                            <View
+                                style={[
+                                    styles.buttons,
+                                    !(
+                                        (paymentPathExists || noteKey) &&
+                                        success
+                                    ) && { marginTop: 14 }
+                                ]}
+                            >
+                                {!!error && (
+                                    <>
+                                        <Button
+                                            title={localeString(
+                                                'views.SendingLightning.tryAgain'
+                                            )}
+                                            icon={{
+                                                name: 'rotate-ccw',
+                                                type: 'feather',
+                                                size: 25
+                                            }}
+                                            onPress={this.handleTryAgain}
+                                            buttonStyle={{
+                                                backgroundColor: 'white',
+                                                height: 40
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 3
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                {(!!error || !!success) && (
+                                    <Row
+                                        align="flex-end"
+                                        style={{
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        <Button
+                                            title={localeString(
+                                                'views.SendingLightning.goToWallet'
+                                            )}
+                                            icon={{
+                                                name: 'list',
+                                                size: 25,
+                                                color: themeColor('background')
+                                            }}
+                                            onPress={() => {
+                                                navigation.popTo('Wallet');
+
+                                                if (success) {
+                                                    this.props.ChannelsStore?.getChannels();
+                                                }
+                                            }}
+                                            buttonStyle={{
+                                                height: 40,
+                                                width: '100%'
+                                            }}
+                                            titleStyle={{
+                                                color: themeColor('background')
+                                            }}
+                                            containerStyle={{
+                                                maxWidth: '100%',
+                                                margin: 3
+                                            }}
+                                        />
+                                    </Row>
+                                )}
+                            </View>
+                        </>
                     </ScrollView>
                 )}
             </Screen>
@@ -1018,7 +1025,6 @@ const styles = StyleSheet.create({
     buttons: {
         width: '100%',
         justifyContent: 'space-between',
-        gap: 15,
-        bottom: 15
+        gap: 15
     }
 });
