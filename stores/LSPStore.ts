@@ -75,6 +75,9 @@ export default class LSPStore {
     // into the create-order response so the view reflects the real outcome.
     private freeOrderPollTimer: ReturnType<typeof setTimeout> | null = null;
     private freeOrderPollId: string | null = null;
+    // Incremented on every start/stop so an in-flight poll that resumes after an
+    // await can tell whether its session is still the active one.
+    private freeOrderPollSessionId = 0;
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -1322,11 +1325,13 @@ export default class LSPStore {
         if (this.freeOrderPollId === orderId) return;
         this.stopFreeOrderStatusPolling();
         this.freeOrderPollId = orderId;
-        this.pollFreeOrderStatus(orderId, service);
+        const sessionId = ++this.freeOrderPollSessionId;
+        this.pollFreeOrderStatus(orderId, service, sessionId);
     };
 
     public stopFreeOrderStatusPolling = () => {
         this.freeOrderPollId = null;
+        this.freeOrderPollSessionId++;
         if (this.freeOrderPollTimer) {
             clearTimeout(this.freeOrderPollTimer);
             this.freeOrderPollTimer = null;
@@ -1335,9 +1340,10 @@ export default class LSPStore {
 
     private pollFreeOrderStatus = async (
         orderId: string,
-        service: LSPService
+        service: LSPService,
+        sessionId: number
     ) => {
-        if (this.freeOrderPollId !== orderId) return;
+        if (this.freeOrderPollSessionId !== sessionId) return;
 
         try {
             if (service === LSPService.LSPS7) {
@@ -1345,8 +1351,6 @@ export default class LSPStore {
                     orderId,
                     this.getLSPSPubkey()
                 );
-            } else if (BackendUtils.supportsLSPS1native()) {
-                await this.lsps1GetOrderNative(orderId);
             } else if (BackendUtils.supportsLSPS1rest()) {
                 await this.lsps1GetOrderREST(orderId, this.getLSPS1Rest());
             } else if (BackendUtils.supportsLSPScustomMessage()) {
@@ -1358,7 +1362,7 @@ export default class LSPStore {
                 return;
             }
 
-            if (this.freeOrderPollId !== orderId) return;
+            if (this.freeOrderPollSessionId !== sessionId) return;
 
             const response =
                 service === LSPService.LSPS7
@@ -1386,9 +1390,9 @@ export default class LSPStore {
             console.error('LSPStore: free order poll error', error);
         }
 
-        if (this.freeOrderPollId !== orderId) return;
+        if (this.freeOrderPollSessionId !== sessionId) return;
         this.freeOrderPollTimer = setTimeout(
-            () => this.pollFreeOrderStatus(orderId, service),
+            () => this.pollFreeOrderStatus(orderId, service, sessionId),
             FREE_ORDER_POLL_INTERVAL_MS
         );
     };
