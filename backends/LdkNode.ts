@@ -1575,7 +1575,9 @@ export default class LdkNode {
 
         return {
             order_id: response.orderId,
-            order_state: response.orderState,
+            // ldk-node returns lowercase order states ('created' | 'completed' |
+            // 'failed'); normalize to the uppercase LSPOrderState the app uses.
+            order_state: response.orderState?.toUpperCase(),
             channel_extension_expiry_blocks:
                 response.channelExtensionExpiryBlocks,
             new_channel_expiry_block: response.newChannelExpiryBlock,
@@ -1613,7 +1615,9 @@ export default class LdkNode {
 
         return {
             order_id: response.orderId,
-            order_state: response.orderState,
+            // ldk-node returns lowercase order states ('created' | 'completed' |
+            // 'failed'); normalize to the uppercase LSPOrderState the app uses.
+            order_state: response.orderState?.toUpperCase(),
             channel_extension_expiry_blocks:
                 response.channelExtensionExpiryBlocks,
             new_channel_expiry_block: response.newChannelExpiryBlock,
