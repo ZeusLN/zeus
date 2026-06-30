@@ -4,6 +4,8 @@ export default class LNC {
     _namespace: string;
     credentials: CredentialStore;
     lnd: LndApi;
+    private _emitter;
+    private _subscriptions;
     constructor(lncConfig?: LncConfig);
     onLocalPrivCreate: (keyHex: string) => void;
     onRemoteKeyReceive: (keyHex: string) => void;
@@ -22,6 +24,7 @@ export default class LNC {
      * Disconnects from the proxy server
      */
     disconnect(): void;
+    private _removeSubscriptions;
     /**
      * Emulates a GRPC request but uses the mobile client instead to communicate with the LND node
      * @param method the GRPC method to call on the service
