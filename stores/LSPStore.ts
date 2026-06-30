@@ -9,6 +9,8 @@ import NodeInfoStore from './NodeInfoStore';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { index, channel } = lndMobile;
 
+import { LSPOrderState, LSPService } from '../models/LSP';
+
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { getClientInfo } from '../utils/ClientInfoUtils';
@@ -27,6 +29,8 @@ const JSON_RPC_VERSION = '2.0';
 // Upper bound for how long a custom-message get_order round trip may take before
 // the caller stops waiting. Resolves early as soon as the response arrives.
 const CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000;
+
+const FREE_ORDER_POLL_INTERVAL_MS = 5000;
 
 export default class LSPStore {
     @observable public info: any = {};
@@ -63,6 +67,14 @@ export default class LSPStore {
     // await the round trip instead of racing a fixed delay.
     private getOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
+
+    // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
+    // Without this poll the post-creation view would stay on the
+    // "opening now…" message forever, even after the channel open fails.
+    // Poll get_order until the order reaches a terminal state, then mirror the result
+    // into the create-order response so the view reflects the real outcome.
+    private freeOrderPollTimer: ReturnType<typeof setTimeout> | null = null;
+    private freeOrderPollId: string | null = null;
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -123,6 +135,7 @@ export default class LSPStore {
 
     @action
     public resetLSPS1Data = () => {
+        this.stopFreeOrderStatusPolling();
         this.createOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
@@ -132,6 +145,7 @@ export default class LSPStore {
 
     @action
     public resetLSPS7Data = () => {
+        this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;
@@ -140,6 +154,7 @@ export default class LSPStore {
 
     @action
     public clearLSPS7Order = () => {
+        this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponse = {};
     };
 
@@ -1298,6 +1313,84 @@ export default class LSPStore {
                     settle();
                 });
         });
+    };
+
+    public startFreeOrderStatusPolling = (
+        orderId: string,
+        service: LSPService
+    ) => {
+        if (this.freeOrderPollId === orderId) return;
+        this.stopFreeOrderStatusPolling();
+        this.freeOrderPollId = orderId;
+        this.pollFreeOrderStatus(orderId, service);
+    };
+
+    public stopFreeOrderStatusPolling = () => {
+        this.freeOrderPollId = null;
+        if (this.freeOrderPollTimer) {
+            clearTimeout(this.freeOrderPollTimer);
+            this.freeOrderPollTimer = null;
+        }
+    };
+
+    private pollFreeOrderStatus = async (
+        orderId: string,
+        service: LSPService
+    ) => {
+        if (this.freeOrderPollId !== orderId) return;
+
+        try {
+            if (service === LSPService.LSPS7) {
+                await this.lsps7GetOrderCustomMessage(
+                    orderId,
+                    this.getLSPSPubkey()
+                );
+            } else if (BackendUtils.supportsLSPS1native()) {
+                await this.lsps1GetOrderNative(orderId);
+            } else if (BackendUtils.supportsLSPS1rest()) {
+                await this.lsps1GetOrderREST(orderId, this.getLSPS1Rest());
+            } else if (BackendUtils.supportsLSPScustomMessage()) {
+                await this.lsps1GetOrderCustomMessage(
+                    orderId,
+                    this.getLSPSPubkey()
+                );
+            } else {
+                return;
+            }
+
+            if (this.freeOrderPollId !== orderId) return;
+
+            const response =
+                service === LSPService.LSPS7
+                    ? this.getExtensionOrderResponse
+                    : this.getOrderResponse;
+            if (response && Object.keys(response).length > 0) {
+                const result = response?.result || response;
+                if (
+                    result?.order_state === LSPOrderState.COMPLETED ||
+                    result?.order_state === LSPOrderState.FAILED
+                ) {
+                    runInAction(() => {
+                        if (service === LSPService.LSPS7) {
+                            this.createExtensionOrderResponse = response;
+                        } else {
+                            this.createOrderResponse = response;
+                        }
+                    });
+                    this.updateOrderInStorage(response);
+                    this.stopFreeOrderStatusPolling();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('LSPStore: free order poll error', error);
+        }
+
+        if (this.freeOrderPollId !== orderId) return;
+        this.freeOrderPollTimer = setTimeout(
+            () => this.pollFreeOrderStatus(orderId, service),
+            FREE_ORDER_POLL_INTERVAL_MS
+        );
     };
 
     public updateOrderInStorage(order: any) {

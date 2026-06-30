@@ -108,6 +108,10 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         });
     }
 
+    componentWillUnmount() {
+        this.props.LSPStore.stopFreeOrderStatusPolling();
+    }
+
     componentDidUpdate(_prevProps: LSPS7Props) {
         const { LSPStore } = this.props;
         const { createExtensionOrderResponse } = LSPStore;
@@ -123,6 +127,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         ) {
             this.lastSavedOrderId = orderId;
             LSPStore.saveOrderToHistory(createExtensionOrderResponse, 'LSPS7');
+            LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS7);
         }
     }
 

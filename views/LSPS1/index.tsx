@@ -197,6 +197,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         ) {
             this.lastSavedOrderId = orderId;
             LSPStore.saveOrderToHistory(createOrderResponse, 'LSPS1');
+            LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS1);
         }
     }
 
