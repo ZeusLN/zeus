@@ -126,10 +126,18 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             isOrderFree(result?.payment)
         ) {
             this.lastSavedOrderId = orderId;
-            LSPStore.saveOrderToHistory(createExtensionOrderResponse, 'LSPS7');
-            LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS7);
+            this.handleFreeOrderCreated(orderId);
         }
     }
+
+    private handleFreeOrderCreated = (orderId: string) => {
+        const { LSPStore } = this.props;
+        LSPStore.saveOrderToHistory(
+            LSPStore.createExtensionOrderResponse,
+            'LSPS7'
+        );
+        LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS7);
+    };
 
     updateExpirationIndex = (expirationIndex: number) => {
         if (expirationIndex === 0) {
