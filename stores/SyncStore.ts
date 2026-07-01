@@ -11,6 +11,21 @@ import NodeInfo from '../models/NodeInfo';
 import ConnectivityStore from './ConnectivityStore';
 import SettingsStore from './SettingsStore';
 
+const BLOCK_HEIGHT_APIS: Record<string, string[]> = {
+    mainnet: [
+        'https://mempool.space/api/blocks/tip/height',
+        'https://blockstream.info/api/blocks/tip/height',
+        'https://mempool.emzy.de/api/blocks/tip/height'
+    ],
+    testnet: [
+        'https://mempool.space/testnet/api/blocks/tip/height',
+        'https://blockstream.info/testnet/api/blocks/tip/height'
+    ],
+    testnet4: ['https://mempool.space/testnet4/api/blocks/tip/height']
+};
+
+const BLOCK_HEIGHT_API_TIMEOUT_MS = 5000;
+
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
     @observable public isRecovering: boolean = false;
@@ -79,25 +94,32 @@ export default class SyncStore {
 
     private setSyncInfo = async () => {
         const nodeInfo = this.nodeInfo;
+        const blockHeight = nodeInfo?.block_height;
 
-        if (this.currentBlockHeight !== nodeInfo?.block_height) {
-            this.currentBlockHeight = nodeInfo?.block_height || 0;
+        if (this.currentBlockHeight !== blockHeight) {
+            let needsTipFetch = false;
+            runInAction(() => {
+                this.currentBlockHeight = blockHeight || 0;
+                needsTipFetch = this.currentBlockHeight >= this.bestBlockHeight;
+            });
 
-            // if current block exceeds or equals best block height, query mempool for new tip
-            // if mempool call fails, set best block height to current height, then proceed
-            if (this.currentBlockHeight >= this.bestBlockHeight) {
+            if (needsTipFetch) {
                 await this.getBestBlockHeight();
-                if (this.error) this.bestBlockHeight = this.currentBlockHeight;
             }
 
-            this.updateProgress();
+            runInAction(() => {
+                if (needsTipFetch && this.error) {
+                    this.bestBlockHeight = this.currentBlockHeight;
+                }
+                this.updateProgress();
+            });
         }
 
-        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
-            this.isSyncing = false;
-        }
-
-        return;
+        runInAction(() => {
+            if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
+                this.isSyncing = false;
+            }
+        });
     };
 
     private getNodeInfo = () =>
@@ -113,36 +135,49 @@ export default class SyncStore {
             (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
     };
 
-    private getBestBlockHeight = async () => {
-        await new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'get',
-                `https://mempool.space/${
-                    this.settingsStore.embeddedLndNetwork === 'Testnet'
-                        ? 'testnet/'
-                        : ''
-                }api/blocks/tip/height`
-            )
-                .then(async (response: any) => {
-                    const status = response.info().status;
-                    if (status == 200) {
-                        this.bestBlockHeight = Number.parseInt(response.json());
-                        if (
-                            typeof this.bestBlockHeight === 'number' &&
-                            this.currentBlockHeight
-                        ) {
-                            this.updateProgress();
-                        }
-                        resolve(this.bestBlockHeight);
-                    } else {
-                        this.error = true;
-                        reject();
-                    }
-                })
-                .catch(() => {
-                    this.error = true;
-                    reject();
+    private getBestBlockHeight = async (): Promise<void> => {
+        const urls =
+            BLOCK_HEIGHT_APIS[this.getNetwork()] ?? BLOCK_HEIGHT_APIS.mainnet;
+
+        for (const url of urls) {
+            try {
+                const height = await new Promise<number>((resolve, reject) => {
+                    const timeout = setTimeout(
+                        () => reject(new Error('timeout')),
+                        BLOCK_HEIGHT_API_TIMEOUT_MS
+                    );
+
+                    ReactNativeBlobUtil.fetch('get', url)
+                        .then((response: any) => {
+                            clearTimeout(timeout);
+                            if (response.info().status === 200) {
+                                const h = Number.parseInt(response.json(), 10);
+                                if (h > 0) resolve(h);
+                                else reject();
+                            } else {
+                                reject();
+                            }
+                        })
+                        .catch((err) => {
+                            clearTimeout(timeout);
+                            reject(err);
+                        });
                 });
+                runInAction(() => {
+                    this.bestBlockHeight = height;
+                    this.error = false;
+                    if (this.currentBlockHeight) {
+                        this.updateProgress();
+                    }
+                });
+                return;
+            } catch {
+                // try next explorer
+            }
+        }
+
+        runInAction(() => {
+            this.error = true;
         });
     };
 
@@ -156,9 +191,8 @@ export default class SyncStore {
         // Fetch best block height, retrying until successful
         while (!this.bestBlockHeight) {
             if (!this.isSyncing) return;
-            try {
-                await this.getBestBlockHeight();
-            } catch {
+            await this.getBestBlockHeight();
+            if (!this.bestBlockHeight) {
                 await sleep(3000);
             }
         }
@@ -180,16 +214,16 @@ export default class SyncStore {
             await sleep(2000);
             this.getNodeInfo().then(() => this.setSyncInfo());
 
-            // only query Mempool instance every 30 seconds
-            const queryMempool = i === 14;
-            if (queryMempool) {
+            // refresh chain tip every 30 seconds
+            const queryTip = i === 14;
+            if (queryTip) {
                 i = 0;
             } else {
                 i++;
             }
 
-            if (queryMempool) {
-                this.getBestBlockHeight().catch(() => {});
+            if (queryTip) {
+                this.getBestBlockHeight();
             }
         }
     };
