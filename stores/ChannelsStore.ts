@@ -13,6 +13,7 @@ import Peer from '../models/Peer';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
 
+import BalanceStore from './BalanceStore';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
@@ -115,9 +116,11 @@ export default class ChannelsStore {
     @observable public haveAnnouncedChannels = false;
 
     settingsStore: SettingsStore;
+    balanceStore: BalanceStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, balanceStore: BalanceStore) {
         this.settingsStore = settingsStore;
+        this.balanceStore = balanceStore;
 
         reaction(
             () => this.channelRequest,
@@ -598,6 +601,12 @@ export default class ChannelsStore {
                         .concat(pendingCloseChannels)
                         .concat(forceCloseChannels)
                         .concat(waitCloseChannels);
+                    // Push close-side limbo (cooperative close + force-close
+                    // timelocks + waiting-close confirmations) to BalanceStore
+                    // so BalancePane can render it next to pendingOpenBalance.
+                    this.balanceStore.setPendingCloseBalance(
+                        data.total_limbo_balance || 0
+                    );
                 })
             );
         }
