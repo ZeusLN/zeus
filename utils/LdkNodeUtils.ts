@@ -7,6 +7,7 @@
 import RNFS from 'react-native-fs';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
+import { connectivityStore } from '../stores/Stores';
 
 import { localeString } from './LocaleUtils';
 import { retry } from './SleepUtils';
@@ -210,13 +211,27 @@ async function initNode({
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
-    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
 
-    // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
-    // The seed is derived once and reused for both storeId and auth headers.
-    const seedHex = await LdkNode.crypto.mnemonicToSeed(mnemonic, passphrase);
-    const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
-    const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
+    // Skip VSS entirely when offline. With VSS configured, the native build
+    // blocks for the full 30-60s VSS timeout before falling back to local
+    // SQLite. We'll pick VSS back up on the next launch when we're online.
+    let vssConfig: { url: string; storeId: string } | undefined;
+    let vssKey: { privateKey: Uint8Array; publicKey: Uint8Array } | undefined;
+    if (connectivityStore.isOffline) {
+        console.log('LDK Node: Offline — skipping VSS, using local-only build');
+    } else {
+        // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
+        // The seed is derived once and reused for both storeId and auth headers.
+        const seedHex = await LdkNode.crypto.mnemonicToSeed(
+            mnemonic,
+            passphrase
+        );
+        vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
+        vssConfig = {
+            url: vssServerUrl || DEFAULT_VSS_SERVER,
+            storeId: Buffer.from(vssKey.publicKey).toString('hex')
+        };
+    }
 
     return await LdkNode.utils.initializeNode({
         network: networkType,
@@ -229,10 +244,7 @@ async function initNode({
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
-        vssConfig: {
-            url: vssUrl,
-            storeId: vssStoreId
-        },
+        vssConfig,
         vssKey
     });
 }
@@ -396,8 +408,14 @@ export async function startLdkNodeWallet({
         }
     }
 
-    // Only sync if the node actually started
-    if (nodeStarted) {
+    // Only sync if the node actually started, and skip entirely when offline.
+    // syncWallets() makes blocking Esplora + RGS requests that would otherwise
+    // wait on the underlying HTTP client timeouts (~30s+). The post-sync RGS
+    // status check would also surface a misleading "empty graph" alert when
+    // we never had a chance to fetch a snapshot.
+    if (nodeStarted && connectivityStore.isOffline) {
+        console.log('LDK Node: Offline — skipping wallet sync');
+    } else if (nodeStarted) {
         onSyncStart?.();
         try {
             await LdkNode.node.syncWallets();
