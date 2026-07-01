@@ -1243,6 +1243,8 @@
     "views.Settings.Privacy.clipboard": "Read clipboard",
     "views.Settings.Privacy.clipboard.explainer": "If enabled, Zeus will read values copied to your clipboard and prompt you if they can be used in the app.",
     "views.Settings.Privacy.enableMempoolRates": "Enable Mempool.space fee suggestions",
+    "views.Settings.Privacy.enableBranta": "Enable Branta verification",
+    "views.Settings.Privacy.enableBranta.explainer": "When enabled, ZEUS will verify payment destinations for merchants running Branta. Only your IP address is visible to Branta servers.",
     "views.Settings.stealthMode": "Stealth Mode",
     "views.Settings.StealthMode.title": "Stealth Mode",
     "views.Settings.StealthMode.chooseApp": "Choose Stealth App",

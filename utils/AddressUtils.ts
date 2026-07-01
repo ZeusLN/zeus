@@ -86,7 +86,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let satAmount, lightning, offer, clinkNoffer;
+    let satAmount, lightning, offer, clinkNoffer, brantaId, brantaSecret;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -117,12 +117,34 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         clinkNoffer = result.noffer || result.NOFFER;
     }
 
-    return [value, satAmount, lightning, offer, clinkNoffer];
+    if (result.branta_id || result.BRANTA_ID) {
+        brantaId = result.branta_id || result.BRANTA_ID;
+    }
+
+    if (result.branta_secret || result.BRANTA_SECRET) {
+        brantaSecret = result.branta_secret || result.BRANTA_SECRET;
+    }
+
+    return [
+        value,
+        satAmount,
+        lightning,
+        offer,
+        clinkNoffer,
+        brantaId,
+        brantaSecret
+    ];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, satAmount, lightning, offer, clinkNoffer;
+        let value,
+            satAmount,
+            lightning,
+            offer,
+            clinkNoffer,
+            brantaId,
+            brantaSecret;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
@@ -134,7 +156,9 @@ class AddressUtils {
                 parsedSatAmount,
                 parsedLightning,
                 parsedOffer,
-                parsedClinkNoffer
+                parsedClinkNoffer,
+                parsedBrantaId,
+                parsedBrantaSecret
             ] = bitcoinQrParser(
                 input,
                 input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
@@ -156,6 +180,14 @@ class AddressUtils {
             if (parsedClinkNoffer) {
                 clinkNoffer = parsedClinkNoffer;
             }
+
+            if (parsedBrantaId) {
+                brantaId = parsedBrantaId;
+            }
+
+            if (parsedBrantaSecret) {
+                brantaSecret = parsedBrantaSecret;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -166,7 +198,15 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, satAmount, lightning, offer, clinkNoffer };
+        return {
+            value,
+            satAmount,
+            lightning,
+            offer,
+            clinkNoffer,
+            brantaId,
+            brantaSecret
+        };
     };
 
     processLNDHubAddress = (input: string) => {
