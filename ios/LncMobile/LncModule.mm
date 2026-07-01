@@ -21,10 +21,11 @@ RCT_EXPORT_METHOD(initLNC:(NSString *)nameSpace)
 }
 
 RCT_EXPORT_METHOD(registerLocalPrivCreateCallback:(NSString *)nameSpace
-                 resolver:(RCTResponseSenderBlock)onLocalPrivCreate)
+                 eventName:(NSString *)eventName)
 {
-    Callback *lpccb = [[Callback alloc] init];
-    [lpccb setCallback:onLocalPrivCreate];
+    StreamingCallback *lpccb = [[StreamingCallback alloc] init];
+    lpccb.delegate = self;
+    [lpccb setEventName:eventName];
     NSError *error;
     LndmobileRegisterLocalPrivCreateCallback(nameSpace, lpccb, &error);
     if (error) {
@@ -33,10 +34,11 @@ RCT_EXPORT_METHOD(registerLocalPrivCreateCallback:(NSString *)nameSpace
 }
 
 RCT_EXPORT_METHOD(registerRemoteKeyReceiveCallback:(NSString *)nameSpace
-                 resolver:(RCTResponseSenderBlock)onRemoteKeyReceive)
+                 eventName:(NSString *)eventName)
 {
-    Callback * rkrcb = [[Callback alloc] init];
-    [rkrcb setCallback:onRemoteKeyReceive];
+    StreamingCallback *rkrcb = [[StreamingCallback alloc] init];
+    rkrcb.delegate = self;
+    [rkrcb setEventName:eventName];
     NSError *error;
     LndmobileRegisterRemoteKeyReceiveCallback(nameSpace, rkrcb, &error);
     if (error) {
@@ -45,10 +47,11 @@ RCT_EXPORT_METHOD(registerRemoteKeyReceiveCallback:(NSString *)nameSpace
 }
 
 RCT_EXPORT_METHOD(registerAuthDataCallback:(NSString *)nameSpace
-                 resolver:(RCTResponseSenderBlock)onAuthData)
+                 eventName:(NSString *)eventName)
 {
-    Callback * oacb = [[Callback alloc] init];
-    [oacb setCallback:onAuthData];
+    StreamingCallback *oacb = [[StreamingCallback alloc] init];
+    oacb.delegate = self;
+    [oacb setEventName:eventName];
     NSError *error;
     LndmobileRegisterAuthDataCallback(nameSpace, oacb, &error);
     if (error) {
@@ -187,6 +190,9 @@ RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
 
 - (NSArray<NSString *> *)supportedEvents {
     return @[
+        @"lnc.localPrivCreate",
+        @"lnc.remoteKeyReceive",
+        @"lnc.authData",
         @"chainrpc.ChainNotifier.RegisterBlockEpochNtfn",
         @"chainrpc.ChainNotifier.RegisterConfirmationsNtfn",
         @"chainrpc.ChainNotifier.RegisterSpendNtfn",
