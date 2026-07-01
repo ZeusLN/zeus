@@ -1,0 +1,123 @@
+syntax = "proto3";
+import "types.proto";
+package events;
+
+// EventEnvelope wraps different event types in a single message to be used by EventPublisher.
+message EventEnvelope {
+  oneof event {
+    PaymentReceived payment_received = 2;
+    PaymentSuccessful payment_successful = 3;
+    PaymentFailed payment_failed = 4;
+    PaymentForwarded payment_forwarded = 6;
+    PaymentClaimable payment_claimable = 7;
+    ChannelStateChanged channel_state_changed = 8;
+  }
+}
+
+enum ChannelState {
+  CHANNEL_STATE_UNSPECIFIED = 0;
+  CHANNEL_STATE_PENDING = 1;
+  CHANNEL_STATE_READY = 2;
+  CHANNEL_STATE_OPEN_FAILED = 3;
+  CHANNEL_STATE_CLOSED = 4;
+}
+
+enum ChannelClosureInitiator {
+  CHANNEL_CLOSURE_INITIATOR_UNSPECIFIED = 0;
+  CHANNEL_CLOSURE_INITIATOR_LOCAL = 1;
+  CHANNEL_CLOSURE_INITIATOR_REMOTE = 2;
+  CHANNEL_CLOSURE_INITIATOR_UNKNOWN = 3;
+}
+
+enum ChannelStateChangeReasonKind {
+  CHANNEL_STATE_CHANGE_REASON_KIND_UNSPECIFIED = 0;
+  CHANNEL_STATE_CHANGE_REASON_KIND_COUNTERPARTY_FORCE_CLOSED = 1;
+  CHANNEL_STATE_CHANGE_REASON_KIND_HOLDER_FORCE_CLOSED = 2;
+  CHANNEL_STATE_CHANGE_REASON_KIND_LEGACY_COOPERATIVE_CLOSURE = 3;
+  CHANNEL_STATE_CHANGE_REASON_KIND_COUNTERPARTY_INITIATED_COOPERATIVE_CLOSURE = 4;
+  CHANNEL_STATE_CHANGE_REASON_KIND_LOCALLY_INITIATED_COOPERATIVE_CLOSURE = 5;
+  CHANNEL_STATE_CHANGE_REASON_KIND_COMMITMENT_TX_CONFIRMED = 6;
+  CHANNEL_STATE_CHANGE_REASON_KIND_FUNDING_TIMED_OUT = 7;
+  CHANNEL_STATE_CHANGE_REASON_KIND_PROCESSING_ERROR = 8;
+  CHANNEL_STATE_CHANGE_REASON_KIND_DISCONNECTED_PEER = 9;
+  CHANNEL_STATE_CHANGE_REASON_KIND_OUTDATED_CHANNEL_MANAGER = 10;
+  CHANNEL_STATE_CHANGE_REASON_KIND_COUNTERPARTY_COOP_CLOSED_UNFUNDED_CHANNEL = 11;
+  CHANNEL_STATE_CHANGE_REASON_KIND_LOCALLY_COOP_CLOSED_UNFUNDED_CHANNEL = 12;
+  CHANNEL_STATE_CHANGE_REASON_KIND_FUNDING_BATCH_CLOSURE = 13;
+  CHANNEL_STATE_CHANGE_REASON_KIND_HTLCS_TIMED_OUT = 14;
+  CHANNEL_STATE_CHANGE_REASON_KIND_PEER_FEERATE_TOO_LOW = 15;
+}
+
+message CounterpartyForceClosedDetails {
+  string peer_msg = 1;
+}
+
+message HolderForceClosedDetails {
+  optional bool broadcasted_latest_txn = 1;
+  string message = 2;
+}
+
+message ProcessingErrorDetails {
+  string err = 1;
+}
+
+message HtlcsTimedOutDetails {
+  optional string payment_hash = 1;
+}
+
+message PeerFeerateTooLowDetails {
+  uint32 peer_feerate_sat_per_kw = 1;
+  uint32 required_feerate_sat_per_kw = 2;
+}
+
+message ChannelStateChangeReason {
+  ChannelStateChangeReasonKind kind = 1;
+  string message = 2;
+  oneof details {
+    CounterpartyForceClosedDetails counterparty_force_closed = 3;
+    HolderForceClosedDetails holder_force_closed = 4;
+    ProcessingErrorDetails processing_error = 5;
+    HtlcsTimedOutDetails htlcs_timed_out = 6;
+    PeerFeerateTooLowDetails peer_feerate_too_low = 7;
+  }
+}
+
+message ChannelStateChanged {
+  string channel_id = 1;
+  string user_channel_id = 2;
+  optional string counterparty_node_id = 3;
+  ChannelState state = 4;
+  optional string funding_txo = 5;
+  optional ChannelStateChangeReason reason = 6;
+  ChannelClosureInitiator closure_initiator = 7;
+}
+
+// PaymentReceived indicates a payment has been received.
+message PaymentReceived {
+  // The payment details for the payment in event.
+  types.Payment payment = 1;
+}
+
+// PaymentSuccessful indicates a sent payment was successful.
+message PaymentSuccessful {
+  // The payment details for the payment in event.
+  types.Payment payment = 1;
+}
+
+// PaymentFailed indicates a sent payment has failed.
+message PaymentFailed {
+  // The payment details for the payment in event.
+  types.Payment payment = 1;
+}
+
+// PaymentClaimable indicates a payment has arrived and is waiting to be manually claimed or failed.
+// This event is only emitted for payments created via `Bolt11ReceiveForHash`.
+message PaymentClaimable {
+  // The payment details for the claimable payment.
+  types.Payment payment = 1;
+}
+
+// PaymentForwarded indicates a payment was forwarded through the node.
+message PaymentForwarded {
+  types.ForwardedPayment forwarded_payment = 1;
+}

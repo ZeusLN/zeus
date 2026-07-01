@@ -353,6 +353,7 @@
     "views.Settings.AddEditNode.nickname": "Nickname (optional)",
     "views.Settings.AddEditNode.serverAddress": "Server address",
     "views.Settings.AddEditNode.accessKey": "Access Key",
+    "views.Settings.AddEditNode.ldkServerApiKey": "ldk-server API key",
     "views.Settings.AddEditNode.restPort": "REST Port",
     "views.Settings.AddEditNode.macaroon": "Macaroon (Hex format)",
     "views.Settings.AddEditNode.rune": "Rune",

@@ -6,6 +6,7 @@ import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // LDK Node
 import LdkNode from '../backends/LdkNode';
+import LdkServer from '../backends/LdkServer';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
 // Custodial
@@ -17,6 +18,7 @@ class BackendUtils {
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
     ldkNode: LdkNode;
+    ldkServer: LdkServer;
     clnRest: CLNRest;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
@@ -25,6 +27,7 @@ class BackendUtils {
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
         this.ldkNode = new LdkNode();
+        this.ldkServer = new LdkServer();
         this.clnRest = new CLNRest();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
@@ -41,6 +44,8 @@ class BackendUtils {
                 return this.embeddedLND;
             case 'ldk-node':
                 return this.ldkNode;
+            case 'ldk-server':
+                return this.ldkServer;
             case 'cln-rest':
                 return this.clnRest;
             case 'lndhub':
@@ -274,6 +279,10 @@ class BackendUtils {
     };
 
     // Implementation type checks
+    isLDKBackend = (implementation = settingsStore.implementation) => {
+        return implementation === 'ldk-node' || implementation === 'ldk-server';
+    };
+
     isLocalWallet = () => {
         const { implementation } = settingsStore;
         return (
