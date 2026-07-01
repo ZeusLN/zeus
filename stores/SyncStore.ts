@@ -94,25 +94,32 @@ export default class SyncStore {
 
     private setSyncInfo = async () => {
         const nodeInfo = this.nodeInfo;
+        const blockHeight = nodeInfo?.block_height;
 
-        if (this.currentBlockHeight !== nodeInfo?.block_height) {
-            this.currentBlockHeight = nodeInfo?.block_height || 0;
+        if (this.currentBlockHeight !== blockHeight) {
+            let needsTipFetch = false;
+            runInAction(() => {
+                this.currentBlockHeight = blockHeight || 0;
+                needsTipFetch = this.currentBlockHeight >= this.bestBlockHeight;
+            });
 
-            // if current block exceeds or equals best block height, fetch chain tip
-            // if all explorers fail, set best block height to current height, then proceed
-            if (this.currentBlockHeight >= this.bestBlockHeight) {
+            if (needsTipFetch) {
                 await this.getBestBlockHeight();
-                if (this.error) this.bestBlockHeight = this.currentBlockHeight;
             }
 
-            this.updateProgress();
+            runInAction(() => {
+                if (needsTipFetch && this.error) {
+                    this.bestBlockHeight = this.currentBlockHeight;
+                }
+                this.updateProgress();
+            });
         }
 
-        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
-            this.isSyncing = false;
-        }
-
-        return;
+        runInAction(() => {
+            if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
+                this.isSyncing = false;
+            }
+        });
     };
 
     private getNodeInfo = () =>
@@ -156,18 +163,22 @@ export default class SyncStore {
                             reject(err);
                         });
                 });
-                this.bestBlockHeight = height;
-                this.error = false;
-                if (this.currentBlockHeight) {
-                    this.updateProgress();
-                }
+                runInAction(() => {
+                    this.bestBlockHeight = height;
+                    this.error = false;
+                    if (this.currentBlockHeight) {
+                        this.updateProgress();
+                    }
+                });
                 return;
             } catch {
                 // try next explorer
             }
         }
 
-        this.error = true;
+        runInAction(() => {
+            this.error = true;
+        });
     };
 
     @action
