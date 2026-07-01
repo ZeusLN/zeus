@@ -128,7 +128,19 @@ describe('ErrorUtils', () => {
                     ['UnhandledContext']
                 )
             ).toEqual(
-                'Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta).'
+                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.'
+            );
+        });
+
+        it('Handles raw LND payment details errors', () => {
+            expect(
+                errorToUserFriendly(
+                    new Error(
+                        'Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)'
+                    )
+                )
+            ).toEqual(
+                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.'
             );
         });
 
@@ -142,7 +154,20 @@ describe('ErrorUtils', () => {
                     ['Keysend']
                 )
             ).toEqual(
-                'Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta). The receiving node might not accept keysend payments.'
+                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state. The receiving node might not accept keysend payments.'
+            );
+        });
+
+        it('Handles raw LND payment details errors with Keysend errorContext', () => {
+            expect(
+                errorToUserFriendly(
+                    new Error(
+                        'Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)'
+                    ),
+                    ['Keysend']
+                )
+            ).toEqual(
+                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state. The receiving node might not accept keysend payments.'
             );
         });
 
