@@ -51,6 +51,7 @@ const TAP_COUNT_OPTIONS = [
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import StealthModeUtils, { StealthApp } from '../../utils/StealthModeUtils';
+import AppIconUtils from '../../utils/AppIconUtils';
 
 // Stealth app icons
 const CalculatorIcon = require('../../assets/images/stealth/calculator.png');
@@ -154,6 +155,7 @@ export default class StealthMode extends React.Component<
     }
 
     applyStealthModeIfNeeded = async () => {
+        const { SettingsStore } = this.props;
         const { stealthEnabled, selectedApp } = this.state;
 
         try {
@@ -163,6 +165,10 @@ export default class StealthMode extends React.Component<
                     await StealthModeUtils.enableStealthMode(selectedApp);
                 } else {
                     await StealthModeUtils.disableStealthMode();
+                    // Restore the user's chosen Zeus app icon variant (no-op if
+                    // it's the default). StealthMode's disable path re-enables
+                    // MainActivity, so do this after to override correctly.
+                    await AppIconUtils.applyStoredIcon(SettingsStore);
                 }
                 return;
             }
