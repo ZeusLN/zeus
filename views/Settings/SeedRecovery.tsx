@@ -51,12 +51,12 @@ import ModalStore from '../../stores/ModalStore';
 import {
     createLndWallet,
     LndMobileEventEmitter,
-    optimizeNeutrinoPeers,
     stopLnd,
     waitForRpcReady,
     STOP_LND_MAX_RETRIES,
     STOP_LND_POLL_DELAY_MS
 } from '../../utils/LndMobileUtils';
+import { optimizeNeutrinoPeers } from '../../utils/NeutrinoPeersUtils';
 import { sleep } from '../../utils/SleepUtils';
 
 import {
