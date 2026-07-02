@@ -346,6 +346,66 @@ export function selectNeutrinoPeersByLatency(
     return picked;
 }
 
+export function isWeakNeutrinoProbeOutcome(ms: NeutrinoProbeOutcome): boolean {
+    return (
+        ms === 'Timed out' ||
+        ms === 'Unreachable' ||
+        (typeof ms === 'number' && ms > NEUTRINO_PING_THRESHOLD_MS)
+    );
+}
+
+export async function probeNeutrinoPeerList(
+    peers: string[],
+    defaultPort: number,
+    timeoutMs: number = NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS
+): Promise<NeutrinoProbeRecord[]> {
+    const records: NeutrinoProbeRecord[] = [];
+
+    for (const peer of peers) {
+        const result = await probeNeutrinoPeer(peer, timeoutMs, defaultPort);
+        records.push(
+            result.timedOut
+                ? { peer, ms: 'Timed out' }
+                : {
+                      peer,
+                      ms: result.reachable ? result.ms : 'Unreachable'
+                  }
+        );
+    }
+
+    return records;
+}
+
+/**
+ * On app restart, probe persisted peers and re-optimize if any are weak.
+ * Must run before initializeLnd so LND starts with the updated peer list.
+ */
+export async function checkAndOptimizeNeutrinoPeersIfNeeded(
+    isTestnet?: boolean
+): Promise<boolean> {
+    const testnet = !!isTestnet;
+    const defaultPort = bitcoinP2pPort(testnet);
+    const peers = testnet
+        ? settingsStore.settings.neutrinoPeersTestnet
+        : settingsStore.settings.neutrinoPeersMainnet;
+
+    if (!peers?.length) {
+        return false;
+    }
+
+    const probes = await probeNeutrinoPeerList(peers, defaultPort);
+    log.d(`Neutrino startup check: ${formatNeutrinoProbeSummary(probes)}`);
+
+    if (!probes.some((probe) => isWeakNeutrinoProbeOutcome(probe.ms))) {
+        log.d('Neutrino startup check: all peers healthy');
+        return false;
+    }
+
+    log.d('Neutrino startup check: weak peers detected, optimizing');
+    await optimizeNeutrinoPeers(testnet);
+    return true;
+}
+
 /**
  * Probe curated defaults, then DNS-derived IPs if needed, then mainnet secondary lists.
  * Persists latency-tiered peers; keeps existing settings when nothing is under threshold.
@@ -448,6 +508,16 @@ function peerProbeUrl(host: string, port: number): string {
 
 function elapsedMs(start: number): number {
     return Math.round(global.performance.now() - start);
+}
+
+function formatNeutrinoProbeSummary(probes: NeutrinoProbeRecord[]): string {
+    return probes
+        .map((probe) => {
+            const outcome =
+                typeof probe.ms === 'number' ? `${probe.ms}ms` : probe.ms;
+            return `${probe.peer}=${outcome}`;
+        })
+        .join(', ');
 }
 
 function dnsFailureHintInMessage(message: string): boolean {

@@ -72,6 +72,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
+import { checkAndOptimizeNeutrinoPeersIfNeeded } from '../../utils/NeutrinoPeersUtils';
 
 import {
     loadPendingPaymentData,
@@ -890,7 +891,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SettingsStore.justCreatedNodeDir = undefined;
                 if (!justCreated) {
                     try {
-                        AlertStore.checkNeutrinoPeers();
+                        await checkAndOptimizeNeutrinoPeersIfNeeded(
+                            embeddedLndNetwork === 'Testnet'
+                        );
+                        await AlertStore.checkNeutrinoPeers();
 
                         const isChannelMigrating =
                             this.state.isChannelMigrating ||
@@ -1073,7 +1077,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 } else {
                     try {
                         // LND was just created and is already running — skip stop→init→start
-                        AlertStore.checkNeutrinoPeers();
+                        await AlertStore.checkNeutrinoPeers();
 
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();
