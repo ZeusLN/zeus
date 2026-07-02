@@ -102,6 +102,19 @@ describe('NeutrinoPeersUtils', () => {
             });
         });
 
+        it('parses bare IPv6 with default port', () => {
+            expect(
+                parseNeutrinoPeerEndpoint('2001:db8::1', defaultPort)
+            ).toEqual({
+                host: '2001:db8::1',
+                port: defaultPort
+            });
+            expect(parseNeutrinoPeerEndpoint('::1', defaultPort)).toEqual({
+                host: '::1',
+                port: defaultPort
+            });
+        });
+
         it('ignores non-numeric port suffixes', () => {
             expect(
                 parseNeutrinoPeerEndpoint('host:with:colons', defaultPort)
@@ -299,6 +312,40 @@ describe('NeutrinoPeersUtils', () => {
                 probeNeutrinoPeer('missing.example', 5000, 8333)
             ).resolves.toEqual({
                 ms: expect.any(Number),
+                reachable: false,
+                timedOut: false
+            });
+        });
+
+        it('treats fast generic errors as reachable peers', async () => {
+            let now = 0;
+            jest.spyOn(global.performance, 'now').mockImplementation(() => {
+                now += 60;
+                return now;
+            });
+            mockFetch.mockRejectedValue(new Error('Network request failed'));
+
+            await expect(
+                probeNeutrinoPeer('peer.example', 5000, 8333)
+            ).resolves.toEqual({
+                ms: 120,
+                reachable: true,
+                timedOut: false
+            });
+        });
+
+        it('treats instant generic errors as unreachable', async () => {
+            let now = 0;
+            jest.spyOn(global.performance, 'now').mockImplementation(() => {
+                now += 10;
+                return now;
+            });
+            mockFetch.mockRejectedValue(new Error('Network request failed'));
+
+            await expect(
+                probeNeutrinoPeer('peer.example', 5000, 8333)
+            ).resolves.toEqual({
+                ms: 20,
                 reachable: false,
                 timedOut: false
             });

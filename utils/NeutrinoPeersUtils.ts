@@ -82,7 +82,7 @@ const DNS_FAILURE_MESSAGE_HINTS = [
     'not known'
 ];
 
-const MIN_REACHABLE_ELAPSED_MS = 100;
+const MIN_REACHABLE_ELAPSED_MS = 25;
 
 export interface PingResult {
     ms: number;
@@ -116,7 +116,7 @@ export function bitcoinP2pPort(isTestnet: boolean): number {
     return isTestnet ? BITCOIN_TESTNET_P2P_PORT : BITCOIN_MAINNET_P2P_PORT;
 }
 
-/** hostname, IPv4:port, or [IPv6]:port */
+/** hostname, IPv4:port, bare IPv6, or [IPv6]:port */
 export function parseNeutrinoPeerEndpoint(
     peer: string,
     defaultPort: number
@@ -132,6 +132,11 @@ export function parseNeutrinoPeerEndpoint(
                 port: Number.isFinite(p) ? p : defaultPort
             };
         }
+    }
+
+    // Bare IPv6 uses multiple colons; only bracketed form may include :port.
+    if (peer.includes(':') && peer.indexOf(':') !== peer.lastIndexOf(':')) {
+        return { host: peer, port: defaultPort };
     }
 
     const lastColon = peer.lastIndexOf(':');
