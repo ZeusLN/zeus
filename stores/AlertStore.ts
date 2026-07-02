@@ -5,10 +5,9 @@ import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 
 import {
-    NEUTRINO_PING_THRESHOLD_MS,
     bitcoinP2pPort,
-    probeNeutrinoPeer,
-    NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS
+    isWeakNeutrinoProbeOutcome,
+    probeNeutrinoPeerList
 } from '../utils/NeutrinoPeersUtils';
 
 const ZOMBIE_CHAN_THRESHOLD = 21000;
@@ -87,63 +86,24 @@ export default class AlertStore {
         const p2pPort = bitcoinP2pPort(
             this.settingsStore.embeddedLndNetwork === 'Testnet'
         );
-        const results: any = [];
-        for (let i = 0; i < peers.length; i++) {
-            const peer = peers[i];
-            await new Promise(async (resolve) => {
-                try {
-                    const r = await probeNeutrinoPeer(
-                        peer,
-                        NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS,
-                        p2pPort
-                    );
-                    if (r.timedOut) {
-                        results.push({
-                            peer,
-                            ms: localeString(
-                                'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
-                            )
-                        });
-                    } else if (!r.reachable) {
-                        results.push({
-                            peer,
-                            ms: localeString(
-                                'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
-                            )
-                        });
-                    } else {
-                        console.log(`# ${peer} - ${r.ms}`);
-                        results.push({
-                            peer,
-                            ms: r.ms
-                        });
-                    }
-                    resolve(true);
-                } catch (e) {
-                    console.log('checkNeutrinoPeers probe error', e);
-                    results.push({
-                        peer,
-                        ms: localeString(
-                            'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
-                        )
-                    });
-                    resolve(true);
-                }
-            });
-        }
+        const probes = await probeNeutrinoPeerList(peers, p2pPort);
 
-        const filteredResults = results.filter((result: any) => {
-            return (
-                result.ms ===
-                    localeString(
-                        'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
-                    ) ||
-                (Number.isInteger(result.ms) &&
-                    result.ms > NEUTRINO_PING_THRESHOLD_MS)
-            );
-        });
+        this.problematicNeutrinoPeers = probes
+            .filter((probe) => isWeakNeutrinoProbeOutcome(probe.ms))
+            .map((probe) => ({
+                peer: probe.peer,
+                ms:
+                    typeof probe.ms === 'number'
+                        ? probe.ms
+                        : probe.ms === 'Timed out'
+                        ? localeString(
+                              'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
+                          )
+                        : localeString(
+                              'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
+                          )
+            }));
 
-        this.problematicNeutrinoPeers = filteredResults;
         if (this.problematicNeutrinoPeers.length > 0) {
             this.hasError = true;
             this.neutrinoPeerError = true;

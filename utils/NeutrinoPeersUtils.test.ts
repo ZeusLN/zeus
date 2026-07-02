@@ -9,6 +9,10 @@ jest.mock('../lndmobile/log', () => () => ({
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
+        settings: {
+            neutrinoPeersMainnet: ['peer-a.example', 'peer-b.example'],
+            neutrinoPeersTestnet: ['testnet-a.example']
+        },
         updateSettings: jest.fn()
     }
 }));
@@ -25,13 +29,16 @@ import {
     NEUTRINO_DNS_SERVICE_BITS,
     NEUTRINO_PING_THRESHOLD_MS,
     bitcoinP2pPort,
+    checkAndOptimizeNeutrinoPeersIfNeeded,
     discoverNeutrinoPeersFromDns,
     dnsSeedFqdnWithServices,
+    isWeakNeutrinoProbeOutcome,
     parseNeutrinoPeerEndpoint,
     pingPeer,
     probeNeutrinoPeer,
     selectNeutrinoPeersByLatency
 } from './NeutrinoPeersUtils';
+import { settingsStore } from '../stores/Stores';
 
 type MockFetchInit = {
     signal?: {
@@ -154,6 +161,51 @@ describe('NeutrinoPeersUtils', () => {
             expect(
                 dnsSeedFqdnWithServices('localhost', NEUTRINO_DNS_SERVICE_BITS)
             ).toBe('localhost');
+        });
+    });
+
+    describe('isWeakNeutrinoProbeOutcome', () => {
+        it('flags timeout, unreachable, and high latency', () => {
+            expect(isWeakNeutrinoProbeOutcome('Timed out')).toBe(true);
+            expect(isWeakNeutrinoProbeOutcome('Unreachable')).toBe(true);
+            expect(
+                isWeakNeutrinoProbeOutcome(NEUTRINO_PING_THRESHOLD_MS + 1)
+            ).toBe(true);
+        });
+
+        it('accepts healthy latency', () => {
+            expect(isWeakNeutrinoProbeOutcome(NEUTRINO_PING_THRESHOLD_MS)).toBe(
+                false
+            );
+        });
+    });
+
+    describe('checkAndOptimizeNeutrinoPeersIfNeeded', () => {
+        it('does not optimize when all peers are healthy', async () => {
+            mockFetch.mockResolvedValue({ ok: true });
+
+            const optimized = await checkAndOptimizeNeutrinoPeersIfNeeded(
+                false
+            );
+
+            expect(optimized).toBe(false);
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('optimizes when a persisted peer is weak', async () => {
+            mockFetch.mockImplementation((url: string) => {
+                if (url.includes('peer-a.example')) {
+                    return Promise.resolve({ ok: true });
+                }
+                return Promise.reject(new Error('unable to resolve host'));
+            });
+
+            const optimized = await checkAndOptimizeNeutrinoPeersIfNeeded(
+                false
+            );
+
+            expect(optimized).toBe(true);
+            expect(settingsStore.updateSettings).toHaveBeenCalled();
         });
     });
 
