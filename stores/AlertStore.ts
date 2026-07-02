@@ -4,6 +4,7 @@ import SettingsStore from './SettingsStore';
 import { localeString } from '../utils/LocaleUtils';
 
 import {
+    NeutrinoProbeRecord,
     bitcoinP2pPort,
     isWeakNeutrinoProbeOutcome,
     probeNeutrinoPeerList
@@ -96,21 +97,10 @@ export default class AlertStore {
     };
 
     @action
-    public checkNeutrinoPeers = async () => {
-        // Pinging every peer can outlast a wallet switch, and nothing awaits
-        // this, so the result must not land on the next wallet's alerts
-        const isCurrent = this.settingsStore.getConnectionGuard();
-        const peers =
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
-                ? this.settingsStore.settings.neutrinoPeersTestnet
-                : this.settingsStore.settings.neutrinoPeersMainnet;
-
-        const p2pPort = bitcoinP2pPort(
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
-        );
-        const probes = await probeNeutrinoPeerList(peers, p2pPort);
-
-        const problematicPeers = probes
+    public setNeutrinoPeerAlertsFromProbes = (
+        probes: NeutrinoProbeRecord[]
+    ) => {
+        this.problematicNeutrinoPeers = probes
             .filter((probe) => isWeakNeutrinoProbeOutcome(probe.ms))
             .map((probe) => ({
                 peer: probe.peer,
@@ -125,12 +115,25 @@ export default class AlertStore {
                               'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
                           )
             }));
+        // Field only. hasError is a computed getter.
+        this.neutrinoPeerError = this.problematicNeutrinoPeers.length > 0;
+    };
 
+    @action
+    public checkNeutrinoPeers = async () => {
+        // Pinging every peer can outlast a wallet switch, and nothing awaits
+        // this, so the result must not land on the next wallet's alerts
+        const isCurrent = this.settingsStore.getConnectionGuard();
+        const peers =
+            this.settingsStore.embeddedLndNetwork === 'Testnet'
+                ? this.settingsStore.settings.neutrinoPeersTestnet
+                : this.settingsStore.settings.neutrinoPeersMainnet;
+
+        const p2pPort = bitcoinP2pPort(
+            this.settingsStore.embeddedLndNetwork === 'Testnet'
+        );
+        const probes = await probeNeutrinoPeerList(peers, p2pPort);
         if (!isCurrent()) return;
-        this.problematicNeutrinoPeers = problematicPeers;
-        // Field only. hasError is now a computed getter.
-        if (this.problematicNeutrinoPeers.length > 0) {
-            this.neutrinoPeerError = true;
-        }
+        this.setNeutrinoPeerAlertsFromProbes(probes);
     };
 }

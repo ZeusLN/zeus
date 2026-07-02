@@ -380,9 +380,14 @@ export async function probeNeutrinoPeerList(
  * On app restart, probe persisted peers and re-optimize if any are weak.
  * Must run before initializeLnd so LND starts with the updated peer list.
  */
+export type NeutrinoStartupPeerCheckResult = {
+    optimized: boolean;
+    alertProbes: NeutrinoProbeRecord[];
+};
+
 export async function checkAndOptimizeNeutrinoPeersIfNeeded(
     isTestnet?: boolean
-): Promise<boolean> {
+): Promise<NeutrinoStartupPeerCheckResult> {
     const testnet = !!isTestnet;
     const defaultPort = bitcoinP2pPort(testnet);
     const peers = testnet
@@ -390,20 +395,33 @@ export async function checkAndOptimizeNeutrinoPeersIfNeeded(
         : settingsStore.settings.neutrinoPeersMainnet;
 
     if (!peers?.length) {
-        return false;
+        return { optimized: false, alertProbes: [] };
     }
 
     const probes = await probeNeutrinoPeerList(peers, defaultPort);
     log.d(`Neutrino startup check: ${formatNeutrinoProbeSummary(probes)}`);
 
-    if (!probes.some((probe) => isWeakNeutrinoProbeOutcome(probe.ms))) {
+    const weakProbes = probes.filter((probe) =>
+        isWeakNeutrinoProbeOutcome(probe.ms)
+    );
+    if (weakProbes.length === 0) {
         log.d('Neutrino startup check: all peers healthy');
-        return false;
+        return { optimized: false, alertProbes: [] };
     }
 
     log.d('Neutrino startup check: weak peers detected, optimizing');
-    await optimizeNeutrinoPeers(testnet);
-    return true;
+    const selected = await optimizeNeutrinoPeers(testnet);
+    if (selected.length > 0) {
+        log.d(
+            'Neutrino startup check: optimize succeeded, skipping post-optimize alert'
+        );
+        return { optimized: true, alertProbes: [] };
+    }
+
+    log.d(
+        'Neutrino startup check: optimize found no replacement peers, keeping alert'
+    );
+    return { optimized: false, alertProbes: weakProbes };
 }
 
 /**
@@ -413,7 +431,7 @@ export async function checkAndOptimizeNeutrinoPeersIfNeeded(
 export async function optimizeNeutrinoPeers(
     isTestnet?: boolean,
     peerTargetCount: number = 3
-): Promise<void> {
+): Promise<string[]> {
     const testnet = !!isTestnet;
     const defaultPort = bitcoinP2pPort(testnet);
     const curatedDefaults = testnet
@@ -469,7 +487,7 @@ export async function optimizeNeutrinoPeers(
         log.d(
             'Neutrino optimize: no peers under latency tiers; keeping existing settings'
         );
-        return;
+        return [];
     }
 
     const dontAllowOtherPeers = selected.length > 2;
@@ -485,6 +503,7 @@ export async function optimizeNeutrinoPeers(
               }
     );
     log.d(`Neutrino optimize: persisted peers: ${selected.join(', ')}`);
+    return selected;
 }
 
 function isBareIpv4(host: string): boolean {
