@@ -5,6 +5,7 @@ import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 
 import {
+    NeutrinoProbeRecord,
     bitcoinP2pPort,
     isWeakNeutrinoProbeOutcome,
     probeNeutrinoPeerList
@@ -77,17 +78,9 @@ export default class AlertStore {
     };
 
     @action
-    public checkNeutrinoPeers = async () => {
-        const peers =
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
-                ? this.settingsStore.settings.neutrinoPeersTestnet
-                : this.settingsStore.settings.neutrinoPeersMainnet;
-
-        const p2pPort = bitcoinP2pPort(
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
-        );
-        const probes = await probeNeutrinoPeerList(peers, p2pPort);
-
+    public setNeutrinoPeerAlertsFromProbes = (
+        probes: NeutrinoProbeRecord[]
+    ) => {
         this.problematicNeutrinoPeers = probes
             .filter((probe) => isWeakNeutrinoProbeOutcome(probe.ms))
             .map((probe) => ({
@@ -107,6 +100,31 @@ export default class AlertStore {
         if (this.problematicNeutrinoPeers.length > 0) {
             this.hasError = true;
             this.neutrinoPeerError = true;
+            return;
         }
+
+        this.neutrinoPeerError = false;
+        if (
+            !this.zombieError &&
+            !this.vssError &&
+            !this.esploraError &&
+            !this.rgsError
+        ) {
+            this.hasError = false;
+        }
+    };
+
+    @action
+    public checkNeutrinoPeers = async () => {
+        const peers =
+            this.settingsStore.embeddedLndNetwork === 'Testnet'
+                ? this.settingsStore.settings.neutrinoPeersTestnet
+                : this.settingsStore.settings.neutrinoPeersMainnet;
+
+        const p2pPort = bitcoinP2pPort(
+            this.settingsStore.embeddedLndNetwork === 'Testnet'
+        );
+        const probes = await probeNeutrinoPeerList(peers, p2pPort);
+        this.setNeutrinoPeerAlertsFromProbes(probes);
     };
 }

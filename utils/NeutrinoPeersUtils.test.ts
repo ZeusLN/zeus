@@ -184,11 +184,9 @@ describe('NeutrinoPeersUtils', () => {
         it('does not optimize when all peers are healthy', async () => {
             mockFetch.mockResolvedValue({ ok: true });
 
-            const optimized = await checkAndOptimizeNeutrinoPeersIfNeeded(
-                false
-            );
+            const result = await checkAndOptimizeNeutrinoPeersIfNeeded(false);
 
-            expect(optimized).toBe(false);
+            expect(result).toEqual({ optimized: false, alertProbes: [] });
             expect(settingsStore.updateSettings).not.toHaveBeenCalled();
         });
 
@@ -200,11 +198,10 @@ describe('NeutrinoPeersUtils', () => {
                 return Promise.reject(new Error('unable to resolve host'));
             });
 
-            const optimized = await checkAndOptimizeNeutrinoPeersIfNeeded(
-                false
-            );
+            const result = await checkAndOptimizeNeutrinoPeersIfNeeded(false);
 
-            expect(optimized).toBe(true);
+            expect(result.optimized).toBe(true);
+            expect(result.alertProbes).toEqual([]);
             expect(settingsStore.updateSettings).toHaveBeenCalled();
         });
     });

@@ -741,10 +741,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // skip the stop→init→start cycle entirely
                 if (!SettingsStore.walletJustCreated) {
                     try {
-                        await checkAndOptimizeNeutrinoPeersIfNeeded(
-                            embeddedLndNetwork === 'Testnet'
-                        );
-                        await AlertStore.checkNeutrinoPeers();
+                        const { alertProbes } =
+                            await checkAndOptimizeNeutrinoPeersIfNeeded(
+                                embeddedLndNetwork === 'Testnet'
+                            );
+                        AlertStore.setNeutrinoPeerAlertsFromProbes(alertProbes);
 
                         const isChannelMigrating =
                             this.state.isChannelMigrating ||
