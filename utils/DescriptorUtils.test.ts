@@ -4,6 +4,7 @@ import b58 from 'bs58check';
 import {
     normalizeExtendedKey,
     recoverMasterFingerprintHex,
+    resolveAddressType,
     buildWatchonlyDescriptors,
     WalletAddressType
 } from './DescriptorUtils';
@@ -140,6 +141,48 @@ describe('DescriptorUtils', () => {
             expect(() =>
                 normalizeExtendedKey('not-a-key', 'testnet')
             ).toThrow();
+        });
+    });
+
+    describe('resolveAddressType', () => {
+        it('uses the explicit type for a plain xpub/tpub', () => {
+            expect(
+                resolveAddressType(
+                    TPUB,
+                    WalletAddressType.NESTED_WITNESS_PUBKEY_HASH
+                )
+            ).toEqual(WalletAddressType.NESTED_WITNESS_PUBKEY_HASH);
+        });
+
+        it('infers native segwit from a zpub when no type is given', () => {
+            expect(resolveAddressType(ZPUB)).toEqual(
+                WalletAddressType.WITNESS_PUBKEY_HASH
+            );
+        });
+
+        it('accepts an explicit type that matches the prefix', () => {
+            expect(
+                resolveAddressType(ZPUB, WalletAddressType.WITNESS_PUBKEY_HASH)
+            ).toEqual(WalletAddressType.WITNESS_PUBKEY_HASH);
+        });
+
+        it('rejects an explicit type that contradicts the prefix', () => {
+            expect(() =>
+                resolveAddressType(
+                    ZPUB,
+                    WalletAddressType.NESTED_WITNESS_PUBKEY_HASH
+                )
+            ).toThrow();
+        });
+
+        it('treats UNKNOWN (0) as not provided', () => {
+            expect(resolveAddressType(ZPUB, WalletAddressType.UNKNOWN)).toEqual(
+                WalletAddressType.WITNESS_PUBKEY_HASH
+            );
+        });
+
+        it('requires a type for a plain xpub/tpub', () => {
+            expect(() => resolveAddressType(TPUB)).toThrow();
         });
     });
 
