@@ -1083,6 +1083,152 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Watch-only Account Methods
+
+    @objc(importWatchonlyAccount:externalDescriptor:internalDescriptor:resolver:rejecter:)
+    func importWatchonlyAccount(_ accountId: String, externalDescriptor: String, internalDescriptor: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try node.importWatchonlyAccount(accountId: accountId, externalDescriptor: externalDescriptor, internalDescriptor: internalDescriptor)
+                resolve(nil)
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(watchonlyNewAddress:resolver:rejecter:)
+    func watchonlyNewAddress(_ accountId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let address = try node.watchonlyNewAddress(accountId: accountId)
+                resolve(["address": address])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(watchonlyBalance:resolver:rejecter:)
+    func watchonlyBalance(_ accountId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let balance = try node.watchonlyBalance(accountId: accountId)
+                resolve(["balanceSats": balance])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(watchonlyListUtxos:resolver:rejecter:)
+    func watchonlyListUtxos(_ accountId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let utxos = try node.watchonlyListUtxos(accountId: accountId)
+                let utxoList = utxos.map { utxo -> [String: Any] in
+                    return [
+                        "txid": utxo.txid,
+                        "vout": utxo.vout,
+                        "value_sats": utxo.valueSats,
+                        "address": utxo.address,
+                        "is_spent": utxo.isSpent
+                    ]
+                }
+                resolve(["utxos": utxoList])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(watchonlyListAddresses:resolver:rejecter:)
+    func watchonlyListAddresses(_ accountId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let addresses = try node.watchonlyListAddresses(accountId: accountId)
+                resolve(["addresses": addresses])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(syncWatchonlyAccounts:rejecter:)
+    func syncWatchonlyAccounts(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try node.syncWatchonlyAccounts()
+                resolve(nil)
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    @objc(listWatchonlyAccounts:rejecter:)
+    func listWatchonlyAccounts(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let accounts = node.listWatchonlyAccounts()
+            resolve(["accounts": accounts])
+        }
+    }
+
+    @objc(previewWatchonlyAccount:internalDescriptor:count:resolver:rejecter:)
+    func previewWatchonlyAccount(_ externalDescriptor: String, internalDescriptor: String, count: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let preview = try node.previewWatchonlyAccount(externalDescriptor: externalDescriptor, internalDescriptor: internalDescriptor, count: count.uint8Value)
+                resolve([
+                    "externalAddresses": preview.externalAddresses,
+                    "internalAddresses": preview.internalAddresses
+                ])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     // MARK: - Route Parameters Helper
 
     private func buildRouteParameters(maxTotalRoutingFeeMsat: Double, maxPathCount: Double) -> RouteParametersConfig? {
