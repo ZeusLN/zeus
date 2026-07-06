@@ -92,6 +92,56 @@ export const recoverMasterFingerprintHex = (
         Base64Utils.base64ToHex(masterKeyFingerprintBase64)
     );
 
+// Script type implied by a SLIP-132 version prefix. Plain xpub/tpub imply
+// nothing and are absent here.
+const IMPLIED_ADDRESS_TYPE: { [version: string]: WalletAddressType } = {
+    [VERSION_ZPUB]: WalletAddressType.WITNESS_PUBKEY_HASH,
+    [VERSION_VPUB]: WalletAddressType.WITNESS_PUBKEY_HASH,
+    [VERSION_YPUB]: WalletAddressType.NESTED_WITNESS_PUBKEY_HASH,
+    [VERSION_UPUB]: WalletAddressType.NESTED_WITNESS_PUBKEY_HASH
+};
+
+/**
+ * Decide the address type for an import request. An explicitly selected type
+ * wins, but a SLIP-132 key whose prefix contradicts it is rejected rather than
+ * silently deriving addresses the key was never used for. A plain xpub/tpub
+ * carries no script-type hint, so the explicit type is required there.
+ *
+ * @param key          extended public key as provided (pre-normalization)
+ * @param explicitType walletrpc.AddressType from the import UI; UNKNOWN (0) is
+ *                     treated as not provided
+ */
+export const resolveAddressType = (
+    key: string,
+    explicitType?: number
+): number => {
+    let implied: WalletAddressType | undefined;
+    try {
+        const version = Buffer.from(b58.decode(key))
+            .subarray(0, 4)
+            .toString('hex');
+        implied = IMPLIED_ADDRESS_TYPE[version];
+    } catch (e) {
+        // invalid keys are rejected by normalizeExtendedKey
+    }
+
+    const explicit = explicitType || undefined; // UNKNOWN = 0 → undefined
+
+    if (explicit !== undefined) {
+        if (implied !== undefined && implied !== explicit) {
+            throw new Error(
+                'Selected address type contradicts the extended key prefix ' +
+                    '(e.g. a zpub is a native segwit key).'
+            );
+        }
+        return explicit;
+    }
+    if (implied !== undefined) return implied;
+    throw new Error(
+        'Address type is required to import a plain xpub/tpub key.'
+    );
+};
+
 interface AddressTypeConfig {
     purpose: string;
     wrap: (inner: string) => string;
