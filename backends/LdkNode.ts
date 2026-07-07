@@ -11,7 +11,17 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
+import {
+    buildWatchonlyDescriptors,
+    normalizeExtendedKey,
+    recoverMasterFingerprintHex,
+    resolveAddressType
+} from '../utils/DescriptorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import {
+    loadWatchonlyRegistry,
+    saveWatchonlyAccountMeta
+} from '../utils/WatchonlyAccountRegistry';
 import type {
     Network,
     NodeStatus,
@@ -257,7 +267,17 @@ export default class LdkNode {
     /**
      * Get blockchain (on-chain) balance
      */
-    getBlockchainBalance = async (): Promise<any> => {
+    getBlockchainBalance = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            const balanceSats =
+                await LdkNodeInjection.watchonly.watchonlyBalance(data.account);
+            return {
+                total_balance: balanceSats.toString(),
+                confirmed_balance: balanceSats.toString(),
+                unconfirmed_balance: '0'
+            };
+        }
+
         const balances = await LdkNodeInjection.node.listBalances();
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
@@ -1081,6 +1101,127 @@ export default class LdkNode {
                 amount_sat: u.value_sats,
                 confirmations: u.is_spent ? '0' : '1'
             }))
+        };
+    };
+
+    // ========================================================================
+    // Watch-only Account Methods
+    // ========================================================================
+
+    /**
+     * Import a watch-only account from an extended public key. Mirrors the
+     * LND-family import: a dry run returns a preview (address samples the user
+     * verifies against their hardware wallet) without persisting; the real
+     * import creates the account in ldk-node, records display metadata, and
+     * kicks off a sync so balances populate.
+     */
+    importAccount = async (data: any): Promise<any> => {
+        const {
+            name,
+            extended_public_key,
+            master_key_fingerprint,
+            address_type,
+            dry_run
+        } = data;
+
+        const network = settingsStore.ldkNetwork || 'mainnet';
+
+        const resolvedType = resolveAddressType(
+            extended_public_key,
+            address_type
+        );
+        const xpub = normalizeExtendedKey(extended_public_key, network);
+        const mfpHex = master_key_fingerprint
+            ? recoverMasterFingerprintHex(master_key_fingerprint)
+            : undefined;
+        const { external, internal, derivationPath } =
+            buildWatchonlyDescriptors({
+                xpub,
+                mfpHex,
+                addressType: resolvedType,
+                network
+            });
+
+        if (dry_run) {
+            const preview =
+                await LdkNodeInjection.watchonly.previewWatchonlyAccount(
+                    external,
+                    internal,
+                    5
+                );
+            return {
+                account: {
+                    name,
+                    extended_public_key,
+                    master_key_fingerprint,
+                    address_type: resolvedType,
+                    derivation_path: derivationPath,
+                    watch_only: true
+                },
+                dry_run_external_addrs: preview.externalAddresses,
+                dry_run_internal_addrs: preview.internalAddresses
+            };
+        }
+
+        // The account name doubles as the ldk-node KVStore namespace.
+        if (
+            !name ||
+            !/^[A-Za-z0-9_-]{1,120}$/.test(name) ||
+            name === 'default'
+        ) {
+            throw new Error(
+                localeString('backends.LdkNode.invalidAccountName')
+            );
+        }
+
+        await LdkNodeInjection.watchonly.importWatchonlyAccount(
+            name,
+            external,
+            internal
+        );
+
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        await saveWatchonlyAccountMeta(nodeDir, name, {
+            extended_public_key,
+            master_key_fingerprint,
+            address_type: resolvedType,
+            derivation_path: derivationPath
+        });
+
+        // Fire-and-forget: pull balances/UTXOs for the new account in the
+        // background. Tolerate NotRunning (e.g. imported before node start).
+        LdkNodeInjection.watchonly.syncWatchonlyAccounts().catch(() => {});
+
+        return { account: { name, watch_only: true } };
+    };
+
+    /**
+     * List imported watch-only accounts. The ldk-node node is the source of
+     * truth for which accounts exist (survives a VSS recovery); the local
+     * registry supplies display metadata, absent gracefully when missing.
+     */
+    listAccounts = async (): Promise<any> => {
+        const names = await LdkNodeInjection.watchonly.listWatchonlyAccounts();
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        const registry = await loadWatchonlyRegistry(nodeDir);
+
+        return {
+            accounts: names.map((name) => {
+                const meta = registry[name];
+                return {
+                    name,
+                    watch_only: true,
+                    ...(meta
+                        ? {
+                              extended_public_key: meta.extended_public_key,
+                              master_key_fingerprint:
+                                  meta.master_key_fingerprint,
+                              address_type: meta.address_type,
+                              derivation_path: meta.derivation_path
+                          }
+                        : {})
+                };
+            })
         };
     };
 
