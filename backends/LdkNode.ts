@@ -15,7 +15,8 @@ import {
     buildWatchonlyDescriptors,
     normalizeExtendedKey,
     recoverMasterFingerprintHex,
-    resolveAddressType
+    resolveAddressType,
+    WalletAddressType
 } from '../utils/DescriptorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
@@ -1077,9 +1078,17 @@ export default class LdkNode {
     // ========================================================================
 
     /**
-     * Get new on-chain address
+     * Get new on-chain address. Reveals a receive address for a watch-only
+     * account when one is passed, otherwise for the node's own wallet.
      */
-    getNewAddress = async (): Promise<any> => {
+    getNewAddress = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            const address =
+                await LdkNodeInjection.watchonly.watchonlyNewAddress(
+                    data.account
+                );
+            return { address };
+        }
         const address = await LdkNodeInjection.onchain.newOnchainAddress();
         return {
             address
@@ -1087,10 +1096,29 @@ export default class LdkNode {
     };
 
     /**
-     * Get UTXOs for coin control
+     * Get a new change address. Watch-only accounts have no separate change
+     * keychain exposed here, so this resolves to a no-op — the import
+     * pre-generation loop calls it and only needs it to settle.
      */
-    getUTXOs = async (): Promise<any> => {
-        const utxos = await LdkNodeInjection.onchain.listUtxos();
+    getNewChangeAddress = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            return { addr: null };
+        }
+        const addr = await LdkNodeInjection.onchain.newOnchainAddress();
+        return { addr };
+    };
+
+    /**
+     * Get UTXOs for coin control. Scoped to a watch-only account when passed,
+     * otherwise the node's own wallet.
+     */
+    getUTXOs = async (data?: any): Promise<any> => {
+        const utxos =
+            data?.account && data.account !== 'default'
+                ? await LdkNodeInjection.watchonly.watchonlyListUtxos(
+                      data.account
+                  )
+                : await LdkNodeInjection.onchain.listUtxos();
         return {
             utxos: utxos.map((u) => ({
                 outpoint: {
@@ -1223,6 +1251,65 @@ export default class LdkNode {
                 };
             })
         };
+    };
+
+    /**
+     * List addresses grouped by watch-only account, in the walletrpc
+     * ListAddresses shape the OnChainAddresses view consumes. ldk-node reveals
+     * external (receive) addresses only, ordered by derivation index, so the
+     * per-address path is synthesized as `${accountPath}/0/${i}` and every
+     * address is external (is_internal: false). Per-address balance is summed
+     * from the account's unspent UTXOs.
+     */
+    listAddresses = async (): Promise<any> => {
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        const network = settingsStore.ldkNetwork || 'mainnet';
+        const coin =
+            network === 'mainnet' || network === 'bitcoin' ? "0'" : "1'";
+
+        const [names, registry] = await Promise.all([
+            LdkNodeInjection.watchonly.listWatchonlyAccounts(),
+            loadWatchonlyRegistry(nodeDir)
+        ]);
+
+        const account_with_addresses = [];
+        for (const name of names) {
+            const meta = registry[name];
+            const addressTypeNum =
+                meta?.address_type ?? WalletAddressType.WITNESS_PUBKEY_HASH;
+            const accountPath = meta?.derivation_path ?? `m/84'/${coin}/0'`;
+
+            const [addresses, utxos] = await Promise.all([
+                LdkNodeInjection.watchonly.watchonlyListAddresses(name),
+                LdkNodeInjection.watchonly.watchonlyListUtxos(name)
+            ]);
+
+            const balanceByAddress: { [addr: string]: BigNumber } = {};
+            for (const u of utxos) {
+                if (u.is_spent) continue;
+                balanceByAddress[u.address] = (
+                    balanceByAddress[u.address] ?? new BigNumber(0)
+                ).plus(u.value_sats);
+            }
+
+            account_with_addresses.push({
+                name,
+                address_type:
+                    WalletAddressType[addressTypeNum] ?? 'WITNESS_PUBKEY_HASH',
+                derivation_path: accountPath,
+                addresses: addresses.map((address, i) => ({
+                    address,
+                    is_internal: false,
+                    balance: (
+                        balanceByAddress[address] ?? new BigNumber(0)
+                    ).toString(),
+                    derivation_path: `${accountPath}/0/${i}`,
+                    public_key: ''
+                }))
+            });
+        }
+
+        return { account_with_addresses };
     };
 
     /**
