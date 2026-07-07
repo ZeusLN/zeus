@@ -898,6 +898,7 @@
     "views.Send.keysendAddress": "keysend address (if enabled)",
     "views.Send.mustBeValid": "Must be a valid",
     "views.Send.onChainNotSupported": "On-chain sends are not supported on",
+    "views.Send.accountSendNotSupported": "Sending from a watch-only account is not supported yet on the embedded LDK node",
     "views.Send.amount": "Amount",
     "views.Send.satoshis": "satoshis",
     "views.Send.message": "Message",

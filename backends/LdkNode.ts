@@ -196,10 +196,17 @@ export default class LdkNode {
     }
 
     /**
-     * Sync wallets (on-chain and lightning)
+     * Sync wallets (on-chain and lightning), plus any imported watch-only
+     * accounts. Account sync failures are tolerated — the node's own sync
+     * result is what callers depend on.
      */
     syncWallets = async (): Promise<void> => {
         await LdkNodeInjection.node.syncWallets();
+        try {
+            await LdkNodeInjection.watchonly.syncWatchonlyAccounts();
+        } catch (e) {
+            console.log('Watch-only account sync failed:', e);
+        }
     };
 
     /**
@@ -1313,9 +1320,27 @@ export default class LdkNode {
     };
 
     /**
+     * Rescan for account funds. The existing-account import flow calls this
+     * after pre-generating addresses; ldk-node's watch-only sync is always a
+     * full scan, so the start_height in the request is ignored.
+     */
+    rescan = async (_data?: any): Promise<any> => {
+        await LdkNodeInjection.watchonly.syncWatchonlyAccounts();
+        return {};
+    };
+
+    /**
      * Send coins on-chain
      */
     sendCoins = async (data: any): Promise<any> => {
+        // SAFETY: without this guard a send initiated from a watch-only
+        // account row would fall through to the branches below and spend the
+        // NODE's own wallet instead. Spending from a watch-only account
+        // requires externally signing a PSBT, which is not wired up here yet.
+        if (data.account && data.account !== 'default') {
+            throw new Error(localeString('views.Send.accountSendNotSupported'));
+        }
+
         let txid: string;
 
         if (data.utxos?.length > 0) {
