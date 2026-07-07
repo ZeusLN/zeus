@@ -150,6 +150,7 @@ interface WalletConfigurationState {
     ldkPassphrase?: string;
     ldkNodeDir?: string;
     ldkNetwork?: string;
+    ldkSeedWordCount: 12 | 24;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
     ldkScorerUrl?: string;
@@ -231,6 +232,7 @@ export default class WalletConfiguration extends React.Component<
         ldkPassphrase: '',
         ldkNodeDir: '',
         ldkNetwork: 'mainnet',
+        ldkSeedWordCount: 12,
         ldkEsploraServer: '',
         ldkRgsServer: '',
         ldkScorerUrl: '',
@@ -1081,7 +1083,8 @@ export default class WalletConfiguration extends React.Component<
             ldkEsploraServer,
             ldkRgsServer,
             ldkScorerUrl,
-            ldkMnemonic
+            ldkMnemonic,
+            ldkSeedWordCount
         } = this.state;
 
         this.setState({
@@ -1125,6 +1128,7 @@ export default class WalletConfiguration extends React.Component<
             const response = await createLdkNodeWallet({
                 nodeDir: ldkNodeDir,
                 seedMnemonic: ldkMnemonic || undefined,
+                wordCount: ldkSeedWordCount,
                 passphrase: ldkPassphrase || undefined,
                 network: networkType,
                 esploraServerUrl:
@@ -1221,6 +1225,7 @@ export default class WalletConfiguration extends React.Component<
             // LDK Node
             ldkMnemonic,
             ldkNetwork,
+            ldkSeedWordCount,
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
@@ -1760,6 +1765,33 @@ export default class WalletConfiguration extends React.Component<
                                                 });
                                             }}
                                             values={EMBEDDED_NODE_NETWORK_KEYS}
+                                        />
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'views.Settings.WalletConfiguration.seedPhraseLength'
+                                            )}
+                                            selectedValue={ldkSeedWordCount}
+                                            onValueChange={(value: number) => {
+                                                this.setState({
+                                                    ldkSeedWordCount: value as
+                                                        | 12
+                                                        | 24
+                                                });
+                                            }}
+                                            values={[
+                                                {
+                                                    key: localeString(
+                                                        'views.Settings.WalletConfiguration.seedPhraseLength.12'
+                                                    ),
+                                                    value: 12
+                                                },
+                                                {
+                                                    key: localeString(
+                                                        'views.Settings.WalletConfiguration.seedPhraseLength.24'
+                                                    ),
+                                                    value: 24
+                                                }
+                                            ]}
                                         />
                                     </View>
                                 )}
