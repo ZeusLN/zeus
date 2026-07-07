@@ -243,6 +243,7 @@ async function initNode({
 export async function createLdkNodeWallet({
     nodeDir,
     seedMnemonic,
+    wordCount = 12,
     passphrase,
     network,
     esploraServerUrl,
@@ -255,6 +256,7 @@ export async function createLdkNodeWallet({
 }: {
     nodeDir: string;
     seedMnemonic?: string;
+    wordCount?: number;
     passphrase?: string;
     network: SupportedNetwork;
     esploraServerUrl?: string;
@@ -279,7 +281,7 @@ export async function createLdkNodeWallet({
     // Generate mnemonic if not provided (new wallet)
     let mnemonic = seedMnemonic;
     if (!mnemonic) {
-        mnemonic = await generateMnemonic(12);
+        mnemonic = await generateMnemonic(wordCount);
     }
 
     const { vssError } = await initNode({
