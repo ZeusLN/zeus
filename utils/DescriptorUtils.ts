@@ -51,8 +51,8 @@ export const normalizeExtendedKey = (key: string, network: string): string => {
         throw new Error('Invalid extended public key: not valid base58check.');
     }
 
-    const version = decoded.subarray(0, 4).toString('hex');
-    const payload = decoded.subarray(4);
+    const version = decoded.slice(0, 4).toString('hex');
+    const payload = decoded.slice(4);
 
     let targetVersion: string;
     if (MAINNET_VERSIONS.includes(version)) {
@@ -117,8 +117,9 @@ export const resolveAddressType = (
 ): number => {
     let implied: WalletAddressType | undefined;
     try {
+        // .slice(), not .subarray() — see normalizeExtendedKey above.
         const version = Buffer.from(b58.decode(key))
-            .subarray(0, 4)
+            .slice(0, 4)
             .toString('hex');
         implied = IMPLIED_ADDRESS_TYPE[version];
     } catch (e) {
