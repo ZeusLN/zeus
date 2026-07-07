@@ -2346,7 +2346,7 @@ export default class LdkNode {
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
-    supportsAccounts = () => false;
+    supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => true;
@@ -2372,7 +2372,7 @@ export default class LdkNode {
     supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
-    supportsAddressesWithDerivationPaths = () => false;
+    supportsAddressesWithDerivationPaths = () => true;
     supportsCustomFeeLimit = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
