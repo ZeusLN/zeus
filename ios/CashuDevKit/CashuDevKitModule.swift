@@ -26,6 +26,19 @@ class CashuDevKitModule: RCTEventEmitter {
     // Serial queue for thread-safe access to the properties above
     private let walletQueue = DispatchQueue(label: "app.zeusln.cashudevkit.wallet")
 
+    // High-signal file logging for diagnostics. cdk-ffi exposes no logger hook
+    // and its Rust internals emit nothing capturable, so we record ZEUS-side
+    // events (which op ran + mapped FFI errors) to a file the Diagnostics tool
+    // can tail. Reuses the generic LogFileObserver helper from the LDK module.
+    private var logFileObserver: LogFileObserver?
+    private let logQueue = DispatchQueue(label: "app.zeusln.cashudevkit.log")
+    private let logDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     // MARK: - Module Setup
 
     @objc
@@ -36,6 +49,11 @@ class CashuDevKitModule: RCTEventEmitter {
     @objc
     override static func requiresMainQueueSetup() -> Bool {
         return false
+    }
+
+    @objc
+    override func supportedEvents() -> [String]! {
+        return ["cashulog"]
     }
 
     // MARK: - Helper Methods
@@ -372,11 +390,46 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    private func getCashuLogPath() -> String {
+        let paths = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask)
+        let appSupport = paths[0]
+        try? FileManager.default.createDirectory(
+            at: appSupport, withIntermediateDirectories: true)
+        return appSupport.appendingPathComponent("cashu.log").path
+    }
+
+    private func logToFile(_ message: String) {
+        logQueue.async {
+            let line = "\(self.logDateFormatter.string(from: Date())) \(message)\n"
+            guard let data = line.data(using: .utf8) else { return }
+            let path = self.getCashuLogPath()
+            let fm = FileManager.default
+            if !fm.fileExists(atPath: path) {
+                fm.createFile(atPath: path, contents: data)
+                return
+            }
+            if let fh = FileHandle(forWritingAtPath: path) {
+                defer { fh.closeFile() }
+                fh.seekToEndOfFile()
+                fh.write(data)
+            }
+        }
+    }
+
     /// Map the CDK FFI error to the legacy bridge error codes that JS
     /// consumers were written against. CDK 0.15+ collapsed the previous
     /// 19 error variants into Cdk(code, message) with Cashu protocol
     /// error codes, plus Internal(message) for infrastructure errors.
     private func mapFfiError(_ error: FfiError) -> (code: String, message: String) {
+        let result = mapFfiErrorRaw(error)
+        // Central choke point: every FFI error passes through here, so log it
+        // once for diagnostics rather than at each call site.
+        logToFile("FFI error [\(result.code)]: \(result.message)")
+        return result
+    }
+
+    private func mapFfiErrorRaw(_ error: FfiError) -> (code: String, message: String) {
         switch error {
         case let .Cdk(code, errorMessage):
             return (legacyErrorCode(protocolCode: code, message: errorMessage), errorMessage)
@@ -551,6 +604,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func initializeWallet(_ mnemonic: String, unit: String,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: initializeWallet unit=\(unit)")
         Task {
             do {
                 let dbPath = getDatabasePath(for: mnemonic)
@@ -624,6 +678,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func addMint(_ mintUrl: String, targetProofCount: NSNumber,
                  resolve: @escaping RCTPromiseResolveBlock,
                  reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: addMint \(mintUrl)")
         guard let repo = getInitializedRepo(reject: reject) else { return }
 
         Task {
@@ -846,6 +901,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func createMintQuote(_ mintUrl: String, amount: NSNumber, description: String?,
                          resolve: @escaping RCTPromiseResolveBlock,
                          reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: createMintQuote \(mintUrl) amount=\(amount)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1072,6 +1128,7 @@ class CashuDevKitModule: RCTEventEmitter {
                                secretKey: String?,
                                resolve: @escaping RCTPromiseResolveBlock,
                                reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: addExternalMintQuote \(mintUrl) quote=\(quoteId) amount=\(amount)")
         let dbHandle: WalletDatabase? = walletQueue.sync {
             guard isInitialized else { return nil }
             return self.db
@@ -1166,6 +1223,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func mintExternal(_ mintUrl: String, quoteId: String, amount: NSNumber,
                       resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: mintExternal \(mintUrl) quote=\(quoteId) amount=\(amount)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1192,6 +1250,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func mint(_ mintUrl: String, quoteId: String, conditionsJson: String?,
               resolve: @escaping RCTPromiseResolveBlock,
               reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: mint \(mintUrl) quote=\(quoteId)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1227,6 +1286,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func createMeltQuote(_ mintUrl: String, request: String, optionsJson: String?,
                          resolve: @escaping RCTPromiseResolveBlock,
                          reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: createMeltQuote \(mintUrl)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1273,6 +1333,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func melt(_ mintUrl: String, quoteId: String,
               resolve: @escaping RCTPromiseResolveBlock,
               reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: melt \(mintUrl) quote=\(quoteId)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1294,6 +1355,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func meltPartial(_ mintUrl: String, bolt11: String, mppAmountMsat: NSNumber,
                      resolve: @escaping RCTPromiseResolveBlock,
                      reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: meltPartial \(mintUrl) mppAmountMsat=\(mppAmountMsat)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1339,6 +1401,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func prepareSend(_ mintUrl: String, amount: NSNumber, optionsJson: String?,
                      resolve: @escaping RCTPromiseResolveBlock,
                      reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: prepareSend \(mintUrl) amount=\(amount)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1416,6 +1479,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func confirmSend(_ preparedSendId: String, memo: String?,
                      resolve: @escaping RCTPromiseResolveBlock,
                      reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: confirmSend id=\(preparedSendId)")
         let prepared: PreparedSend? = walletQueue.sync { preparedSends[preparedSendId] }
         guard let prepared else {
             reject("NO_PREPARED_SEND", "Prepared send not found", nil)
@@ -1477,6 +1541,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func receive(_ encodedToken: String, optionsJson: String?,
                  resolve: @escaping RCTPromiseResolveBlock,
                  reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: receive")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1560,6 +1625,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func restore(_ mintUrl: String,
                  resolve: @escaping RCTPromiseResolveBlock,
                  reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: restore \(mintUrl)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1582,6 +1648,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func restoreFromSeed(_ mintUrl: String, seedHex: String,
                          resolve: @escaping RCTPromiseResolveBlock,
                          reject: @escaping RCTPromiseRejectBlock) {
+        logToFile("op: restoreFromSeed \(mintUrl)")
         guard getInitializedRepo(reject: reject) != nil else { return }
 
         Task {
@@ -1957,9 +2024,36 @@ class CashuDevKitModule: RCTEventEmitter {
         resolve(disposed)
     }
 
+    // MARK: - Diagnostics logging
+
+    @objc(tailCashuLog:resolver:rejecter:)
+    func tailCashuLog(_ numLines: NSNumber,
+                      resolve: @escaping RCTPromiseResolveBlock,
+                      reject: @escaping RCTPromiseRejectBlock) {
+        let content = LogFileObserver.tailFile(
+            path: getCashuLogPath(), numLines: numLines.intValue)
+        resolve(content)
+    }
+
+    @objc(observeCashuLogFile:rejecter:)
+    func observeCashuLogFile(resolve: @escaping RCTPromiseResolveBlock,
+                             reject: @escaping RCTPromiseRejectBlock) {
+        if logFileObserver == nil {
+            let observer = LogFileObserver(filePath: getCashuLogPath()) {
+                [weak self] data in
+                self?.sendEvent(withName: "cashulog", body: data)
+            }
+            observer.startObserving()
+            logFileObserver = observer
+        }
+        resolve(true)
+    }
+
     // MARK: - Cleanup
 
     override func invalidate() {
+        logFileObserver?.stopObserving()
+        logFileObserver = nil
         walletQueue.sync {
             repo = nil
             db = nil
