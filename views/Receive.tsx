@@ -1402,7 +1402,7 @@ export default class Receive extends React.Component<
             !onChainOnly &&
             ((BackendUtils.supportsCustomPreimages() &&
                 showCustomPreimageField) ||
-                (BackendUtils.isLNDBased() && !lspIsActive) ||
+                (BackendUtils.supportsRouteHints() && !lspIsActive) ||
                 (BackendUtils.supportsAMP() && !lspIsActive) ||
                 (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive));
 
@@ -2602,7 +2602,7 @@ export default class Receive extends React.Component<
                                                                 </>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
+                                                        {BackendUtils.supportsRouteHints() &&
                                                             !lspIsActive && (
                                                                 <View
                                                                     style={{
@@ -2675,7 +2675,7 @@ export default class Receive extends React.Component<
                                                                 </View>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
+                                                        {BackendUtils.supportsRouteHints() &&
                                                             !lspIsActive &&
                                                             routeHints && (
                                                                 <Row>
@@ -2727,7 +2727,7 @@ export default class Receive extends React.Component<
                                                                 </Row>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
+                                                        {BackendUtils.supportsRouteHints() &&
                                                             routeHints && (
                                                                 <HopPicker
                                                                     ref={(
