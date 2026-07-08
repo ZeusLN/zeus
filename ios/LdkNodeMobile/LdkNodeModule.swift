@@ -761,6 +761,9 @@ class LdkNodeModule: RCTEventEmitter {
             if let shortChannelId = channel.shortChannelId {
                 result["shortChannelId"] = String(shortChannelId)
             }
+            if let inboundScidAlias = channel.inboundScidAlias {
+                result["inboundScidAlias"] = String(inboundScidAlias)
+            }
             return result
         }
         resolve(["channels": channelList])
@@ -1104,8 +1107,24 @@ class LdkNodeModule: RCTEventEmitter {
 
     // MARK: - BOLT11 Payment Methods
 
-    @objc(receiveBolt11:invoiceDescription:expirySecs:resolver:rejecter:)
-    func receiveBolt11(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    private func parseRouteHintsMode(_ mode: String?) -> RouteHintsMode {
+        switch mode?.lowercased() {
+        case "none":
+            return .none
+        case "custom":
+            return .custom
+        default:
+            return .automatic
+        }
+    }
+
+    private func parseCustomRouteHintUserChannelIds(_ ids: [String]?) -> [UserChannelId]? {
+        guard let ids = ids, !ids.isEmpty else { return nil }
+        return ids
+    }
+
+    @objc(receiveBolt11:invoiceDescription:expirySecs:routeHintsMode:customRouteHintChannelIds:resolver:rejecter:)
+    func receiveBolt11(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, routeHintsMode: String?, customRouteHintChannelIds: [String]?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1114,15 +1133,23 @@ class LdkNodeModule: RCTEventEmitter {
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receive(amountMsat: UInt64(amountMsat), description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let hintsMode = parseRouteHintsMode(routeHintsMode)
+            let customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            let invoice = try bolt11.receiveWithRouteHints(
+                amountMsat: UInt64(amountMsat),
+                description: descriptionObj,
+                expirySecs: UInt32(expirySecs),
+                routeHintsMode: hintsMode,
+                customRouteHintUserChannelIds: customChannelIds
+            )
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
         }
     }
 
-    @objc(receiveVariableAmountBolt11:expirySecs:resolver:rejecter:)
-    func receiveVariableAmountBolt11(_ invoiceDescription: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(receiveVariableAmountBolt11:expirySecs:routeHintsMode:customRouteHintChannelIds:resolver:rejecter:)
+    func receiveVariableAmountBolt11(_ invoiceDescription: String, expirySecs: Double, routeHintsMode: String?, customRouteHintChannelIds: [String]?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1131,7 +1158,14 @@ class LdkNodeModule: RCTEventEmitter {
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let hintsMode = parseRouteHintsMode(routeHintsMode)
+            let customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            let invoice = try bolt11.receiveVariableAmountWithRouteHints(
+                description: descriptionObj,
+                expirySecs: UInt32(expirySecs),
+                routeHintsMode: hintsMode,
+                customRouteHintUserChannelIds: customChannelIds
+            )
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
