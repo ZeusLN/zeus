@@ -53,6 +53,7 @@ interface ChannelPickerState {
 
 const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
 const MAX_NUMBER_ROUTE_HINTS_LND = 20;
+const MAX_NUMBER_ROUTE_HINTS_LDK = 3;
 
 @inject('ChannelsStore', 'UnitsStore')
 @observer
@@ -315,9 +316,10 @@ export default class ChannelPicker extends React.Component<
                                             disabled={
                                                 selectedChannels.length === 0 ||
                                                 (selectionMode === 'multiple' &&
-                                                    backendUtils.isLNDBased() &&
                                                     selectedChannels.length >
-                                                        MAX_NUMBER_ROUTE_HINTS_LND)
+                                                        (backendUtils.isLNDBased()
+                                                            ? MAX_NUMBER_ROUTE_HINTS_LND
+                                                            : MAX_NUMBER_ROUTE_HINTS_LDK))
                                             }
                                             onPress={() => {
                                                 this.updateValueSet();
