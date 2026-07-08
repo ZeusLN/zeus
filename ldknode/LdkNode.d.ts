@@ -201,7 +201,10 @@ export interface ChannelDetails {
     inboundHtlcMinimumMsat: number;
     inboundHtlcMaximumMsat?: number;
     shortChannelId?: string;
+    inboundScidAlias?: string;
 }
+
+export type RouteHintsMode = 'none' | 'automatic' | 'custom';
 
 export interface ClosedChannelDetails {
     channelId: string;
@@ -551,11 +554,15 @@ export interface ILdkNodeModule {
     receiveBolt11(
         amountMsat: number,
         description: string,
-        expirySecs: number
+        expirySecs: number,
+        routeHintsMode?: RouteHintsMode,
+        customRouteHintChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     receiveVariableAmountBolt11(
         description: string,
-        expirySecs: number
+        expirySecs: number,
+        routeHintsMode?: RouteHintsMode,
+        customRouteHintChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,
