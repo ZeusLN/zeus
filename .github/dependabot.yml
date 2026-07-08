@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # npm dependencies (root manifest)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    # Bundle routine minor/patch bumps into a single PR to keep noise down
+    # in a large dependency tree; major bumps still get their own PRs so
+    # native / crypto-sensitive upgrades can be reviewed and tested in
+    # isolation.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by the CI workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
