@@ -100,6 +100,7 @@ export default class NostrWalletConnect {
     supportsCoinControl = () => false;
     supportsChannelCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouteHints = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
