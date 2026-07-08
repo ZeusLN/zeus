@@ -24,7 +24,8 @@ import type {
     PaymentFailureReason,
     ClosureReason,
     Lsps1OrderResponse,
-    Lsps1OrderStatus
+    Lsps1OrderStatus,
+    RouteHintsMode
 } from '../ldknode/LdkNode.d';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
@@ -1296,6 +1297,24 @@ export default class LdkNode {
         // Ensure expiry is a number (it comes as a string from the UI)
         const expirySecs = Number(data.expiry_seconds) || 3600;
 
+        let routeHintsMode: RouteHintsMode = 'none';
+        if (data.private) {
+            routeHintsMode = 'automatic';
+        } else if (data.route_hint_user_channel_ids?.length) {
+            routeHintsMode = 'custom';
+        }
+
+        const bolt11Params = {
+            description: data.memo || '',
+            expirySecs,
+            routeHintsMode,
+            customRouteHintUserChannelIds:
+                routeHintsMode === 'custom'
+                    ? data.route_hint_user_channel_ids
+                    : undefined
+        };
+
+        // Prefer value_msat; treat empty string value as amountless (0)
         const amountMsat = data.value_msat
             ? Number(data.value_msat)
             : data.value != null && data.value !== ''
@@ -1315,15 +1334,11 @@ export default class LdkNode {
         if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
-                description: data.memo || '',
-                expirySecs
+                ...bolt11Params
             });
         } else {
             invoice = await LdkNodeInjection.bolt11.receiveVariableAmountBolt11(
-                {
-                    description: data.memo || '',
-                    expirySecs
-                }
+                bolt11Params
             );
         }
 
@@ -2092,6 +2107,7 @@ export default class LdkNode {
                 : '',
             // chan_id is the numeric SCID (formatted as NNNxNNNxNNN by formatScid)
             chan_id: channel.shortChannelId || '',
+            peer_scid_alias: channel.inboundScidAlias || '',
             // channel_id is the 32-byte hex channel ID
             channel_id: channel.channelId,
             capacity: channel.channelValueSats.toString(),
@@ -2112,7 +2128,6 @@ export default class LdkNode {
                 channel.unspendablePunishmentReserve?.toString(),
             remote_chan_reserve_sat:
                 channel.counterpartyUnspendablePunishmentReserve?.toString(),
-            // LDK Node specific
             user_channel_id: channel.userChannelId,
             is_channel_ready: channel.isChannelReady,
             is_usable: channel.isUsable,
@@ -2280,7 +2295,7 @@ export default class LdkNode {
     supportsAMP = () => false;
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
-    supportsHopPicking = () => false;
+    supportsHopPicking = () => true;
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
@@ -2319,6 +2334,7 @@ export default class LdkNode {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsCustomFeeLimit = () => true;
+    supportsRouteHints = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;
