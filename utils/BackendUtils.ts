@@ -263,6 +263,7 @@ class BackendUtils {
     supportsAddressesWithDerivationPaths = () =>
         this.call('supportsAddressesWithDerivationPaths');
     supportsCustomFeeLimit = () => this.call('supportsCustomFeeLimit');
+    supportsRouteHints = () => this.call('supportsRouteHints');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
     supportsAddressMessageSigning = () =>
