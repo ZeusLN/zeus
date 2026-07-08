@@ -197,20 +197,25 @@ export default class SeedRecovery extends React.PureComponent<
         };
     }
 
-    private expectedMnemonicWordCount(
+    private acceptedWordCounts(
         params: SeedRecoveryProps['route']['params']
-    ): 12 | 24 {
+    ): (12 | 24)[] {
         const implementation = params?.implementation ?? 'embedded-lnd';
-        const shortMnemonicFlow =
-            implementation === 'ldk-node' ||
+        if (
             params?.restoreSwaps === true ||
-            params?.restoreRescueKey === true;
-        return shortMnemonicFlow ? 12 : 24;
+            params?.restoreRescueKey === true
+        ) {
+            return [12];
+        }
+        if (implementation === 'ldk-node') {
+            return [12, 24];
+        }
+        return [24];
     }
 
-    // Effective seed length for the current flow. Swaps/rescue keys are always
-    // 12 words; embedded LND is always a 24-word aezeed; LDK Node can be either,
-    // set from the `wordCount` chosen on the LdkWalletRecoverySettings screen.
+    // Effective seed length for the current flow, read from state for rendering.
+    // LDK's value comes from the `wordCount` chosen on the
+    // LdkWalletRecoverySettings screen
     private currentWordCount(): 12 | 24 {
         const { implementation, restoreSwaps, restoreRescueKey, ldkWordCount } =
             this.state;
@@ -234,13 +239,9 @@ export default class SeedRecovery extends React.PureComponent<
             const clipboardWords = clipboard.trim().split(/\s+/);
             const implementation =
                 route.params?.implementation ?? 'embedded-lnd';
+            const acceptedWordCounts = this.acceptedWordCounts(route.params);
 
-            const acceptedWordCounts =
-                implementation === 'ldk-node'
-                    ? [12, 24]
-                    : [this.expectedMnemonicWordCount(route.params)];
-
-            if (acceptedWordCounts.includes(clipboardWords.length)) {
+            if (acceptedWordCounts.includes(clipboardWords.length as 12 | 24)) {
                 this.setState({
                     showClipboardPrompt: true,
                     clipboardSeedArray: clipboardWords
@@ -1512,37 +1513,16 @@ export default class SeedRecovery extends React.PureComponent<
                                               )
                                     }
                                     disabled={
-                                        restoreSwaps || restoreRescueKey
-                                            ? (rescueHost === 'Custom' &&
-                                                  !customRescueHost) ||
-                                              seedArray.length !== 12 ||
-                                              seedArray.some(
-                                                  (seed) =>
-                                                      !BIP39_WORD_LIST.includes(
-                                                          seed
-                                                              ?.toLowerCase()
-                                                              ?.trim()
-                                                      )
-                                              )
-                                            : implementation === 'ldk-node'
-                                            ? seedArray.length !== wordCount ||
-                                              seedArray.some(
-                                                  (seed) =>
-                                                      !BIP39_WORD_LIST.includes(
-                                                          seed
-                                                              ?.toLowerCase()
-                                                              ?.trim()
-                                                      )
-                                              )
-                                            : seedArray.length !== 24 ||
-                                              seedArray.some(
-                                                  (seed) =>
-                                                      !BIP39_WORD_LIST.includes(
-                                                          seed
-                                                              ?.toLowerCase()
-                                                              ?.trim()
-                                                      )
-                                              )
+                                        ((restoreSwaps || restoreRescueKey) &&
+                                            rescueHost === 'Custom' &&
+                                            !customRescueHost) ||
+                                        seedArray.length !== wordCount ||
+                                        seedArray.some(
+                                            (seed) =>
+                                                !BIP39_WORD_LIST.includes(
+                                                    seed?.toLowerCase()?.trim()
+                                                )
+                                        )
                                     }
                                 />
                             </View>
