@@ -101,6 +101,7 @@ interface SeedRecoveryProps {
             nickname?: string;
             photo?: string;
             isSqlite?: boolean;
+            wordCount?: 12 | 24;
         }
     >;
 }
@@ -209,7 +210,7 @@ export default class SeedRecovery extends React.PureComponent<
 
     // Effective seed length for the current flow. Swaps/rescue keys are always
     // 12 words; embedded LND is always a 24-word aezeed; LDK Node can be either,
-    // toggled by the user via `ldkWordCount`.
+    // set from the `wordCount` chosen on the LdkWalletRecoverySettings screen.
     private currentWordCount(): 12 | 24 {
         const { implementation, restoreSwaps, restoreRescueKey, ldkWordCount } =
             this.state;
@@ -221,31 +222,6 @@ export default class SeedRecovery extends React.PureComponent<
         }
         return 24;
     }
-
-    // Switch the LDK seed length. Shrinking to 12 drops any words entered in
-    // slots 13-24 and clears a now-out-of-range selection so the input and grid
-    // stay consistent.
-    private setLdkWordCount = (wordCount: 12 | 24) => {
-        this.setState((prevState) => {
-            const seedArray = prevState.seedArray.slice(0, wordCount);
-            const selectionOutOfRange =
-                prevState.selectedWordIndex != null &&
-                prevState.selectedWordIndex >= wordCount;
-            return {
-                ...prevState,
-                ldkWordCount: wordCount,
-                seedArray,
-                ...(selectionOutOfRange
-                    ? {
-                          selectedWordIndex: null,
-                          selectedInputType: null,
-                          selectedText: '',
-                          showSuggestions: false
-                      }
-                    : {})
-            };
-        });
-    };
 
     async componentDidMount() {
         await this.initFromProps(this.props);
@@ -291,12 +267,14 @@ export default class SeedRecovery extends React.PureComponent<
         const restoreSwaps = props.route.params?.restoreSwaps ?? false;
         const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
         const isSqlite = props.route.params?.isSqlite ?? false;
+        const wordCount = props.route.params?.wordCount ?? 12;
         this.setState({
             embeddedLndIsSqlite: isSqlite,
             network,
             implementation,
             restoreSwaps,
-            restoreRescueKey
+            restoreRescueKey,
+            ldkWordCount: wordCount
         });
     }
 
@@ -532,8 +510,7 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost,
             customRescueHost,
             showValidation,
-            implementation,
-            ldkWordCount
+            implementation
         } = this.state;
 
         const wordCount = this.currentWordCount();
@@ -1173,35 +1150,6 @@ export default class SeedRecovery extends React.PureComponent<
                         </View>
                         {!showSuggestions && (
                             <>
-                                {isLdkNode && selectedInputType !== 'scb' && (
-                                    <View style={{ paddingHorizontal: 16 }}>
-                                        <DropdownSetting
-                                            title={localeString(
-                                                'views.Settings.WalletConfiguration.seedPhraseLength'
-                                            )}
-                                            selectedValue={ldkWordCount}
-                                            onValueChange={(value: number) =>
-                                                this.setLdkWordCount(
-                                                    value as 12 | 24
-                                                )
-                                            }
-                                            values={[
-                                                {
-                                                    key: localeString(
-                                                        'views.Settings.WalletConfiguration.seedPhraseLength.12'
-                                                    ),
-                                                    value: 12
-                                                },
-                                                {
-                                                    key: localeString(
-                                                        'views.Settings.WalletConfiguration.seedPhraseLength.24'
-                                                    ),
-                                                    value: 24
-                                                }
-                                            ]}
-                                        />
-                                    </View>
-                                )}
                                 {selectedInputType !== 'scb' && (
                                     <ScrollView
                                         contentContainerStyle={{

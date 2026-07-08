@@ -2826,12 +2826,10 @@ export default class WalletConfiguration extends React.Component<
                                                     )}
                                                     onPress={() =>
                                                         navigation.navigate(
-                                                            'SeedRecovery',
+                                                            'LdkWalletRecoverySettings',
                                                             {
                                                                 network:
                                                                     ldkNetwork,
-                                                                implementation:
-                                                                    'ldk-node',
                                                                 nickname,
                                                                 photo
                                                             }
