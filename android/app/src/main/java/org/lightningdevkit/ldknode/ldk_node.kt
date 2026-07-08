@@ -1024,6 +1024,15 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
 
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_with_route_hints(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `routeHintsMode`: RustBuffer.ByValue,
+        `customRouteHintUserChannelIds`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
     fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(
         `ptr`: Pointer,
         `amountMsat`: Long,
@@ -1040,6 +1049,16 @@ internal interface UniffiLib : Library {
         `expirySecs`: Int,
         `maxLspFeeLimitMsat`: RustBuffer.ByValue,
         `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_with_route_hints(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `routeHintsMode`: RustBuffer.ByValue,
+        `customRouteHintUserChannelIds`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
 
@@ -2556,9 +2575,13 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(): Short
 
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints(): Short
+
     fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel(): Short
 
     fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints(): Short
 
     fun uniffi_ldk_node_checksum_method_bolt11payment_send(): Short
 
@@ -2985,10 +3008,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash() != 38025.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints() != 37082.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel() != 16532.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints() != 4129.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 53480.toShort()) {
@@ -4408,6 +4437,13 @@ public interface Bolt11PaymentInterface {
         `paymentHash`: PaymentHash,
     ): Bolt11Invoice
 
+    fun `receiveVariableAmountWithRouteHints`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `routeHintsMode`: RouteHintsMode,
+        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+    ): Bolt11Invoice
+
     fun `receiveViaJitChannel`(
         `amountMsat`: kotlin.ULong,
         `description`: Bolt11InvoiceDescription,
@@ -4421,6 +4457,14 @@ public interface Bolt11PaymentInterface {
         `expirySecs`: kotlin.UInt,
         `maxLspFeeLimitMsat`: kotlin.ULong?,
         `paymentHash`: PaymentHash,
+    ): Bolt11Invoice
+
+    fun `receiveWithRouteHints`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `routeHintsMode`: RouteHintsMode,
+        `customRouteHintUserChannelIds`: List<UserChannelId>?,
     ): Bolt11Invoice
 
     fun `send`(
@@ -4686,6 +4730,28 @@ open class Bolt11Payment :
         )
 
     @Throws(NodeException::class)
+    override fun `receiveVariableAmountWithRouteHints`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `routeHintsMode`: RouteHintsMode,
+        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_with_route_hints(
+                        it,
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterTypeRouteHintsMode.lower(`routeHintsMode`),
+                        FfiConverterOptionalSequenceTypeUserChannelId.lower(`customRouteHintUserChannelIds`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
     override fun `receiveViaJitChannel`(
         `amountMsat`: kotlin.ULong,
         `description`: Bolt11InvoiceDescription,
@@ -4725,6 +4791,30 @@ open class Bolt11Payment :
                         FfiConverterUInt.lower(`expirySecs`),
                         FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),
                         FfiConverterTypePaymentHash.lower(`paymentHash`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `receiveWithRouteHints`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `routeHintsMode`: RouteHintsMode,
+        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_with_route_hints(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterTypeRouteHintsMode.lower(`routeHintsMode`),
+                        FfiConverterOptionalSequenceTypeUserChannelId.lower(`customRouteHintUserChannelIds`),
                         _status,
                     )
                 }
@@ -15514,6 +15604,35 @@ sealed class QrPaymentResult {
     companion object
 }
 
+enum class RouteHintsMode {
+    NONE,
+    AUTOMATIC,
+    CUSTOM;
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRouteHintsMode : FfiConverterRustBuffer<RouteHintsMode> {
+    override fun read(buf: ByteBuffer): RouteHintsMode =
+        try {
+            RouteHintsMode.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
+
+    override fun allocationSize(value: RouteHintsMode): ULong = 4UL
+
+    override fun write(
+        value: RouteHintsMode,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
 /**
  * @suppress
  */
@@ -17388,6 +17507,66 @@ public object FfiConverterSequenceTypeOutPoint : FfiConverterRustBuffer<List<Out
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeOutPoint.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeUserChannelId : FfiConverterRustBuffer<List<UserChannelId>> {
+    override fun read(buf: ByteBuffer): List<UserChannelId> {
+        val len = buf.getInt()
+        return List<UserChannelId>(len) {
+            FfiConverterTypeUserChannelId.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<UserChannelId>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeUserChannelId.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(
+        value: List<UserChannelId>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeUserChannelId.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalSequenceTypeUserChannelId : FfiConverterRustBuffer<List<UserChannelId>?> {
+    override fun read(buf: ByteBuffer): List<UserChannelId>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceTypeUserChannelId.read(buf)
+    }
+
+    override fun allocationSize(value: List<UserChannelId>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceTypeUserChannelId.allocationSize(value)
+        }
+    }
+
+    override fun write(
+        value: List<UserChannelId>?,
+        buf: ByteBuffer,
+    ) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceTypeUserChannelId.write(value, buf)
         }
     }
 }
