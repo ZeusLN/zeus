@@ -23,6 +23,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 import RNRestart from 'react-native-restart';
+import { validateMnemonic } from '@scure/bip39';
 
 import {
     ErrorMessage,
@@ -136,6 +137,7 @@ interface SeedRecoveryState {
     ldkMnemonic: string;
     ldkPassphrase: string;
     ldkNodeDir: string;
+    ldkWordCount: 12 | 24;
     channelDbUri?: string;
     channelDbFileName?: string;
     olympusRestorePending: boolean;
@@ -188,6 +190,7 @@ export default class SeedRecovery extends React.PureComponent<
             ldkMnemonic: '',
             ldkPassphrase: '',
             ldkNodeDir: '',
+            ldkWordCount: 12,
             olympusRestorePending: false,
             embeddedLndIsSqlite: false
         };
@@ -204,6 +207,46 @@ export default class SeedRecovery extends React.PureComponent<
         return shortMnemonicFlow ? 12 : 24;
     }
 
+    // Effective seed length for the current flow. Swaps/rescue keys are always
+    // 12 words; embedded LND is always a 24-word aezeed; LDK Node can be either,
+    // toggled by the user via `ldkWordCount`.
+    private currentWordCount(): 12 | 24 {
+        const { implementation, restoreSwaps, restoreRescueKey, ldkWordCount } =
+            this.state;
+        if (restoreSwaps || restoreRescueKey) {
+            return 12;
+        }
+        if (implementation === 'ldk-node') {
+            return ldkWordCount;
+        }
+        return 24;
+    }
+
+    // Switch the LDK seed length. Shrinking to 12 drops any words entered in
+    // slots 13-24 and clears a now-out-of-range selection so the input and grid
+    // stay consistent.
+    private setLdkWordCount = (wordCount: 12 | 24) => {
+        this.setState((prevState) => {
+            const seedArray = prevState.seedArray.slice(0, wordCount);
+            const selectionOutOfRange =
+                prevState.selectedWordIndex != null &&
+                prevState.selectedWordIndex >= wordCount;
+            return {
+                ...prevState,
+                ldkWordCount: wordCount,
+                seedArray,
+                ...(selectionOutOfRange
+                    ? {
+                          selectedWordIndex: null,
+                          selectedInputType: null,
+                          selectedText: '',
+                          showSuggestions: false
+                      }
+                    : {})
+            };
+        });
+    };
+
     async componentDidMount() {
         await this.initFromProps(this.props);
 
@@ -213,13 +256,24 @@ export default class SeedRecovery extends React.PureComponent<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
             const clipboardWords = clipboard.trim().split(/\s+/);
-            const expectedWords = this.expectedMnemonicWordCount(route.params);
+            const implementation =
+                route.params?.implementation ?? 'embedded-lnd';
 
-            if (clipboardWords.length === expectedWords) {
+            const acceptedWordCounts =
+                implementation === 'ldk-node'
+                    ? [12, 24]
+                    : [this.expectedMnemonicWordCount(route.params)];
+
+            if (acceptedWordCounts.includes(clipboardWords.length)) {
                 this.setState({
                     showClipboardPrompt: true,
                     clipboardSeedArray: clipboardWords
                 });
+                if (implementation === 'ldk-node') {
+                    this.setState({
+                        ldkWordCount: clipboardWords.length as 12 | 24
+                    });
+                }
             }
         }
     }
@@ -478,8 +532,12 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost,
             customRescueHost,
             showValidation,
-            implementation
+            implementation,
+            ldkWordCount
         } = this.state;
+
+        const wordCount = this.currentWordCount();
+        const isLdkNode = implementation === 'ldk-node';
 
         const invalidWordIndices: number[] = showValidation
             ? seedArray.reduce((acc: number[], word, i) => {
@@ -518,14 +576,7 @@ export default class SeedRecovery extends React.PureComponent<
                             } else if (selectedWordIndex != null) {
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
-                                const is12WordMode =
-                                    restoreSwaps ||
-                                    restoreRescueKey ||
-                                    implementation === 'ldk-node';
-                                if (
-                                    (is12WordMode && selectedWordIndex < 11) ||
-                                    (!is12WordMode && selectedWordIndex < 23)
-                                ) {
+                                if (selectedWordIndex < wordCount - 1) {
                                     this.setState({
                                         selectedWordIndex:
                                             selectedWordIndex + 1,
@@ -716,9 +767,21 @@ export default class SeedRecovery extends React.PureComponent<
 
             if (implementation === 'ldk-node') {
                 // LDK Node restore
+                const mnemonic = seedArray.join(' ');
+
+                // LDK seeds are BIP39, so verify the checksum up front.
+                if (!validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
+                    this.setState({
+                        loading: false,
+                        errorMsg: localeString(
+                            'views.Settings.SeedRecovery.invalidChecksum'
+                        )
+                    });
+                    return;
+                }
+
                 await stopLdkNode();
 
-                const mnemonic = seedArray.join(' ');
                 const nodeDir = uuidv4();
 
                 try {
@@ -1079,10 +1142,9 @@ export default class SeedRecovery extends React.PureComponent<
                                         if (
                                             (restoreSwaps ||
                                                 restoreRescueKey ||
-                                                implementation ===
-                                                    'ldk-node') &&
+                                                isLdkNode) &&
                                             (selectedWordIndex == null ||
-                                                selectedWordIndex >= 12)
+                                                selectedWordIndex >= wordCount)
                                         ) {
                                             return;
                                         } else if (selectedWordIndex != null) {
@@ -1111,6 +1173,35 @@ export default class SeedRecovery extends React.PureComponent<
                         </View>
                         {!showSuggestions && (
                             <>
+                                {isLdkNode && selectedInputType !== 'scb' && (
+                                    <View style={{ paddingHorizontal: 16 }}>
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'views.Settings.WalletConfiguration.seedPhraseLength'
+                                            )}
+                                            selectedValue={ldkWordCount}
+                                            onValueChange={(value: number) =>
+                                                this.setLdkWordCount(
+                                                    value as 12 | 24
+                                                )
+                                            }
+                                            values={[
+                                                {
+                                                    key: localeString(
+                                                        'views.Settings.WalletConfiguration.seedPhraseLength.12'
+                                                    ),
+                                                    value: 12
+                                                },
+                                                {
+                                                    key: localeString(
+                                                        'views.Settings.WalletConfiguration.seedPhraseLength.24'
+                                                    ),
+                                                    value: 24
+                                                }
+                                            ]}
+                                        />
+                                    </View>
+                                )}
                                 {selectedInputType !== 'scb' && (
                                     <ScrollView
                                         contentContainerStyle={{
@@ -1119,119 +1210,40 @@ export default class SeedRecovery extends React.PureComponent<
                                         }}
                                         keyboardShouldPersistTaps="handled"
                                     >
-                                        {restoreSwaps ||
-                                        restoreRescueKey ||
-                                        implementation === 'ldk-node' ? (
-                                            <>
-                                                <View
-                                                    style={{
-                                                        ...styles.column,
-                                                        alignSelf:
-                                                            !selectedInputType
-                                                                ? 'center'
-                                                                : undefined
-                                                    }}
-                                                >
-                                                    {[0, 1, 2, 3, 4, 5].map(
-                                                        (i) => (
-                                                            <RecoveryLabel
-                                                                key={i}
-                                                                type="mnemonicWord"
-                                                                index={i}
-                                                                text={
-                                                                    this.state
-                                                                        .seedArray[
-                                                                        i
-                                                                    ]
-                                                                }
-                                                            />
-                                                        )
-                                                    )}
-                                                </View>
-                                                <View
-                                                    style={{
-                                                        ...styles.column,
-                                                        alignSelf:
-                                                            !selectedInputType
-                                                                ? 'center'
-                                                                : undefined
-                                                    }}
-                                                >
-                                                    {[6, 7, 8, 9, 10, 11].map(
-                                                        (i) => (
-                                                            <RecoveryLabel
-                                                                key={i}
-                                                                type="mnemonicWord"
-                                                                index={i}
-                                                                text={
-                                                                    this.state
-                                                                        .seedArray[
-                                                                        i
-                                                                    ]
-                                                                }
-                                                            />
-                                                        )
-                                                    )}
-                                                </View>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <View
-                                                    style={{
-                                                        ...styles.column,
-                                                        alignSelf:
-                                                            !selectedInputType
-                                                                ? 'center'
-                                                                : undefined
-                                                    }}
-                                                >
-                                                    {[
-                                                        0, 1, 2, 3, 4, 5, 6, 7,
-                                                        8, 9, 10, 11
-                                                    ].map((index: number) => {
-                                                        return (
-                                                            <RecoveryLabel
-                                                                key={index}
-                                                                type="mnemonicWord"
-                                                                index={index}
-                                                                text={
-                                                                    seedArray[
-                                                                        index
-                                                                    ]
-                                                                }
-                                                            />
-                                                        );
-                                                    })}
-                                                </View>
-                                                <View
-                                                    style={{
-                                                        ...styles.column,
-                                                        alignSelf:
-                                                            !selectedInputType
-                                                                ? 'center'
-                                                                : undefined
-                                                    }}
-                                                >
-                                                    {[
-                                                        12, 13, 14, 15, 16, 17,
-                                                        18, 19, 20, 21, 22, 23
-                                                    ].map((index: number) => {
-                                                        return (
-                                                            <RecoveryLabel
-                                                                key={index}
-                                                                type="mnemonicWord"
-                                                                index={index}
-                                                                text={
-                                                                    seedArray[
-                                                                        index
-                                                                    ]
-                                                                }
-                                                            />
-                                                        );
-                                                    })}
-                                                </View>
-                                            </>
-                                        )}
+                                        {[
+                                            Array.from(
+                                                { length: wordCount / 2 },
+                                                (_, i) => i
+                                            ),
+                                            Array.from(
+                                                { length: wordCount / 2 },
+                                                (_, i) => i + wordCount / 2
+                                            )
+                                        ].map((columnIndices, columnKey) => (
+                                            <View
+                                                key={columnKey}
+                                                style={{
+                                                    ...styles.column,
+                                                    alignSelf:
+                                                        !selectedInputType
+                                                            ? 'center'
+                                                            : undefined
+                                                }}
+                                            >
+                                                {columnIndices.map(
+                                                    (index: number) => (
+                                                        <RecoveryLabel
+                                                            key={index}
+                                                            type="mnemonicWord"
+                                                            index={index}
+                                                            text={
+                                                                seedArray[index]
+                                                            }
+                                                        />
+                                                    )
+                                                )}
+                                            </View>
+                                        ))}
                                     </ScrollView>
                                 )}
 
@@ -1565,8 +1577,15 @@ export default class SeedRecovery extends React.PureComponent<
                                                       )
                                               )
                                             : implementation === 'ldk-node'
-                                            ? seedArray.length !== 12 ||
-                                              seedArray.some((seed) => !seed)
+                                            ? seedArray.length !== wordCount ||
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                             : seedArray.length !== 24 ||
                                               seedArray.some(
                                                   (seed) =>
