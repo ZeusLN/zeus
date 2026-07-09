@@ -69,6 +69,7 @@ RCT_EXTERN_METHOD(watchonlyListAddresses:(NSString *)accountId resolver:(RCTProm
 RCT_EXTERN_METHOD(syncWatchonlyAccounts:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(listWatchonlyAccounts:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(previewWatchonlyAccount:(NSString *)externalDescriptor internalDescriptor:(NSString *)internalDescriptor count:(nonnull NSNumber *)count resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(watchonlyCreatePsbt:(NSString *)accountId recipients:(NSArray *)recipients utxos:(NSArray *)utxos satPerVbyte:(nonnull NSNumber *)satPerVbyte resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // BOLT11 Payment Methods
 RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

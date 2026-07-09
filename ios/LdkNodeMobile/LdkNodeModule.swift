@@ -1229,6 +1229,40 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(watchonlyCreatePsbt:recipients:utxos:satPerVbyte:resolver:rejecter:)
+    func watchonlyCreatePsbt(_ accountId: String, recipients: NSArray, utxos: NSArray, satPerVbyte: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                var parsedRecipients: [PsbtRecipient] = []
+                for item in recipients {
+                    if let dict = item as? [String: Any],
+                       let address = dict["address"] as? String,
+                       let amountSats = dict["amountSats"] as? NSNumber {
+                        parsedRecipients.append(PsbtRecipient(address: address, amountSats: amountSats.uint64Value))
+                    }
+                }
+                var outpoints: [OutPoint] = []
+                for item in utxos {
+                    if let dict = item as? [String: Any],
+                       let txid = dict["txid"] as? String,
+                       let vout = dict["vout"] as? NSNumber {
+                        outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
+                    }
+                }
+                let feeRate = FeeRate.fromSatPerVbUnchecked(satVb: satPerVbyte.uint64Value)
+                let psbt = try node.watchonlyCreatePsbt(accountId: accountId, recipients: parsedRecipients, utxos: outpoints, feeRate: feeRate)
+                resolve(["psbt": psbt])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     // MARK: - Route Parameters Helper
 
     private func buildRouteParameters(maxTotalRoutingFeeMsat: Double, maxPathCount: Double) -> RouteParametersConfig? {
