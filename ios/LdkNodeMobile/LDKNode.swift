@@ -2890,6 +2890,8 @@ public protocol NodeProtocol : AnyObject {
     
     func watchonlyBalance(accountId: AccountId) throws  -> UInt64
     
+    func watchonlyCreatePsbt(accountId: AccountId, recipients: [PsbtRecipient], utxos: [OutPoint], feeRate: FeeRate) throws  -> String
+    
     func watchonlyListAddresses(accountId: AccountId) throws  -> [Address]
     
     func watchonlyListUtxos(accountId: AccountId) throws  -> [WalletUtxo]
@@ -3371,6 +3373,17 @@ open func watchonlyBalance(accountId: AccountId)throws  -> UInt64 {
     return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_watchonly_balance(self.uniffiClonePointer(),
         FfiConverterTypeAccountId.lower(accountId),$0
+    )
+})
+}
+    
+open func watchonlyCreatePsbt(accountId: AccountId, recipients: [PsbtRecipient], utxos: [OutPoint], feeRate: FeeRate)throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_create_psbt(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),
+        FfiConverterSequenceTypePsbtRecipient.lower(recipients),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),
+        FfiConverterTypeFeeRate.lower(feeRate),$0
     )
 })
 }
@@ -7446,6 +7459,72 @@ public func FfiConverterTypePeerDetails_lift(_ buf: RustBuffer) throws -> PeerDe
 #endif
 public func FfiConverterTypePeerDetails_lower(_ value: PeerDetails) -> RustBuffer {
     return FfiConverterTypePeerDetails.lower(value)
+}
+
+
+public struct PsbtRecipient {
+    public var address: Address
+    public var amountSats: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(address: Address, amountSats: UInt64) {
+        self.address = address
+        self.amountSats = amountSats
+    }
+}
+
+
+
+extension PsbtRecipient: Equatable, Hashable {
+    public static func ==(lhs: PsbtRecipient, rhs: PsbtRecipient) -> Bool {
+        if lhs.address != rhs.address {
+            return false
+        }
+        if lhs.amountSats != rhs.amountSats {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(address)
+        hasher.combine(amountSats)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePsbtRecipient: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PsbtRecipient {
+        return
+            try PsbtRecipient(
+                address: FfiConverterTypeAddress.read(from: &buf), 
+                amountSats: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PsbtRecipient, into buf: inout [UInt8]) {
+        FfiConverterTypeAddress.write(value.address, into: &buf)
+        FfiConverterUInt64.write(value.amountSats, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePsbtRecipient_lift(_ buf: RustBuffer) throws -> PsbtRecipient {
+    return try FfiConverterTypePsbtRecipient.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePsbtRecipient_lower(_ value: PsbtRecipient) -> RustBuffer {
+    return FfiConverterTypePsbtRecipient.lower(value)
 }
 
 
@@ -11957,6 +12036,31 @@ fileprivate struct FfiConverterSequenceTypePeerDetails: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePsbtRecipient: FfiConverterRustBuffer {
+    typealias SwiftType = [PsbtRecipient]
+
+    public static func write(_ value: [PsbtRecipient], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePsbtRecipient.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PsbtRecipient] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PsbtRecipient]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePsbtRecipient.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer {
     typealias SwiftType = [RouteHintHop]
 
@@ -13732,6 +13836,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_watchonly_balance() != 39708) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_create_psbt() != 19695) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_watchonly_list_addresses() != 48800) {
