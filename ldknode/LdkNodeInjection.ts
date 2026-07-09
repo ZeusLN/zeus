@@ -466,6 +466,21 @@ const previewWatchonlyAccount = async (
     };
 };
 
+const watchonlyCreatePsbt = async (
+    accountId: string,
+    recipients: Array<{ address: string; amountSats: number }>,
+    utxos: Array<{ txid: string; vout: number }>,
+    satPerVbyte: number
+): Promise<string> => {
+    const result: any = await LdkNodeModule.watchonlyCreatePsbt(
+        accountId,
+        recipients,
+        utxos,
+        satPerVbyte
+    );
+    return result.psbt;
+};
+
 // ============================================================================
 // BOLT11 Payment Functions
 // ============================================================================
@@ -1214,6 +1229,12 @@ export interface ILdkNodeInjections {
             externalAddresses: string[];
             internalAddresses: string[];
         }>;
+        watchonlyCreatePsbt: (
+            accountId: string,
+            recipients: Array<{ address: string; amountSats: number }>,
+            utxos: Array<{ txid: string; vout: number }>,
+            satPerVbyte: number
+        ) => Promise<string>;
     };
     bolt11: {
         receiveBolt11: (params: {
@@ -1437,7 +1458,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         watchonlyListAddresses,
         syncWatchonlyAccounts,
         listWatchonlyAccounts,
-        previewWatchonlyAccount
+        previewWatchonlyAccount,
+        watchonlyCreatePsbt
     },
     bolt11: {
         receiveBolt11,
