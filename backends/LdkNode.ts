@@ -1330,13 +1330,42 @@ export default class LdkNode {
     };
 
     /**
+     * Build an unsigned PSBT that spends from a watch-only account, ready to be
+     * signed externally (e.g. on a hardware wallet). Mirrors LND's `fundPsbt`:
+     * the caller passes the same LND-shaped request (`raw.outputs` map,
+     * `raw.inputs`, `sat_per_vbyte`, `account`) and receives `funded_psbt`.
+     */
+    fundPsbt = async (data: any): Promise<any> => {
+        const outputs = data?.raw?.outputs || {};
+        const recipients = Object.keys(outputs).map((address) => ({
+            address,
+            amountSats: Number(outputs[address])
+        }));
+
+        const inputs = data?.raw?.inputs || [];
+        const utxos = inputs.map((input: any) => ({
+            txid: input.txid_str,
+            vout: Number(input.output_index)
+        }));
+
+        const funded_psbt =
+            await LdkNodeInjection.watchonly.watchonlyCreatePsbt(
+                data.account,
+                recipients,
+                utxos,
+                Number(data.sat_per_vbyte)
+            );
+
+        return { funded_psbt };
+    };
+
+    /**
      * Send coins on-chain
      */
     sendCoins = async (data: any): Promise<any> => {
-        // SAFETY: without this guard a send initiated from a watch-only
-        // account row would fall through to the branches below and spend the
-        // NODE's own wallet instead. Spending from a watch-only account
-        // requires externally signing a PSBT, which is not wired up here yet.
+        // SAFETY: a watch-only account cannot spend the node wallet. Account
+        // sends are built as an unsigned PSBT via `fundPsbt` and signed
+        // externally; they must never reach the node-wallet send paths below.
         if (data.account && data.account !== 'default') {
             throw new Error(localeString('views.Send.accountSendNotSupported'));
         }
