@@ -1373,6 +1373,40 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    private fun parseRecipients(recipientsArray: ReadableArray): List<PsbtRecipient> {
+        val recipients = mutableListOf<PsbtRecipient>()
+        for (i in 0 until recipientsArray.size()) {
+            val dict = recipientsArray.getMap(i) ?: continue
+            val address = dict.getString("address") ?: continue
+            val amountSats = dict.getDouble("amountSats").toLong().toULong()
+            recipients.add(PsbtRecipient(address = address, amountSats = amountSats))
+        }
+        return recipients
+    }
+
+    @ReactMethod
+    fun watchonlyCreatePsbt(accountId: String, recipients: ReadableArray, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val parsedRecipients = parseRecipients(recipients)
+                val outpoints = parseOutPoints(utxos)
+                val feeRate = FeeRate.fromSatPerVbUnchecked(satPerVbyte.toLong().toULong())
+                val psbt = node.watchonlyCreatePsbt(accountId, parsedRecipients, outpoints, feeRate)
+                val result = Arguments.createMap().apply {
+                    putString("psbt", psbt)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
     @ReactMethod
     fun openChannelFundMax(nodeId: String, address: String, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray?, promise: Promise) {
         moduleScope.launch {
