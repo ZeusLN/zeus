@@ -1949,6 +1949,15 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): Long
 
+    fun uniffi_ldk_node_fn_method_node_watchonly_create_psbt(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        `recipients`: RustBuffer.ByValue,
+        `utxos`: RustBuffer.ByValue,
+        `feeRate`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
     fun uniffi_ldk_node_fn_method_node_watchonly_list_addresses(
         `ptr`: Pointer,
         `accountId`: RustBuffer.ByValue,
@@ -2858,6 +2867,8 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_checksum_method_node_watchonly_balance(): Short
 
+    fun uniffi_ldk_node_checksum_method_node_watchonly_create_psbt(): Short
+
     fun uniffi_ldk_node_checksum_method_node_watchonly_list_addresses(): Short
 
     fun uniffi_ldk_node_checksum_method_node_watchonly_list_utxos(): Short
@@ -3427,6 +3438,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_watchonly_balance() != 39708.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_create_psbt() != 19695.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_watchonly_list_addresses() != 48800.toShort()) {
@@ -8146,6 +8160,13 @@ public interface NodeInterface {
 
     fun `watchonlyBalance`(`accountId`: AccountId): kotlin.ULong
 
+    fun `watchonlyCreatePsbt`(
+        `accountId`: AccountId,
+        `recipients`: List<PsbtRecipient>,
+        `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate,
+    ): kotlin.String
+
     fun `watchonlyListAddresses`(`accountId`: AccountId): List<Address>
 
     fun `watchonlyListUtxos`(`accountId`: AccountId): List<WalletUtxo>
@@ -8896,6 +8917,28 @@ open class Node :
                     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_balance(
                         it,
                         FfiConverterTypeAccountId.lower(`accountId`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyCreatePsbt`(
+        `accountId`: AccountId,
+        `recipients`: List<PsbtRecipient>,
+        `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate,
+    ): kotlin.String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_create_psbt(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        FfiConverterSequenceTypePsbtRecipient.lower(`recipients`),
+                        FfiConverterSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -12650,6 +12693,38 @@ public object FfiConverterTypePeerDetails : FfiConverterRustBuffer<PeerDetails> 
         FfiConverterTypeSocketAddress.write(value.`address`, buf)
         FfiConverterBoolean.write(value.`isPersisted`, buf)
         FfiConverterBoolean.write(value.`isConnected`, buf)
+    }
+}
+
+data class PsbtRecipient(
+    var `address`: Address,
+    var `amountSats`: kotlin.ULong,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePsbtRecipient : FfiConverterRustBuffer<PsbtRecipient> {
+    override fun read(buf: ByteBuffer): PsbtRecipient =
+        PsbtRecipient(
+            FfiConverterTypeAddress.read(buf),
+            FfiConverterULong.read(buf),
+        )
+
+    override fun allocationSize(value: PsbtRecipient) =
+        (
+            FfiConverterTypeAddress.allocationSize(value.`address`) +
+                FfiConverterULong.allocationSize(value.`amountSats`)
+        )
+
+    override fun write(
+        value: PsbtRecipient,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeAddress.write(value.`address`, buf)
+        FfiConverterULong.write(value.`amountSats`, buf)
     }
 }
 
@@ -17700,6 +17775,34 @@ public object FfiConverterSequenceTypePeerDetails : FfiConverterRustBuffer<List<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePeerDetails.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypePsbtRecipient : FfiConverterRustBuffer<List<PsbtRecipient>> {
+    override fun read(buf: ByteBuffer): List<PsbtRecipient> {
+        val len = buf.getInt()
+        return List<PsbtRecipient>(len) {
+            FfiConverterTypePsbtRecipient.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PsbtRecipient>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePsbtRecipient.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(
+        value: List<PsbtRecipient>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePsbtRecipient.write(it, buf)
         }
     }
 }
