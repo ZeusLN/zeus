@@ -567,6 +567,12 @@ export interface ILdkNodeModule {
         externalAddresses: string[];
         internalAddresses: string[];
     }>;
+    watchonlyCreatePsbt(
+        accountId: string,
+        recipients: Array<{ address: string; amountSats: number }>,
+        utxos: Array<{ txid: string; vout: number }>,
+        satPerVbyte: number
+    ): Promise<{ psbt: string }>;
 
     // BOLT11 Payment Methods
     receiveBolt11(
