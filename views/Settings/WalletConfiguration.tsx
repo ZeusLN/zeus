@@ -56,6 +56,7 @@ import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
     EMBEDDED_NODE_NETWORK_KEYS,
+    LDK_VSS_SERVER_KEYS,
     Settings,
     Node,
     Implementations,
@@ -156,6 +157,7 @@ interface WalletConfigurationState {
     ldkRgsServer?: string;
     ldkScorerUrl?: string;
     ldkVssServer?: string;
+    ldkVssServerMode: string;
     ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
@@ -237,7 +239,8 @@ export default class WalletConfiguration extends React.Component<
         ldkEsploraServer: '',
         ldkRgsServer: '',
         ldkScorerUrl: '',
-        ldkVssServer: '',
+        ldkVssServer: DEFAULT_VSS_SERVER,
+        ldkVssServerMode: DEFAULT_VSS_SERVER,
         ldkNodeInitialized: false,
         // NWC
         nostrWalletConnectUrl: '',
@@ -1229,6 +1232,7 @@ export default class WalletConfiguration extends React.Component<
             ldkNetwork,
             ldkSeedWordCount,
             ldkVssServer,
+            ldkVssServerMode,
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
@@ -1807,30 +1811,44 @@ export default class WalletConfiguration extends React.Component<
                                                 ]}
                                             />
 
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.EmbeddedNode.VssServer.serverUrl'
+                                            <DropdownSetting
+                                                title={localeString(
+                                                    'views.Settings.EmbeddedNode.VssServer.title'
                                                 )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={DEFAULT_VSS_SERVER}
-                                                value={ldkVssServer}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                onChangeText={(text: string) =>
+                                                selectedValue={ldkVssServerMode}
+                                                onValueChange={(
+                                                    value: string
+                                                ) => {
                                                     this.setState({
+                                                        ldkVssServerMode: value,
                                                         ldkVssServer:
-                                                            text.trim()
-                                                    })
-                                                }
-                                                locked={loading}
+                                                            value === 'custom'
+                                                                ? ''
+                                                                : value
+                                                    });
+                                                }}
+                                                values={LDK_VSS_SERVER_KEYS}
                                             />
+
+                                            {ldkVssServerMode === 'custom' && (
+                                                <TextInput
+                                                    placeholder={
+                                                        DEFAULT_VSS_SERVER
+                                                    }
+                                                    value={ldkVssServer}
+                                                    autoCapitalize="none"
+                                                    autoCorrect={false}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            ldkVssServer:
+                                                                text.trim()
+                                                        })
+                                                    }
+                                                    locked={loading}
+                                                />
+                                            )}
                                         </Accordion>
                                     </View>
                                 )}
