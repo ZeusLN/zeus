@@ -45,6 +45,7 @@ import {
 } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
+import Accordion from '../../components/Accordion';
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
@@ -1035,7 +1036,7 @@ export default class WalletConfiguration extends React.Component<
         network: string
     ) => {
         const { SettingsStore, navigation } = this.props;
-        const { nickname, photo, ldkPassphrase } = this.state;
+        const { nickname, photo, ldkPassphrase, ldkVssServer } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         const node = {
@@ -1051,7 +1052,7 @@ export default class WalletConfiguration extends React.Component<
             ),
             ldkRgsServer: getDefaultRgsServer(network as SupportedNetwork),
             ldkScorerUrl: DEFAULT_SCORER_URL,
-            ldkVssServer: DEFAULT_VSS_SERVER
+            ldkVssServer: ldkVssServer || DEFAULT_VSS_SERVER
         };
 
         let nodes: any;
@@ -1083,6 +1084,7 @@ export default class WalletConfiguration extends React.Component<
             ldkEsploraServer,
             ldkRgsServer,
             ldkScorerUrl,
+            ldkVssServer,
             ldkMnemonic,
             ldkSeedWordCount
         } = this.state;
@@ -1140,7 +1142,7 @@ export default class WalletConfiguration extends React.Component<
                         : ldkScorerUrl,
                 lsps1Config,
                 trustedPeers0conf: trustedPeers,
-                vssServerUrl: DEFAULT_VSS_SERVER
+                vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
             });
 
             // Node is already built — tell Wallet.tsx to skip re-init
@@ -1226,6 +1228,7 @@ export default class WalletConfiguration extends React.Component<
             ldkMnemonic,
             ldkNetwork,
             ldkSeedWordCount,
+            ldkVssServer,
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
@@ -1766,33 +1769,69 @@ export default class WalletConfiguration extends React.Component<
                                             }}
                                             values={EMBEDDED_NODE_NETWORK_KEYS}
                                         />
-                                        <DropdownSetting
+
+                                        <Accordion
+                                            headerLayout="form"
+                                            id="ldk-advanced-settings"
+                                            scrollRef={this.scrollViewRef}
                                             title={localeString(
-                                                'views.Settings.WalletConfiguration.seedPhraseLength'
+                                                'general.advancedSettings'
                                             )}
-                                            selectedValue={ldkSeedWordCount}
-                                            onValueChange={(value: number) => {
-                                                this.setState({
-                                                    ldkSeedWordCount: value as
-                                                        | 12
-                                                        | 24
-                                                });
-                                            }}
-                                            values={[
-                                                {
-                                                    key: localeString(
-                                                        'views.Settings.WalletConfiguration.seedPhraseLength.12'
-                                                    ),
-                                                    value: 12
-                                                },
-                                                {
-                                                    key: localeString(
-                                                        'views.Settings.WalletConfiguration.seedPhraseLength.24'
-                                                    ),
-                                                    value: 24
+                                        >
+                                            <DropdownSetting
+                                                title={localeString(
+                                                    'views.Settings.WalletConfiguration.seedPhraseLength'
+                                                )}
+                                                selectedValue={ldkSeedWordCount}
+                                                onValueChange={(
+                                                    value: number
+                                                ) => {
+                                                    this.setState({
+                                                        ldkSeedWordCount:
+                                                            value as 12 | 24
+                                                    });
+                                                }}
+                                                values={[
+                                                    {
+                                                        key: localeString(
+                                                            'views.Settings.WalletConfiguration.seedPhraseLength.12'
+                                                        ),
+                                                        value: 12
+                                                    },
+                                                    {
+                                                        key: localeString(
+                                                            'views.Settings.WalletConfiguration.seedPhraseLength.24'
+                                                        ),
+                                                        value: 24
+                                                    }
+                                                ]}
+                                            />
+
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.EmbeddedNode.VssServer.serverUrl'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={DEFAULT_VSS_SERVER}
+                                                value={ldkVssServer}
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        ldkVssServer:
+                                                            text.trim()
+                                                    })
                                                 }
-                                            ]}
-                                        />
+                                                locked={loading}
+                                            />
+                                        </Accordion>
                                     </View>
                                 )}
 
