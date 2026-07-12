@@ -98,3 +98,6 @@ android/app/src/main/jniLibs/
 ios/LdkNodeMobile/LDKNodeFFI.xcframework
 ios/LdkNodeLibZipFile
 ios/LdkNodeMobile/__MACOSX/
+# Claude Code: share skills, keep everything else local
+.claude/*
+!.claude/skills/
