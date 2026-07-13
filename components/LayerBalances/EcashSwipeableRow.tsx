@@ -7,11 +7,7 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
-import Animated, {
-    interpolate,
-    SharedValue,
-    useAnimatedStyle
-} from 'react-native-reanimated';
+import { SharedValue } from 'react-native-reanimated';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
 import { RectButton } from 'react-native-gesture-handler';
 import ReanimatedSwipeable, {
@@ -19,6 +15,8 @@ import ReanimatedSwipeable, {
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
+
+import ActionContainer from './ActionContainer';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -31,28 +29,6 @@ import MintToken from '../../assets/images/SVG/MintToken.svg';
 import Mint from '../../assets/images/SVG/Mint.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';
-
-const ActionContainer = ({
-    x,
-    progress,
-    children
-}: {
-    x: number;
-    progress: SharedValue<number>;
-    children: React.ReactNode;
-}) => {
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [
-            { translateX: interpolate(progress.value, [0.25, 1], [x, 0]) }
-        ],
-        opacity: interpolate(progress.value, [0, 1], [0, 1])
-    }));
-    return (
-        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-            {children}
-        </Animated.View>
-    );
-};
 
 interface EcashSwipeableRowProps {
     navigation: NativeStackNavigationProp<any, any>;
