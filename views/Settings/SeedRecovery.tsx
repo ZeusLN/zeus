@@ -102,6 +102,7 @@ interface SeedRecoveryProps {
             photo?: string;
             isSqlite?: boolean;
             wordCount?: 12 | 24;
+            vssServer?: string;
         }
     >;
 }
@@ -467,7 +468,7 @@ export default class SeedRecovery extends React.PureComponent<
             ldkPassphrase,
             ldkEsploraServer: getDefaultEsploraServer(networkType),
             ldkRgsServer: getDefaultRgsServer(networkType),
-            ldkVssServer: DEFAULT_VSS_SERVER
+            ldkVssServer: route.params?.vssServer || DEFAULT_VSS_SERVER
         };
 
         let nodes: any;
@@ -808,7 +809,9 @@ export default class SeedRecovery extends React.PureComponent<
                         scorerUrl: DEFAULT_SCORER_URL,
                         lsps1Config,
                         trustedPeers0conf: trustedPeers,
-                        vssServerUrl: DEFAULT_VSS_SERVER
+                        vssServerUrl:
+                            this.props.route.params?.vssServer ||
+                            DEFAULT_VSS_SERVER
                     });
 
                     // Node is already built — tell Wallet.tsx to skip re-init

@@ -226,7 +226,8 @@ import EditFee from './views/EditFee';
 // Embedded LND/LDK
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
-import LdkWalletRecoverySettings from './views/Settings/LdkWalletRecoverySettings';
+import LdkWalletRecoverySettings from './views/Settings/LdkRecovery/LdkWalletRecoverySettings';
+import LdkRecoveryVssServer from './views/Settings/LdkRecovery/LdkRecoveryVssServer';
 import SeedQRExport from './views/Settings/SeedQRExport';
 import Sync from './views/Sync';
 import SyncRecovery from './views/SyncRecovery';
@@ -1090,6 +1091,12 @@ export default class App extends React.PureComponent {
                                                                 name="LdkWalletRecoverySettings" // @ts-ignore:next-line
                                                                 component={
                                                                     LdkWalletRecoverySettings
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LdkRecoveryVssServer" // @ts-ignore:next-line
+                                                                component={
+                                                                    LdkRecoveryVssServer
                                                                 }
                                                             />
                                                             <Stack.Screen

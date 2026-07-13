@@ -3,13 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
-import Button from '../../components/Button';
-import Header from '../../components/Header';
-import Screen from '../../components/Screen';
-import Text from '../../components/Text';
+import Button from '../../../components/Button';
+import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import Text from '../../../components/Text';
 
-import { themeColor } from '../../utils/ThemeUtils';
-import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../../utils/LocaleUtils';
 
 interface LdkWalletRecoverySettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -27,13 +27,12 @@ export default class LdkWalletRecoverySettings extends React.Component<
     LdkWalletRecoverySettingsProps,
     {}
 > {
-    private continueToRecovery = (wordCount: 12 | 24) => {
+    private continueToVssServer = (wordCount: 12 | 24) => {
         const { navigation, route } = this.props;
         const { network, nickname, photo } = route.params ?? {};
 
-        navigation.navigate('SeedRecovery', {
+        navigation.navigate('LdkRecoveryVssServer', {
             network,
-            implementation: 'ldk-node',
             nickname,
             photo,
             wordCount
@@ -85,7 +84,7 @@ export default class LdkWalletRecoverySettings extends React.Component<
                             title={localeString(
                                 'views.Settings.WalletConfiguration.seedPhraseLength.12'
                             )}
-                            onPress={() => this.continueToRecovery(12)}
+                            onPress={() => this.continueToVssServer(12)}
                         />
                     </View>
                     <View style={styles.button}>
@@ -93,7 +92,7 @@ export default class LdkWalletRecoverySettings extends React.Component<
                             title={localeString(
                                 'views.Settings.WalletConfiguration.seedPhraseLength.24'
                             )}
-                            onPress={() => this.continueToRecovery(24)}
+                            onPress={() => this.continueToVssServer(24)}
                             secondary
                         />
                     </View>
