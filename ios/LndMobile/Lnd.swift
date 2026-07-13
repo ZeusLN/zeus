@@ -104,6 +104,7 @@ open class Lnd {
     "VerifyChanBackup": { bytes, cb in LndmobileVerifyChanBackup(bytes, cb) },
     "GetChanInfo": { bytes, cb in LndmobileGetChanInfo(bytes, cb) },
     "AbandonChannel": { bytes, cb in LndmobileAbandonChannel(bytes, cb) },
+    "UpdateChannelPolicy": { bytes, cb in LndmobileUpdateChannelPolicy(bytes, cb) },
     "GetNetworkInfo": { bytes, cb in LndmobileGetNetworkInfo(bytes, cb) },
 
     // onchain

@@ -40,7 +40,8 @@ const {
     abandonChannel,
     openChannel,
     openChannelSync,
-    decodeOpenStatusUpdate
+    decodeOpenStatusUpdate,
+    updateChannelPolicy
 } = lndMobile.channel;
 const {
     signMessageNodePubkey,
@@ -316,6 +317,7 @@ export default class EmbeddedLND extends LND {
 
     // getFees = () => N/A;
     // setFees = () => N/A;
+    updateChannelPolicy = async (data: any) => await updateChannelPolicy(data);
 
     signMessageWithAddr = async (message: string, address: string) => {
         return await signMsgWithAddr(

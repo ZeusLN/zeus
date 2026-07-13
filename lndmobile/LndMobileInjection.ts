@@ -60,7 +60,8 @@ import {
     restoreChannelBackups,
     abandonChannel,
     getChanInfo,
-    closedChannels
+    closedChannels,
+    updateChannelPolicy
 } from './channel';
 import {
     getTransactions,
@@ -356,6 +357,17 @@ export interface ILndMobileInjections {
             pendingFundingShimOnly?: boolean,
             iKnowWhatIAmDoing?: boolean
         ) => Promise<lnrpc.AbandonChannelResponse>;
+        updateChannelPolicy: (data: {
+            base_fee_msat?: string;
+            fee_rate_ppm?: number;
+            time_lock_delta?: number;
+            min_htlc_msat?: string;
+            min_htlc_msat_specified?: boolean;
+            max_htlc_msat?: string;
+            chan_point?: { funding_txid_str: string; output_index: number };
+            global?: boolean;
+            create_missing_edge?: boolean;
+        }) => Promise<lnrpc.PolicyUpdateResponse>;
     };
     onchain: {
         getTransactions: (data?: any) => Promise<lnrpc.TransactionDetails>;
@@ -695,7 +707,8 @@ export default {
         decodeChannelAcceptRequest,
         channelAcceptorResponse,
         getChanInfo,
-        closedChannels
+        closedChannels,
+        updateChannelPolicy
     },
     onchain: {
         getTransactions,
