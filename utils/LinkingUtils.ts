@@ -9,6 +9,13 @@ import { settingsStore } from '../stores/Stores';
 class LinkingUtils {
     private shareIntentProcessed = false;
     private pendingDeepLink: string | null = null;
+    // Linking.getInitialURL() returns the same URL for the lifetime of the
+    // activity (and on Android, onNewIntent + setIntent refreshes it with
+    // each warm deep link), while the Wallet view — which consumes it — can
+    // mount more than once, e.g. when 'Select wallet on start-up' is
+    // enabled. Track the last URL actually processed so it is only ever
+    // handled once.
+    private lastHandledUrl: string | null = null;
 
     processPendingDeepLink = (
         navigation: NativeStackNavigationProp<any, any>
@@ -53,7 +60,9 @@ class LinkingUtils {
             }
 
             if (url) {
-                this.handleDeepLink(url, navigation);
+                if (url !== this.lastHandledUrl) {
+                    this.handleDeepLink(url, navigation);
+                }
                 return;
             }
             if (Platform.OS === 'android') {
@@ -109,6 +118,8 @@ class LinkingUtils {
             this.pendingDeepLink = url;
             return;
         }
+
+        this.lastHandledUrl = url;
 
         if (url.startsWith('nostr:')) {
             Linking.openURL(url);
