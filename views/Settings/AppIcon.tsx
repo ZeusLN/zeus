@@ -72,26 +72,22 @@ export default class AppIcon extends React.Component<
         if (this.state.stealthActive) return;
         if (variant === previous) return;
 
-        const failAndRevert = async () => {
-            // Restore both the native icon and the picker selection.
-            await AppIconUtils.setAppIcon(previous);
-            this.setState({ selected: previous });
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Settings.AppIcon.failure')
-            );
-        };
-
         this.setState({ selected: variant });
 
-        const success = await AppIconUtils.setAppIcon(variant);
-        if (!success) {
-            this.setState({ selected: previous });
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Settings.AppIcon.failure')
-            );
-            return;
+        // On iOS the alternate icon can be applied immediately. On Android
+        // the native launcher switch is deferred to the AppState 'background'
+        // handler in App.tsx: switching activity-aliases disables the alias
+        // the current task was launched from, which closes the app.
+        if (Platform.OS === 'ios') {
+            const success = await AppIconUtils.setAppIcon(variant);
+            if (!success) {
+                this.setState({ selected: previous });
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Settings.AppIcon.failure')
+                );
+                return;
+            }
         }
 
         try {
@@ -103,7 +99,15 @@ export default class AppIcon extends React.Component<
             });
         } catch (error) {
             console.error('Failed to persist app icon setting:', error);
-            await failAndRevert();
+            // Restore both the native icon and the picker selection.
+            if (Platform.OS === 'ios') {
+                await AppIconUtils.setAppIcon(previous);
+            }
+            this.setState({ selected: previous });
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Settings.AppIcon.failure')
+            );
         }
     };
 
@@ -146,6 +150,28 @@ export default class AppIcon extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.AppIcon.disabledByStealthMode'
+                                )}
+                            </Text>
+                        </View>
+                    )}
+
+                    {!stealthActive && Platform.OS === 'android' && (
+                        <View
+                            style={[
+                                styles.section,
+                                { backgroundColor: themeColor('secondary') }
+                            ]}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.AppIcon.launcherNote'
                                 )}
                             </Text>
                         </View>

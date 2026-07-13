@@ -52,8 +52,51 @@ public class StealthMode extends ReactContextBaseJavaModule {
         return STEALTH_APPS.get(stealthApp);
     }
 
-    private String[] getStealthAliases() {
+    // Package-private so AppIcon can keep the two modules' launcher aliases
+    // mutually exclusive without duplicating this list.
+    static String[] stealthAliasSuffixes() {
         return STEALTH_APPS.values().toArray(new String[0]);
+    }
+
+    private String[] getStealthAliases() {
+        return stealthAliasSuffixes();
+    }
+
+    /**
+     * Restore the Zeus launcher entry the user chose: the stored custom app
+     * icon alias if one is set, otherwise {@code .MainActivity} (default
+     * icon). Disables every other Zeus-branded launcher entry so exactly one
+     * is left enabled.
+     */
+    private void restoreZeusLauncher(PackageManager pm, String packageName) {
+        String iconAlias =
+            AppIcon.storedAliasSuffix(getReactApplicationContext());
+        String targetSuffix = iconAlias == null ? MAIN_ACTIVITY : iconAlias;
+
+        // Enable the chosen entry first so the launcher never has zero
+        // enabled Zeus entries, then disable the rest.
+        pm.setComponentEnabledSetting(
+            new ComponentName(packageName, packageName + targetSuffix),
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        );
+
+        if (iconAlias != null) {
+            pm.setComponentEnabledSetting(
+                new ComponentName(packageName, packageName + MAIN_ACTIVITY),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+            );
+        }
+
+        for (String alias : AppIcon.appIconAliasSuffixes()) {
+            if (alias.equals(targetSuffix)) continue;
+            pm.setComponentEnabledSetting(
+                new ComponentName(packageName, packageName + alias),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+            );
+        }
     }
 
     @ReactMethod
@@ -65,26 +108,40 @@ public class StealthMode extends ReactContextBaseJavaModule {
             String targetAlias = getAliasForApp(stealthApp);
             boolean isStealthMode = targetAlias != null;
 
-            // Handle MainActivity (the real activity with LAUNCHER intent)
-            ComponentName mainActivityComponent = new ComponentName(packageName, packageName + MAIN_ACTIVITY);
-            pm.setComponentEnabledSetting(
-                mainActivityComponent,
-                isStealthMode
-                    ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                    : PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP
-            );
-
-            // Handle all stealth aliases
-            for (String alias : getStealthAliases()) {
-                ComponentName componentName = new ComponentName(packageName, packageName + alias);
-                int newState = alias.equals(targetAlias)
-                    ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-
+            if (isStealthMode) {
+                // Enable the disguise first so the launcher never has zero
+                // enabled entries, then hide every Zeus-branded entry —
+                // MainActivity and any custom app icon alias — so only the
+                // disguise remains.
                 pm.setComponentEnabledSetting(
-                    componentName,
-                    newState,
+                    new ComponentName(packageName, packageName + targetAlias),
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                );
+                pm.setComponentEnabledSetting(
+                    new ComponentName(packageName, packageName + MAIN_ACTIVITY),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                );
+                for (String alias : AppIcon.appIconAliasSuffixes()) {
+                    pm.setComponentEnabledSetting(
+                        new ComponentName(packageName, packageName + alias),
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                    );
+                }
+            } else {
+                // Restore the user's chosen Zeus icon (default or custom
+                // app icon variant)
+                restoreZeusLauncher(pm, packageName);
+            }
+
+            // Disable all non-target stealth aliases
+            for (String alias : getStealthAliases()) {
+                if (alias.equals(targetAlias)) continue;
+                pm.setComponentEnabledSetting(
+                    new ComponentName(packageName, packageName + alias),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP
                 );
             }
@@ -127,11 +184,18 @@ public class StealthMode extends ReactContextBaseJavaModule {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
 
-            ComponentName mainComponent = new ComponentName(packageName, packageName + MAIN_ACTIVITY);
-            int state = pm.getComponentEnabledSetting(mainComponent);
-
-            // If MainActivity is disabled, stealth mode is active
-            boolean isActive = (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+            // Stealth mode is active iff a stealth disguise alias is enabled.
+            // MainActivity being disabled is not a reliable signal — custom
+            // app icon variants (AppIcon module) also disable it.
+            boolean isActive = false;
+            for (String alias : getStealthAliases()) {
+                ComponentName componentName = new ComponentName(packageName, packageName + alias);
+                int state = pm.getComponentEnabledSetting(componentName);
+                if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                    isActive = true;
+                    break;
+                }
+            }
             promise.resolve(isActive);
         } catch (Exception e) {
             promise.reject("STEALTH_ERROR", e.getMessage());
@@ -145,45 +209,30 @@ public class StealthMode extends ReactContextBaseJavaModule {
             PackageManager pm = context.getPackageManager();
             String packageName = context.getPackageName();
 
-            // Check if MainActivity is enabled
-            ComponentName mainComponent = new ComponentName(packageName, packageName + MAIN_ACTIVITY);
-            int mainState = pm.getComponentEnabledSetting(mainComponent);
-            boolean mainEnabled = (mainState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-                                   mainState == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT);
-
             // Check if any stealth alias is enabled
-            boolean anyAliasEnabled = false;
+            boolean anyStealthAliasEnabled = false;
             for (String alias : getStealthAliases()) {
                 ComponentName componentName = new ComponentName(packageName, packageName + alias);
                 int state = pm.getComponentEnabledSetting(componentName);
                 if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-                    anyAliasEnabled = true;
+                    anyStealthAliasEnabled = true;
                     break;
                 }
             }
 
-            // If nothing is enabled, enable MainActivity (safety check)
-            if (!mainEnabled && !anyAliasEnabled) {
-                pm.setComponentEnabledSetting(
-                    mainComponent,
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    PackageManager.DONT_KILL_APP
-                );
+            // Not in stealth mode: make sure exactly one Zeus launcher entry
+            // is enabled — MainActivity or the stored custom app icon alias.
+            // Heals states where no launcher entry (or a stale combination of
+            // entries) is enabled. No-op when the state is already correct.
+            if (!anyStealthAliasEnabled) {
+                restoreZeusLauncher(pm, packageName);
 
-                // Also disable any stealth aliases to be safe
-                for (String alias : getStealthAliases()) {
-                    ComponentName componentName = new ComponentName(packageName, packageName + alias);
-                    pm.setComponentEnabledSetting(
-                        componentName,
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                    );
+                if (getPreferences().getBoolean(PREF_STEALTH_ENABLED, false)) {
+                    getPreferences().edit()
+                        .putString(PREF_STEALTH_APP, "zeus")
+                        .putBoolean(PREF_STEALTH_ENABLED, false)
+                        .apply();
                 }
-
-                getPreferences().edit()
-                    .putString(PREF_STEALTH_APP, "zeus")
-                    .putBoolean(PREF_STEALTH_ENABLED, false)
-                    .apply();
             }
 
             promise.resolve(true);
