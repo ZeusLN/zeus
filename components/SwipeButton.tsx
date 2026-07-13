@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
     View,
     Text,
@@ -41,13 +41,22 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
         extrapolate: 'clamp'
     });
 
-    const [offset, setOffset] = useState(0);
+    // the responder is created once, so its handlers only ever see refs
+    const completed = useRef(false);
+    const onSwipeSuccessRef = useRef(onSwipeSuccess);
+    onSwipeSuccessRef.current = onSwipeSuccess;
+
+    const springBack = () =>
+        Animated.spring(pan, {
+            toValue: 0,
+            useNativeDriver: false
+        }).start();
 
     const panResponder = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
+            onStartShouldSetPanResponder: () => !completed.current,
+            onMoveShouldSetPanResponder: () => !completed.current,
             onPanResponderGrant: () => {
-                pan.setOffset(offset);
                 pan.setValue(0);
             },
             onPanResponderMove: (_e, gesture) => {
@@ -60,18 +69,19 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 _e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
-                const finalValue =
-                    gesture.dx > maxTranslation * 0.95 ? maxTranslation : 0;
-                if (finalValue === maxTranslation) {
-                    onSwipeSuccess();
+                if (gesture.dx > maxTranslation * 0.95) {
+                    // lock the button in the completed position before
+                    // kicking off any work, so it can't be dragged again or
+                    // left hanging mid-track while navigation is pending
+                    completed.current = true;
+                    pan.setValue(maxTranslation);
+                    onSwipeSuccessRef.current();
+                } else {
+                    springBack();
                 }
-
-                Animated.spring(pan, {
-                    toValue: finalValue,
-                    useNativeDriver: false
-                }).start(() => {
-                    setOffset(finalValue);
-                });
+            },
+            onPanResponderTerminate: () => {
+                if (!completed.current) springBack();
             }
         })
     ).current;
