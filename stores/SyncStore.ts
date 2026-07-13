@@ -5,6 +5,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
 import { sleep } from '../utils/SleepUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfo from '../models/NodeInfo';
 
@@ -117,11 +118,11 @@ export default class SyncStore {
         await new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
-                `https://mempool.space/${
-                    this.settingsStore.embeddedLndNetwork === 'Testnet'
-                        ? 'testnet/'
-                        : ''
-                }api/blocks/tip/height`
+                `${UrlUtils.getMempoolApiUrl({
+                    isMutinynet: false,
+                    isTestNet:
+                        this.settingsStore.embeddedLndNetwork === 'Testnet'
+                })}/blocks/tip/height`
             )
                 .then(async (response: any) => {
                     const status = response.info().status;
