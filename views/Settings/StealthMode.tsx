@@ -50,8 +50,7 @@ const TAP_COUNT_OPTIONS = [
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import StealthModeUtils, { StealthApp } from '../../utils/StealthModeUtils';
-import AppIconUtils from '../../utils/AppIconUtils';
+import { StealthApp } from '../../utils/StealthModeUtils';
 
 // Stealth app icons
 const CalculatorIcon = require('../../assets/images/stealth/calculator.png');
@@ -105,10 +104,6 @@ export default class StealthMode extends React.Component<
     StealthModeProps,
     StealthModeState
 > {
-    private unsubscribeBlur: (() => void) | null = null;
-    private initialApp: StealthApp = 'calculator';
-    private initialStealthEnabled: boolean = false;
-
     state = {
         stealthEnabled: false,
         selectedApp: 'calculator' as StealthApp,
@@ -118,20 +113,15 @@ export default class StealthMode extends React.Component<
     };
 
     async componentDidMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore } = this.props;
         const settings = await SettingsStore.getSettings();
 
-        const currentApp =
-            (settings.privacy && settings.privacy.stealthApp) || 'calculator';
-        const currentStealthEnabled =
-            (settings.privacy && settings.privacy.stealthMode) || false;
-
-        this.initialApp = currentApp;
-        this.initialStealthEnabled = currentStealthEnabled;
-
         this.setState({
-            stealthEnabled: currentStealthEnabled,
-            selectedApp: currentApp,
+            stealthEnabled:
+                (settings.privacy && settings.privacy.stealthMode) || false,
+            selectedApp:
+                (settings.privacy && settings.privacy.stealthApp) ||
+                'calculator',
             stealthPinLength:
                 (settings.privacy && settings.privacy.stealthPinLength) || 5,
             stealthVpnCountry:
@@ -141,46 +131,13 @@ export default class StealthMode extends React.Component<
                 (settings.privacy && settings.privacy.stealthVpnServer) ||
                 'Geneva'
         });
-
-        // Listen for navigation blur event to apply stealth mode changes
-        this.unsubscribeBlur = navigation.addListener('blur', () => {
-            this.applyStealthModeIfNeeded();
-        });
     }
 
-    componentWillUnmount() {
-        if (this.unsubscribeBlur) {
-            this.unsubscribeBlur();
-        }
-    }
-
-    applyStealthModeIfNeeded = async () => {
-        const { SettingsStore } = this.props;
-        const { stealthEnabled, selectedApp } = this.state;
-
-        try {
-            // Handle stealth mode toggle changes
-            if (stealthEnabled !== this.initialStealthEnabled) {
-                if (stealthEnabled) {
-                    await StealthModeUtils.enableStealthMode(selectedApp);
-                } else {
-                    await StealthModeUtils.disableStealthMode();
-                    // Restore the user's chosen Zeus app icon variant (no-op if
-                    // it's the default). StealthMode's disable path re-enables
-                    // MainActivity, so do this after to override correctly.
-                    await AppIconUtils.applyStoredIcon(SettingsStore);
-                }
-                return;
-            }
-
-            // Handle app selection changes (only if stealth is enabled)
-            if (stealthEnabled && selectedApp !== this.initialApp) {
-                await StealthModeUtils.enableStealthMode(selectedApp);
-            }
-        } catch (error) {
-            console.error('Error applying stealth mode on blur:', error);
-        }
-    };
+    // Note: the native launcher switch is deliberately NOT applied here or
+    // on navigation events. Disabling the activity-alias the current task
+    // was launched from closes the app, so the switch is applied by the
+    // AppState 'background' handler in App.tsx once the user leaves the app
+    // (with StealthModeWrapper's startup check as a fallback).
 
     handleToggleStealth = async () => {
         const { SettingsStore } = this.props;
@@ -192,7 +149,7 @@ export default class StealthMode extends React.Component<
         this.setState({ stealthEnabled: newStealthEnabled });
 
         // Only save the setting - native stealth mode change will be applied
-        // when the user navigates back from this screen
+        // when the app goes to background or is closed
         await updateSettings({
             privacy: {
                 ...settings.privacy,

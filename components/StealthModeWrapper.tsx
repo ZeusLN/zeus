@@ -54,10 +54,14 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
             const settings = settingsStr ? JSON.parse(settingsStr) : {};
             const jsStealthEnabled = settings?.privacy?.stealthMode || false;
 
-            if (nativeActive && !jsStealthEnabled) {
+            if (nativeActive && settingsStr && !jsStealthEnabled) {
                 // JS says stealth is off but native is still active —
                 // sync native to match JS (e.g. user toggled off but
-                // the app was killed before the native change applied)
+                // the app was killed before the native change applied).
+                // Only do this when the settings read genuinely succeeded
+                // (settingsStr is falsy on a transient keychain failure);
+                // disabling the alias this task was launched from closes
+                // the app, so a bad read here must never nuke stealth.
                 await StealthModeUtils.disableStealthMode();
                 return;
             }

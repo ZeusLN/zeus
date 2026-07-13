@@ -50,6 +50,7 @@ import {
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
+import AppIconUtils from './utils/AppIconUtils';
 import StealthModeUtils from './utils/StealthModeUtils';
 import StealthModeWrapper from './components/StealthModeWrapper';
 import { AppContainer } from './components/layout/AppContainer';
@@ -401,6 +402,13 @@ export default class App extends React.PureComponent {
                         await StealthModeUtils.isStealthModeActive();
                     if (nativeActive) {
                         await StealthModeUtils.disableStealthMode();
+                    }
+                    // Apply any pending app icon change (no-op when the
+                    // applied variant already matches). Deferred to
+                    // background because switching launcher aliases closes
+                    // the current task.
+                    if (Platform.OS === 'android') {
+                        await AppIconUtils.applyStoredIcon(settingsStore);
                     }
                 }
             } catch (error) {
