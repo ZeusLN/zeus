@@ -1313,14 +1313,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 );
             }
         }
-        // only navigate to initial url after connection and main calls are made
-        if (
-            this.state.initialLoad &&
-            !(
-                SettingsStore.settings.selectNodeOnStartup &&
-                SettingsStore.initialStart
-            )
-        ) {
+        // only navigate to initial url after connection and main calls are
+        // made. No selectNodeOnStartup check is needed here: an instance
+        // that deferred to the startup wallet selection screen never reaches
+        // fetchData (_replacedForWalletSelection), and LinkingUtils only
+        // handles a given initial URL once
+        if (this.state.initialLoad) {
             this.setState({
                 initialLoad: false
             });
