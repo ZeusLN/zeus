@@ -4,18 +4,17 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import Button from '../../../components/Button';
-import DropdownSetting from '../../../components/DropdownSetting';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import Text from '../../../components/Text';
-import TextInput from '../../../components/TextInput';
-
-import { LDK_VSS_SERVER_KEYS } from '../../../stores/SettingsStore';
+import VssServerPicker, {
+    resolveVssServer,
+    isVssServerValid
+} from '../../../components/VssServerPicker';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { DEFAULT_VSS_SERVER } from '../../../utils/LdkNodeUtils';
-import UrlUtils from '../../../utils/UrlUtils';
 
 interface LdkRecoveryVssServerProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -44,14 +43,10 @@ export default class LdkRecoveryVssServer extends React.Component<
         customServer: ''
     };
 
-    private getEffectiveServer = (): string => {
-        const { selectedValue, customServer } = this.state;
-        return selectedValue === 'custom' ? customServer.trim() : selectedValue;
-    };
-
     private continueToRecovery = () => {
         const { navigation, route } = this.props;
         const { network, nickname, photo, wordCount } = route.params ?? {};
+        const { selectedValue, customServer } = this.state;
 
         navigation.navigate('SeedRecovery', {
             network,
@@ -59,23 +54,14 @@ export default class LdkRecoveryVssServer extends React.Component<
             nickname,
             photo,
             wordCount,
-            vssServer: this.getEffectiveServer() || undefined
+            vssServer:
+                resolveVssServer(selectedValue, customServer) || undefined
         });
     };
 
     render() {
         const { navigation } = this.props;
         const { selectedValue, customServer } = this.state;
-        const customServerTrimmed = customServer.trim();
-
-        const isCustom = selectedValue === 'custom';
-
-        const showInvalidUrlError =
-            isCustom &&
-            customServerTrimmed !== '' &&
-            !UrlUtils.isValidUrl(customServer);
-        const disabled =
-            isCustom && (customServerTrimmed === '' || showInvalidUrlError);
 
         return (
             <Screen>
@@ -104,52 +90,24 @@ export default class LdkRecoveryVssServer extends React.Component<
                         )}
                     </Text>
 
-                    <DropdownSetting
-                        title={localeString(
-                            'views.Settings.EmbeddedNode.VssServer.serverUrl'
-                        )}
+                    <VssServerPicker
                         selectedValue={selectedValue}
-                        onValueChange={(value: string) => {
+                        customServer={customServer}
+                        onChange={(value, custom) =>
                             this.setState({
                                 selectedValue: value,
-                                customServer:
-                                    value === 'custom' ? customServer : ''
-                            });
-                        }}
-                        values={LDK_VSS_SERVER_KEYS}
+                                customServer: custom
+                            })
+                        }
                     />
-
-                    {isCustom && (
-                        <>
-                            <TextInput
-                                value={customServer}
-                                placeholder={DEFAULT_VSS_SERVER}
-                                onChangeText={(text: string) =>
-                                    this.setState({ customServer: text })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
-                            {showInvalidUrlError && (
-                                <Text
-                                    style={{
-                                        ...styles.error,
-                                        color: themeColor('error')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.invalidServerUrl'
-                                    )}
-                                </Text>
-                            )}
-                        </>
-                    )}
 
                     <View style={styles.button}>
                         <Button
                             title={localeString('general.next')}
                             onPress={this.continueToRecovery}
-                            disabled={disabled}
+                            disabled={
+                                !isVssServerValid(selectedValue, customServer)
+                            }
                         />
                     </View>
                 </View>
@@ -168,11 +126,6 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 15,
         marginBottom: 24
-    },
-    error: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 12,
-        marginTop: 4
     },
     button: {
         marginTop: 24
