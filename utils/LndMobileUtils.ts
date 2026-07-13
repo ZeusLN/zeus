@@ -1254,7 +1254,10 @@ export async function waitForRpcReady(timeoutMs = LND_READY_TIMEOUT_MS) {
             ) {
                 throw createLndError(LndErrorCode.RPC_CONNECTION_CLOSED);
             }
-            if (matchesLndErrorCode(errorMessage, LndErrorCode.RPC_NOT_READY)) {
+            if (
+                matchesLndErrorCode(errorMessage, LndErrorCode.RPC_NOT_READY) ||
+                matchesLndErrorCode(errorMessage, LndErrorCode.WALLET_LOCKED)
+            ) {
                 await sleep(500);
                 continue;
             }
