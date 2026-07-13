@@ -15,9 +15,10 @@ import java.util.Collections;
 
 /**
  * Native module that switches the Zeus app launcher icon between branded
- * variants. Touches only its own activity-aliases plus {@code .MainActivity};
- * Stealth Mode aliases are owned by {@link StealthMode} and are intentionally
- * untouched here so the two modules can coexist.
+ * variants. Exactly one launcher entry may be enabled at a time, so switching
+ * icons also disables the Stealth Mode disguise aliases owned by
+ * {@link StealthMode} — and StealthMode symmetrically disables (on enable) or
+ * restores (on disable) the aliases owned here.
  */
 public class AppIcon extends ReactContextBaseJavaModule {
     private static final String TAG = "AppIcon";
@@ -39,19 +40,26 @@ public class AppIcon extends ReactContextBaseJavaModule {
         APP_ICON_ALIASES = Collections.unmodifiableMap(map);
     }
 
-    // Other launcher-eligible aliases owned by sibling modules. We disable
-    // these when switching app icons so exactly one launcher entry is enabled
-    // at a time. Stealth Mode is guarded by the JS UI (picker disabled while
-    // stealth is active), so this is only reached when stealth should be off.
-    private static final String[] FOREIGN_LAUNCHER_ALIASES = new String[] {
-        ".StealthCalculatorActivity",
-        ".StealthVPNActivity",
-        ".StealthQRScannerActivity",
-        ".StealthNotepadActivity"
-    };
-
     public AppIcon(ReactApplicationContext reactContext) {
         super(reactContext);
+    }
+
+    // Package-private accessors so StealthMode can restore the user's chosen
+    // icon variant and keep the two modules' launcher aliases mutually
+    // exclusive without duplicating this list.
+    static String[] appIconAliasSuffixes() {
+        return APP_ICON_ALIASES.values().toArray(new String[0]);
+    }
+
+    /**
+     * Alias suffix for the stored icon variant, or {@code null} when the
+     * default icon (plain {@code .MainActivity}) is selected.
+     */
+    static String storedAliasSuffix(Context context) {
+        String variant = context
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(PREF_CURRENT_VARIANT, DEFAULT_VARIANT);
+        return APP_ICON_ALIASES.get(variant);
     }
 
     @Override
@@ -73,44 +81,45 @@ public class AppIcon extends ReactContextBaseJavaModule {
 
             String targetAlias = APP_ICON_ALIASES.get(variant);
             boolean isDefault = DEFAULT_VARIANT.equals(variant) || targetAlias == null;
+            String targetSuffix = isDefault ? MAIN_ACTIVITY : targetAlias;
 
-            ComponentName mainActivity =
-                new ComponentName(packageName, packageName + MAIN_ACTIVITY);
+            // Enable the chosen entry first so the launcher never has zero
+            // enabled Zeus entries, then disable the rest.
             pm.setComponentEnabledSetting(
-                mainActivity,
-                isDefault
-                    ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                new ComponentName(packageName, packageName + targetSuffix),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
             );
 
-            for (Map.Entry<String, String> entry : APP_ICON_ALIASES.entrySet()) {
-                ComponentName aliasComponent =
-                    new ComponentName(packageName, packageName + entry.getValue());
-                int newState = entry.getValue().equals(targetAlias)
-                    ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+            if (!isDefault) {
                 pm.setComponentEnabledSetting(
-                    aliasComponent,
-                    newState,
+                    new ComponentName(packageName, packageName + MAIN_ACTIVITY),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP
                 );
             }
 
-            // Ensure foreign launcher aliases (Stealth Mode disguises) are
-            // disabled so the launcher never shows duplicate Zeus entries.
-            for (String alias : FOREIGN_LAUNCHER_ALIASES) {
-                ComponentName foreign =
+            for (Map.Entry<String, String> entry : APP_ICON_ALIASES.entrySet()) {
+                if (entry.getValue().equals(targetSuffix)) continue;
+                pm.setComponentEnabledSetting(
+                    new ComponentName(packageName, packageName + entry.getValue()),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                );
+            }
+
+            // Ensure Stealth Mode disguise aliases are disabled so the
+            // launcher never shows duplicate Zeus entries. The JS UI blocks
+            // the picker while stealth is active, so this is only reached
+            // when stealth should be off.
+            for (String alias : StealthMode.stealthAliasSuffixes()) {
+                ComponentName stealthAlias =
                     new ComponentName(packageName, packageName + alias);
-                try {
-                    pm.setComponentEnabledSetting(
-                        foreign,
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                    );
-                } catch (IllegalArgumentException ignored) {
-                    // Alias not present in this build — fine, skip it.
-                }
+                pm.setComponentEnabledSetting(
+                    stealthAlias,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                );
             }
 
             getPreferences().edit()
