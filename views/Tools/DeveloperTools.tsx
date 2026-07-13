@@ -344,7 +344,11 @@ class Command extends React.Component<CommandProps, CommandState> {
                     if (this.props.command === 'updateChannelPolicy') {
                         return {
                             label,
-                            commandParameters: [channel.channel_point || '']
+                            commandParameters: [
+                                channel.channel_point || '',
+                                channel.local_constraints?.max_pending_amt_msat?.toString() ||
+                                    ''
+                            ]
                         };
                     } else if (this.props.command === 'abandonChannel') {
                         // Parse channel_point (format: "txid:index") for abandonChannel
@@ -424,7 +428,15 @@ class Command extends React.Component<CommandProps, CommandState> {
                 data.min_htlc_msat = minHtlcMsat;
                 data.min_htlc_msat_specified = true;
             }
-            if (maxHtlcMsat) data.max_htlc_msat = maxHtlcMsat;
+            if (maxHtlcMsat) {
+                data.max_htlc_msat = maxHtlcMsat;
+            } else if (createMissingEdge && commandParameters[1]) {
+                // lnd recreates a missing edge with max_htlc 0, and a blank
+                // max_htlc_msat means "keep current", so the update fails
+                // validation (min_htlc > max_htlc 0) unless we supply the
+                // channel's negotiated max in-flight amount
+                data.max_htlc_msat = commandParameters[1];
+            }
             if (createMissingEdge) data.create_missing_edge = true;
 
             if (commandParameters[0] === 'global') {
