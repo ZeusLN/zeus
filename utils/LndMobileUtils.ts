@@ -230,8 +230,7 @@ export function checkLndStreamErrorResponse(
             name + ': Got invalid response from lnd: ' + JSON.stringify(event)
         );
     }
-    console.log('name', name);
-    console.log('checkLndStreamErrorResponse error_desc:', event.error_desc);
+    log.d(`checkLndStreamErrorResponse stream=${name}`, [event.error_desc]);
     if (event.error_code) {
         const errorDesc = event.error_desc || '';
 

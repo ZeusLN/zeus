@@ -785,15 +785,10 @@ export default class SeedRecovery extends React.PureComponent<
                     });
                 }
             } else {
-                // Embedded LND restore
-                try {
-                    await stopLnd(true);
-                } catch (e: any) {}
-
-                // Only stop LND if it's actually running — calling
-                // stopLnd when the daemon isn't up causes
-                // LndmobileStopDaemon to never call back, stalling
-                // the restore flow indefinitely.
+                // Embedded LND restore — only stop when the JS layer
+                // believes LND is running. forceStop skips the native
+                // status check; calling it when the daemon is down can
+                // stall restore waiting for SubscribeState EOF.
                 if (this.props.SettingsStore.embeddedLndStarted) {
                     this.setState({
                         successMsg: localeString(

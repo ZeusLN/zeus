@@ -2209,7 +2209,14 @@ export default class SettingsStore {
         this.settings.isBiometryEnabled &&
         this.settings.supportedBiometryType !== undefined;
 
-    public setLoginStatus = (status = false) => (this.loggedIn = status);
+    @action
+    public setLoginStatus = (status = false) => {
+        this.loggedIn = status;
+        if (!status) {
+            this.embeddedLndLoadingMsg = undefined;
+        }
+        return this.loggedIn;
+    };
 
     @action
     public setEmbeddedLndLoadingMsg = (message?: string) => {
