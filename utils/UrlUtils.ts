@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
+import { DEFAULT_MEMPOOL_INSTANCE } from '../stores/SettingsStore';
 
 /**
  * Get the Esplora-compatible API base URL for the current network.
@@ -9,9 +10,37 @@ const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
 }): string => {
+    const privacy = settingsStore?.settings?.privacy;
+    const instance = privacy?.mempoolInstance || DEFAULT_MEMPOOL_INSTANCE;
+
+    // Custom instance is used verbatim on every network
+    if (instance === 'Custom' && privacy?.customMempoolInstance) {
+        let host = privacy.customMempoolInstance.trim().replace(/\/+$/, '');
+        if (!host.includes('://')) host = `https://${host}`;
+        return `${host}/api`;
+    }
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
-    const prefix = nodeInfo.isTestNet ? 'testnet/' : '';
-    return `https://mempool.space/${prefix}api`;
+    // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
+    return `https://${
+        instance === 'mempool.space'
+            ? 'mempool.space'
+            : DEFAULT_MEMPOOL_INSTANCE
+    }/api`;
+};
+
+/**
+ * Hostname of the effective mempool instance, for display purposes.
+ */
+const getMempoolInstanceHost = (nodeInfo: {
+    isMutinynet: boolean;
+    isTestNet: boolean;
+}): string => {
+    try {
+        return new URL(getMempoolApiUrl(nodeInfo)).host;
+    } catch {
+        return DEFAULT_MEMPOOL_INSTANCE;
+    }
 };
 
 const goToBlockExplorer = (
@@ -121,6 +150,7 @@ const leaveZeus = (url: string) => {
 export default {
     isValidUrl,
     getMempoolApiUrl,
+    getMempoolInstanceHost,
     goToBlockExplorerTXID,
     goToBlockExplorerAddress,
     goToBlockExplorerBlockHeight,

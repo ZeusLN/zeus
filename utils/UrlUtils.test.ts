@@ -20,9 +20,112 @@ jest.mock('react-native', () => ({
     }
 }));
 
+jest.mock('../stores/SettingsStore', () => ({
+    DEFAULT_MEMPOOL_INSTANCE: 'electrs.zeusln.com'
+}));
+
+import { settingsStore } from '../stores/Stores';
 import UrlUtils from './UrlUtils';
 
+const mainnet = { isMutinynet: false, isTestNet: false };
+const testnet = { isMutinynet: false, isTestNet: true };
+const mutinynet = { isMutinynet: true, isTestNet: false };
+
 describe('UrlUtils', () => {
+    describe('getMempoolApiUrl', () => {
+        beforeEach(() => {
+            settingsStore.settings.privacy = {};
+        });
+
+        it('defaults to electrs.zeusln.com on mainnet', () => {
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://electrs.zeusln.com/api'
+            );
+        });
+
+        it('uses mempool.space when selected', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'mempool.space'
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://mempool.space/api'
+            );
+        });
+
+        it('falls back to mempool.space testnet3 on testnet (electrs.zeusln.com is mainnet-only)', () => {
+            expect(UrlUtils.getMempoolApiUrl(testnet)).toEqual(
+                'https://mempool.space/testnet/api'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'mempool.space'
+            };
+            expect(UrlUtils.getMempoolApiUrl(testnet)).toEqual(
+                'https://mempool.space/testnet/api'
+            );
+        });
+
+        it('uses mutinynet.com on mutinynet', () => {
+            expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
+                'https://mutinynet.com/api'
+            );
+        });
+
+        it('uses a custom instance verbatim on every network', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'https://mempool.mynode.local'
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            expect(UrlUtils.getMempoolApiUrl(testnet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+        });
+
+        it('prepends https:// and strips trailing slashes on custom instances', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'mempool.mynode.local/'
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+        });
+
+        it('falls back to the default instance when Custom is selected but empty', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: ''
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://electrs.zeusln.com/api'
+            );
+        });
+    });
+
+    describe('getMempoolInstanceHost', () => {
+        it('returns the hostname of the effective instance', () => {
+            settingsStore.settings.privacy = {};
+            expect(UrlUtils.getMempoolInstanceHost(mainnet)).toEqual(
+                'electrs.zeusln.com'
+            );
+            expect(UrlUtils.getMempoolInstanceHost(testnet)).toEqual(
+                'mempool.space'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'http://192.168.1.1:8999'
+            };
+            expect(UrlUtils.getMempoolInstanceHost(mainnet)).toEqual(
+                '192.168.1.1:8999'
+            );
+        });
+    });
+
     describe('isValidUrl', () => {
         it('accepts valid HTTPS URLs', () => {
             expect(UrlUtils.isValidUrl('https://example.com')).toBe(true);

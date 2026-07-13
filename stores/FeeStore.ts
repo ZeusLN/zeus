@@ -8,6 +8,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import UrlUtils from '../utils/UrlUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
@@ -54,9 +55,9 @@ export default class FeeStore {
         this.recommendedFees = {};
         return ReactNativeBlobUtil.fetch(
             'get',
-            `https://mempool.space/${
-                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
-            }api/v1/fees/recommended`
+            `${UrlUtils.getMempoolApiUrl(
+                this.nodeInfoStore.nodeInfo
+            )}/v1/fees/recommended`
         )
             .then((response: any) => {
                 const status = response.info().status;

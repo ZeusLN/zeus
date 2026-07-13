@@ -6,7 +6,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import StealthIcon from '../../assets/images/SVG/Hidden.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
-import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    BLOCK_EXPLORER_KEYS,
+    DEFAULT_MEMPOOL_INSTANCE,
+    MEMPOOL_INSTANCE_KEYS
+} from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -30,6 +34,8 @@ interface PrivacyState {
     clipboard: boolean;
     lurkerMode: boolean;
     enableMempoolRates: boolean;
+    mempoolInstance: string;
+    customMempoolInstance: string;
 }
 
 @inject('SettingsStore')
@@ -45,7 +51,9 @@ export default class Privacy extends React.Component<
         customBlockExplorer: '',
         clipboard: false,
         lurkerMode: false,
-        enableMempoolRates: false
+        enableMempoolRates: false,
+        mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
+        customMempoolInstance: ''
     };
 
     async componentDidMount() {
@@ -66,7 +74,13 @@ export default class Privacy extends React.Component<
                 (settings.privacy && settings.privacy.lurkerMode) || false,
             enableMempoolRates:
                 (settings.privacy && settings.privacy.enableMempoolRates) ||
-                false
+                false,
+            mempoolInstance:
+                (settings.privacy && settings.privacy.mempoolInstance) ||
+                DEFAULT_MEMPOOL_INSTANCE,
+            customMempoolInstance:
+                (settings.privacy && settings.privacy.customMempoolInstance) ||
+                ''
         });
     }
 
@@ -86,7 +100,9 @@ export default class Privacy extends React.Component<
             customBlockExplorer,
             clipboard,
             lurkerMode,
-            enableMempoolRates
+            enableMempoolRates,
+            mempoolInstance,
+            customMempoolInstance
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
 
@@ -289,6 +305,63 @@ export default class Privacy extends React.Component<
                             />
                         </View>
                     </View>
+
+                    {enableMempoolRates && (
+                        <View style={{ marginTop: 20 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.Privacy.mempoolInstance'
+                                )}
+                                selectedValue={mempoolInstance}
+                                onValueChange={async (value: string) => {
+                                    this.setState({
+                                        mempoolInstance: value
+                                    });
+                                    await updateSettings({
+                                        privacy: {
+                                            ...settings.privacy,
+                                            mempoolInstance: value
+                                        }
+                                    });
+                                }}
+                                values={MEMPOOL_INSTANCE_KEYS}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                            />
+
+                            {mempoolInstance === 'Custom' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString('general.custom')}
+                                    </Text>
+                                    <TextInput
+                                        value={customMempoolInstance}
+                                        placeholder="https://mempool.mynode.local"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                customMempoolInstance: text
+                                            });
+
+                                            await updateSettings({
+                                                privacy: {
+                                                    ...settings.privacy,
+                                                    customMempoolInstance: text
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </>
+                            )}
+                        </View>
+                    )}
 
                     {Platform.OS === 'android' && (
                         <TouchableOpacity
