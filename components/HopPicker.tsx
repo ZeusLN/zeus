@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     FlatList,
     Modal,
     Platform,
@@ -139,6 +140,19 @@ export default class ChannelPicker extends React.Component<
             if (selectedChannels.includes(item)) {
                 selectedChannels.splice(selectedChannels.indexOf(item), 1);
             } else {
+                const maxRouteHints = backendUtils.isLNDBased()
+                    ? MAX_NUMBER_ROUTE_HINTS_LND
+                    : MAX_NUMBER_ROUTE_HINTS_LDK;
+                if (selectedChannels.length >= maxRouteHints) {
+                    Alert.alert(
+                        localeString('general.limitexceed'),
+                        localeString(
+                            'components.HopPicker.routeHintsLimitReached',
+                            { count: maxRouteHints }
+                        )
+                    );
+                    return;
+                }
                 selectedChannels.push(item);
             }
             this.setState({ selectedChannels });
