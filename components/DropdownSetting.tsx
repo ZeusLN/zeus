@@ -12,6 +12,8 @@ import { themeColor } from './../utils/ThemeUtils';
 import CaretDown from './../assets/images/SVG/Caret Down.svg';
 import { localeString } from './../utils/LocaleUtils';
 
+import ZeusText from './Text';
+
 interface DropdownSettingProps {
     title?: string;
     titleColor?: string;
@@ -19,6 +21,7 @@ interface DropdownSettingProps {
     onValueChange: (value: any) => void;
     values: Array<any>;
     disabled?: boolean;
+    infoModalText?: string | Array<string>;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -32,7 +35,8 @@ export default class DropdownSetting extends React.Component<
             selectedValue,
             onValueChange,
             values,
-            disabled
+            disabled,
+            infoModalText
         } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
@@ -100,16 +104,17 @@ export default class DropdownSetting extends React.Component<
                 {Platform.OS === 'android' && (
                     <View>
                         {title && (
-                            <Text
+                            <ZeusText
                                 style={{
                                     ...styles.secondaryText,
                                     color:
                                         titleColor ||
                                         themeColor('secondaryText')
                                 }}
+                                infoModalText={infoModalText}
                             >
                                 {title}
-                            </Text>
+                            </ZeusText>
                         )}
                         <Picker
                             selectedValue={selectedValue}
@@ -133,16 +138,17 @@ export default class DropdownSetting extends React.Component<
                 {Platform.OS === 'ios' && (
                     <View>
                         {title && (
-                            <Text
+                            <ZeusText
                                 style={{
                                     ...styles.secondaryText,
                                     color:
                                         titleColor ||
                                         themeColor('secondaryText')
                                 }}
+                                infoModalText={infoModalText}
                             >
                                 {title}
-                            </Text>
+                            </ZeusText>
                         )}
                         <TouchableOpacity
                             onPress={() =>

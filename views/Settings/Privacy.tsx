@@ -306,62 +306,66 @@ export default class Privacy extends React.Component<
                         </View>
                     </View>
 
-                    {enableMempoolRates && (
-                        <View style={{ marginTop: 20 }}>
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.Privacy.mempoolInstance'
-                                )}
-                                selectedValue={mempoolInstance}
-                                onValueChange={async (value: string) => {
-                                    this.setState({
-                                        mempoolInstance: value
-                                    });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            mempoolInstance: value
-                                        }
-                                    });
-                                }}
-                                values={MEMPOOL_INSTANCE_KEYS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                            />
-
-                            {mempoolInstance === 'Custom' && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString('general.custom')}
-                                    </Text>
-                                    <TextInput
-                                        value={customMempoolInstance}
-                                        placeholder="https://mempool.mynode.local"
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        onChangeText={async (text: string) => {
-                                            this.setState({
-                                                customMempoolInstance: text
-                                            });
-
-                                            await updateSettings({
-                                                privacy: {
-                                                    ...settings.privacy,
-                                                    customMempoolInstance: text
-                                                }
-                                            });
-                                        }}
-                                    />
-                                </>
+                    <View style={{ marginTop: 20 }}>
+                        <DropdownSetting
+                            title={localeString(
+                                'views.Settings.Privacy.mempoolInstance'
                             )}
-                        </View>
-                    )}
+                            infoModalText={[
+                                localeString(
+                                    'views.Settings.Privacy.mempoolInstance.explainer1'
+                                ),
+                                localeString(
+                                    'views.Settings.Privacy.mempoolInstance.explainer2'
+                                )
+                            ]}
+                            selectedValue={mempoolInstance}
+                            onValueChange={async (value: string) => {
+                                this.setState({
+                                    mempoolInstance: value
+                                });
+                                await updateSettings({
+                                    privacy: {
+                                        ...settings.privacy,
+                                        mempoolInstance: value
+                                    }
+                                });
+                            }}
+                            values={MEMPOOL_INSTANCE_KEYS}
+                            disabled={SettingsStore.settingsUpdateInProgress}
+                        />
+
+                        {mempoolInstance === 'Custom' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('general.custom')}
+                                </Text>
+                                <TextInput
+                                    value={customMempoolInstance}
+                                    placeholder="https://mempool.mynode.local"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            customMempoolInstance: text
+                                        });
+
+                                        await updateSettings({
+                                            privacy: {
+                                                ...settings.privacy,
+                                                customMempoolInstance: text
+                                            }
+                                        });
+                                    }}
+                                />
+                            </>
+                        )}
+                    </View>
 
                     {Platform.OS === 'android' && (
                         <TouchableOpacity

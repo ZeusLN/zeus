@@ -1244,6 +1244,8 @@
     "views.Settings.Privacy.clipboard.explainer": "If enabled, Zeus will read values copied to your clipboard and prompt you if they can be used in the app.",
     "views.Settings.Privacy.enableMempoolRates": "Enable mempool fee suggestions",
     "views.Settings.Privacy.mempoolInstance": "Mempool instance",
+    "views.Settings.Privacy.mempoolInstance.explainer1": "ZEUS uses this mempool instance to fetch fee estimates, broadcast transactions, sweep funds from private keys, and check the latest block height while your node is syncing.",
+    "views.Settings.Privacy.mempoolInstance.explainer2": "It is used for these purposes even when mempool fee suggestions are disabled. Select a custom instance to keep this activity between you and your own server.",
     "views.Settings.stealthMode": "Stealth Mode",
     "views.Settings.StealthMode.title": "Stealth Mode",
     "views.Settings.StealthMode.chooseApp": "Choose Stealth App",
