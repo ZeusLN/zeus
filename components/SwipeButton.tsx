@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     GestureResponderEvent,
     Dimensions
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import CaretRight from '../assets/images/SVG/Caret Right alt.svg';
 import { themeColor } from '../utils/ThemeUtils';
@@ -51,6 +52,18 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             toValue: 0,
             useNativeDriver: false
         }).start();
+
+    // every screen using this button navigates away in onSwipeSuccess; if
+    // the user comes back (e.g. the send failed), unlock the knob so they
+    // can retry
+    useFocusEffect(
+        useCallback(() => {
+            if (completed.current) {
+                completed.current = false;
+                pan.setValue(0);
+            }
+        }, [])
+    );
 
     const panResponder = useRef(
         PanResponder.create({
