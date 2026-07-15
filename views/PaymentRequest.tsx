@@ -518,6 +518,9 @@ export default class PaymentRequest extends React.Component<
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
+        const locale = SettingsStore.settings.locale;
+        if (pay_req) pay_req.determineFormattedOriginalTimeUntilExpiry(locale);
+
         // variables cannot be destructured traditionally here
         // due to how we clear the pay_req from the store upon
         // navigating back
@@ -525,7 +528,7 @@ export default class PaymentRequest extends React.Component<
             pay_req && pay_req.getRequestAmount
                 ? pay_req.getRequestAmount
                 : undefined;
-        const expiry = pay_req && pay_req.expiry;
+        const expiry = pay_req && pay_req.formattedOriginalTimeUntilExpiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;
         const payment_hash = pay_req && pay_req.payment_hash;
@@ -971,7 +974,9 @@ export default class PaymentRequest extends React.Component<
                                         keyValue={localeString(
                                             'views.PaymentRequest.cltvExpiry'
                                         )}
-                                        value={cltv_expiry}
+                                        value={`${cltv_expiry} ${localeString(
+                                            'general.blocks'
+                                        )}`}
                                     />
                                 )}
 

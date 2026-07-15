@@ -418,7 +418,9 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString(
                                     'views.Invoice.cltvExpiry'
                                 )}
-                                value={cltv_expiry}
+                                value={`${cltv_expiry} ${localeString(
+                                    'general.blocks'
+                                )}`}
                             />
                         )}
 

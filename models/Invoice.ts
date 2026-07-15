@@ -387,12 +387,17 @@ export default class Invoice extends BaseModel {
         | number
         | undefined {
         const decoded = this.decodedPaymentRequest;
-        if (!decoded) return undefined;
+        const timestamp = decoded ? decoded.timestamp : Number(this.timestamp);
         if (this.expires_at != null) {
             // expiry is missing in payment request in Core Lightning
-            return this.expires_at - decoded.timestamp;
+            return !isNaN(timestamp) ? this.expires_at - timestamp : undefined;
         }
-        return decoded.expiry;
+        if (decoded) return decoded.expiry;
+        // no bolt11 string to decode (e.g. pay_req built from a backend
+        // decodepayreq response) — use the reported expiry seconds
+        return this.expiry != null && this.expiry !== ''
+            ? Number(this.expiry)
+            : undefined;
     }
 
     public determineFormattedOriginalTimeUntilExpiry(
