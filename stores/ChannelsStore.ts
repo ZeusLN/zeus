@@ -691,27 +691,35 @@ export default class ChannelsStore {
         if (implementation === 'lightning-node-connect') {
             return BackendUtils.closeChannel(urlParams);
         } else {
-            let resolved = false;
+            let settled = false;
             return await Promise.race([
                 new Promise((resolve) => {
                     BackendUtils.closeChannel(urlParams)
                         .then(() => {
+                            if (settled) return;
+                            settled = true;
                             this.handleChannelClose();
-                            resolved = true;
                             resolve(true);
                         })
                         .catch((error: Error) => {
+                            if (settled) return;
+                            settled = true;
                             this.handleChannelCloseError(error);
-                            resolved = true;
                             resolve(true);
                         });
                 }),
                 // LND REST call tends to time out, so let's put a 6 second
                 // forced resolution, as true errors will typically throw
-                // before that time
+                // before that time. The settled flag ensures the call's
+                // eventual result (e.g. the 30s REST timeout on the
+                // streaming close call) can't fire handlers after the
+                // forced resolution has already succeeded
                 new Promise(async (resolve) => {
                     await new Promise((res) => setTimeout(res, 6000));
-                    if (!resolved) this.handleChannelClose();
+                    if (!settled) {
+                        settled = true;
+                        this.handleChannelClose();
+                    }
                     resolve(true);
                 })
             ]);
@@ -728,7 +736,9 @@ export default class ChannelsStore {
     @action
     public handleChannelCloseError = (error: Error) => {
         this.closeChannelErr = errorToUserFriendly(error);
-        this.getChannelsError();
+        // a failed close request doesn't invalidate the channel list,
+        // so don't call getChannelsError here - it would wipe channels
+        this.closingChannel = false;
     };
 
     @action
