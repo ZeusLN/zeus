@@ -2075,7 +2075,7 @@ export default class LdkNode {
     supportsAMP = () => false;
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
-    supportsHopPicking = () => true;
+    supportsHopPicking = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
