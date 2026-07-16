@@ -13,6 +13,7 @@ import {
     DEFAULT_SCORER_URL,
     DEFAULT_VSS_SERVER,
     ALBY_VSS_SERVER,
+    LDK_VSS_SERVER,
     getDefaultEsploraServer,
     getDefaultRgsServer,
     SupportedNetwork
@@ -431,6 +432,7 @@ export const EMBEDDED_NODE_NETWORK_KEYS = [
 export const LDK_VSS_SERVER_KEYS = [
     { key: 'ZEUS', value: DEFAULT_VSS_SERVER },
     { key: 'Alby', value: ALBY_VSS_SERVER },
+    { key: 'LDK', value: LDK_VSS_SERVER },
     { key: 'Custom', translateKey: 'general.custom', value: 'custom' }
 ];
 
