@@ -47,7 +47,8 @@ import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 import Accordion from '../../components/Accordion';
 import VssServerPicker, {
-    resolveVssServer
+    resolveVssServer,
+    isVssServerValid
 } from '../../components/VssServerPicker';
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
@@ -2848,7 +2849,13 @@ export default class WalletConfiguration extends React.Component<
                                                         );
                                                     }}
                                                     tertiary
-                                                    disabled={loading}
+                                                    disabled={
+                                                        loading ||
+                                                        !isVssServerValid(
+                                                            ldkVssServerSelected,
+                                                            ldkVssServerCustom
+                                                        )
+                                                    }
                                                 />
                                             </View>
                                             <View style={styles.button}>
