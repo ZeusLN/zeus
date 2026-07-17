@@ -143,15 +143,16 @@ export default class PaymentsSettings extends React.Component<
                             <View
                                 style={{
                                     flexDirection: 'row',
-                                    width: '95%'
+                                    gap: 8
                                 }}
                             >
                                 <TextInput
                                     style={{
-                                        width: '50%'
+                                        flex: 1
                                     }}
                                     keyboardType="numeric"
                                     value={feeLimit}
+                                    suffix={localeString('general.sats')}
                                     onChangeText={async (text: string) => {
                                         this.setState({
                                             feeLimit: text
@@ -170,24 +171,13 @@ export default class PaymentsSettings extends React.Component<
                                         })
                                     }
                                 />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 35
-                                    }}
-                                >
-                                    {localeString('general.sats')}
-                                </Text>
                                 <TextInput
                                     style={{
-                                        width: '50%',
-                                        right: 5
+                                        flex: 1
                                     }}
                                     keyboardType="numeric"
                                     value={feePercentage}
+                                    suffix="%"
                                     onChangeText={async (text: string) => {
                                         this.setState({
                                             feePercentage: text
@@ -206,17 +196,6 @@ export default class PaymentsSettings extends React.Component<
                                         })
                                     }
                                 />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 25
-                                    }}
-                                >
-                                    {'%'}
-                                </Text>
                             </View>
                             <Text style={{ color: themeColor('text') }}>
                                 {localeString(
@@ -240,52 +219,28 @@ export default class PaymentsSettings extends React.Component<
                                     'views.Settings.Payments.defaultFeeLimit'
                                 )}`}
                             </Text>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexWrap: 'wrap',
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
+                            <TextInput
+                                keyboardType="numeric"
+                                value={feePercentage}
+                                suffix="%"
+                                onChangeText={async (text: string) => {
+                                    this.setState({
+                                        feePercentage: text
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            defaultFeeMethod: 'percent',
+                                            defaultFeePercentage: text
+                                        }
+                                    });
                                 }}
-                            ></View>
-                            <View
-                                style={{
-                                    flexDirection: 'row'
-                                }}
-                            >
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={feePercentage}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            feePercentage: text
-                                        });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultFeeMethod: 'percent',
-                                                defaultFeePercentage: text
-                                            }
-                                        });
-                                    }}
-                                    onPressIn={() =>
-                                        this.setState({
-                                            feeLimitMethod: 'percent'
-                                        })
-                                    }
-                                />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 28
-                                    }}
-                                >
-                                    {'%'}
-                                </Text>
-                            </View>
+                                onPressIn={() =>
+                                    this.setState({
+                                        feeLimitMethod: 'percent'
+                                    })
+                                }
+                            />
                         </View>
                     )}
 

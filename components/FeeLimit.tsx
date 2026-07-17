@@ -223,16 +223,17 @@ export default class FeeLimit extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                width: '95%'
+                                gap: 8
                             }}
                         >
                             <TextInput
                                 style={{
-                                    width: '50%',
+                                    flex: 1,
                                     opacity: feeOption == 'fixed' ? 1 : 0.25
                                 }}
                                 keyboardType="numeric"
                                 value={feeLimitSat}
+                                suffix={localeString('general.sats')}
                                 onChangeText={(text: string) => {
                                     this.setState({
                                         feeLimitSat: text
@@ -246,24 +247,14 @@ export default class FeeLimit extends React.Component<
                                     onFeeLimitSatChange(feeLimitSat);
                                 }}
                             />
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text'),
-                                    top: 28,
-                                    right: 30,
-                                    opacity: feeOption == 'fixed' ? 1 : 0.25
-                                }}
-                            >
-                                {localeString('general.sats')}
-                            </Text>
                             <TextInput
                                 style={{
-                                    width: '50%',
+                                    flex: 1,
                                     opacity: feeOption == 'percent' ? 1 : 0.25
                                 }}
                                 keyboardType="numeric"
                                 value={maxFeePercent}
+                                suffix="%"
                                 onChangeText={(text: string) => {
                                     this.setState(
                                         {
@@ -292,17 +283,6 @@ export default class FeeLimit extends React.Component<
                                     onFeeLimitSatChange(percentAmount);
                                 }}
                             />
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text'),
-                                    top: 28,
-                                    right: 18,
-                                    opacity: feeOption == 'percent' ? 1 : 0.25
-                                }}
-                            >
-                                {'%'}
-                            </Text>
                         </View>
                     </>
                 )}
@@ -327,53 +307,38 @@ export default class FeeLimit extends React.Component<
                                 <Amount sats={percentAmount} />
                             </Text>
                         </Row>
-                        <View
-                            style={{
-                                flexDirection: 'row'
+                        <TextInput
+                            keyboardType="numeric"
+                            value={maxFeePercent}
+                            suffix="%"
+                            onChangeText={(text: string) => {
+                                this.setState(
+                                    {
+                                        maxFeePercent: text
+                                    },
+                                    () => {
+                                        const percentAmount =
+                                            this.calculatePercentAmount(
+                                                satAmount
+                                            );
+
+                                        this.setState({
+                                            percentAmount
+                                        });
+                                        onFeeLimitSatChange(percentAmount);
+
+                                        if (onMaxFeePercentChange)
+                                            onMaxFeePercentChange(text);
+                                    }
+                                );
                             }}
-                        >
-                            <TextInput
-                                keyboardType="numeric"
-                                value={maxFeePercent}
-                                onChangeText={(text: string) => {
-                                    this.setState(
-                                        {
-                                            maxFeePercent: text
-                                        },
-                                        () => {
-                                            const percentAmount =
-                                                this.calculatePercentAmount(
-                                                    satAmount
-                                                );
-
-                                            this.setState({
-                                                percentAmount
-                                            });
-                                            onFeeLimitSatChange(percentAmount);
-
-                                            if (onMaxFeePercentChange)
-                                                onMaxFeePercentChange(text);
-                                        }
-                                    );
-                                }}
-                                onPressIn={() => {
-                                    this.setState({
-                                        feeOption: 'percent'
-                                    });
-                                    onFeeLimitSatChange(percentAmount);
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text'),
-                                    top: 28,
-                                    right: 24
-                                }}
-                            >
-                                {'%'}
-                            </Text>
-                        </View>
+                            onPressIn={() => {
+                                this.setState({
+                                    feeOption: 'percent'
+                                });
+                                onFeeLimitSatChange(percentAmount);
+                            }}
+                        />
                     </React.Fragment>
                 )}
             </React.Fragment>
