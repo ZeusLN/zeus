@@ -4,7 +4,6 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
-import { HMAC as sha256HMAC } from 'fast-sha256';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -21,6 +20,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { hmacSha256 } from '../utils/HashingUtils';
 import {
     ecdsaSignDERHex,
     getCompressedPublicKeyHex
@@ -122,9 +122,10 @@ export default class LnurlAuth extends React.Component<
                 // 2. LN WALLET obtains an RFC6979 deterministic signature of sha256(utf8ToBytes(canonical phrase)) using secp256k1 with node private key.
                 // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
                 // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
-                const linkingKeyPriv = new sha256HMAC(signature.signature)
-                    .update(Base64Utils.stringToUint8Array(this.state.domain))
-                    .digest();
+                const linkingKeyPriv = hmacSha256(
+                    signature.signature,
+                    Base64Utils.stringToUint8Array(this.state.domain)
+                );
 
                 const linkingKeyPub = getCompressedPublicKeyHex(linkingKeyPriv);
 
