@@ -18,7 +18,8 @@ import type {
     Lsps1OrderResponse,
     Lsps1OrderStatus,
     Lsps7ExtendableChannel,
-    Lsps7OrderResponse
+    Lsps7OrderResponse,
+    RouteHintsMode
 } from './LdkNode.d';
 
 const { LdkNodeModule } = NativeModules;
@@ -408,30 +409,42 @@ const sendAllToOnchainAddressWithUtxos = async ({
 const receiveBolt11 = async ({
     amountMsat,
     description,
-    expirySecs
+    expirySecs,
+    routeHintsMode,
+    customRouteHintUserChannelIds
 }: {
     amountMsat: number;
     description: string;
     expirySecs: number;
+    routeHintsMode?: RouteHintsMode;
+    customRouteHintUserChannelIds?: string[];
 }): Promise<string> => {
     const result = await LdkNodeModule.receiveBolt11(
         amountMsat,
         description,
-        expirySecs
+        expirySecs,
+        routeHintsMode || 'none',
+        customRouteHintUserChannelIds || []
     );
     return result.invoice;
 };
 
 const receiveVariableAmountBolt11 = async ({
     description,
-    expirySecs
+    expirySecs,
+    routeHintsMode,
+    customRouteHintUserChannelIds
 }: {
     description: string;
     expirySecs: number;
+    routeHintsMode?: RouteHintsMode;
+    customRouteHintUserChannelIds?: string[];
 }): Promise<string> => {
     const result = await LdkNodeModule.receiveVariableAmountBolt11(
         description,
-        expirySecs
+        expirySecs,
+        routeHintsMode || 'none',
+        customRouteHintUserChannelIds ?? null
     );
     return result.invoice;
 };
@@ -1121,10 +1134,14 @@ export interface ILdkNodeInjections {
             amountMsat: number;
             description: string;
             expirySecs: number;
+            routeHintsMode?: RouteHintsMode;
+            customRouteHintUserChannelIds?: string[];
         }) => Promise<string>;
         receiveVariableAmountBolt11: (params: {
             description: string;
             expirySecs: number;
+            routeHintsMode?: RouteHintsMode;
+            customRouteHintUserChannelIds?: string[];
         }) => Promise<string>;
         sendBolt11: (params: {
             invoice: string;

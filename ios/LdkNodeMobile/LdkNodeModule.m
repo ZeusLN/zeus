@@ -61,8 +61,8 @@ RCT_EXTERN_METHOD(sendToOnchainAddressWithUtxos:(NSString *)address amountSats:(
 RCT_EXTERN_METHOD(sendAllToOnchainAddressWithUtxos:(NSString *)address retainReserve:(BOOL)retainReserve utxos:(NSArray *)utxos resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // BOLT11 Payment Methods
-RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs routeHintsMode:(NSString *)routeHintsMode customRouteHintChannelIds:(NSArray *)customRouteHintChannelIds resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription expirySecs:(double)expirySecs routeHintsMode:(NSString *)routeHintsMode customRouteHintChannelIds:(NSArray *)customRouteHintChannelIds resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 

@@ -623,6 +623,7 @@ export default class CLNRest {
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
+    supportsRouteHints = () => false;
     supportsWithdrawalRequests = () => true;
     supportsAccounts = () => false;
     supportsRouting = () => true;
