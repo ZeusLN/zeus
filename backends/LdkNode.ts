@@ -1165,11 +1165,13 @@ export default class LdkNode {
         // Ensure expiry is a number (it comes as a string from the UI)
         const expirySecs = Number(data.expiry_seconds) || 3600;
 
-        if (data.value || data.value_msat) {
-            const amountMsat = data.value_msat
-                ? Number(data.value_msat)
-                : Number(data.value) * 1000;
+        const amountMsat = data.value_msat
+            ? Number(data.value_msat)
+            : data.value != null && data.value !== ''
+            ? Number(data.value) * 1000
+            : 0;
 
+        if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
