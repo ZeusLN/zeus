@@ -16,6 +16,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import CopyButton from '../../components/CopyButton';
 import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -48,7 +49,7 @@ interface CategoryProps {
     selectedCommand: string | null;
     onCommand: (
         command: string,
-        param?: string | Array<string | boolean | undefined>
+        param?: string | Array<string | boolean | object | undefined>
     ) => Promise<void>;
     implementation: Implementations;
     open: boolean;
@@ -59,7 +60,7 @@ interface CommandProps {
     command: string;
     onTap: (
         command: string,
-        param?: string | Array<string | boolean | undefined>
+        param?: string | Array<string | boolean | object | undefined>
     ) => Promise<void>;
     selected: boolean;
 }
@@ -79,6 +80,12 @@ interface CommandState {
     expanded: boolean;
     pendingFundingShimOnly?: boolean;
     iKnowWhatIAmDoing?: boolean;
+    baseFeeMsat: string;
+    feeRatePpm: string;
+    timeLockDelta: string;
+    minHtlcMsat: string;
+    maxHtlcMsat: string;
+    createMissingEdge?: boolean;
 }
 
 interface ResponseContainerProps {
@@ -258,6 +265,14 @@ const categories: Array<{
                     'embedded-lnd',
                     'lightning-node-connect'
                 ]
+            },
+            {
+                name: 'updateChannelPolicy',
+                compatibleImplementations: [
+                    'lnd',
+                    'embedded-lnd',
+                    'lightning-node-connect'
+                ]
             }
         ]
     }
@@ -297,13 +312,24 @@ const ResponseContainer = ({
 );
 
 class Command extends React.Component<CommandProps, CommandState> {
-    private commandsWithSubItems = ['getChannelInfo', 'abandonChannel'];
+    private commandsWithSubItems = [
+        'getChannelInfo',
+        'abandonChannel',
+        'updateChannelPolicy'
+    ];
 
     state: CommandState = {
         loading: false,
         expanded: false,
         pendingFundingShimOnly: false,
-        iKnowWhatIAmDoing: false
+        iKnowWhatIAmDoing: false,
+        // lnd defaults for lncli updatechanpolicy
+        baseFeeMsat: '1000',
+        feeRatePpm: '1',
+        timeLockDelta: '80',
+        minHtlcMsat: '',
+        maxHtlcMsat: '',
+        createMissingEdge: false
     };
 
     private loadSubItems = async () => {
@@ -315,7 +341,16 @@ class Command extends React.Component<CommandProps, CommandState> {
                 const subItems = channels.map((channel: any) => {
                     const label = `Channel ${channel.chan_id} (${channel.remote_pubkey})`;
 
-                    if (this.props.command === 'abandonChannel') {
+                    if (this.props.command === 'updateChannelPolicy') {
+                        return {
+                            label,
+                            commandParameters: [
+                                channel.channel_point || '',
+                                channel.local_constraints?.max_pending_amt_msat?.toString() ||
+                                    ''
+                            ]
+                        };
+                    } else if (this.props.command === 'abandonChannel') {
                         // Parse channel_point (format: "txid:index") for abandonChannel
                         const channelPoint = channel.channel_point || '';
                         const [fundingTxId, outputIndex] =
@@ -340,6 +375,14 @@ class Command extends React.Component<CommandProps, CommandState> {
                         };
                     }
                 });
+                if (this.props.command === 'updateChannelPolicy') {
+                    subItems.unshift({
+                        label: localeString(
+                            'views.Tools.developerTools.updateChannelPolicy.global'
+                        ),
+                        commandParameters: ['global']
+                    });
+                }
                 this.setState({ subItems, loading: false });
             } catch (error) {
                 console.error('Error loading channels:', error);
@@ -366,6 +409,50 @@ class Command extends React.Component<CommandProps, CommandState> {
         channelInfo?: { chanId: string; remotePubkey: string; outpoint: string }
     ): void {
         this.setState({ selectedSubItemIndex });
+        if (command === 'updateChannelPolicy') {
+            const {
+                baseFeeMsat,
+                feeRatePpm,
+                timeLockDelta,
+                minHtlcMsat,
+                maxHtlcMsat,
+                createMissingEdge
+            } = this.state;
+
+            const data: any = {
+                base_fee_msat: baseFeeMsat || '0',
+                fee_rate_ppm: Number(feeRatePpm) || 0,
+                time_lock_delta: Number(timeLockDelta) || 0
+            };
+            if (minHtlcMsat) {
+                data.min_htlc_msat = minHtlcMsat;
+                data.min_htlc_msat_specified = true;
+            }
+            if (maxHtlcMsat) {
+                data.max_htlc_msat = maxHtlcMsat;
+            } else if (createMissingEdge && commandParameters[1]) {
+                // lnd recreates a missing edge with max_htlc 0, and a blank
+                // max_htlc_msat means "keep current", so the update fails
+                // validation (min_htlc > max_htlc 0) unless we supply the
+                // channel's negotiated max in-flight amount
+                data.max_htlc_msat = commandParameters[1];
+            }
+            if (createMissingEdge) data.create_missing_edge = true;
+
+            if (commandParameters[0] === 'global') {
+                data.global = true;
+            } else {
+                const [fundingTxId, outputIndex] =
+                    commandParameters[0].split(':');
+                data.chan_point = {
+                    funding_txid_str: fundingTxId,
+                    output_index: Number(outputIndex) || 0
+                };
+            }
+
+            this.props.onTap(command, [data]);
+            return;
+        }
         // For abandonChannel, include boolean parameters only if explicitly set to true
         if (command === 'abandonChannel' && channelInfo) {
             const params: Array<string | boolean | undefined> = [
@@ -497,6 +584,91 @@ class Command extends React.Component<CommandProps, CommandState> {
                                         onValueChange={(value: boolean) =>
                                             this.setState({
                                                 iKnowWhatIAmDoing: value
+                                            })
+                                        }
+                                    />
+                                </View>
+                            </View>
+                        )}
+                        {command === 'updateChannelPolicy' && (
+                            <View
+                                style={[
+                                    styles.booleanParamsContainer,
+                                    {
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }
+                                ]}
+                            >
+                                {(
+                                    [
+                                        {
+                                            key: 'baseFeeMsat',
+                                            label: 'base_fee_msat'
+                                        },
+                                        {
+                                            key: 'feeRatePpm',
+                                            label: 'fee_rate_ppm'
+                                        },
+                                        {
+                                            key: 'timeLockDelta',
+                                            label: 'time_lock_delta'
+                                        },
+                                        {
+                                            key: 'minHtlcMsat',
+                                            label: 'min_htlc_msat'
+                                        },
+                                        {
+                                            key: 'maxHtlcMsat',
+                                            label: 'max_htlc_msat'
+                                        }
+                                    ] as const
+                                ).map((field) => (
+                                    <View
+                                        style={styles.textParamRow}
+                                        key={field.key}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.booleanParamLabel,
+                                                {
+                                                    color: themeColor('text')
+                                                }
+                                            ]}
+                                        >
+                                            {field.label}
+                                        </Text>
+                                        <TextInput
+                                            value={this.state[field.key]}
+                                            onChangeText={(value: string) =>
+                                                this.setState({
+                                                    [field.key]: value
+                                                } as any)
+                                            }
+                                            keyboardType="numeric"
+                                            style={styles.textParamInput}
+                                        />
+                                    </View>
+                                ))}
+                                <View style={styles.booleanParamRow}>
+                                    <Text
+                                        style={[
+                                            styles.booleanParamLabel,
+                                            {
+                                                color: themeColor('text')
+                                            }
+                                        ]}
+                                    >
+                                        create_missing_edge
+                                    </Text>
+                                    <Switch
+                                        value={
+                                            this.state.createMissingEdge ||
+                                            false
+                                        }
+                                        onValueChange={(value: boolean) =>
+                                            this.setState({
+                                                createMissingEdge: value
                                             })
                                         }
                                     />
@@ -660,7 +832,7 @@ export default class DeveloperTools extends React.Component<
 
     handleCommand = async (
         command: string,
-        param?: string | Array<string | boolean | undefined>
+        param?: string | Array<string | boolean | object | undefined>
     ) => {
         this.setState({
             selectedCommand: command,
@@ -907,6 +1079,16 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'PPNeueMontreal-Book',
         flex: 1
+    },
+    textParamRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 4
+    },
+    textParamInput: {
+        height: 40,
+        width: 150
     },
     responseContainer: {
         marginTop: 16,

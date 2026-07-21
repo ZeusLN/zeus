@@ -472,6 +472,11 @@ export default class LightningNodeConnect {
             .updateChannelPolicy(params)
             .then((data: lnrpc.PolicyUpdateResponse) => snakeize(data));
     };
+    // takes a raw PolicyUpdateRequest, used by Developer Tools
+    updateChannelPolicy = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .updateChannelPolicy(data)
+            .then((res: lnrpc.PolicyUpdateResponse) => snakeize(res));
     getRoutes = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
             .queryRoutes({

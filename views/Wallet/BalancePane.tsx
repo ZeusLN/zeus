@@ -182,13 +182,19 @@ export default class BalancePane extends React.PureComponent<
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
             lightningBalance,
-            pendingOpenBalance
+            pendingOpenBalance,
+            pendingCloseBalance
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
         const { implementation, settings, lndFolderMissing } = SettingsStore;
 
-        const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
+        const lightningPendingTotal = new BigNumber(pendingOpenBalance || 0)
+            .plus(pendingCloseBalance || 0)
+            .toNumber();
+        const hasLightningPending = lightningPendingTotal > 0;
+
+        const pendingUnconfirmedBalance = new BigNumber(lightningPendingTotal)
             .plus(unconfirmedBlockchainBalance)
             .toNumber()
             .toFixed(3);
@@ -206,40 +212,55 @@ export default class BalancePane extends React.PureComponent<
                     jumboText
                     toggleable
                 />
-                {!(pendingOpenBalance > 0) && (
+                {!hasLightningPending && (
                     <View style={styles.conversion}>
                         <Conversion sats={lightningBalance} sensitive />
                     </View>
                 )}
-                {pendingOpenBalance > 0 ? (
-                    <>
-                        <View style={styles.pendingAmountSpacing}>
-                            <Amount
-                                sats={pendingOpenBalance}
-                                sensitive
-                                jumboText
-                                toggleable
-                                pending
-                                onPendingPress={() =>
-                                    this.handlePendingPress('lightning')
-                                }
-                            />
-                        </View>
-                        <View style={styles.conversion}>
-                            <Conversion
-                                sats={lightningBalance}
-                                satsPending={pendingOpenBalance}
-                                sensitive
-                            />
-                        </View>
-                    </>
-                ) : null}
+                {pendingOpenBalance > 0 && (
+                    <View style={styles.pendingAmountSpacing}>
+                        <Amount
+                            sats={pendingOpenBalance}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                            onPendingPress={() =>
+                                this.handlePendingPress('lightning')
+                            }
+                        />
+                    </View>
+                )}
+                {pendingCloseBalance > 0 && (
+                    <View style={styles.pendingAmountSpacing}>
+                        <Amount
+                            sats={pendingCloseBalance}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                            onPendingPress={() =>
+                                this.handlePendingPress('lightning')
+                            }
+                        />
+                    </View>
+                )}
+                {hasLightningPending && (
+                    <View style={styles.conversion}>
+                        <Conversion
+                            sats={lightningBalance}
+                            satsPending={lightningPendingTotal}
+                            sensitive
+                        />
+                    </View>
+                )}
             </View>
         );
         const BalanceViewCombined = () => {
             const hasOnchainPending = Boolean(
                 Number(unconfirmedBlockchainBalance ?? 0) ||
-                    Number(pendingOpenBalance ?? 0)
+                    Number(pendingOpenBalance ?? 0) ||
+                    Number(pendingCloseBalance ?? 0)
             );
             const hasAnyPending = hasOnchainPending;
             const renderPendingBalance = (sats: string | number) => (

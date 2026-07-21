@@ -115,6 +115,8 @@ class BackendUtils {
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
     setFees = (...args: any[]) => this.call('setFees', args);
+    updateChannelPolicy = (...args: any[]) =>
+        this.call('updateChannelPolicy', args);
     getRoutes = (...args: any[]) => this.call('getRoutes', args);
     getForwardingHistory = (...args: any[]) =>
         this.call('getForwardingHistory', args);

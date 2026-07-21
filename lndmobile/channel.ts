@@ -248,6 +248,58 @@ export const abandonChannel = async (
 /**
  * @throws
  */
+export const updateChannelPolicy = async (data: {
+    base_fee_msat?: string;
+    fee_rate_ppm?: number;
+    time_lock_delta?: number;
+    min_htlc_msat?: string;
+    min_htlc_msat_specified?: boolean;
+    max_htlc_msat?: string;
+    chan_point?: { funding_txid_str: string; output_index: number };
+    global?: boolean;
+    create_missing_edge?: boolean;
+}): Promise<lnrpc.PolicyUpdateResponse> => {
+    const options: lnrpc.IPolicyUpdateRequest = {
+        base_fee_msat: data.base_fee_msat
+            ? Long.fromValue(data.base_fee_msat)
+            : undefined,
+        fee_rate_ppm: data.fee_rate_ppm,
+        time_lock_delta: data.time_lock_delta,
+        min_htlc_msat: data.min_htlc_msat
+            ? Long.fromValue(data.min_htlc_msat)
+            : undefined,
+        min_htlc_msat_specified: data.min_htlc_msat_specified,
+        max_htlc_msat: data.max_htlc_msat
+            ? Long.fromValue(data.max_htlc_msat)
+            : undefined,
+        create_missing_edge: data.create_missing_edge
+    };
+
+    if (data.global) {
+        options.global = true;
+    } else if (data.chan_point) {
+        options.chan_point = {
+            funding_txid_str: data.chan_point.funding_txid_str,
+            output_index: data.chan_point.output_index
+        };
+    }
+
+    const response = await sendCommand<
+        lnrpc.IPolicyUpdateRequest,
+        lnrpc.PolicyUpdateRequest,
+        lnrpc.PolicyUpdateResponse
+    >({
+        request: lnrpc.PolicyUpdateRequest,
+        response: lnrpc.PolicyUpdateResponse,
+        method: 'UpdateChannelPolicy',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const pendingChannels =
     async (): Promise<lnrpc.PendingChannelsResponse> => {
         const response = await sendCommand<

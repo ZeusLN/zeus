@@ -643,6 +643,9 @@ export default class LND {
             min_htlc_msat_specified: min_htlc ? true : false
         });
     };
+    // takes a raw PolicyUpdateRequest, used by Developer Tools
+    updateChannelPolicy = (data: any) =>
+        this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${

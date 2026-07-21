@@ -347,9 +347,6 @@ export default class LdkNode {
             pendingCloseBalance = pendingCloseBalance.plus(sb.amountSatoshis);
         }
 
-        const totalPendingBalance =
-            pendingOpenBalance.plus(pendingCloseBalance);
-
         return {
             balance: localBalance.toString(),
             local_balance: {
@@ -360,10 +357,10 @@ export default class LdkNode {
                 sat: remoteBalance.toString(),
                 msat: remoteBalance.times(1000).toString()
             },
-            pending_open_balance: totalPendingBalance.toString(),
+            pending_open_balance: pendingOpenBalance.toString(),
             pending_open_local_balance: {
-                sat: totalPendingBalance.toString(),
-                msat: totalPendingBalance.times(1000).toString()
+                sat: pendingOpenBalance.toString(),
+                msat: pendingOpenBalance.times(1000).toString()
             }
         };
     };
@@ -686,7 +683,30 @@ export default class LdkNode {
             }
         }
 
+        // total_limbo_balance: sats in close-side limbo (cooperative closes
+        // awaiting confirmation + force-close timelocks + waiting closes).
+        // Matches lnrpc.PendingChannelsResponse.total_limbo_balance semantics
+        // so ChannelsStore can read it uniformly across backends.
+        let totalLimboBalance = new BigNumber(0);
+        for (const lb of balances.lightningBalances) {
+            if (lb.type === 'claimableOnChannelClose') continue;
+            if (activeChannelIds.has(lb.channelId)) continue;
+            totalLimboBalance = totalLimboBalance.plus(lb.amountSatoshis);
+        }
+        for (const sb of balances.pendingBalancesFromChannelClosures) {
+            if (sb.channelId && activeChannelIds.has(sb.channelId)) continue;
+            if (
+                sb.type === 'awaitingThresholdConfirmations' &&
+                sb.confirmationHeight != null &&
+                sb.confirmationHeight <= currentBlockHeight
+            ) {
+                continue;
+            }
+            totalLimboBalance = totalLimboBalance.plus(sb.amountSatoshis);
+        }
+
         return {
+            total_limbo_balance: totalLimboBalance.toString(),
             pending_open_channels: pendingOpen.map((channel) => ({
                 channel: this.formatChannel(channel)
             })),

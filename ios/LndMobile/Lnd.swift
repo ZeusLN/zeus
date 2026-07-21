@@ -85,7 +85,6 @@ open class Lnd {
     "LookupInvoice": { bytes, cb in LndmobileLookupInvoice(bytes, cb) },
     "ListPeers": { bytes, cb in LndmobileListPeers(bytes, cb) },
     "DisconnectPeer": { bytes, cb in LndmobileDisconnectPeer (bytes, cb) },
-    "SendPaymentSync": { bytes, cb in LndmobileSendPaymentSync(bytes, cb) },
     "GetRecoveryInfo": { bytes, cb in LndmobileGetRecoveryInfo(bytes, cb) },
     "RouterResetMissionControl": { bytes, cb in LndmobileRouterResetMissionControl(bytes, cb) },
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
@@ -105,6 +104,7 @@ open class Lnd {
     "VerifyChanBackup": { bytes, cb in LndmobileVerifyChanBackup(bytes, cb) },
     "GetChanInfo": { bytes, cb in LndmobileGetChanInfo(bytes, cb) },
     "AbandonChannel": { bytes, cb in LndmobileAbandonChannel(bytes, cb) },
+    "UpdateChannelPolicy": { bytes, cb in LndmobileUpdateChannelPolicy(bytes, cb) },
     "GetNetworkInfo": { bytes, cb in LndmobileGetNetworkInfo(bytes, cb) },
 
     // onchain

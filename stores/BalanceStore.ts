@@ -14,6 +14,11 @@ export default class BalanceStore {
     @observable public loadingLightningBalance = false;
     @observable public error = false;
     @observable public pendingOpenBalance: number | string | any;
+    // Sats locked up in pending close, force close, and waiting close
+    // channels — i.e. funds in close-side limbo. Mirrors pendingOpenBalance
+    // semantics but for the closing side. Populated by ChannelsStore from
+    // PendingChannelsResponse.total_limbo_balance (or the LDK-node analogue).
+    @observable public pendingCloseBalance: number | string | any;
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
     settingsStore: SettingsStore;
@@ -50,8 +55,14 @@ export default class BalanceStore {
 
     private resetLightningBalance = () => {
         this.pendingOpenBalance = 0;
+        this.pendingCloseBalance = 0;
         this.lightningBalance = 0;
         this.loadingLightningBalance = false;
+    };
+
+    @action
+    public setPendingCloseBalance = (value: number | string) => {
+        this.pendingCloseBalance = Number(value || 0);
     };
 
     @action
