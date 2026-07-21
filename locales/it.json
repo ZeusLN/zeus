@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Abbandona canale",
     "views.Tools.developerTools.abandonChannel.message": "Vuoi davvero abbandonare questo canale? Il canale verrà rimosso dal database e potresti perdere i fondi se non li hai ancora recuperati.",
     "views.Tools.developerTools.abandonChannel.confirm": "Abbandono",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "Esportazione / Importazione di Configurazioni del portafoglio",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "Le configurazioni del portafoglio esportate si trovano in File > Download.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "Le configurazioni del portafoglio esportate possono essere trovate nell'app File nella cartella ZEUS",
