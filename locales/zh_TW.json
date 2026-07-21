@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Abandon Channel",
     "views.Tools.developerTools.abandonChannel.message": "Are you sure you want to abandon this channel? The channel will be removed from the database and you may lose funds if you haven't already recovered them.",
     "views.Tools.developerTools.abandonChannel.confirm": "Abandon",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "匯出/匯入錢包設定",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "錢包設定檔在匯出後可以在「檔案」>「下載」中找到。",
     "views.Tools.nodeConfigExportImport.explaineriOS": "錢包設定檔在匯出後可以在「檔案」應用程式裡的「ZEUS」檔案夾中找到。",
