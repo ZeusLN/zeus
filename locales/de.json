@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Kanal verwerfen",
     "views.Tools.developerTools.abandonChannel.message": "Möchtest du diesen Kanal wirklich verwerfen? Der Kanal wird aus der Datenbank entfernt und du könntest Guthaben verlieren, falls du es nicht bereits wiederhergestellt hast.",
     "views.Tools.developerTools.abandonChannel.confirm": "Verwerfen",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "Wallet-Konfigurationen exportieren/importieren",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "Exportierte Wallet-Konfigurationen befinden sich in Dateien > Downloads.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "Exportierte Wallet-Konfigurationen befinden sich in der Dateien-App im Ordner ZEUS",
