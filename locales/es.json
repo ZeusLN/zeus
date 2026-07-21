@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Abandonar el canal",
     "views.Tools.developerTools.abandonChannel.message": "¿Seguro que quieres abandonar este canal? Se eliminará de la base de datos y podrías perder tus fondos si aún no los has recuperado.",
     "views.Tools.developerTools.abandonChannel.confirm": "Abandonar",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "Configuraciones de exportación/importación de billetera",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "Las configuraciones de billetera exportadas se pueden encontrar en Archivos > Descargas.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "Las configuraciones de billetera exportadas se pueden encontrar en la aplicación Archivos, en la carpeta ZEUS",
