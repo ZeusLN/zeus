@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "채널 포기",
     "views.Tools.developerTools.abandonChannel.message": "이 채널을 정말로 포기하시겠습니까? 데이터베이스에서 채널이 삭제되며, 이미 자금을 복구하지 않았다면 자금을 잃을 수 있습니다.",
     "views.Tools.developerTools.abandonChannel.confirm": "포기",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "지갑 설정 내보내기/가져오기",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "내보낸 지갑 설정은 '파일 > 다운로드'에서 확인할 수 있습니다.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "내보낸 지갑 설정은 Files 앱의 ZEUS 폴더에서 확인할 수 있습니다.",

@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "放弃通道",
     "views.Tools.developerTools.abandonChannel.message": "您确定要放弃此通道吗？该通道将从数据库中移除，如果您尚未恢复资金，则可能会面临资金损失。",
     "views.Tools.developerTools.abandonChannel.confirm": "放弃",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "导出/导入钱包配置",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "导出的钱包配置可以在“文件 > 下载”中找到。",
     "views.Tools.nodeConfigExportImport.explaineriOS": "导出的钱包配置可在“文件”应用程序里的 ZEUS 文件夹中找到。",
