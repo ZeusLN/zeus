@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Abandonare Canal",
     "views.Tools.developerTools.abandonChannel.message": "Sigur vrei să abandonezi acest canal? Canalul va fi eliminat din baza de date și este posibil să pierzi fonduri dacă nu le-ai recuperat deja.",
     "views.Tools.developerTools.abandonChannel.confirm": "Abandonare",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "Export / import configurații de  portofel",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "Configurațiile portofelului exportate pot fi găsite în Fișiere > Descărcări.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "Configurațiile portofelului exportate pot fi găsite în aplicația Fișiere, în folderul ZEUS",
