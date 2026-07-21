@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Opustit kanál",
     "views.Tools.developerTools.abandonChannel.message": "Opravdu chcete tento kanál opustit? Kanál bude odstraněn z databáze a může se stát, že přijdete o své prostředky, pokud jste je již nezískali zpět.",
     "views.Tools.developerTools.abandonChannel.confirm": "Opustit",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Globální (všechny kanály)",
     "views.Tools.nodeConfigExportImport.title": "Exportovat/Importovat konfigurace peněženky",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "Exportované konfigurace peněženky najdete ve složce Soubory > Stažené",
     "views.Tools.nodeConfigExportImport.explaineriOS": "Exportované konfigurace peněženky najdete pomocí aplikace Soubory ve složce ZEUS",
