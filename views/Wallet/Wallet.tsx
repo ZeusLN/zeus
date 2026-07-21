@@ -4,6 +4,7 @@ import {
     AppState,
     AppStateStatus,
     BackHandler,
+    EmitterSubscription,
     Linking,
     NativeEventSubscription,
     PanResponder,
@@ -187,8 +188,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private panResponder: PanResponderInstance;
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
+    private linkingSubscription: EmitterSubscription | undefined;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
     private _navigating = false;
+    // Set once this instance replaces itself with the startup wallet
+    // selection screen; late focus/AppState triggers must not connect to
+    // the previously selected wallet or consume the initial deep link
+    private _replacedForWalletSelection = false;
 
     constructor(props: WalletProps) {
         super(props);
@@ -334,6 +340,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props.navigation.removeListener('focus', this.handleFocus);
         this.handleAppStateChangeSubscription?.remove();
         this.backPressSubscription?.remove();
+        this.linkingSubscription?.remove();
         if (this.startupTimeoutId) {
             clearTimeout(this.startupTimeoutId);
             this.startupTimeoutId = undefined;
@@ -377,13 +384,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     startListeners() {
-        Linking.addEventListener('url', this.handleOpenURL);
+        this.linkingSubscription?.remove();
+        this.linkingSubscription = Linking.addEventListener(
+            'url',
+            this.handleOpenURL
+        );
     }
 
     async getSettingsAndNavigate(
         explicitShareIntentData?: any,
         transientRetryCount = 0
     ) {
+        if (this._replacedForWalletSelection) return;
+
         try {
             this.setState({ loading: true });
             const { SettingsStore, navigation } = this.props;
@@ -473,6 +486,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         this.setState({ unlocked: true });
                     }
                     // Skip wallet activation by navigating directly to Wallets screen
+                    this._replacedForWalletSelection = true;
                     navigation.replace('Wallets', {
                         fromStartup: true,
                         shareIntentData
@@ -1299,14 +1313,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 );
             }
         }
-        // only navigate to initial url after connection and main calls are made
-        if (
-            this.state.initialLoad &&
-            !(
-                SettingsStore.settings.selectNodeOnStartup &&
-                SettingsStore.initialStart
-            )
-        ) {
+        // only navigate to initial url after connection and main calls are
+        // made. No selectNodeOnStartup check is needed here: an instance
+        // that deferred to the startup wallet selection screen never reaches
+        // fetchData (_replacedForWalletSelection), and LinkingUtils only
+        // handles a given initial URL once
+        if (this.state.initialLoad) {
             this.setState({
                 initialLoad: false
             });
