@@ -997,6 +997,7 @@
     "views.Tools.developerTools.abandonChannel.title": "Abandonar o canal",
     "views.Tools.developerTools.abandonChannel.message": "Tem certeza de que deseja abandonar este canal? O canal será removido do banco de dados e você poderá perder fundos caso ainda não os tenha recuperado.",
     "views.Tools.developerTools.abandonChannel.confirm": "Abandonar",
+    "views.Tools.developerTools.updateChannelPolicy.global": "Global (all channels)",
     "views.Tools.nodeConfigExportImport.title": "Exportar/Importar Configurações de Carteira",
     "views.Tools.nodeConfigExportImport.explainerAndroid": "As configurações de carteira exportadas podem ser encontradas em Arquivos > Downloads.",
     "views.Tools.nodeConfigExportImport.explaineriOS": "As configurações de carteira exportadas podem ser encontradas no aplicativo Arquivos na pasta ZEUS",
