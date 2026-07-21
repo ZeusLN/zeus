@@ -457,9 +457,12 @@ export default class InvoicesStore {
                         );
                         jit_bolt11 = response as string;
                     } catch (e: any) {
-                        // Clear error state so the unwrapped invoice
-                        // can be displayed without a stale error banner
+                        // Surface the LSP's rejection as a dismissable
+                        // warning, clearing the error state so the
+                        // unwrapped invoice can still be displayed
                         runInAction(() => {
+                            this.lspStore.flow_warning_msg =
+                                this.lspStore.flow_error_msg;
                             this.lspStore.flow_error = false;
                             this.lspStore.flow_error_msg = '';
                             this.lspStore.showLspSettings = false;

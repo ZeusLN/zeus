@@ -1827,6 +1827,12 @@ export default class Receive extends React.Component<
                             {error_msg && (
                                 <ErrorMessage message={error_msg} dismissable />
                             )}
+                            {LSPStore.flow_warning_msg && (
+                                <WarningMessage
+                                    message={LSPStore.flow_warning_msg}
+                                    dismissable
+                                />
+                            )}
 
                             {showLspSettings && (
                                 <View style={{ margin: 10 }}>

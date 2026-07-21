@@ -43,6 +43,7 @@ export default class LSPStore {
     @observable public error_msg: string = '';
     @observable public flow_error: boolean = false;
     @observable public flow_error_msg: string = '';
+    @observable public flow_warning_msg: string = '';
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
@@ -124,6 +125,7 @@ export default class LSPStore {
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
+        this.flow_warning_msg = '';
         this.showLspSettings = false;
     };
 
@@ -133,6 +135,7 @@ export default class LSPStore {
         this.feeId = undefined;
         this.flow_error = false;
         this.flow_error_msg = '';
+        this.flow_warning_msg = '';
         this.showLspSettings = false;
     };
 
@@ -463,6 +466,7 @@ export default class LSPStore {
     public getZeroConfInvoice = (bolt11: string) => {
         this.flow_error = false;
         this.flow_error_msg = '';
+        this.flow_warning_msg = '';
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
