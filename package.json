@@ -98,7 +98,7 @@
     "long": "5.2.3",
     "lottie-react-native": "7.3.4",
     "message-port-polyfill": "0.2.0",
-    "mobx": "5.15.3",
+    "mobx": "5.15.7",
     "mobx-react": "6.1.4",
     "moment": "2.29.4",
     "nostr-tools": "1.16.0",
