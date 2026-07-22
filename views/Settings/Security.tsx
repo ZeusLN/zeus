@@ -9,7 +9,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { Settings } from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
@@ -27,14 +27,24 @@ type SecurityItem =
     | { translateKey: string; screen: string }
     | { translateKey: string; action: string };
 
+interface SecurityState {
+    scramblePin: boolean;
+    loginBackground: boolean;
+    displaySecurityItems: SecurityItem[];
+    pinExists: boolean;
+    passphraseExists: boolean;
+    supportedBiometryType: BiometryType | undefined;
+    isBiometryEnabled: boolean | undefined;
+}
+
 // Build list rows from in-memory settings so first paint matches other
 // settings screens (no empty → populated flash after async load).
-const buildSecurityItems = (settings: {
-    passphrase?: string;
-    pin?: string;
-    duressPassphrase?: string;
-    duressPin?: string;
-}): SecurityItem[] => {
+const buildSecurityItems = (
+    settings: Pick<
+        Settings,
+        'passphrase' | 'pin' | 'duressPassphrase' | 'duressPin'
+    >
+): SecurityItem[] => {
     // Three cases:
     // 1) If no passphrase or pin is set, allow user to set passphrase or pin
     // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
@@ -52,7 +62,7 @@ const buildSecurityItems = (settings: {
         ];
     }
     if (settings.passphrase) {
-        return [
+        const items: SecurityItem[] = [
             {
                 translateKey: 'views.Settings.ChangePassword.title',
                 screen: 'SetPassword'
@@ -66,55 +76,59 @@ const buildSecurityItems = (settings: {
                     ? 'views.Settings.ChangeDuressPassword.title'
                     : 'views.Settings.SetDuressPassword.title',
                 screen: 'SetDuressPassword'
-            },
-            ...(settings.duressPassphrase
-                ? [
-                      {
-                          translateKey:
-                              'views.Settings.SetDuressPassword.deletePassword',
-                          action: 'DeleteDuressPassword'
-                      } as SecurityItem
-                  ]
-                : [])
-        ];
-    }
-    if (settings.pin) {
-        const items: SecurityItem[] = [
-            {
-                translateKey: 'views.Settings.ChangePin.title',
-                screen: 'SetPin'
-            },
-            {
-                translateKey: 'views.Settings.Security.deletePIN',
-                action: 'DeletePin'
-            },
-            {
-                translateKey: settings.duressPin
-                    ? 'views.Settings.ChangeDuressPin.title'
-                    : 'views.Settings.SetDuressPin.title',
-                screen: 'SetDuressPin'
             }
         ];
-        if (settings.duressPin) {
+        if (settings.duressPassphrase) {
             items.push({
-                translateKey: 'views.Settings.Security.deleteDuressPIN',
-                action: 'DeleteDuressPin'
+                translateKey: 'views.Settings.SetDuressPassword.deletePassword',
+                action: 'DeleteDuressPassword'
             });
         }
         return items;
     }
-    return [];
+    // Remaining case: pin is set (branch 1 handled neither; branch 2 handled passphrase)
+    const items: SecurityItem[] = [
+        {
+            translateKey: 'views.Settings.ChangePin.title',
+            screen: 'SetPin'
+        },
+        {
+            translateKey: 'views.Settings.Security.deletePIN',
+            action: 'DeletePin'
+        },
+        {
+            translateKey: settings.duressPin
+                ? 'views.Settings.ChangeDuressPin.title'
+                : 'views.Settings.SetDuressPin.title',
+            screen: 'SetDuressPin'
+        }
+    ];
+    if (settings.duressPin) {
+        items.push({
+            translateKey: 'views.Settings.Security.deleteDuressPIN',
+            action: 'DeleteDuressPin'
+        });
+    }
+    return items;
 };
 
-interface SecurityState {
-    scramblePin: boolean;
-    loginBackground: boolean;
-    displaySecurityItems: SecurityItem[];
-    pinExists: boolean;
-    passphraseExists: boolean;
-    supportedBiometryType: BiometryType | undefined;
-    isBiometryEnabled: boolean | undefined;
-}
+const deriveStateFromSettings = (
+    settings: Settings,
+    biometrics?: {
+        isBiometryEnabled: boolean;
+        supportedBiometryType: BiometryType | undefined;
+    }
+): SecurityState => ({
+    scramblePin: settings.scramblePin ?? true,
+    loginBackground: settings.loginBackground ?? false,
+    displaySecurityItems: buildSecurityItems(settings),
+    pinExists: !!settings.pin,
+    passphraseExists: !!settings.passphrase,
+    supportedBiometryType:
+        biometrics?.supportedBiometryType ?? settings.supportedBiometryType,
+    isBiometryEnabled:
+        biometrics?.isBiometryEnabled ?? settings.isBiometryEnabled
+});
 
 @inject('SettingsStore', 'ModalStore')
 @observer
@@ -124,16 +138,7 @@ export default class Security extends React.Component<
 > {
     constructor(props: SecurityProps) {
         super(props);
-        const settings = props.SettingsStore.settings || {};
-        this.state = {
-            scramblePin: settings.scramblePin ?? true,
-            loginBackground: settings.loginBackground ?? false,
-            displaySecurityItems: buildSecurityItems(settings),
-            pinExists: !!settings.pin,
-            passphraseExists: !!settings.passphrase,
-            supportedBiometryType: settings.supportedBiometryType,
-            isBiometryEnabled: settings.isBiometryEnabled
-        };
+        this.state = deriveStateFromSettings(props.SettingsStore.settings);
     }
 
     componentDidMount() {
@@ -146,23 +151,23 @@ export default class Security extends React.Component<
     }
 
     checkSettings = async () => {
-        const { SettingsStore, route } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const biometricsStatus = await SettingsStore.checkBiometricsStatus();
         const settings = await SettingsStore.getSettings();
 
-        this.setState({
-            scramblePin: settings.scramblePin ?? true,
-            loginBackground: settings.loginBackground ?? false,
-            isBiometryEnabled: biometricsStatus.isBiometryEnabled,
-            supportedBiometryType: biometricsStatus.supportedBiometryType,
-            pinExists: !!settings.pin,
-            passphraseExists: !!settings.passphrase,
-            displaySecurityItems: buildSecurityItems(settings)
-        });
+        this.setState(
+            deriveStateFromSettings(settings, {
+                isBiometryEnabled: biometricsStatus.isBiometryEnabled,
+                supportedBiometryType: biometricsStatus.supportedBiometryType
+            })
+        );
 
         // If user tried to enable biometrics, but was forced to first set up pin or password,
         // call handleBiometricsSwitchChange again
         if (route.params?.enableBiometrics) {
+            // Clear before prompting so a later focus (e.g. after Lockscreen)
+            // does not re-trigger the OS biometric prompt
+            navigation.setParams({ enableBiometrics: undefined });
             this.handleBiometricsSwitchChange(true);
         }
     };
