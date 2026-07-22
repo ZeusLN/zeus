@@ -688,12 +688,14 @@ export default class ModalBox extends React.PureComponent<
             <View
                 importantForAccessibility="yes"
                 accessibilityViewIsModal={true}
-                style={[styles.transparent, styles.absolute]}
-                pointerEvents={'box-none'}
+                style={[
+                    styles.transparent,
+                    styles.absolute,
+                    { pointerEvents: 'box-none' }
+                ]}
             >
                 <View
-                    style={{ flex: 1 }}
-                    pointerEvents={'box-none'}
+                    style={{ flex: 1, pointerEvents: 'box-none' }}
                     onLayout={this.onContainerLayout}
                 >
                     {visible && this.renderBackdrop()}
