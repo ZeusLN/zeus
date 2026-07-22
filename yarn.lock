@@ -9290,13 +9290,6 @@ react-native-screens@4.19.0:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
-react-native-securerandom@1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/react-native-securerandom/-/react-native-securerandom-1.0.1.tgz#dc983cce980c80d1af62406e2ef2917ed0ada55f"
-  integrity sha512-ibuDnd3xi17HyD5CkilOXGPFpS9Z1oifjyHFwUl8NMzcQcpruM0ZX8ytr3A4rCeAsaBHjz69r78Xgd6vUswv1Q==
-  dependencies:
-    base64-js "*"
-
 react-native-share@12.2.1:
   version "12.2.1"
   resolved "https://registry.yarnpkg.com/react-native-share/-/react-native-share-12.2.1.tgz#ee19e2c835099a2f4b627a68e62d2019658ceb05"
