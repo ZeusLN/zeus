@@ -183,7 +183,7 @@
     "@typescript-eslint/parser": "8.59.3",
     "babel-jest": "29.7.0",
     "compressing": "1.10.5",
-    "concurrently": "9.1.2",
+    "concurrently": "10.0.3",
     "eslint": "9.39.4",
     "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-import": "2.32.0",
