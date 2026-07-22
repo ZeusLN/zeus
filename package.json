@@ -145,7 +145,7 @@
     "react-native-view-shot": "5.1.0",
     "react-native-vision-camera": "4.7.3",
     "react-native-worklets": "0.8.3",
-    "readable-stream": "1.0.33",
+    "readable-stream": "4.7.0",
     "scrypt-js": "3.0.1",
     "sha.js": "2.4.12",
     "socket.io-client": "4.8.3",
