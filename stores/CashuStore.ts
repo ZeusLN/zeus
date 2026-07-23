@@ -293,6 +293,7 @@ export default class CashuStore {
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
+    private connectivityCallbackRegistered: boolean = false;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -1723,7 +1724,17 @@ export default class CashuStore {
     // =========================================================================
 
     public startConnectivityMonitoring = () => {
-        connectivityStore.start();
+        // ConnectivityStore.start() is owned by Wallet.fetchData() — it runs
+        // before any wallet implementation init so isOffline is reliable
+        // before we hit network-bound code paths. Here we only register the
+        // Cashu-specific reconnect handler.
+        //
+        // initializeWallets can run multiple times in a session (handleFocus,
+        // handleAppStateChange) so guard against re-registering the callback;
+        // duplicates would trigger redundant sweeps and pending checks on
+        // every reconnect.
+        if (this.connectivityCallbackRegistered) return;
+        this.connectivityCallbackRegistered = true;
         connectivityStore.onReconnect(() => {
             // delay briefly to let the network stabilize
             if (!this.isSweeping) {
@@ -1733,10 +1744,6 @@ export default class CashuStore {
                 }, 3000);
             }
         });
-    };
-
-    public stopConnectivityMonitoring = () => {
-        connectivityStore.stop();
     };
 
     @action
@@ -1766,7 +1773,6 @@ export default class CashuStore {
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
-        this.stopConnectivityMonitoring();
     };
 
     @action
@@ -3261,8 +3267,10 @@ export default class CashuStore {
                     : [];
 
                 // If no mints in local storage (e.g. fresh recovery),
-                // try to restore mint list from Nostr backup
-                if (localMintUrls.length === 0) {
+                // try to restore mint list from Nostr backup. Skip when
+                // offline — every relay would otherwise time out and add
+                // several seconds to startup.
+                if (localMintUrls.length === 0 && !this.isOffline) {
                     try {
                         const nostrMints = await this.nostrRestoreMints();
                         if (nostrMints && nostrMints.length > 0) {
