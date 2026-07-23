@@ -1825,6 +1825,7 @@
     "pos.views.Order.totalFiat": "Total (fiat)",
     "pos.views.Order.totalBitcoin": "Total (Bitcoin)",
     "pos.views.Order.total": "Total",
+    "pos.views.Order.requestPayment": "Request payment",
     "pos.views.Order.paymentType": "Payment type",
     "pos.views.Order.printReceipt": "Print Receipt",
     "pos.views.Order.printInvoice": "Print Invoice",
