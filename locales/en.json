@@ -1,5 +1,6 @@
 {
     "general.send": "Send",
+    "general.reserve": "Reserve",
     "general.tor": "Tor",
     "general.torEnabled": "Tor enabled",
     "general.receive": "Receive",
