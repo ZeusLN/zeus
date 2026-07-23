@@ -26,7 +26,12 @@ function Help(props: HelpProps) {
         />
     );
 
-    const HELP_ITEMS = [
+    const HELP_ITEMS: Array<{
+        label: string;
+        url?: string;
+        email?: string;
+        path?: string;
+    }> = [
         {
             label: localeString('views.Settings.Help.docs').replace(
                 'Zeus',
@@ -39,8 +44,14 @@ function Help(props: HelpProps) {
             url: 'https://github.com/ZeusLN/zeus/issues'
         },
         {
+            label: localeString('views.Settings.Help.diagnostics'),
+            path: 'Diagnostics'
+        },
+        {
+            // Email support routes through Diagnostics so the user is prompted
+            // to attach version/logs/settings before composing the email.
             label: localeString('views.Settings.Help.email'),
-            email: 'support@zeusln.com'
+            path: 'Diagnostics'
         }
     ];
 
@@ -66,6 +77,7 @@ function Help(props: HelpProps) {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => {
+                            if (item.path) navigation.navigate(item.path);
                             if (item.email) {
                                 UrlUtils.goToEmailAddress(item.email);
                             }
