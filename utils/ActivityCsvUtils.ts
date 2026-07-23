@@ -30,6 +30,20 @@ export const CSV_KEYS = {
     ]
 };
 
+const sanitizeCsvCell = (value: unknown): string => {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'number') return String(value);
+
+    const stringValue = String(value);
+    const escapedValue = stringValue.replace(/"/g, '""');
+
+    if (/^\s*[=+\-@]/.test(escapedValue)) {
+        return `'${escapedValue}`;
+    }
+
+    return escapedValue;
+};
+
 // Generates a formatted timestamp string for file naming.
 export const getFormattedDateTime = (): string => {
     const now = new Date();
@@ -54,7 +68,7 @@ export const convertActivityToCsv = async (
         const rows = data
             .map((item) =>
                 keysToInclude
-                    .map((field) => `"${item[field.value] || ''}"`)
+                    .map((field) => `"${sanitizeCsvCell(item[field.value])}"`)
                     .join(',')
             )
             .join('\n');
