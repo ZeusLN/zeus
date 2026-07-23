@@ -21,9 +21,11 @@ import * as nip44 from '@nostr/tools/nip44';
 // at a Nostr pubkey + relay + offer id, optionally with pricing hints.
 
 const NOFFER_PREFIX = 'noffer';
+const NDEBIT_PREFIX = 'ndebit';
 const BECH32_MAX_SIZE = 5000;
 
 export const CLINK_KIND = 21001;
+export const CLINK_DEBIT_KIND = 21002;
 export const CLINK_VERSION = '1';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -542,6 +544,289 @@ export const requestInvoiceFromNoffer = async (
     throw lastErr ?? new Error('CLINK request failed on all relays');
 };
 
+// ─── CLINK Debits (kind 21002) ────────────────────────────────────────────────
+// Spec: https://github.com/shocknet/clink (specs/clink-debits.md)
+// `ndebit1...` bech32 TLV pointer: pubkey(0) + relay(1) + pointer?(2) + k1?(3)
+
+export interface NdebitData {
+    pubkey: string; // hex32 — node service that receives kind-21002
+    relay: string;
+    pointer?: string; // TLV 2 — opaque pointer_id
+    k1?: string; // TLV 3 — session identifier (hex64) for session ndebits
+}
+
+export interface NdebitSuccess {
+    res: 'ok';
+    preimage?: string;
+}
+
+export interface NdebitFailure {
+    res: 'GFY';
+    error: string;
+    code: number;
+}
+
+export type NdebitResponse = NdebitSuccess | NdebitFailure;
+
+export const isNdebitSuccess = (r: NdebitResponse): r is NdebitSuccess =>
+    r.res === 'ok';
+
+/**
+ * Decode an `ndebit1…` bech32 TLV string into structured data.
+ */
+export const decodeNdebit = (input: string): NdebitData => {
+    const lower = input.toLowerCase();
+    const { prefix, words } = bech32.decode(
+        lower as `${string}1${string}`,
+        BECH32_MAX_SIZE
+    );
+    if (prefix !== NDEBIT_PREFIX) {
+        throw new Error(`expected ndebit prefix, got '${prefix}'`);
+    }
+    const data = new Uint8Array(bech32.fromWords(words));
+    const tlv = parseTLV(data);
+
+    if (!tlv[0]?.[0] || tlv[0][0].length !== 32) {
+        throw new Error('ndebit missing or invalid pubkey (TLV 0)');
+    }
+    if (!tlv[1]?.[0]) {
+        throw new Error('ndebit missing relay URL (TLV 1)');
+    }
+
+    const pubkey = bytesToHex(tlv[0][0]);
+    const relay = utf8Decoder.decode(tlv[1][0]);
+    const pointer = tlv[2]?.[0] ? utf8Decoder.decode(tlv[2][0]) : undefined;
+    // TLV 3 is 32 raw bytes → hex64 k1 string
+    const k1 = tlv[3]?.[0] ? bytesToHex(tlv[3][0]) : undefined;
+
+    return { pubkey, relay, pointer, k1 };
+};
+
+/**
+ * Send a CLINK Debit payment request (kind 21002).
+ * The wallet generates a bolt11 invoice for `amountSats` and sends it to the
+ * node service identified by `ndebit`. The node service pays it and returns
+ * the preimage (or a GFY failure).
+ */
+export const requestPaymentFromNdebit = async (
+    ndebit: NdebitData,
+    invoice: string,
+    amountSats?: number,
+    options: {
+        extraRelays?: string[];
+        timeoutMs?: number;
+    } = {}
+): Promise<NdebitResponse> => {
+    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const relays = [ndebit.relay, ...(options.extraRelays ?? [])].filter(
+        (r, i, arr) => !!r && arr.indexOf(r) === i
+    );
+    if (relays.length === 0) {
+        throw new ClinkRequestError('NO_RELAYS');
+    }
+    const onion = relays.find((r) => /\.onion(:\d+)?(\/|$)/i.test(r));
+    if (onion) {
+        throw new ClinkRequestError('ONION_NOT_SUPPORTED', onion);
+    }
+
+    // Build payment request payload
+    const payload: Record<string, any> = { bolt11: invoice };
+    if (ndebit.pointer) payload.pointer = ndebit.pointer;
+    if (amountSats !== undefined) payload.amount_sats = amountSats;
+    if (ndebit.k1) payload.k1 = ndebit.k1;
+
+    // Ephemeral key — don't link wallet identity to debit requests
+    const payerSkHex = generatePrivateKey();
+    const payerPkHex = getPublicKey(payerSkHex);
+    const conversationKey = nip44.getConversationKey(
+        hexToBytes(payerSkHex),
+        ndebit.pubkey
+    );
+    const encryptedContent = nip44.encrypt(
+        JSON.stringify(payload),
+        conversationKey
+    );
+
+    const event = finishEvent(
+        {
+            kind: CLINK_DEBIT_KIND,
+            content: encryptedContent,
+            tags: [
+                ['p', ndebit.pubkey],
+                ['clink_version', CLINK_VERSION]
+            ],
+            created_at: Math.floor(Date.now() / 1000)
+        },
+        payerSkHex
+    );
+
+    let lastErr: unknown;
+    for (const relayUrl of relays) {
+        try {
+            return await sendAndAwaitDebitResponse({
+                relayUrl,
+                event,
+                payerPkHex,
+                recipientPkHex: ndebit.pubkey,
+                conversationKey,
+                timeoutMs
+            });
+        } catch (e) {
+            lastErr = e;
+            console.warn(`CLINK Debit request via ${relayUrl} failed:`, e);
+        }
+    }
+    throw lastErr ?? new Error('CLINK Debit request failed on all relays');
+};
+
+/**
+ * Low-level: publish a kind-21002 event and await the matching response.
+ */
+const sendAndAwaitDebitResponse = (opts: {
+    relayUrl: string;
+    event: any;
+    payerPkHex: string;
+    recipientPkHex: string;
+    conversationKey: Uint8Array;
+    timeoutMs: number;
+}): Promise<NdebitResponse> => {
+    const {
+        relayUrl,
+        event,
+        payerPkHex,
+        recipientPkHex,
+        conversationKey,
+        timeoutMs
+    } = opts;
+    const log = (msg: string, extra?: any) =>
+        extra !== undefined
+            ? console.log(`[CLINK-DEBIT ${relayUrl}] ${msg}`, extra)
+            : console.log(`[CLINK-DEBIT ${relayUrl}] ${msg}`);
+
+    return new Promise((resolve, reject) => {
+        const relay = relayInit(relayUrl);
+        let resolved = false;
+        let sub: any;
+        const cleanup = () => {
+            try {
+                sub?.unsub();
+            } catch {}
+            try {
+                relay.close();
+            } catch {}
+        };
+        const timeout = setTimeout(() => {
+            if (resolved) return;
+            resolved = true;
+            log(`request timed out after ${timeoutMs}ms`);
+            cleanup();
+            reject(new ClinkRequestError('TIMEOUT'));
+        }, timeoutMs);
+
+        relay.on('notice', (msg: string) => log('relay NOTICE:', msg));
+        relay.on('error', () => log('relay error event fired'));
+
+        relay
+            .connect()
+            .then(() => {
+                log('connected');
+                sub = relay.sub([
+                    {
+                        kinds: [CLINK_DEBIT_KIND],
+                        '#p': [payerPkHex],
+                        authors: [recipientPkHex],
+                        '#e': [event.id],
+                        since: Math.floor(Date.now() / 1000) - 60
+                    }
+                ]);
+                log('subscribed', {
+                    kind: CLINK_DEBIT_KIND,
+                    p: payerPkHex,
+                    author: recipientPkHex
+                });
+
+                sub.on('eose', () => log('relay sent EOSE'));
+
+                sub.on('event', (ev: any) => {
+                    if (resolved) return;
+                    // Basic structural check
+                    if (
+                        ev.kind !== CLINK_DEBIT_KIND ||
+                        ev.pubkey !== recipientPkHex
+                    )
+                        return;
+                    const tags: any[] = Array.isArray(ev.tags) ? ev.tags : [];
+                    const refsRequest = tags.some(
+                        (t: any) =>
+                            Array.isArray(t) &&
+                            t[0] === 'e' &&
+                            t[1] === event.id
+                    );
+                    if (!refsRequest) return;
+
+                    let valid = false;
+                    try {
+                        valid = verifySignature(ev);
+                    } catch {}
+                    if (!valid) {
+                        log('bad signature, skipping');
+                        return;
+                    }
+
+                    let plaintext: string;
+                    try {
+                        plaintext = nip44.decrypt(ev.content, conversationKey);
+                    } catch (e) {
+                        log('nip44 decrypt failed:', e);
+                        return;
+                    }
+                    let parsed: NdebitResponse;
+                    try {
+                        parsed = JSON.parse(plaintext);
+                    } catch {
+                        log('plaintext not JSON, skipping');
+                        return;
+                    }
+                    log('debit response accepted', parsed);
+                    resolved = true;
+                    clearTimeout(timeout);
+                    cleanup();
+                    resolve(parsed);
+                });
+
+                relay.publish(event).then(
+                    () => log('publish OK'),
+                    (err: any) => {
+                        log(`publish REJECTED: ${err?.message ?? err}`);
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+                        cleanup();
+                        reject(
+                            new ClinkRequestError(
+                                'RELAY_REJECTED_PUBLISH',
+                                err?.message ?? String(err)
+                            )
+                        );
+                    }
+                );
+            })
+            .catch((e: any) => {
+                log('connect failed:', e);
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(timeout);
+                cleanup();
+                reject(
+                    new ClinkRequestError(
+                        'RELAY_CONNECT_FAILED',
+                        e?.message ?? (e ? String(e) : undefined)
+                    )
+                );
+            });
+    });
+};
+
 const ClinkUtils = {
     decodeNoffer,
     buildClinkRequestPayload,
@@ -549,10 +834,14 @@ const ClinkUtils = {
     requestInvoiceFromNoffer,
     isNofferSuccess,
     verifyBolt11MatchesOffer,
+    decodeNdebit,
+    requestPaymentFromNdebit,
+    isNdebitSuccess,
     ClinkRequestError,
     NofferPriceType,
     NofferErrorCode,
     CLINK_KIND,
+    CLINK_DEBIT_KIND,
     CLINK_VERSION
 };
 

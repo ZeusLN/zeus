@@ -220,7 +220,7 @@ const handleAnything = async (
     const network = getNetworkString();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    let { value, satAmount, lightning, offer, clinkNoffer }: any =
+    let { value, satAmount, lightning, offer, clinkNoffer, clinkNdebit }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
@@ -269,6 +269,12 @@ const handleAnything = async (
                 clinkNoffer
             }
         ];
+    } else if (clinkNdebit) {
+        if (isClipboardValue) return true;
+        if (!AddressUtils.isValidNdebit(clinkNdebit)) {
+            throw new Error(localeString('utils.handleAnything.invalidNdebit'));
+        }
+        return ['ClinkDebitPay', { ndebit: clinkNdebit }];
     } else if (clinkNoffer) {
         if (isClipboardValue) return true;
         if (!AddressUtils.isValidNoffer(clinkNoffer)) {
@@ -398,6 +404,9 @@ const handleAnything = async (
                 isValid: true
             }
         ];
+    } else if (!hasAt && AddressUtils.isValidNdebit(value)) {
+        if (isClipboardValue) return true;
+        return ['ClinkDebitPay', { ndebit: value }];
     } else if (!hasAt && AddressUtils.isValidNoffer(value)) {
         if (isClipboardValue) return true;
         return ['ClinkPay', { noffer: value }];

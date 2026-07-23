@@ -70,6 +70,7 @@ import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import LnurlPay from './views/LnurlPay/LnurlPay';
 import ClinkPay from './views/ClinkPay/ClinkPay';
+import ClinkDebitPay from './views/ClinkDebitPay/ClinkDebitPay';
 import LnurlChannel from './views/LnurlChannel';
 import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
@@ -820,6 +821,12 @@ export default class App extends React.PureComponent {
                                                                 name="ClinkPay" // @ts-ignore:next-line
                                                                 component={
                                                                     ClinkPay
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="ClinkDebitPay" // @ts-ignore:next-line
+                                                                component={
+                                                                    ClinkDebitPay
                                                                 }
                                                             />
                                                             <Stack.Screen

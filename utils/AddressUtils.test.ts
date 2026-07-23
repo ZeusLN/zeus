@@ -208,6 +208,36 @@ describe('AddressUtils', () => {
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
             });
         });
+
+        it('parses ndebit from BIP-21 URI query param', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?ndebit=ndebit1qvqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23adlkqa4zqm6p23nfr'
+                )
+            ).toMatchObject({
+                value: '',
+                clinkNdebit:
+                    'ndebit1qvqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23adlkqa4zqm6p23nfr'
+            });
+        });
+    });
+
+    describe('isValidNdebit', () => {
+        it('accepts well-formed ndebit strings (regex check only)', () => {
+            expect(
+                AddressUtils.isValidNdebit(
+                    'ndebit1qvqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23adlkqa4zqm6p23nfr'
+                )
+            ).toBe(true);
+        });
+        it('rejects empty input and other bech32 prefixes', () => {
+            expect(AddressUtils.isValidNdebit('')).toBe(false);
+            expect(
+                AddressUtils.isValidNdebit(
+                    'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+                )
+            ).toBe(false);
+        });
     });
 
     describe('isValidNoffer', () => {
