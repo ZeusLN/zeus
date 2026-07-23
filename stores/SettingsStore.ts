@@ -72,6 +72,8 @@ interface PrivacySettings {
     clipboard?: boolean;
     lurkerMode?: boolean;
     enableMempoolRates?: boolean;
+    mempoolInstance?: string;
+    customMempoolInstance?: string;
     // Stealth Mode (Android only)
     stealthMode?: boolean;
     stealthApp?: 'zeus' | 'calculator' | 'vpn' | 'qrscanner' | 'notepad';
@@ -272,6 +274,18 @@ export const BLOCK_EXPLORER_KEYS = [
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
+export const DEFAULT_MEMPOOL_INSTANCE = 'electrs.zeusln.com';
+
+export const MEMPOOL_INSTANCE_KEYS = [
+    { key: 'electrs.zeusln.com', value: 'electrs.zeusln.com' },
+    { key: 'mempool.space', value: 'mempool.space' },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
         value: 'Custom'
     }
 ];
@@ -1471,6 +1485,8 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true,
+            mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
+            customMempoolInstance: '',
             stealthMode: false,
             stealthApp: 'calculator',
             stealthPinLength: 5,

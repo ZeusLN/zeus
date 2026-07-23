@@ -61,14 +61,6 @@ export class WIFUtils {
 
         return { isValid: true };
     }
-
-    baseUrl(network: string) {
-        if (network === 'mainnet') {
-            return 'https://mempool.space/api';
-        } else if (network === 'testnet') {
-            return 'https://mempool.space/testnet/api';
-        }
-    }
 }
 
 const wifUtils = new WIFUtils();

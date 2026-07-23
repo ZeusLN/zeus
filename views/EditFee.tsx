@@ -22,6 +22,7 @@ import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
 import Refresh from '../assets/images/SVG/Sync.svg';
@@ -29,6 +30,7 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
+import { nodeInfoStore } from './../stores/Stores';
 
 interface EditFeeProps {
     FeeStore: FeeStore;
@@ -115,18 +117,21 @@ export default class EditFee extends React.Component<
                     rightComponent={ReloadButton()}
                     navigation={navigation}
                 />
-                <View
-                    style={{
-                        alignItems: 'center',
-                        width: '100%',
-                        paddingTop: 15,
-                        paddingBottom: 15,
-                        backgroundColor: themeColor('background'),
-                        zIndex: 1
-                    }}
-                >
-                    <MempoolSpace width={140} height={55} />
-                </View>
+                {UrlUtils.getMempoolInstanceHost(nodeInfoStore.nodeInfo) ===
+                    'mempool.space' && (
+                    <View
+                        style={{
+                            alignItems: 'center',
+                            width: '100%',
+                            paddingTop: 15,
+                            paddingBottom: 15,
+                            backgroundColor: themeColor('background'),
+                            zIndex: 1
+                        }}
+                    >
+                        <MempoolSpace width={140} height={55} />
+                    </View>
+                )}
                 <KeyboardAvoidingView
                     behavior="position"
                     keyboardVerticalOffset={keyboardVerticalOffset}
