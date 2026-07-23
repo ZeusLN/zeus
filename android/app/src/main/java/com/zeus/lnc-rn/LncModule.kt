@@ -35,25 +35,28 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun registerLocalPrivCreateCallback(namespace: String, onLocalPrivCreate: Callback) {
-     val lpccb = AndroidCallback()
-     lpccb.setCallback(onLocalPrivCreate)
+  fun registerLocalPrivCreateCallback(namespace: String, eventName: String) {
+     val lpccb = AndroidStreamingCallback()
+     lpccb.setEventName(eventName)
+     lpccb.setCallback(::sendEvent)
 
      Lndmobile.registerLocalPrivCreateCallback(namespace, lpccb)
   }
 
   @ReactMethod
-  fun registerRemoteKeyReceiveCallback(namespace: String, onRemoteKeyReceive: Callback) {
-     val rkrcb = AndroidCallback()
-     rkrcb.setCallback(onRemoteKeyReceive)
+  fun registerRemoteKeyReceiveCallback(namespace: String, eventName: String) {
+     val rkrcb = AndroidStreamingCallback()
+     rkrcb.setEventName(eventName)
+     rkrcb.setCallback(::sendEvent)
 
      Lndmobile.registerRemoteKeyReceiveCallback(namespace, rkrcb)
   }
 
   @ReactMethod
-  fun registerAuthDataCallback(namespace: String, onAuthData: Callback) {
-     val oacb = AndroidCallback()
-     oacb.setCallback(onAuthData)
+  fun registerAuthDataCallback(namespace: String, eventName: String) {
+     val oacb = AndroidStreamingCallback()
+     oacb.setEventName(eventName)
+     oacb.setCallback(::sendEvent)
 
      Lndmobile.registerAuthDataCallback(namespace, oacb)
   }
