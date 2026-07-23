@@ -473,10 +473,7 @@ export default class ChannelsStore {
             this.loading = false;
         });
 
-        if (
-            this.settingsStore.implementation === 'ldk-node' &&
-            setPendingHtlcs
-        ) {
+        if (BackendUtils.isLDKBackend() && setPendingHtlcs) {
             try {
                 const data = await BackendUtils.getPayments();
                 const pendingPayments = (data?.payments || []).filter(
@@ -1090,8 +1087,8 @@ export default class ChannelsStore {
             request?.additionalChannels &&
             request.additionalChannels?.length > 0;
 
-        // LDK Node needs the host for openChannel, other backends don't
-        if (this.settingsStore.implementation !== 'ldk-node') {
+        // LDK-based backends need the host for openChannel, other backends don't
+        if (!BackendUtils.isLDKBackend()) {
             delete request.host;
         }
         // LDK Node doesn't support announced channels - always force private
