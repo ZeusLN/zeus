@@ -223,9 +223,11 @@ import WalletSettings from './views/Onboarding/WalletSettings';
 
 import EditFee from './views/EditFee';
 
-// Embedded LND
+// Embedded LND/LDK
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
+import LdkWalletRecoverySettings from './views/Settings/LdkRecovery/LdkWalletRecoverySettings';
+import LdkRecoveryVssServer from './views/Settings/LdkRecovery/LdkRecoveryVssServer';
 import SeedQRExport from './views/Settings/SeedQRExport';
 import Sync from './views/Sync';
 import SyncRecovery from './views/SyncRecovery';
@@ -1083,6 +1085,18 @@ export default class App extends React.PureComponent {
                                                                 name="SeedRecovery" // @ts-ignore:next-line
                                                                 component={
                                                                     SeedRecovery
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LdkWalletRecoverySettings" // @ts-ignore:next-line
+                                                                component={
+                                                                    LdkWalletRecoverySettings
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LdkRecoveryVssServer" // @ts-ignore:next-line
+                                                                component={
+                                                                    LdkRecoveryVssServer
                                                                 }
                                                             />
                                                             <Stack.Screen

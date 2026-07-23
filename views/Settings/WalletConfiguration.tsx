@@ -45,6 +45,11 @@ import {
 } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
+import Accordion from '../../components/Accordion';
+import VssServerPicker, {
+    resolveVssServer,
+    isVssServerValid
+} from '../../components/VssServerPicker';
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
@@ -150,10 +155,13 @@ interface WalletConfigurationState {
     ldkPassphrase?: string;
     ldkNodeDir?: string;
     ldkNetwork?: string;
+    ldkSeedWordCount: 12 | 24;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
     ldkScorerUrl?: string;
     ldkVssServer?: string;
+    ldkVssServerSelected: string;
+    ldkVssServerCustom: string;
     ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
@@ -231,10 +239,13 @@ export default class WalletConfiguration extends React.Component<
         ldkPassphrase: '',
         ldkNodeDir: '',
         ldkNetwork: 'mainnet',
+        ldkSeedWordCount: 12,
         ldkEsploraServer: '',
         ldkRgsServer: '',
         ldkScorerUrl: '',
-        ldkVssServer: '',
+        ldkVssServer: DEFAULT_VSS_SERVER,
+        ldkVssServerSelected: DEFAULT_VSS_SERVER,
+        ldkVssServerCustom: '',
         ldkNodeInitialized: false,
         // NWC
         nostrWalletConnectUrl: '',
@@ -1033,7 +1044,7 @@ export default class WalletConfiguration extends React.Component<
         network: string
     ) => {
         const { SettingsStore, navigation } = this.props;
-        const { nickname, photo, ldkPassphrase } = this.state;
+        const { nickname, photo, ldkPassphrase, ldkVssServer } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         const node = {
@@ -1049,7 +1060,7 @@ export default class WalletConfiguration extends React.Component<
             ),
             ldkRgsServer: getDefaultRgsServer(network as SupportedNetwork),
             ldkScorerUrl: DEFAULT_SCORER_URL,
-            ldkVssServer: DEFAULT_VSS_SERVER
+            ldkVssServer: ldkVssServer || DEFAULT_VSS_SERVER
         };
 
         let nodes: any;
@@ -1081,7 +1092,9 @@ export default class WalletConfiguration extends React.Component<
             ldkEsploraServer,
             ldkRgsServer,
             ldkScorerUrl,
-            ldkMnemonic
+            ldkVssServer,
+            ldkMnemonic,
+            ldkSeedWordCount
         } = this.state;
 
         this.setState({
@@ -1125,6 +1138,7 @@ export default class WalletConfiguration extends React.Component<
             const response = await createLdkNodeWallet({
                 nodeDir: ldkNodeDir,
                 seedMnemonic: ldkMnemonic || undefined,
+                wordCount: ldkSeedWordCount,
                 passphrase: ldkPassphrase || undefined,
                 network: networkType,
                 esploraServerUrl:
@@ -1136,7 +1150,7 @@ export default class WalletConfiguration extends React.Component<
                         : ldkScorerUrl,
                 lsps1Config,
                 trustedPeers0conf: trustedPeers,
-                vssServerUrl: DEFAULT_VSS_SERVER
+                vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
             });
 
             // Node is already built — tell Wallet.tsx to skip re-init
@@ -1221,6 +1235,9 @@ export default class WalletConfiguration extends React.Component<
             // LDK Node
             ldkMnemonic,
             ldkNetwork,
+            ldkSeedWordCount,
+            ldkVssServerSelected,
+            ldkVssServerCustom,
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
@@ -1761,6 +1778,67 @@ export default class WalletConfiguration extends React.Component<
                                             }}
                                             values={EMBEDDED_NODE_NETWORK_KEYS}
                                         />
+
+                                        <Accordion
+                                            headerLayout="form"
+                                            id="ldk-advanced-settings"
+                                            scrollRef={this.scrollViewRef}
+                                            title={localeString(
+                                                'general.advancedSettings'
+                                            )}
+                                        >
+                                            <DropdownSetting
+                                                title={localeString(
+                                                    'views.Settings.WalletConfiguration.seedPhraseLength'
+                                                )}
+                                                selectedValue={ldkSeedWordCount}
+                                                onValueChange={(
+                                                    value: number
+                                                ) => {
+                                                    this.setState({
+                                                        ldkSeedWordCount:
+                                                            value as 12 | 24
+                                                    });
+                                                }}
+                                                values={[
+                                                    {
+                                                        key: localeString(
+                                                            'views.Settings.WalletConfiguration.seedPhraseLength.12'
+                                                        ),
+                                                        value: 12
+                                                    },
+                                                    {
+                                                        key: localeString(
+                                                            'views.Settings.WalletConfiguration.seedPhraseLength.24'
+                                                        ),
+                                                        value: 24
+                                                    }
+                                                ]}
+                                            />
+
+                                            <VssServerPicker
+                                                selectedValue={
+                                                    ldkVssServerSelected
+                                                }
+                                                customServer={
+                                                    ldkVssServerCustom
+                                                }
+                                                locked={loading}
+                                                onChange={(value, custom) =>
+                                                    this.setState({
+                                                        ldkVssServerSelected:
+                                                            value,
+                                                        ldkVssServerCustom:
+                                                            custom,
+                                                        ldkVssServer:
+                                                            resolveVssServer(
+                                                                value,
+                                                                custom
+                                                            )
+                                                    })
+                                                }
+                                            />
+                                        </Accordion>
                                     </View>
                                 )}
 
@@ -2771,7 +2849,13 @@ export default class WalletConfiguration extends React.Component<
                                                         );
                                                     }}
                                                     tertiary
-                                                    disabled={loading}
+                                                    disabled={
+                                                        loading ||
+                                                        !isVssServerValid(
+                                                            ldkVssServerSelected,
+                                                            ldkVssServerCustom
+                                                        )
+                                                    }
                                                 />
                                             </View>
                                             <View style={styles.button}>
@@ -2794,12 +2878,10 @@ export default class WalletConfiguration extends React.Component<
                                                     )}
                                                     onPress={() =>
                                                         navigation.navigate(
-                                                            'SeedRecovery',
+                                                            'LdkWalletRecoverySettings',
                                                             {
                                                                 network:
                                                                     ldkNetwork,
-                                                                implementation:
-                                                                    'ldk-node',
                                                                 nickname,
                                                                 photo
                                                             }

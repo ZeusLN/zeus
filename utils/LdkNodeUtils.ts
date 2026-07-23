@@ -45,6 +45,10 @@ export const ESPLORA_SERVERS_MUTINYNET: EsploraServer[] = [
 // Default VSS (Versioned Storage Service) server
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
+export const ALBY_VSS_SERVER = 'https://vss.getalbypro.com/vss';
+
+export const LDK_VSS_SERVER = 'https://rapidsync.lightningdevkit.org';
+
 // Default RGS (Rapid Gossip Sync) servers
 export const RGS_SERVERS_MAINNET: EsploraServer[] = [
     { key: 'ZEUS (rgs.zeusln.com)', value: 'https://rgs.zeusln.com/snapshot' },
@@ -243,6 +247,7 @@ async function initNode({
 export async function createLdkNodeWallet({
     nodeDir,
     seedMnemonic,
+    wordCount = 12,
     passphrase,
     network,
     esploraServerUrl,
@@ -255,6 +260,7 @@ export async function createLdkNodeWallet({
 }: {
     nodeDir: string;
     seedMnemonic?: string;
+    wordCount?: number;
     passphrase?: string;
     network: SupportedNetwork;
     esploraServerUrl?: string;
@@ -279,7 +285,7 @@ export async function createLdkNodeWallet({
     // Generate mnemonic if not provided (new wallet)
     let mnemonic = seedMnemonic;
     if (!mnemonic) {
-        mnemonic = await generateMnemonic(12);
+        mnemonic = await generateMnemonic(wordCount);
     }
 
     const { vssError } = await initNode({
