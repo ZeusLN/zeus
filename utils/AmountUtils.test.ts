@@ -5,7 +5,8 @@ import {
     getAmountFromSats,
     getFormattedAmount,
     getFeePercentage,
-    getSatAmount
+    getSatAmount,
+    normalizeNumberString
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -867,10 +868,16 @@ describe('AmountUtils', () => {
                 expect(result).toBe(1000);
             });
 
-            it('handles comma-separated input by converting to dots', () => {
+            it('treats 3 digits after comma as thousand separator', () => {
                 (unitsStore as any).units = 'sats';
                 const result = getSatAmount('1,001');
-                expect(result).toBe(1.001);
+                expect(result).toBe(1001);
+            });
+
+            it('treats comma with 1-2 digits after as decimal separator', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('1,5');
+                expect(result).toBe(1.5);
             });
         });
 
@@ -1046,6 +1053,34 @@ describe('AmountUtils', () => {
 
         it('handles very small percentages', () => {
             expect(getFeePercentage(1, 1000000)).toBe('0%');
+        });
+    });
+
+    describe('amount normalization', () => {
+        it('treats 3 digits after separator as thousand separator', () => {
+            expect(normalizeNumberString('1,234')).toBe('1234');
+            expect(normalizeNumberString('100,000')).toBe('100000');
+            expect(normalizeNumberString('1.234.567')).toBe('1234567');
+        });
+
+        it('handles mixed separators with decimals', () => {
+            expect(normalizeNumberString('1,234.56')).toBe('1234.56');
+            expect(normalizeNumberString('1.234,56')).toBe('1234.56');
+            expect(normalizeNumberString('1,000,000.50')).toBe('1000000.50');
+        });
+
+        it('handles negative values and edge cases', () => {
+            expect(normalizeNumberString('-1,234')).toBe('-1234');
+            expect(normalizeNumberString('-1.234,56')).toBe('-1234.56');
+            expect(normalizeNumberString('  1,234.56  ')).toBe('1234.56');
+        });
+
+        it('handles null, undefined, empty, and zero values', () => {
+            expect(normalizeNumberString('')).toBe('0');
+            expect(normalizeNumberString(null as any)).toBe('0');
+            expect(normalizeNumberString(undefined as any)).toBe('0');
+            expect(normalizeNumberString('0')).toBe('0');
+            expect(normalizeNumberString('0,0')).toBe('0.0');
         });
     });
 });
