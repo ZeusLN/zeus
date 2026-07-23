@@ -156,6 +156,309 @@
         </intent-filter>
       </activity-alias>
 
+      <!-- App Icon Variants -->
+      <!-- Gradient Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient"
+        android:roundIcon="@mipmap/ic_launcher_gradient_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters: while this icon variant is
+             enabled, MainActivity is disabled, so deep links / NFC / share
+             must resolve through this alias instead. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Yellow Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconYellowActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_yellow"
+        android:roundIcon="@mipmap/ic_launcher_yellow_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters (see .AppIconGradientActivity) -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Gradient Inverse Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientInverseActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient_inverse"
+        android:roundIcon="@mipmap/ic_launcher_gradient_inverse_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters (see .AppIconGradientActivity) -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Red Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconRedActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_red"
+        android:roundIcon="@mipmap/ic_launcher_red_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters (see .AppIconGradientActivity) -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Gradient Red Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconGradientRedActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_gradient_red"
+        android:roundIcon="@mipmap/ic_launcher_gradient_red_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters (see .AppIconGradientActivity) -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Black and White Zeus icon - disabled by default -->
+      <activity-alias
+        android:name=".AppIconBlackAndWhiteActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_launcher_bw"
+        android:roundIcon="@mipmap/ic_launcher_bw_round"
+        android:label="@string/app_name"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Mirror MainActivity's filters (see .AppIconGradientActivity) -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="keyauth" />
+            <data android:scheme="lndconnect" />
+            <data android:scheme="cashu" />
+            <data android:scheme="zeusln" />
+            <data android:scheme="zeuscontact" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="lightning" />
+            <data android:scheme="LIGHTNING" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="image/*" />
+        </intent-filter>
+      </activity-alias>
+
       <service
           android:name="com.reactnativehce.services.CardService"
           android:exported="true"

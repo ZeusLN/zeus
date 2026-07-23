@@ -50,6 +50,7 @@ import {
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
+import AppIconUtils from './utils/AppIconUtils';
 import StealthModeUtils from './utils/StealthModeUtils';
 import StealthModeWrapper from './components/StealthModeWrapper';
 import { AppContainer } from './components/layout/AppContainer';
@@ -111,6 +112,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
+import AppIcon from './views/Settings/AppIcon';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -400,6 +402,13 @@ export default class App extends React.PureComponent {
                         await StealthModeUtils.isStealthModeActive();
                     if (nativeActive) {
                         await StealthModeUtils.disableStealthMode();
+                    }
+                    // Apply any pending app icon change (no-op when the
+                    // applied variant already matches). Deferred to
+                    // background because switching launcher aliases closes
+                    // the current task.
+                    if (Platform.OS === 'android') {
+                        await AppIconUtils.applyStoredIcon(settingsStore);
                     }
                 }
             } catch (error) {
@@ -734,6 +743,12 @@ export default class App extends React.PureComponent {
                                                                 name="Display" // @ts-ignore:next-line
                                                                 component={
                                                                     Display
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="AppIcon" // @ts-ignore:next-line
+                                                                component={
+                                                                    AppIcon
                                                                 }
                                                             />
                                                             <Stack.Screen
