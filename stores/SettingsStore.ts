@@ -1127,11 +1127,6 @@ export const THEME_KEYS = [
         translateKey: 'views.Settings.Theme.light',
         value: 'light'
     },
-    {
-        key: 'Junkie',
-        translateKey: 'views.Settings.Theme.junkie',
-        value: 'junkie'
-    },
     { key: 'BPM', translateKey: 'views.Settings.Theme.bpm', value: 'bpm' },
     {
         key: 'Blacked Out',
@@ -1142,11 +1137,6 @@ export const THEME_KEYS = [
         key: 'Scarlet',
         translateKey: 'views.Settings.Theme.scarlet',
         value: 'scarlet'
-    },
-    {
-        key: 'Memberberry',
-        translateKey: 'views.Settings.Theme.purple',
-        value: 'purple'
     },
     {
         key: 'Blueberry',
@@ -1214,6 +1204,51 @@ export const THEME_KEYS = [
         key: 'Spooky',
         translateKey: 'views.Settings.Theme.spooky',
         value: 'orange'
+    },
+    {
+        key: 'Dracula',
+        translateKey: 'views.Settings.Theme.dracula',
+        value: 'dracula'
+    },
+    {
+        key: 'Solarized Dark',
+        translateKey: 'views.Settings.Theme.solarized-dark',
+        value: 'solarized-dark'
+    },
+    {
+        key: 'Solarized Light',
+        translateKey: 'views.Settings.Theme.solarized-light',
+        value: 'solarized-light'
+    },
+    {
+        key: 'Gruvbox',
+        translateKey: 'views.Settings.Theme.gruvbox',
+        value: 'gruvbox'
+    },
+    {
+        key: 'Nord',
+        translateKey: 'views.Settings.Theme.nord',
+        value: 'nord'
+    },
+    {
+        key: 'Monokai',
+        translateKey: 'views.Settings.Theme.monokai',
+        value: 'monokai'
+    },
+    {
+        key: 'One Dark',
+        translateKey: 'views.Settings.Theme.one-dark',
+        value: 'one-dark'
+    },
+    {
+        key: 'Tokyo Night',
+        translateKey: 'views.Settings.Theme.tokyo-night',
+        value: 'tokyo-night'
+    },
+    {
+        key: "Synthwave '84",
+        translateKey: 'views.Settings.Theme.synthwave',
+        value: 'synthwave'
     }
 ];
 
