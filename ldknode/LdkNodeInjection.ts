@@ -402,6 +402,82 @@ const sendAllToOnchainAddressWithUtxos = async ({
 };
 
 // ============================================================================
+// Watch-only Account Methods
+// ============================================================================
+
+const importWatchonlyAccount = async (
+    accountId: string,
+    externalDescriptor: string,
+    internalDescriptor: string
+): Promise<void> => {
+    return await LdkNodeModule.importWatchonlyAccount(
+        accountId,
+        externalDescriptor,
+        internalDescriptor
+    );
+};
+
+const watchonlyNewAddress = async (accountId: string): Promise<string> => {
+    const result: any = await LdkNodeModule.watchonlyNewAddress(accountId);
+    return result.address;
+};
+
+const watchonlyBalance = async (accountId: string): Promise<number> => {
+    const result: any = await LdkNodeModule.watchonlyBalance(accountId);
+    return result.balanceSats;
+};
+
+const watchonlyListUtxos = async (accountId: string): Promise<WalletUtxo[]> => {
+    const result: any = await LdkNodeModule.watchonlyListUtxos(accountId);
+    return result.utxos;
+};
+
+const watchonlyListAddresses = async (accountId: string): Promise<string[]> => {
+    const result: any = await LdkNodeModule.watchonlyListAddresses(accountId);
+    return result.addresses;
+};
+
+const syncWatchonlyAccounts = async (): Promise<void> => {
+    return await LdkNodeModule.syncWatchonlyAccounts();
+};
+
+const listWatchonlyAccounts = async (): Promise<string[]> => {
+    const result: any = await LdkNodeModule.listWatchonlyAccounts();
+    return result.accounts;
+};
+
+const previewWatchonlyAccount = async (
+    externalDescriptor: string,
+    internalDescriptor: string,
+    count: number
+): Promise<{ externalAddresses: string[]; internalAddresses: string[] }> => {
+    const result: any = await LdkNodeModule.previewWatchonlyAccount(
+        externalDescriptor,
+        internalDescriptor,
+        count
+    );
+    return {
+        externalAddresses: result.externalAddresses,
+        internalAddresses: result.internalAddresses
+    };
+};
+
+const watchonlyCreatePsbt = async (
+    accountId: string,
+    recipients: Array<{ address: string; amountSats: number }>,
+    utxos: Array<{ txid: string; vout: number }>,
+    satPerVbyte: number
+): Promise<string> => {
+    const result: any = await LdkNodeModule.watchonlyCreatePsbt(
+        accountId,
+        recipients,
+        utxos,
+        satPerVbyte
+    );
+    return result.psbt;
+};
+
+// ============================================================================
 // BOLT11 Payment Functions
 // ============================================================================
 
@@ -1116,6 +1192,33 @@ export interface ILdkNodeInjections {
             utxos: Array<{ txid: string; vout: number }>;
         }) => Promise<string>;
     };
+    watchonly: {
+        importWatchonlyAccount: (
+            accountId: string,
+            externalDescriptor: string,
+            internalDescriptor: string
+        ) => Promise<void>;
+        watchonlyNewAddress: (accountId: string) => Promise<string>;
+        watchonlyBalance: (accountId: string) => Promise<number>;
+        watchonlyListUtxos: (accountId: string) => Promise<WalletUtxo[]>;
+        watchonlyListAddresses: (accountId: string) => Promise<string[]>;
+        syncWatchonlyAccounts: () => Promise<void>;
+        listWatchonlyAccounts: () => Promise<string[]>;
+        previewWatchonlyAccount: (
+            externalDescriptor: string,
+            internalDescriptor: string,
+            count: number
+        ) => Promise<{
+            externalAddresses: string[];
+            internalAddresses: string[];
+        }>;
+        watchonlyCreatePsbt: (
+            accountId: string,
+            recipients: Array<{ address: string; amountSats: number }>,
+            utxos: Array<{ txid: string; vout: number }>,
+            satPerVbyte: number
+        ) => Promise<string>;
+    };
     bolt11: {
         receiveBolt11: (params: {
             amountMsat: number;
@@ -1327,6 +1430,17 @@ const LdkNodeInjection: ILdkNodeInjections = {
         listUtxos,
         sendToOnchainAddressWithUtxos,
         sendAllToOnchainAddressWithUtxos
+    },
+    watchonly: {
+        importWatchonlyAccount,
+        watchonlyNewAddress,
+        watchonlyBalance,
+        watchonlyListUtxos,
+        watchonlyListAddresses,
+        syncWatchonlyAccounts,
+        listWatchonlyAccounts,
+        previewWatchonlyAccount,
+        watchonlyCreatePsbt
     },
     bolt11: {
         receiveBolt11,

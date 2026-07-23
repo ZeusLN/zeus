@@ -11,7 +11,18 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
+import {
+    buildWatchonlyDescriptors,
+    normalizeExtendedKey,
+    recoverMasterFingerprintHex,
+    resolveAddressType,
+    WalletAddressType
+} from '../utils/DescriptorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import {
+    loadWatchonlyRegistry,
+    saveWatchonlyAccountMeta
+} from '../utils/WatchonlyAccountRegistry';
 import type {
     Network,
     NodeStatus,
@@ -185,10 +196,17 @@ export default class LdkNode {
     }
 
     /**
-     * Sync wallets (on-chain and lightning)
+     * Sync wallets (on-chain and lightning), plus any imported watch-only
+     * accounts. Account sync failures are tolerated — the node's own sync
+     * result is what callers depend on.
      */
     syncWallets = async (): Promise<void> => {
         await LdkNodeInjection.node.syncWallets();
+        try {
+            await LdkNodeInjection.watchonly.syncWatchonlyAccounts();
+        } catch (e) {
+            console.log('Watch-only account sync failed:', e);
+        }
     };
 
     /**
@@ -257,7 +275,17 @@ export default class LdkNode {
     /**
      * Get blockchain (on-chain) balance
      */
-    getBlockchainBalance = async (): Promise<any> => {
+    getBlockchainBalance = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            const balanceSats =
+                await LdkNodeInjection.watchonly.watchonlyBalance(data.account);
+            return {
+                total_balance: balanceSats.toString(),
+                confirmed_balance: balanceSats.toString(),
+                unconfirmed_balance: '0'
+            };
+        }
+
         const balances = await LdkNodeInjection.node.listBalances();
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
@@ -1077,9 +1105,17 @@ export default class LdkNode {
     // ========================================================================
 
     /**
-     * Get new on-chain address
+     * Get new on-chain address. Reveals a receive address for a watch-only
+     * account when one is passed, otherwise for the node's own wallet.
      */
-    getNewAddress = async (): Promise<any> => {
+    getNewAddress = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            const address =
+                await LdkNodeInjection.watchonly.watchonlyNewAddress(
+                    data.account
+                );
+            return { address };
+        }
         const address = await LdkNodeInjection.onchain.newOnchainAddress();
         return {
             address
@@ -1087,10 +1123,29 @@ export default class LdkNode {
     };
 
     /**
-     * Get UTXOs for coin control
+     * Get a new change address. Watch-only accounts have no separate change
+     * keychain exposed here, so this resolves to a no-op — the import
+     * pre-generation loop calls it and only needs it to settle.
      */
-    getUTXOs = async (): Promise<any> => {
-        const utxos = await LdkNodeInjection.onchain.listUtxos();
+    getNewChangeAddress = async (data?: any): Promise<any> => {
+        if (data?.account && data.account !== 'default') {
+            return { addr: null };
+        }
+        const addr = await LdkNodeInjection.onchain.newOnchainAddress();
+        return { addr };
+    };
+
+    /**
+     * Get UTXOs for coin control. Scoped to a watch-only account when passed,
+     * otherwise the node's own wallet.
+     */
+    getUTXOs = async (data?: any): Promise<any> => {
+        const utxos =
+            data?.account && data.account !== 'default'
+                ? await LdkNodeInjection.watchonly.watchonlyListUtxos(
+                      data.account
+                  )
+                : await LdkNodeInjection.onchain.listUtxos();
         return {
             utxos: utxos.map((u) => ({
                 outpoint: {
@@ -1104,10 +1159,237 @@ export default class LdkNode {
         };
     };
 
+    // ========================================================================
+    // Watch-only Account Methods
+    // ========================================================================
+
+    /**
+     * Import a watch-only account from an extended public key. Mirrors the
+     * LND-family import: a dry run returns a preview (address samples the user
+     * verifies against their hardware wallet) without persisting; the real
+     * import creates the account in ldk-node, records display metadata, and
+     * kicks off a sync so balances populate.
+     */
+    importAccount = async (data: any): Promise<any> => {
+        const {
+            name,
+            extended_public_key,
+            master_key_fingerprint,
+            address_type,
+            dry_run
+        } = data;
+
+        const network = settingsStore.ldkNetwork || 'mainnet';
+
+        const resolvedType = resolveAddressType(
+            extended_public_key,
+            address_type
+        );
+        const xpub = normalizeExtendedKey(extended_public_key, network);
+        const mfpHex = master_key_fingerprint
+            ? recoverMasterFingerprintHex(master_key_fingerprint)
+            : undefined;
+        const { external, internal, derivationPath } =
+            buildWatchonlyDescriptors({
+                xpub,
+                mfpHex,
+                addressType: resolvedType,
+                network
+            });
+
+        if (dry_run) {
+            const preview =
+                await LdkNodeInjection.watchonly.previewWatchonlyAccount(
+                    external,
+                    internal,
+                    5
+                );
+            return {
+                account: {
+                    name,
+                    extended_public_key,
+                    master_key_fingerprint,
+                    address_type: resolvedType,
+                    derivation_path: derivationPath,
+                    watch_only: true
+                },
+                dry_run_external_addrs: preview.externalAddresses,
+                dry_run_internal_addrs: preview.internalAddresses
+            };
+        }
+
+        // The account name doubles as the ldk-node KVStore namespace.
+        if (
+            !name ||
+            !/^[A-Za-z0-9_-]{1,120}$/.test(name) ||
+            name === 'default'
+        ) {
+            throw new Error(
+                localeString('backends.LdkNode.invalidAccountName')
+            );
+        }
+
+        await LdkNodeInjection.watchonly.importWatchonlyAccount(
+            name,
+            external,
+            internal
+        );
+
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        await saveWatchonlyAccountMeta(nodeDir, name, {
+            extended_public_key,
+            master_key_fingerprint,
+            address_type: resolvedType,
+            derivation_path: derivationPath
+        });
+
+        // Fire-and-forget: pull balances/UTXOs for the new account in the
+        // background. Tolerate NotRunning (e.g. imported before node start).
+        LdkNodeInjection.watchonly.syncWatchonlyAccounts().catch(() => {});
+
+        return { account: { name, watch_only: true } };
+    };
+
+    /**
+     * List imported watch-only accounts. The ldk-node node is the source of
+     * truth for which accounts exist (survives a VSS recovery); the local
+     * registry supplies display metadata, absent gracefully when missing.
+     */
+    listAccounts = async (): Promise<any> => {
+        const names = await LdkNodeInjection.watchonly.listWatchonlyAccounts();
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        const registry = await loadWatchonlyRegistry(nodeDir);
+
+        return {
+            accounts: names.map((name) => {
+                const meta = registry[name];
+                return {
+                    name,
+                    watch_only: true,
+                    ...(meta
+                        ? {
+                              extended_public_key: meta.extended_public_key,
+                              master_key_fingerprint:
+                                  meta.master_key_fingerprint,
+                              address_type: meta.address_type,
+                              derivation_path: meta.derivation_path
+                          }
+                        : {})
+                };
+            })
+        };
+    };
+
+    /**
+     * List addresses grouped by watch-only account, in the walletrpc
+     * ListAddresses shape the OnChainAddresses view consumes. ldk-node reveals
+     * external (receive) addresses only, ordered by derivation index, so the
+     * per-address path is synthesized as `${accountPath}/0/${i}` and every
+     * address is external (is_internal: false). Per-address balance is summed
+     * from the account's unspent UTXOs.
+     */
+    listAddresses = async (): Promise<any> => {
+        const nodeDir = settingsStore.ldkNodeDir || 'ldk';
+        const network = settingsStore.ldkNetwork || 'mainnet';
+        const coin =
+            network === 'mainnet' || network === 'bitcoin' ? "0'" : "1'";
+
+        const [names, registry] = await Promise.all([
+            LdkNodeInjection.watchonly.listWatchonlyAccounts(),
+            loadWatchonlyRegistry(nodeDir)
+        ]);
+
+        const account_with_addresses = [];
+        for (const name of names) {
+            const meta = registry[name];
+            const addressTypeNum =
+                meta?.address_type ?? WalletAddressType.WITNESS_PUBKEY_HASH;
+            const accountPath = meta?.derivation_path ?? `m/84'/${coin}/0'`;
+
+            const [addresses, utxos] = await Promise.all([
+                LdkNodeInjection.watchonly.watchonlyListAddresses(name),
+                LdkNodeInjection.watchonly.watchonlyListUtxos(name)
+            ]);
+
+            const balanceByAddress: { [addr: string]: BigNumber } = {};
+            for (const u of utxos) {
+                if (u.is_spent) continue;
+                balanceByAddress[u.address] = (
+                    balanceByAddress[u.address] ?? new BigNumber(0)
+                ).plus(u.value_sats);
+            }
+
+            account_with_addresses.push({
+                name,
+                address_type:
+                    WalletAddressType[addressTypeNum] ?? 'WITNESS_PUBKEY_HASH',
+                derivation_path: accountPath,
+                addresses: addresses.map((address, i) => ({
+                    address,
+                    is_internal: false,
+                    balance: (
+                        balanceByAddress[address] ?? new BigNumber(0)
+                    ).toString(),
+                    derivation_path: `${accountPath}/0/${i}`,
+                    public_key: ''
+                }))
+            });
+        }
+
+        return { account_with_addresses };
+    };
+
+    /**
+     * Rescan for account funds. The existing-account import flow calls this
+     * after pre-generating addresses; ldk-node's watch-only sync is always a
+     * full scan, so the start_height in the request is ignored.
+     */
+    rescan = async (_data?: any): Promise<any> => {
+        await LdkNodeInjection.watchonly.syncWatchonlyAccounts();
+        return {};
+    };
+
+    /**
+     * Build an unsigned PSBT that spends from a watch-only account, ready to be
+     * signed externally (e.g. on a hardware wallet). Mirrors LND's `fundPsbt`:
+     * the caller passes the same LND-shaped request (`raw.outputs` map,
+     * `raw.inputs`, `sat_per_vbyte`, `account`) and receives `funded_psbt`.
+     */
+    fundPsbt = async (data: any): Promise<any> => {
+        const outputs = data?.raw?.outputs || {};
+        const recipients = Object.keys(outputs).map((address) => ({
+            address,
+            amountSats: Number(outputs[address])
+        }));
+
+        const inputs = data?.raw?.inputs || [];
+        const utxos = inputs.map((input: any) => ({
+            txid: input.txid_str,
+            vout: Number(input.output_index)
+        }));
+
+        const funded_psbt =
+            await LdkNodeInjection.watchonly.watchonlyCreatePsbt(
+                data.account,
+                recipients,
+                utxos,
+                Number(data.sat_per_vbyte)
+            );
+
+        return { funded_psbt };
+    };
+
     /**
      * Send coins on-chain
      */
     sendCoins = async (data: any): Promise<any> => {
+        // SAFETY: a watch-only account cannot spend the node wallet. Account
+        // sends are built as an unsigned PSBT via `fundPsbt` and signed
+        // externally; they must never reach the node-wallet send paths below.
+        if (data.account && data.account !== 'default') {
+            throw new Error(localeString('views.Send.accountSendNotSupported'));
+        }
+
         let txid: string;
 
         if (data.utxos?.length > 0) {
@@ -2088,7 +2370,7 @@ export default class LdkNode {
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
-    supportsAccounts = () => false;
+    supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => true;
@@ -2114,7 +2396,7 @@ export default class LdkNode {
     supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
-    supportsAddressesWithDerivationPaths = () => false;
+    supportsAddressesWithDerivationPaths = () => true;
     supportsCustomFeeLimit = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;

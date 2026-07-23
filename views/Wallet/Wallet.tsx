@@ -1173,6 +1173,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await NodeInfoStore.getNodeInfo();
                 console.log('[LDK startup] fetching balance');
                 await BalanceStore.getCombinedBalance();
+                if (BackendUtils.supportsAccounts()) {
+                    try {
+                        await UTXOsStore.listAccounts();
+                    } catch (e) {
+                        console.log('[LDK startup] listAccounts failed:', e);
+                    }
+                }
                 console.log('[LDK startup] polling channels');
                 ChannelsStore.getChannelsWithPolling().then(() => {
                     // Check for sweep to self-custody threshold after channels are online

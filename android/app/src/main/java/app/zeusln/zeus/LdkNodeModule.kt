@@ -1189,6 +1189,224 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Watch-only Account Methods
+
+    @ReactMethod
+    fun importWatchonlyAccount(accountId: String, externalDescriptor: String, internalDescriptor: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                node.importWatchonlyAccount(accountId, externalDescriptor, internalDescriptor)
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun watchonlyNewAddress(accountId: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val address = node.watchonlyNewAddress(accountId)
+                val result = Arguments.createMap().apply {
+                    putString("address", address)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun watchonlyBalance(accountId: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val balance = node.watchonlyBalance(accountId)
+                val result = Arguments.createMap().apply {
+                    putDouble("balanceSats", balance.toLong().toDouble())
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun watchonlyListUtxos(accountId: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val utxos = node.watchonlyListUtxos(accountId)
+                val utxoArray = Arguments.createArray()
+                for (utxo in utxos) {
+                    val utxoMap = Arguments.createMap().apply {
+                        putString("txid", utxo.txid)
+                        putInt("vout", utxo.vout.toInt())
+                        putDouble("value_sats", utxo.valueSats.toLong().toDouble())
+                        putString("address", utxo.address)
+                        putBoolean("is_spent", utxo.isSpent)
+                    }
+                    utxoArray.pushMap(utxoMap)
+                }
+                val result = Arguments.createMap().apply {
+                    putArray("utxos", utxoArray)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun watchonlyListAddresses(accountId: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val addresses = node.watchonlyListAddresses(accountId)
+                val addressArray = Arguments.createArray()
+                for (address in addresses) {
+                    addressArray.pushString(address)
+                }
+                val result = Arguments.createMap().apply {
+                    putArray("addresses", addressArray)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun syncWatchonlyAccounts(promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                node.syncWatchonlyAccounts()
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun listWatchonlyAccounts(promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val accounts = node.listWatchonlyAccounts()
+                val accountArray = Arguments.createArray()
+                for (account in accounts) {
+                    accountArray.pushString(account)
+                }
+                val result = Arguments.createMap().apply {
+                    putArray("accounts", accountArray)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun previewWatchonlyAccount(externalDescriptor: String, internalDescriptor: String, count: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val preview = node.previewWatchonlyAccount(externalDescriptor, internalDescriptor, count.toInt().toUByte())
+                val externalArray = Arguments.createArray()
+                for (address in preview.externalAddresses) {
+                    externalArray.pushString(address)
+                }
+                val internalArray = Arguments.createArray()
+                for (address in preview.internalAddresses) {
+                    internalArray.pushString(address)
+                }
+                val result = Arguments.createMap().apply {
+                    putArray("externalAddresses", externalArray)
+                    putArray("internalAddresses", internalArray)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    private fun parseRecipients(recipientsArray: ReadableArray): List<PsbtRecipient> {
+        val recipients = mutableListOf<PsbtRecipient>()
+        for (i in 0 until recipientsArray.size()) {
+            val dict = recipientsArray.getMap(i) ?: continue
+            val address = dict.getString("address") ?: continue
+            val amountSats = dict.getDouble("amountSats").toLong().toULong()
+            recipients.add(PsbtRecipient(address = address, amountSats = amountSats))
+        }
+        return recipients
+    }
+
+    @ReactMethod
+    fun watchonlyCreatePsbt(accountId: String, recipients: ReadableArray, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val parsedRecipients = parseRecipients(recipients)
+                val outpoints = parseOutPoints(utxos)
+                val feeRate = FeeRate.fromSatPerVbUnchecked(satPerVbyte.toLong().toULong())
+                val psbt = node.watchonlyCreatePsbt(accountId, parsedRecipients, outpoints, feeRate)
+                val result = Arguments.createMap().apply {
+                    putString("psbt", psbt)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
     @ReactMethod
     fun openChannelFundMax(nodeId: String, address: String, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray?, promise: Promise) {
         moduleScope.launch {

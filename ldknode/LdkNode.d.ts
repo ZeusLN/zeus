@@ -547,6 +547,33 @@ export interface ILdkNodeModule {
         utxos: Array<{ txid: string; vout: number }>
     ): Promise<{ txid: string }>;
 
+    // Watch-only Account Methods
+    importWatchonlyAccount(
+        accountId: string,
+        externalDescriptor: string,
+        internalDescriptor: string
+    ): Promise<void>;
+    watchonlyNewAddress(accountId: string): Promise<{ address: string }>;
+    watchonlyBalance(accountId: string): Promise<{ balanceSats: number }>;
+    watchonlyListUtxos(accountId: string): Promise<{ utxos: any[] }>;
+    watchonlyListAddresses(accountId: string): Promise<{ addresses: string[] }>;
+    syncWatchonlyAccounts(): Promise<void>;
+    listWatchonlyAccounts(): Promise<{ accounts: string[] }>;
+    previewWatchonlyAccount(
+        externalDescriptor: string,
+        internalDescriptor: string,
+        count: number
+    ): Promise<{
+        externalAddresses: string[];
+        internalAddresses: string[];
+    }>;
+    watchonlyCreatePsbt(
+        accountId: string,
+        recipients: Array<{ address: string; amountSats: number }>,
+        utxos: Array<{ txid: string; vout: number }>,
+        satPerVbyte: number
+    ): Promise<{ psbt: string }>;
+
     // BOLT11 Payment Methods
     receiveBolt11(
         amountMsat: number,

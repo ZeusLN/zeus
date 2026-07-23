@@ -381,7 +381,7 @@ export default class TransactionsStore {
             });
     };
 
-    private sendCoinsLNDCoinControl = (
+    private sendCoinsWithPsbt = (
         transactionRequest: TransactionRequest,
         defaultAccount?: boolean
     ) => {
@@ -484,13 +484,20 @@ export default class TransactionsStore {
             });
             transactionRequest.outpoints = outpoints;
         } else if (
+            !BackendUtils.isLNDBased() &&
+            BackendUtils.supportsAccounts() &&
+            transactionRequest.account &&
+            transactionRequest.account !== 'default'
+        ) {
+            return this.sendCoinsWithPsbt(transactionRequest, false);
+        } else if (
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
                 transactionRequest.utxos.length > 0) ||
             (transactionRequest?.additional_outputs?.length &&
                 transactionRequest?.additional_outputs?.length > 0)
         ) {
-            return this.sendCoinsLNDCoinControl(
+            return this.sendCoinsWithPsbt(
                 transactionRequest,
                 transactionRequest.account === 'default'
             );
