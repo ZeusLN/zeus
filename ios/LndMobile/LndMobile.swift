@@ -115,6 +115,33 @@ class LndMobile: RCTEventEmitter {
       }
   }
 
+  /// As produced by LND/gRPC mobile bindings, e.g. `code = Internal desc = ...` (aligned with Android `LndMobileService`).
+  private static let lndGrpcStatusMessageRegex: NSRegularExpression = {
+    // swiftlint:disable:next force_try
+    try! NSRegularExpression(pattern: "code = (\\S+) desc = (.*)")
+  }()
+
+  private func lndGrpcErrorCodeAndDesc(from fullError: String) -> (code: String, desc: String) {
+    let range = NSRange(location: 0, length: (fullError as NSString).length)
+    guard
+      let match = Self.lndGrpcStatusMessageRegex.firstMatch(in: fullError, options: [], range: range),
+      match.numberOfRanges > 2
+    else {
+      return ("Error", fullError)
+    }
+    let codeNS = match.range(at: 1)
+    let descNS = match.range(at: 2)
+    guard
+      codeNS.location != NSNotFound,
+      descNS.location != NSNotFound,
+      let codeRange = Range(codeNS, in: fullError),
+      let descRange = Range(descNS, in: fullError)
+    else {
+      return ("Error", fullError)
+    }
+    return (String(fullError[codeRange]), String(fullError[descRange]))
+  }
+
   @objc(checkStatus:rejecter:)
   func checkStatus(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     resolve(Lnd.shared.checkStatus())
@@ -122,14 +149,38 @@ class LndMobile: RCTEventEmitter {
 
   @objc(startLnd:lndDir:isTorEnabled:isTestnet:resolver:rejecter:)
   func startLnd(_ args: String, lndDir: String, isTorEnabled: Bool, isTestnet: Bool, resolve: @escaping RCTPromiseResolveBlock, rejecter reject:@escaping RCTPromiseRejectBlock) {
-    Lnd.shared.startLnd(args, lndDir: lndDir, isTorEnabled: isTorEnabled, isTestnet: isTestnet) { (data, error) in
+    Lnd.shared.startLnd(args, lndDir: lndDir, isTorEnabled: isTorEnabled, isTestnet: isTestnet) { [weak self] (data, error) in
       if let e = error {
         reject("error", e.localizedDescription, e)
         return
       }
+      // Begin the SubscribeState stream immediately after the LND process
+      // starts, before resolving the JS promise.  JS registers its listener
+      // before calling startLnd, so the first state event is guaranteed to
+      // arrive after the listener is in place — no sleep/poll needed.
+      self?.startStateSubscription()
       resolve([
         "data": data?.base64EncodedString()
       ])
+    }
+  }
+
+  /// Starts the SubscribeState stream via the native Lnd singleton and forwards
+  /// every event to JS through the RCTEventEmitter machinery.
+  /// This is called automatically inside startLnd so JS never needs to initiate
+  /// the subscription during startup.
+  private func startStateSubscription() {
+    Lnd.shared.subscribeToStateChanges { [weak self] (data, error) in
+      guard let self = self else { return }
+      if let e = error {
+        let fullError = e.localizedDescription
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
+        self.sendEvent(withName: "SubscribeState",
+                       body: ["error_code": errorCode, "error_desc": errorDesc])
+      } else {
+        self.sendEvent(withName: "SubscribeState",
+                       body: ["data": data?.base64EncodedString()])
+      }
     }
   }
 
@@ -205,13 +256,7 @@ class LndMobile: RCTEventEmitter {
         NSLog(e.localizedDescription)
 
         let fullError = e.localizedDescription
-        var errorCode = "Error"
-        var errorDesc = fullError
-
-        if let codeRange = fullError.range(of: "code = "), let descRange = fullError.range(of: " desc = ") {
-          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
-          errorDesc = String(fullError[descRange.upperBound..<fullError.endIndex])
-        }
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
 
         self.sendEvent(
           withName: method,
@@ -238,13 +283,7 @@ class LndMobile: RCTEventEmitter {
         NSLog(e.localizedDescription)
 
         let fullError = e.localizedDescription
-        var errorCode = "Error"
-        var errorDesc = fullError
-
-        if let codeRange = fullError.range(of: "code = "), let descRange = fullError.range(of: " desc = ") {
-          errorCode = String(fullError[codeRange.upperBound..<descRange.lowerBound])
-          errorDesc = String(fullError[descRange.upperBound..<fullError.endIndex])
-        }
+        let (errorCode, errorDesc) = self.lndGrpcErrorCodeAndDesc(from: fullError)
 
         self.sendEvent(
           withName: method,

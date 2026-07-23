@@ -34,6 +34,14 @@ export const checkStatus = async (): Promise<ELndMobileStatusCodes> => {
     return await LndMobile.checkStatus();
 };
 
+export const isLndAlreadyRunning = async (): Promise<boolean> => {
+    const status = await checkStatus();
+    return (
+        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+        ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+    );
+};
+
 /**
  * @throws
  * @return string

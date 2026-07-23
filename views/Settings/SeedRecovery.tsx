@@ -53,9 +53,7 @@ import {
     LndMobileEventEmitter,
     optimizeNeutrinoPeers,
     stopLnd,
-    waitForRpcReady,
-    STOP_LND_MAX_RETRIES,
-    STOP_LND_POLL_DELAY_MS
+    waitForRpcReady
 } from '../../utils/LndMobileUtils';
 import { sleep } from '../../utils/SleepUtils';
 
@@ -787,12 +785,10 @@ export default class SeedRecovery extends React.PureComponent<
                     });
                 }
             } else {
-                // Embedded LND restore
-
-                // Only stop LND if it's actually running — calling
-                // stopLnd when the daemon isn't up causes
-                // LndmobileStopDaemon to never call back, stalling
-                // the restore flow indefinitely.
+                // Embedded LND restore — only stop when the JS layer
+                // believes LND is running. forceStop skips the native
+                // status check; calling it when the daemon is down can
+                // stall restore waiting for SubscribeState EOF.
                 if (this.props.SettingsStore.embeddedLndStarted) {
                     this.setState({
                         successMsg: localeString(
@@ -800,11 +796,7 @@ export default class SeedRecovery extends React.PureComponent<
                         )
                     });
                     try {
-                        await stopLnd(
-                            STOP_LND_MAX_RETRIES,
-                            STOP_LND_POLL_DELAY_MS,
-                            true
-                        );
+                        await stopLnd(true);
                     } catch (e: any) {
                         console.log(
                             'stopLnd during restore (expected):',

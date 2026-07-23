@@ -1,7 +1,6 @@
 package app.zeusln.zeus;
 
 import android.annotation.SuppressLint;
-import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -13,7 +12,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.database.sqlite.SQLiteDatabase;
@@ -535,32 +533,6 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
         // Hyperlog.w(TAG, e.getMessage(), e);
       }
     }
-  }
-
-  private boolean checkLndProcessExists() {
-    String packageName = getApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      // Hyperlog.d(TAG, "Process " + p.processName);
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        // Hyperlog.d(TAG, "Found " + packageName + ":zeusLndMobile pid: " + String.valueOf(p.pid));
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean killLndProcess() {
-    String packageName = getApplicationContext().getPackageName();
-    ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
-      if (p.processName.equals(packageName + ":zeusLndMobile")) {
-        // Hyperlog.i(TAG, "Killing " + packageName + ":zeusLndMobile with pid: " + String.valueOf(p.pid));
-        Process.killProcess(p.pid);
-        return true;
-      }
-    }
-    return false;
   }
 
   private ServiceConnection serviceConnection = new ServiceConnection() {

@@ -524,15 +524,7 @@ class LndMobileTools: RCTEventEmitter {
 
   @objc(killLnd:rejecter:)
   func killLnd(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
-    // On iOS, we can't directly kill other processes, but we can mark LND as stopped
-    // and let the system clean up the resources
-    if Lnd.shared.lndStarted {
-        Lnd.shared.lndStarted = false
-        // Clear any active streams
-        Lnd.shared.activeStreams.removeAll()
-        resolve(true)
-    } else {
-        resolve(false)
-    }
+    Lnd.shared.releaseStuckLndState()
+    resolve(true)
   }
 }
