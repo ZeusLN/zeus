@@ -58,7 +58,7 @@
     "@react-native-community/datetimepicker": "8.5.1",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-community/slider": "5.2.0",
-    "@react-native-documents/picker": "11.0.3",
+    "@react-native-documents/picker": "12.0.1",
     "@react-native-picker/picker": "2.11.4",
     "@react-native-vector-icons/feather": "12.4.0",
     "@react-native-vector-icons/fontawesome": "12.4.0",
