@@ -69,6 +69,8 @@ export default class Invoice extends BaseModel {
     public invoice_amount_msat: string | number;
     public bolt12: string;
     public payment_preimage: string;
+    // NIP-47 (Nostr Wallet Connect) transaction objects
+    public preimage?: string;
     // pay req
     public timestamp?: string | number;
     public destination?: string;
@@ -107,8 +109,11 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getRPreimage(): string {
-        if (!this.r_preimage) return '';
-        const preimage = this.r_preimage.data || this.r_preimage;
+        // LND uses r_preimage, Core Lightning payment_preimage, NIP-47 preimage
+        const source =
+            this.r_preimage || this.payment_preimage || this.preimage;
+        if (!source) return '';
+        const preimage = source.data || source;
         return typeof preimage === 'object'
             ? Base64Utils.bytesToHex(preimage)
             : typeof preimage === 'string'
@@ -119,8 +124,10 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getRHash(): string {
-        if (!this.r_hash) return '';
-        const hash = this.r_hash.data || this.r_hash;
+        // LND uses r_hash, Core Lightning and NIP-47 payment_hash
+        const source = this.r_hash || this.payment_hash;
+        if (!source) return '';
+        const hash = source.data || source;
         return typeof hash === 'object'
             ? Base64Utils.bytesToHex(hash)
             : typeof hash === 'string'

@@ -649,20 +649,29 @@ export default class NostrConnectUtils {
             Number(invoice.expires_at) ||
             timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS;
 
+        // The request may carry only the invoice, so recover the hash from it
+        let paymentHash = request.payment_hash || '';
+        if (!paymentHash) {
+            try {
+                const decoded = await NostrConnectUtils.decodeInvoiceTags(
+                    invoice.getPaymentRequest
+                );
+                paymentHash = decoded.paymentHash || '';
+            } catch {
+                // Undecodable mint quote — report an empty hash rather than a wrong one
+            }
+        }
+
         return NostrConnectUtils.createNip47Transaction({
             type: 'incoming',
             state: isPaid ? 'settled' : 'pending',
             invoice: invoice.getPaymentRequest,
-            payment_hash: request.payment_hash!,
+            payment_hash: paymentHash,
             amount: satsToMillisats(amtSat || 0),
-            ...(isPaid && {
-                preimage:
-                    invoice.getPaymentRequest ||
-                    request.invoice ||
-                    request.payment_hash
-            }),
             description: invoice.getMemo,
-            settled_at: isPaid ? invoice.settleDate.getTime() / 1000 : 0,
+            settled_at: isPaid
+                ? Math.floor(invoice.settleDate.getTime() / 1000)
+                : 0,
             created_at: timestamp,
             expires_at: expiresAt
         });
@@ -683,10 +692,16 @@ export default class NostrConnectUtils {
         }
         const invoice = new Invoice(rawInvoice);
         const now = Math.floor(Date.now() / 1000);
+        const createdAt = Math.floor(invoice.getCreationDate.getTime() / 1000);
+        // Core Lightning reports an absolute expires_at, LND expiry seconds
+        const expiresAt =
+            Number(invoice.expires_at) > 0
+                ? Number(invoice.expires_at)
+                : Number(invoice.expiry) > 0
+                ? createdAt + Number(invoice.expiry)
+                : 0;
 
-        const isExpired =
-            Number(invoice.expiry) > 0 &&
-            Number(invoice.timestamp) + Number(invoice.expiry) < now;
+        const isExpired = expiresAt > 0 && expiresAt < now;
 
         const state = invoice.isPaid
             ? 'settled'
@@ -705,9 +720,11 @@ export default class NostrConnectUtils {
                 preimage: invoice.getRPreimage
             }),
             description_hash: invoice.getDescriptionHash,
-            settled_at: invoice.settleDate.getTime() / 1000,
-            created_at: invoice.getCreationDate.getTime() / 1000,
-            expires_at: invoice.getCreationDate.getTime() / 1000
+            settled_at: invoice.isPaid
+                ? Math.floor(invoice.settleDate.getTime() / 1000)
+                : 0,
+            created_at: createdAt,
+            expires_at: expiresAt
         });
     }
 
@@ -1027,10 +1044,13 @@ export default class NostrConnectUtils {
             return activity.payment.paymentHash;
         }
         if (activity.invoice) {
-            const invoiceHash = (activity.invoice as Invoice).payment_hash;
+            const invoiceHash =
+                (activity.invoice as Invoice).getRHash ||
+                (activity.invoice as Invoice).payment_hash;
             if (invoiceHash) return invoiceHash;
         }
-        return activity.id || '';
+        // activity.id holds the payment request, which is not a payment hash
+        return '';
     }
 
     private static extractAmountFromActivity(
@@ -1409,7 +1429,8 @@ export default class NostrConnectUtils {
                     const amount = Number(invoice.getAmount) || 0;
                     const timestamp =
                         Number(invoice.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = invoice.payment_hash || '';
+                    // LND returns r_hash, Core Lightning payment_hash
+                    const paymentHash = invoice.getRHash || '';
                     const invoiceString = invoice.getPaymentRequest || '';
                     const description = invoice.getMemo || '';
                     const expiresAt = Number(invoice.expires_at) || 0;

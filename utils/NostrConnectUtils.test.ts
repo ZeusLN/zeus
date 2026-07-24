@@ -37,6 +37,10 @@ import * as nostrTools from 'nostr-tools';
 
 import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
+import Invoice from '../models/Invoice';
+import Base64Utils from './Base64Utils';
+import BackendUtils from './BackendUtils';
+import type { ConnectionActivity } from '../models/NWCConnection';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -740,6 +744,127 @@ describe('NostrConnectUtils', () => {
 
                     expect(result).toEqual({ inTransit: false });
                 });
+            });
+        });
+    });
+
+    describe('NIP-47 transaction field mapping', () => {
+        const CREATION_DATE = 1700000000;
+        const EXPIRY_SECONDS = 3600;
+        const SETTLE_DATE = 1700000500;
+        const PREIMAGE = hex64('a');
+
+        /** LND REST returns r_hash and r_preimage base64-encoded */
+        const lndInvoice = (overrides: object = {}) => ({
+            r_hash: Base64Utils.hexToBase64(HASH_A),
+            payment_request: INVOICE_A,
+            creation_date: String(CREATION_DATE),
+            expiry: String(EXPIRY_SECONDS),
+            value: '1000',
+            settled: false,
+            ...overrides
+        });
+
+        const lookupLightningInvoice = (rawInvoice: object) => {
+            (BackendUtils as any).lookupInvoice = jest
+                .fn()
+                .mockResolvedValue(rawInvoice);
+            return NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
+                HASH_A
+            );
+        };
+
+        describe('lookup_invoice', () => {
+            it('reads the payment hash from the LND r_hash field', async () => {
+                const tx = await lookupLightningInvoice(lndInvoice());
+
+                expect(tx.payment_hash).toBe(HASH_A);
+            });
+
+            it('reports expiry as creation plus expiry, not the creation date', async () => {
+                const tx = await lookupLightningInvoice(lndInvoice());
+
+                expect(tx.created_at).toBe(CREATION_DATE);
+                expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
+
+            it('marks an unpaid invoice past its expiry as failed', async () => {
+                const tx = await lookupLightningInvoice(lndInvoice());
+
+                expect(tx.state).toBe('failed');
+            });
+
+            it('returns preimage and settle time for a settled invoice', async () => {
+                const tx = await lookupLightningInvoice(
+                    lndInvoice({
+                        settled: true,
+                        settle_date: String(SETTLE_DATE),
+                        r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+                    })
+                );
+
+                expect(tx.state).toBe('settled');
+                expect(tx.preimage).toBe(PREIMAGE);
+                expect(tx.settled_at).toBe(SETTLE_DATE);
+            });
+
+            it('reads Core Lightning payment_hash and payment_preimage', async () => {
+                const tx = await lookupLightningInvoice({
+                    payment_hash: HASH_A,
+                    payment_preimage: PREIMAGE,
+                    bolt11: INVOICE_A,
+                    created_at: CREATION_DATE,
+                    expires_at: CREATION_DATE + EXPIRY_SECONDS,
+                    paid_at: SETTLE_DATE,
+                    status: 'paid',
+                    msatoshi: 1000000
+                });
+
+                expect(tx.payment_hash).toBe(HASH_A);
+                expect(tx.preimage).toBe(PREIMAGE);
+                expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
+
+            it('does not report a settle time for an unpaid invoice', async () => {
+                const tx = await lookupLightningInvoice({
+                    payment_hash: HASH_A,
+                    bolt11: INVOICE_A,
+                    created_at: CREATION_DATE,
+                    timestamp: CREATION_DATE,
+                    expires_at: CREATION_DATE + EXPIRY_SECONDS,
+                    status: 'unpaid'
+                });
+
+                expect(tx.state).not.toBe('settled');
+                expect(tx.settled_at).toBe(0);
+            });
+        });
+
+        describe('list_transactions', () => {
+            it('derives payment_hash from r_hash for LND invoices', () => {
+                const [tx] =
+                    NostrConnectUtils.convertLightningDataToNip47Transactions({
+                        invoices: [new Invoice(lndInvoice())]
+                    });
+
+                expect(tx.payment_hash).toBe(HASH_A);
+            });
+
+            it('never reports the payment request as a payment hash', () => {
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    invoice: new Invoice(lndInvoice())
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.payment_hash).toBe(HASH_A);
             });
         });
     });
