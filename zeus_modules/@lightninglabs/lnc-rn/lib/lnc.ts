@@ -140,7 +140,7 @@ export default class LNC {
                         const res = snakeKeysToCamel(rawRes);
                         log.debug(`${method} response`, res);
                         resolve(res as TRes);
-                    } catch (error) {
+                    } catch {
                         log.debug(`${method} raw response`, response);
                         reject(new Error(response));
                         return;

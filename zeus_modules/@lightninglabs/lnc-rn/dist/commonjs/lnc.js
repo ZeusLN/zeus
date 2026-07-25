@@ -104,7 +104,7 @@ class LNC {
           const res = (0, _lncCore.snakeKeysToCamel)(rawRes);
           _log.log.debug(`${method} response`, res);
           resolve(res);
-        } catch (error) {
+        } catch {
           _log.log.debug(`${method} raw response`, response);
           reject(new Error(response));
           return;
