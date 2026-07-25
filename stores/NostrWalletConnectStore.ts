@@ -46,7 +46,6 @@ import NostrConnectUtils, {
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
-import Base64Utils from '../utils/Base64Utils';
 
 import NWCConnection, {
     BudgetRenewalType,
@@ -1713,9 +1712,9 @@ export default class NostrWalletConnectStore {
                 return { result, error: undefined };
             }
             const rHash =
-                request.payment_hash && request.payment_hash.includes('=')
-                    ? Base64Utils.base64ToHex(request.payment_hash)
-                    : request.payment_hash;
+                await NostrConnectUtils.resolveLookupInvoicePaymentHash(
+                    request
+                );
             if (!rHash) {
                 return NostrConnectUtils.createNip47Error(
                     localeString(

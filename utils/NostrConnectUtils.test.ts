@@ -37,6 +37,7 @@ import * as nostrTools from 'nostr-tools';
 
 import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
+import Base64Utils from './Base64Utils';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -741,6 +742,51 @@ describe('NostrConnectUtils', () => {
                     expect(result).toEqual({ inTransit: false });
                 });
             });
+        });
+    });
+
+    describe('lookup_invoice request resolution', () => {
+        // BOLT11 spec reference vector; hash confirmed by decoding it
+        const BOLT11 =
+            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+        const BOLT11_HASH =
+            '0001020304050607080900010203040506070809000102030405060708090102';
+
+        const resolve = (request: object) =>
+            NostrConnectUtils.resolveLookupInvoicePaymentHash(request as never);
+
+        it('passes a hex payment_hash through unchanged', async () => {
+            await expect(resolve({ payment_hash: HASH_A })).resolves.toBe(
+                HASH_A
+            );
+        });
+
+        it('converts a base64 payment_hash to hex', async () => {
+            await expect(
+                resolve({ payment_hash: Base64Utils.hexToBase64(HASH_A) })
+            ).resolves.toBe(HASH_A);
+        });
+
+        it('derives the hash from the invoice when no hash is given', async () => {
+            await expect(resolve({ invoice: BOLT11 })).resolves.toBe(
+                BOLT11_HASH
+            );
+        });
+
+        it('prefers payment_hash when both parameters are present', async () => {
+            await expect(
+                resolve({ payment_hash: HASH_A, invoice: BOLT11 })
+            ).resolves.toBe(HASH_A);
+        });
+
+        it('returns undefined when neither parameter is given', async () => {
+            await expect(resolve({})).resolves.toBeUndefined();
+        });
+
+        it('returns undefined for an undecodable invoice', async () => {
+            await expect(
+                resolve({ invoice: 'not-a-payment-request' })
+            ).resolves.toBeUndefined();
         });
     });
 });

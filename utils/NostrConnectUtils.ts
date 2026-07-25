@@ -23,6 +23,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuToken from '../models/CashuToken';
 import Transaction from '../models/Transaction';
 
+import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
@@ -594,6 +595,34 @@ export default class NostrConnectUtils {
             return new Invoice(result).isPaid;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * NIP-47 lookup_invoice takes either payment_hash or invoice — "one of
+     * payment_hash or invoice is required". Resolves the request to a payment
+     * hash in hex, or undefined when neither parameter yields one.
+     */
+    static async resolveLookupInvoicePaymentHash(
+        request: Nip47LookupInvoiceRequest
+    ): Promise<string | undefined> {
+        const paymentHash = request.payment_hash?.trim();
+        if (paymentHash) {
+            // Some clients send the hash base64-encoded rather than as hex
+            return paymentHash.includes('=')
+                ? Base64Utils.base64ToHex(paymentHash)
+                : paymentHash;
+        }
+
+        const invoice = request.invoice?.trim();
+        if (!invoice) return undefined;
+
+        try {
+            const decoded = await NostrConnectUtils.decodeInvoiceTags(invoice);
+            return decoded.paymentHash || undefined;
+        } catch {
+            // Undecodable payment request — the caller reports NOT_FOUND
+            return undefined;
         }
     }
 
