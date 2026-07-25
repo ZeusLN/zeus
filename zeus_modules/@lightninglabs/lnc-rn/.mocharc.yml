@@ -1,0 +1,6 @@
+# transpile-only: the tests are not type-checked, so no @types/mocha or
+# @types/chai devDependencies are needed
+require: 'ts-node/register/transpile-only'
+# no ** globstar: the minimatch resolution pin (9.x) makes mocha's bundled
+# glob 7 choke on globstar patterns (GLOBSTAR became a Symbol in minimatch 4+)
+spec: 'test/*.test.ts'
