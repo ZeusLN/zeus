@@ -16,7 +16,7 @@ const capitalize = s => s && s[0].toUpperCase() + s.slice(1);
 function createRpc(packageName, lnc) {
   const rpc = {};
   return new Proxy(rpc, {
-    get(target, key, c) {
+    get(_target, key) {
       const methodName = capitalize(key.toString());
       // the full name of the method (ex: lnrpc.Lightning.OpenChannel)
       const method = `${packageName}.${methodName}`;
