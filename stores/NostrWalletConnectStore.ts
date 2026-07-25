@@ -95,6 +95,10 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/** Payments fetched when lookup_invoice falls back to searching payments */
+const LOOKUP_PAYMENT_FETCH_LIMIT = 100;
+/** Window in which that fetched list is reused across lookup_invoice calls */
+const LOOKUP_PAYMENT_CACHE_MS = 5_000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -173,6 +177,11 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    /** Short-lived payment list reused by lookup_invoice, see getPaymentsForLookup */
+    private lookupPaymentCache: {
+        payments: Payment[];
+        fetchedAt: number;
+    } | null = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1724,17 +1733,86 @@ export default class NostrWalletConnectStore {
                     Nip47ErrorCode.NOT_FOUND
                 );
             }
-            const result =
-                await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
-                    rHash
-                );
-            return { result, error: undefined };
+            try {
+                const result =
+                    await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
+                        rHash
+                    );
+                return { result, error: undefined };
+            } catch (invoiceLookupError) {
+                // NIP-47 lookup_invoice covers payments too, but the backend
+                // lookup only sees invoices — fall back to the payment list.
+                // A failure here must not mask the original lookup result.
+                let payment: Payment | undefined;
+                try {
+                    payment = await this.findPaymentForLookup(
+                        rHash,
+                        request.invoice
+                    );
+                } catch (paymentLookupError) {
+                    console.error(
+                        'NWC: payment lookup fallback failed:',
+                        paymentLookupError
+                    );
+                }
+                if (!payment) throw invoiceLookupError;
+                return {
+                    result: NostrConnectUtils.buildNip47TransactionForPayment(
+                        payment
+                    ),
+                    error: undefined
+                };
+            }
         } catch (error) {
             return NostrConnectUtils.createNip47Error(
                 (error as Error).message,
                 Nip47ErrorCode.NOT_FOUND
             );
         }
+    }
+
+    /**
+     * Finds an outgoing payment for lookup_invoice. Only runs when the invoice
+     * lookup missed, so the common case costs no extra node round-trip.
+     */
+    private async findPaymentForLookup(
+        rHash: string,
+        invoice?: string
+    ): Promise<Payment | undefined> {
+        const payments = await this.getPaymentsForLookup();
+        return NostrConnectUtils.findPaymentForInvoice(
+            invoice || '',
+            payments,
+            rHash
+        );
+    }
+
+    private async getPaymentsForLookup(): Promise<Payment[]> {
+        const now = Date.now();
+        if (
+            this.lookupPaymentCache &&
+            NostrConnectUtils.isLookupPaymentCacheFresh(
+                this.lookupPaymentCache.fetchedAt,
+                now,
+                LOOKUP_PAYMENT_CACHE_MS
+            )
+        ) {
+            return this.lookupPaymentCache.payments;
+        }
+
+        // Deliberately not via paymentsStore: that overwrites the shared
+        // payment list the wallet UI renders from, and toggles its loading
+        // state. `reversed` must be explicit — embedded LND defaults it to
+        // false and would return the oldest page instead of the newest.
+        const data = await BackendUtils.getPayments({
+            maxPayments: LOOKUP_PAYMENT_FETCH_LIMIT,
+            reversed: true
+        });
+        const payments: Payment[] = (data?.payments || []).map(
+            (payment: any) => new Payment(payment)
+        );
+        this.lookupPaymentCache = { payments, fetchedAt: now };
+        return payments;
     }
 
     private async handleListTransactions(

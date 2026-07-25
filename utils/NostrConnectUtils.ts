@@ -711,6 +711,54 @@ export default class NostrConnectUtils {
         });
     }
 
+    /**
+     * NIP-47 transaction for an outgoing payment. Per spec, "outgoing" is the
+     * type for payments, and a payment has no expiry.
+     *
+     * Note `Payment.getFee` reports sats, so the fee is scaled to msats here.
+     */
+    static buildNip47TransactionForPayment(payment: Payment): Nip47Transaction {
+        const timestamp =
+            Number(payment.getTimestamp) || dateTimeUtils.getCurrentTimestamp();
+
+        let state: 'settled' | 'pending' | 'failed' = 'pending';
+        if (payment.isFailed) {
+            state = 'failed';
+        } else if (!payment.isIncomplete) {
+            state = 'settled';
+        }
+
+        return NostrConnectUtils.createNip47Transaction({
+            type: 'outgoing',
+            state,
+            invoice: payment.getPaymentRequest || '',
+            payment_hash: payment.paymentHash || '',
+            amount: satsToMillisats(Number(payment.getAmount) || 0),
+            description: payment.getMemo || '',
+            preimage: payment.getPreimage || '',
+            fees_paid: satsToMillisats(Number(payment.getFee) || 0),
+            settled_at: state === 'settled' ? timestamp : 0,
+            created_at: timestamp,
+            expires_at: 0
+        });
+    }
+
+    /**
+     * Whether a payment list fetched for lookup_invoice may still be reused.
+     * Collapses a client polling the same hash into a single node round-trip.
+     */
+    static isLookupPaymentCacheFresh(
+        fetchedAt: number,
+        now: number,
+        ttlMs: number
+    ): boolean {
+        if (fetchedAt <= 0) return false;
+        const age = now - fetchedAt;
+        // A negative age means the clock moved backwards — refetch rather than
+        // trust a timestamp from the future
+        return age >= 0 && age < ttlMs;
+    }
+
     static async decodeInvoiceTagsForMakeInvoice(
         paymentRequest: string,
         rHash?: string
@@ -1364,40 +1412,8 @@ export default class NostrConnectUtils {
         // Convert Lightning payments
         if (lightningData.payments) {
             const paymentTransactions = lightningData.payments.map(
-                (payment: Payment) => {
-                    const amount = Number(payment.getAmount) || 0;
-                    const timestamp =
-                        Number(payment.getTimestamp) || Date.now() / 1000;
-                    const paymentHash = payment.paymentHash || '';
-                    const invoice = payment.getPaymentRequest || '';
-                    const feesPaid = satsToMillisats(
-                        Number(payment.getFee) || 0
-                    );
-                    const description = payment.getMemo || '';
-                    const preimage = payment.getPreimage || '';
-
-                    // Determine state based on payment status
-                    let state: 'settled' | 'pending' | 'failed' = 'pending';
-                    if (payment.isFailed) {
-                        state = 'failed';
-                    } else if (!payment.isIncomplete) {
-                        state = 'settled';
-                    }
-
-                    return NostrConnectUtils.createNip47Transaction({
-                        type: 'outgoing',
-                        state,
-                        invoice,
-                        payment_hash: paymentHash,
-                        amount: satsToMillisats(amount),
-                        description,
-                        preimage,
-                        fees_paid: feesPaid,
-                        settled_at: state === 'settled' ? timestamp : 0,
-                        created_at: timestamp,
-                        expires_at: 0
-                    });
-                }
+                (payment: Payment) =>
+                    NostrConnectUtils.buildNip47TransactionForPayment(payment)
             );
             transactions.push(...paymentTransactions);
         }

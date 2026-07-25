@@ -743,4 +743,114 @@ describe('NostrConnectUtils', () => {
             });
         });
     });
+
+    describe('buildNip47TransactionForPayment', () => {
+        const TIMESTAMP = 1700000000;
+        const build = (payment: Payment) =>
+            NostrConnectUtils.buildNip47TransactionForPayment(payment);
+
+        it('types a payment as outgoing and gives it no expiry', () => {
+            const tx = build(
+                new Payment({
+                    payment_hash: HASH_A,
+                    payment_request: INVOICE_A,
+                    creation_date: String(TIMESTAMP),
+                    value_sat: '1000',
+                    status: 'SUCCEEDED'
+                })
+            );
+
+            expect(tx.type).toBe('outgoing');
+            expect(tx.expires_at).toBe(0);
+        });
+
+        it('reports the fee in msats (Payment.getFee is in sats)', () => {
+            const tx = build(
+                new Payment({
+                    payment_hash: HASH_A,
+                    creation_date: String(TIMESTAMP),
+                    value_sat: '1000',
+                    fee_msat: '2500',
+                    status: 'SUCCEEDED'
+                })
+            );
+
+            expect(tx.fees_paid).toBe(2500);
+        });
+
+        it('derives the Core Lightning fee from amount vs amount_sent', () => {
+            const tx = build(
+                new Payment({
+                    payment_hash: HASH_A,
+                    bolt11: INVOICE_A,
+                    created_at: String(TIMESTAMP),
+                    amount_msat: '1000000msat',
+                    amount_sent_msat: '1002000msat',
+                    status: 'complete'
+                })
+            );
+
+            expect(tx.fees_paid).toBe(2000);
+        });
+
+        it('decodes an LndHub buffer payment hash to hex', () => {
+            const tx = build(
+                new Payment({
+                    payment_hash: {
+                        type: 'Buffer',
+                        data: Array(32).fill(0xcc)
+                    },
+                    creation_date: String(TIMESTAMP),
+                    value_sat: '1000',
+                    status: 'SUCCEEDED'
+                })
+            );
+
+            expect(tx.payment_hash).toBe(HASH_A);
+        });
+
+        it('marks a settled payment settled and stamps settled_at', () => {
+            const tx = build(paymentFixtures.settled());
+
+            expect(tx.state).toBe('settled');
+            expect(tx.settled_at).toBe(tx.created_at);
+            expect(tx.preimage).toBe('abc123preimage');
+        });
+
+        it('marks a failed payment failed without a settle time', () => {
+            const tx = build(paymentFixtures.failed());
+
+            expect(tx.state).toBe('failed');
+            expect(tx.settled_at).toBe(0);
+        });
+
+        it('marks an in-flight payment pending without a settle time', () => {
+            const tx = build(paymentFixtures.inFlightStatus());
+
+            expect(tx.state).toBe('pending');
+            expect(tx.settled_at).toBe(0);
+        });
+    });
+
+    describe('isLookupPaymentCacheFresh', () => {
+        const TTL = 5000;
+        const fresh = (fetchedAt: number, now: number) =>
+            NostrConnectUtils.isLookupPaymentCacheFresh(fetchedAt, now, TTL);
+
+        it('reuses a list fetched within the window', () => {
+            expect(fresh(1_000_000, 1_004_999)).toBe(true);
+        });
+
+        it('refetches once the window has elapsed', () => {
+            expect(fresh(1_000_000, 1_005_000)).toBe(false);
+        });
+
+        it('treats an unset timestamp as stale', () => {
+            expect(fresh(0, 1_000_000)).toBe(false);
+        });
+
+        it('refetches when the clock moved backwards', () => {
+            expect(fresh(1_000_000, 999_000)).toBe(false);
+        });
+    });
 });
