@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    // this package is vendored inside the zeus repo, so tsc's automatic
+    // @types inclusion would otherwise pull in the root repo's newer
+    // node_modules/@types (written for newer TypeScript than the 4.5
+    // pinned here); restrict lookup to this package's own types
+    "typeRoots": ["./node_modules/@types"],
     "target": "es5",
     "module": "commonjs",
     "declaration": true,

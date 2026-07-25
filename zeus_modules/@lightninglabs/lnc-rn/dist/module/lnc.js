@@ -1,5 +1,6 @@
-"use strict";
-
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 import { NativeModules } from 'react-native';
 import { LndApi, snakeKeysToCamel } from '@lightninglabs/lnc-core';
 import { createRpc } from './api/createRpc';
@@ -13,6 +14,20 @@ const DEFAULT_CONFIG = {
 };
 export default class LNC {
   constructor(lncConfig) {
+    _defineProperty(this, "_namespace", void 0);
+    _defineProperty(this, "credentials", void 0);
+    _defineProperty(this, "lnd", void 0);
+    _defineProperty(this, "onLocalPrivCreate", keyHex => {
+      log.debug('local private key created: ' + keyHex);
+      this.credentials.localKey = keyHex;
+    });
+    _defineProperty(this, "onRemoteKeyReceive", keyHex => {
+      log.debug('remote key received: ' + keyHex);
+      this.credentials.remoteKey = keyHex;
+    });
+    _defineProperty(this, "onAuthData", keyHex => {
+      log.debug('auth data received: ' + keyHex);
+    });
     // merge the passed in config with the defaults
     const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
     this._namespace = config.namespace;
@@ -27,17 +42,6 @@ export default class LNC {
     this.lnd = new LndApi(createRpc, this);
     NativeModules.LncModule.initLNC(this._namespace);
   }
-  onLocalPrivCreate = keyHex => {
-    log.debug('local private key created: ' + keyHex);
-    this.credentials.localKey = keyHex;
-  };
-  onRemoteKeyReceive = keyHex => {
-    log.debug('remote key received: ' + keyHex);
-    this.credentials.remoteKey = keyHex;
-  };
-  onAuthData = keyHex => {
-    log.debug('auth data received: ' + keyHex);
-  };
   async isConnected() {
     return await NativeModules.LncModule.isConnected(this._namespace);
   }

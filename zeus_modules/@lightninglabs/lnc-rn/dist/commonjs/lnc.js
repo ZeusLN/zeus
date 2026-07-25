@@ -10,6 +10,9 @@ var _createRpc = require("./api/createRpc");
 var _credentialStore = _interopRequireDefault(require("./util/credentialStore"));
 var _log = require("./util/log");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 /** The default values for the LncConfig options */
 const DEFAULT_CONFIG = {
   namespace: 'default',
@@ -17,6 +20,20 @@ const DEFAULT_CONFIG = {
 };
 class LNC {
   constructor(lncConfig) {
+    _defineProperty(this, "_namespace", void 0);
+    _defineProperty(this, "credentials", void 0);
+    _defineProperty(this, "lnd", void 0);
+    _defineProperty(this, "onLocalPrivCreate", keyHex => {
+      _log.log.debug('local private key created: ' + keyHex);
+      this.credentials.localKey = keyHex;
+    });
+    _defineProperty(this, "onRemoteKeyReceive", keyHex => {
+      _log.log.debug('remote key received: ' + keyHex);
+      this.credentials.remoteKey = keyHex;
+    });
+    _defineProperty(this, "onAuthData", keyHex => {
+      _log.log.debug('auth data received: ' + keyHex);
+    });
     // merge the passed in config with the defaults
     const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
     this._namespace = config.namespace;
@@ -31,17 +48,6 @@ class LNC {
     this.lnd = new _lncCore.LndApi(_createRpc.createRpc, this);
     _reactNative.NativeModules.LncModule.initLNC(this._namespace);
   }
-  onLocalPrivCreate = keyHex => {
-    _log.log.debug('local private key created: ' + keyHex);
-    this.credentials.localKey = keyHex;
-  };
-  onRemoteKeyReceive = keyHex => {
-    _log.log.debug('remote key received: ' + keyHex);
-    this.credentials.remoteKey = keyHex;
-  };
-  onAuthData = keyHex => {
-    _log.log.debug('auth data received: ' + keyHex);
-  };
   async isConnected() {
     return await _reactNative.NativeModules.LncModule.isConnected(this._namespace);
   }
