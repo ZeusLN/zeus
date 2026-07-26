@@ -265,6 +265,22 @@ export default class CLNRest {
         return this.postRequest('/v1/withdraw', request);
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
+    // listinvoices filters natively by payment hash, and unlike the SQL query
+    // used by getInvoices it is not restricted to paid invoices
+    lookupInvoice = (data: any) =>
+        this.postRequest('/v1/listinvoices', {
+            payment_hash: data.r_hash
+        }).then((response: any) => {
+            const invoice = response?.invoices?.[0];
+            if (!invoice) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                    )
+                );
+            }
+            return invoice;
+        });
     getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
             query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
