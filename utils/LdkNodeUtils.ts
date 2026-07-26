@@ -45,10 +45,6 @@ export const ESPLORA_SERVERS_MUTINYNET: EsploraServer[] = [
 // Default VSS (Versioned Storage Service) server
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
-export const ALBY_VSS_SERVER = 'https://vss.getalbypro.com/vss';
-
-export const LDK_VSS_SERVER = 'https://rapidsync.lightningdevkit.org';
-
 // Default RGS (Rapid Gossip Sync) servers
 export const RGS_SERVERS_MAINNET: EsploraServer[] = [
     { key: 'ZEUS (rgs.zeusln.com)', value: 'https://rgs.zeusln.com/snapshot' },
