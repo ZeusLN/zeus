@@ -1,7 +1,7 @@
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-import { NativeModules } from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 import { LndApi, snakeKeysToCamel } from '@lightninglabs/lnc-core';
 import { createRpc } from './api/createRpc';
 import LncCredentialStore from './util/credentialStore';
@@ -12,11 +12,19 @@ const DEFAULT_CONFIG = {
   namespace: 'default',
   serverHost: 'mailbox.terminal.lightning.today:443'
 };
+
+// Native event names emitted by LncModule for the persistent register callbacks.
+// Kept in sync with ios/LncMobile/LncModule.mm and android/.../LncModule.kt.
+const EVENT_LOCAL_PRIV_CREATE = 'lnc.localPrivCreate';
+const EVENT_REMOTE_KEY_RECEIVE = 'lnc.remoteKeyReceive';
+const EVENT_AUTH_DATA = 'lnc.authData';
 export default class LNC {
   constructor(lncConfig) {
     _defineProperty(this, "_namespace", void 0);
     _defineProperty(this, "credentials", void 0);
     _defineProperty(this, "lnd", void 0);
+    _defineProperty(this, "_emitter", void 0);
+    _defineProperty(this, "_subscriptions", []);
     _defineProperty(this, "onLocalPrivCreate", keyHex => {
       log.debug('local private key created: ' + keyHex);
       this.credentials.localKey = keyHex;
@@ -40,6 +48,7 @@ export default class LNC {
       if (config.pairingPhrase) this.credentials.pairingPhrase = config.pairingPhrase;
     }
     this.lnd = new LndApi(createRpc, this);
+    this._emitter = new NativeEventEmitter(NativeModules.LncModule);
     NativeModules.LncModule.initLNC(this._namespace);
   }
   async isConnected() {
@@ -67,9 +76,22 @@ export default class LNC {
     // do not attempt to connect multiple times
     const connected = await this.isConnected();
     if (connected) return;
-    NativeModules.LncModule.registerLocalPrivCreateCallback(this._namespace, this.onLocalPrivCreate);
-    NativeModules.LncModule.registerRemoteKeyReceiveCallback(this._namespace, this.onRemoteKeyReceive);
-    NativeModules.LncModule.registerAuthDataCallback(this._namespace, this.onAuthData);
+
+    // Under React Native's new architecture, RCTResponseSenderBlock /
+    // com.facebook.react.bridge.Callback may only be invoked once. The Go
+    // LNC bridge fires these callbacks repeatedly over the session
+    // lifetime, so we route them through RCTEventEmitter instead.
+    this._removeSubscriptions();
+    this._subscriptions = [this._emitter.addListener(EVENT_LOCAL_PRIV_CREATE, ({
+      result
+    }) => this.onLocalPrivCreate(result)), this._emitter.addListener(EVENT_REMOTE_KEY_RECEIVE, ({
+      result
+    }) => this.onRemoteKeyReceive(result)), this._emitter.addListener(EVENT_AUTH_DATA, ({
+      result
+    }) => this.onAuthData(result))];
+    NativeModules.LncModule.registerLocalPrivCreateCallback(this._namespace, EVENT_LOCAL_PRIV_CREATE);
+    NativeModules.LncModule.registerRemoteKeyReceiveCallback(this._namespace, EVENT_REMOTE_KEY_RECEIVE);
+    NativeModules.LncModule.registerAuthDataCallback(this._namespace, EVENT_AUTH_DATA);
     const {
       pairingPhrase,
       localKey,
@@ -86,7 +108,14 @@ export default class LNC {
    * Disconnects from the proxy server
    */
   disconnect() {
+    this._removeSubscriptions();
     NativeModules.LncModule.disconnect(this._namespace);
+  }
+  _removeSubscriptions() {
+    for (const sub of this._subscriptions) {
+      sub.remove();
+    }
+    this._subscriptions = [];
   }
 
   /**
