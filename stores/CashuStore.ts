@@ -491,9 +491,22 @@ export default class CashuStore {
 
         let cashuSeedPhrase: string;
         if (ldkMnemonic) {
-            // LDK Node uses a 12-word mnemonic - use it directly as the
-            // cashu seed since it already has exactly 128 bits of entropy
-            cashuSeedPhrase = ldkMnemonic;
+            const ldkWordCount = ldkMnemonic.trim().split(/\s+/).length;
+            if (ldkWordCount === 12) {
+                // A 12-word LDK mnemonic already has exactly 128 bits of
+                // entropy - use it directly as the cashu seed
+                cashuSeedPhrase = ldkMnemonic;
+            } else {
+                // Larger LDK mnemonics (e.g. 24 words) derive a 12-word cashu
+                // seed from bytes [48:64] of the BIP-39 seed (v2-bip39 style)
+                const seedFromMnemonic =
+                    bip39scure.mnemonicToSeedSync(ldkMnemonic);
+                const entropy = seedFromMnemonic.slice(48, 64);
+                cashuSeedPhrase = bip39scure.entropyToMnemonic(
+                    entropy,
+                    BIP39_WORD_LIST
+                );
+            }
         } else if (lndSeedPhrase && lndSeedPhrase.length > 0) {
             // LND uses a 24-word mnemonic - derive a 12-word cashu seed
             // from bytes [48:64] of the BIP-39 seed (v2-bip39 style)

@@ -6,14 +6,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
-import TextInput from '../../../components/TextInput';
+import VssServerPicker, {
+    VSS_CUSTOM_VALUE,
+    resolveVssServer,
+    isVssServerValid
+} from '../../../components/VssServerPicker';
 
-import SettingsStore from '../../../stores/SettingsStore';
+import SettingsStore, {
+    LDK_VSS_SERVER_KEYS
+} from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import UrlUtils from '../../../utils/UrlUtils';
 import { DEFAULT_VSS_SERVER } from '../../../utils/LdkNodeUtils';
 
 interface VssServerProps {
@@ -22,7 +27,8 @@ interface VssServerProps {
 }
 
 interface VssServerState {
-    vssServer: string;
+    selectedValue: string;
+    customServer: string;
     savedVssServer: string;
 }
 
@@ -35,9 +41,15 @@ export default class VssServer extends React.Component<
     state = (() => {
         const { settings } = this.props.SettingsStore;
         const selectedNode = settings.selectedNode || 0;
-        const saved = settings.nodes?.[selectedNode]?.ldkVssServer || '';
+        const saved =
+            settings.nodes?.[selectedNode]?.ldkVssServer || DEFAULT_VSS_SERVER;
+
+        const presetValues = LDK_VSS_SERVER_KEYS.map((s) => s.value);
+        const isPreset = presetValues.includes(saved);
+
         return {
-            vssServer: saved,
+            selectedValue: isPreset ? saved : VSS_CUSTOM_VALUE,
+            customServer: isPreset ? '' : saved,
             savedVssServer: saved
         };
     })();
@@ -60,16 +72,15 @@ export default class VssServer extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { vssServer, savedVssServer } = this.state;
+        const { selectedValue, customServer, savedVssServer } = this.state;
 
-        const showReset = vssServer !== DEFAULT_VSS_SERVER;
-
-        const vssServerTrimmed = vssServer.trim();
-        const showInvalidUrlError =
-            vssServerTrimmed !== '' && !UrlUtils.isValidUrl(vssServer);
-
+        const effectiveServer = resolveVssServer(selectedValue, customServer);
+        const isValid = isVssServerValid(selectedValue, customServer);
         const hasUnsavedChanges =
-            vssServer !== savedVssServer && !showInvalidUrlError;
+            isValid &&
+            effectiveServer !== '' &&
+            effectiveServer !== savedVssServer;
+        const showReset = effectiveServer !== DEFAULT_VSS_SERVER;
 
         return (
             <Screen>
@@ -102,42 +113,16 @@ export default class VssServer extends React.Component<
                             </Text>
                         </View>
 
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.EmbeddedNode.VssServer.serverUrl'
-                            )}
-                        </Text>
-                        <TextInput
-                            value={vssServer}
-                            placeholder={DEFAULT_VSS_SERVER}
-                            onChangeText={(text: string) => {
+                        <VssServerPicker
+                            selectedValue={selectedValue}
+                            customServer={customServer}
+                            onChange={(value, custom) =>
                                 this.setState({
-                                    vssServer: text
-                                });
-                            }}
-                            autoCapitalize="none"
-                            autoCorrect={false}
+                                    selectedValue: value,
+                                    customServer: custom
+                                })
+                            }
                         />
-
-                        {showInvalidUrlError && (
-                            <Text
-                                style={{
-                                    color: themeColor('error'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 12,
-                                    marginTop: 4
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.EmbeddedNode.invalidServerUrl'
-                                )}
-                            </Text>
-                        )}
 
                         <View style={{ marginTop: 10 }}>
                             <Text
@@ -160,7 +145,9 @@ export default class VssServer extends React.Component<
                                     accessibilityLabel={localeString(
                                         'general.save'
                                     )}
-                                    onPress={() => this.saveSettings(vssServer)}
+                                    onPress={() =>
+                                        this.saveSettings(effectiveServer)
+                                    }
                                 />
                             </View>
                         )}
@@ -175,7 +162,8 @@ export default class VssServer extends React.Component<
                                     secondary
                                     onPress={async () => {
                                         this.setState({
-                                            vssServer: DEFAULT_VSS_SERVER
+                                            selectedValue: DEFAULT_VSS_SERVER,
+                                            customServer: ''
                                         });
                                         await this.saveSettings(
                                             DEFAULT_VSS_SERVER

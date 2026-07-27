@@ -427,6 +427,11 @@ export const EMBEDDED_NODE_NETWORK_KEYS = [
     }
 ];
 
+export const LDK_VSS_SERVER_KEYS = [
+    { key: 'ZEUS', value: DEFAULT_VSS_SERVER },
+    { key: 'Custom', translateKey: 'general.custom', value: 'custom' }
+];
+
 export const LNC_MAILBOX_KEYS = [
     {
         key: 'mailbox.terminal.lightning.today:443',
