@@ -238,8 +238,6 @@ export default class SeedRecovery extends React.PureComponent<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
             const clipboardWords = clipboard.trim().split(/\s+/);
-            const implementation =
-                route.params?.implementation ?? 'embedded-lnd';
             const acceptedWordCounts = this.acceptedWordCounts(route.params);
 
             if (acceptedWordCounts.includes(clipboardWords.length as 12 | 24)) {
@@ -247,11 +245,6 @@ export default class SeedRecovery extends React.PureComponent<
                     showClipboardPrompt: true,
                     clipboardSeedArray: clipboardWords
                 });
-                if (implementation === 'ldk-node') {
-                    this.setState({
-                        ldkWordCount: clipboardWords.length as 12 | 24
-                    });
-                }
             }
         }
     }
@@ -1571,18 +1564,28 @@ export default class SeedRecovery extends React.PureComponent<
                             <View style={{ marginBottom: 12 }}>
                                 <Button
                                     title={localeString('general.yes')}
-                                    onPress={() =>
+                                    onPress={() => {
+                                        const {
+                                            clipboardSeedArray,
+                                            implementation
+                                        } = this.state;
                                         this.setState({
-                                            seedArray:
-                                                this.state.clipboardSeedArray.map(
-                                                    (w) =>
-                                                        w.toLowerCase().trim()
-                                                ),
+                                            seedArray: clipboardSeedArray.map(
+                                                (w) => w.toLowerCase().trim()
+                                            ),
                                             showClipboardPrompt: false,
                                             clipboardSeedArray: [],
                                             showValidation: true
-                                        })
-                                    }
+                                        });
+                                        if (implementation === 'ldk-node') {
+                                            this.setState({
+                                                ldkWordCount:
+                                                    clipboardSeedArray.length as
+                                                        | 12
+                                                        | 24
+                                            });
+                                        }
+                                    }}
                                     tertiary
                                 />
                             </View>
