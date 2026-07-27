@@ -1,1 +1,1 @@
-{"version":3,"names":[],"sourceRoot":"../../lib","sources":["typings.d.ts"],"mappings":"","ignoreList":[]}
+{"version":3,"names":[],"sources":["typings.d.ts"],"sourcesContent":["declare var global: any;\ndeclare module 'debug' {\n    interface Debugger {\n        (formatter: any, ...args: any[]): void;\n    }\n    function debug(namespace: string): Debugger;\n    export { Debugger };\n    export default debug;\n}\n"],"mappings":"","ignoreList":[]}

@@ -14,7 +14,8 @@
       "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@nostr|@noble|@scure|uuid)/)"
     ],
     "testPathIgnorePatterns": [
-      "check-styles.test.ts"
+      "check-styles.test.ts",
+      "zeus_modules"
     ],
     "moduleNameMapper": {
       "^@noble/hashes/_assert$": "<rootDir>/node_modules/@noble/hashes/_assert.js",
