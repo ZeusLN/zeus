@@ -13,6 +13,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -84,6 +85,15 @@ export default class Privacy extends React.Component<
         });
     }
 
+    // Both fields require a full http(s) URL, matching the other custom
+    // server settings. The block explorer's optional '#mempool.space'
+    // convention hint parses as a URL fragment, and is only honored by
+    // goToBlockExplorer when a scheme is present anyway.
+    isValidCustomUrl = (text: string): boolean => {
+        const trimmed = text.trim();
+        return trimmed === '' || UrlUtils.isValidUrl(trimmed);
+    };
+
     renderSeparator = () => (
         <View
             style={{
@@ -105,6 +115,12 @@ export default class Privacy extends React.Component<
             customMempoolInstance
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
+
+        const customBlockExplorerError =
+            !this.isValidCustomUrl(customBlockExplorer);
+        const customMempoolInstanceError = !this.isValidCustomUrl(
+            customMempoolInstance
+        );
 
         return (
             <Screen>
@@ -157,10 +173,16 @@ export default class Privacy extends React.Component<
                             </Text>
                             <TextInput
                                 value={customBlockExplorer}
+                                placeholder="https://explorer.mynode.local"
+                                error={customBlockExplorerError}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                                 onChangeText={async (text: string) => {
                                     this.setState({
                                         customBlockExplorer: text
                                     });
+
+                                    if (!this.isValidCustomUrl(text)) return;
 
                                     await updateSettings({
                                         privacy: {
@@ -170,6 +192,20 @@ export default class Privacy extends React.Component<
                                     });
                                 }}
                             />
+                            {customBlockExplorerError && (
+                                <Text
+                                    style={{
+                                        color: themeColor('error'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 12,
+                                        marginTop: 4
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Privacy.invalidCustomUrl'
+                                    )}
+                                </Text>
+                            )}
                         </>
                     )}
 
@@ -348,12 +384,16 @@ export default class Privacy extends React.Component<
                                 <TextInput
                                     value={customMempoolInstance}
                                     placeholder="https://mempool.mynode.local"
+                                    error={customMempoolInstanceError}
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     onChangeText={async (text: string) => {
                                         this.setState({
                                             customMempoolInstance: text
                                         });
+
+                                        if (!this.isValidCustomUrl(text))
+                                            return;
 
                                         await updateSettings({
                                             privacy: {
@@ -363,6 +403,20 @@ export default class Privacy extends React.Component<
                                         });
                                     }}
                                 />
+                                {customMempoolInstanceError && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('error'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 12,
+                                            marginTop: 4
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Privacy.invalidCustomUrl'
+                                        )}
+                                    </Text>
+                                )}
                             </>
                         )}
                     </View>
