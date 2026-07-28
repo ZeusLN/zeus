@@ -682,6 +682,16 @@ export default class NostrConnectUtils {
             );
         }
         const invoice = new Invoice(rawInvoice);
+        // Being an object is not proof of being an invoice — a backend may
+        // resolve with an error body. Require something identifying before
+        // reporting this as a found invoice.
+        if (!invoice.getRHash && !invoice.getPaymentRequest) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                )
+            );
+        }
         const now = Math.floor(Date.now() / 1000);
 
         const isExpired =

@@ -1733,29 +1733,19 @@ export default class NostrWalletConnectStore {
                     Nip47ErrorCode.NOT_FOUND
                 );
             }
-            try {
-                const result =
-                    await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
-                        rHash
-                    );
-                return { result, error: undefined };
-            } catch (invoiceLookupError) {
-                // NIP-47 lookup_invoice covers payments too, but the backend
-                // lookup only sees invoices — fall back to the payment list.
-                // A failure here must not mask the original lookup result.
-                let payment: Payment | undefined;
-                try {
-                    payment = await this.findPaymentForLookup(
-                        rHash,
-                        request.invoice
-                    );
-                } catch (paymentLookupError) {
-                    console.error(
-                        'NWC: payment lookup fallback failed:',
-                        paymentLookupError
-                    );
-                }
-                if (!payment) throw invoiceLookupError;
+            // NIP-47 lookup_invoice covers invoices and payments, so ask for
+            // each in turn. Both helpers answer with undefined when they have
+            // nothing, rather than signalling absence by throwing.
+            const invoice = await this.lookupInvoiceForNip47(rHash);
+            if (invoice) {
+                return { result: invoice, error: undefined };
+            }
+
+            const payment = await this.lookupPaymentForNip47(
+                rHash,
+                request.invoice
+            );
+            if (payment) {
                 return {
                     result: NostrConnectUtils.buildNip47TransactionForPayment(
                         payment
@@ -1763,6 +1753,13 @@ export default class NostrWalletConnectStore {
                     error: undefined
                 };
             }
+
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                ),
+                Nip47ErrorCode.NOT_FOUND
+            );
         } catch (error) {
             return NostrConnectUtils.createNip47Error(
                 (error as Error).message,
@@ -1772,19 +1769,46 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Finds an outgoing payment for lookup_invoice. Only runs when the invoice
-     * lookup missed, so the common case costs no extra node round-trip.
+     * Invoice lookup expressed as a question. Backends disagree on how they
+     * report a miss — some throw, some resolve with `false` through
+     * BackendUtils.call — so every one of those collapses to undefined here
+     * instead of being inferred from an exception at the call site.
      */
-    private async findPaymentForLookup(
+    private async lookupInvoiceForNip47(
+        rHash: string
+    ): Promise<Nip47Transaction | undefined> {
+        try {
+            return await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
+                rHash
+            );
+        } catch (error) {
+            return undefined;
+        }
+    }
+
+    /**
+     * Finds an outgoing payment for lookup_invoice. Only runs when the invoice
+     * lookup found nothing, so the common case costs no extra node round-trip.
+     * A failing node request is reported as "not found", never as a crash.
+     */
+    private async lookupPaymentForNip47(
         rHash: string,
         invoice?: string
     ): Promise<Payment | undefined> {
-        const payments = await this.getPaymentsForLookup();
-        return NostrConnectUtils.findPaymentForInvoice(
-            invoice || '',
-            payments,
-            rHash
-        );
+        try {
+            const payments = await this.getPaymentsForLookup();
+            return NostrConnectUtils.findPaymentForInvoice(
+                invoice || '',
+                payments,
+                rHash
+            );
+        } catch (error) {
+            console.error(
+                'NWC: payment lookup for lookup_invoice failed:',
+                error
+            );
+            return undefined;
+        }
     }
 
     private async getPaymentsForLookup(): Promise<Payment[]> {

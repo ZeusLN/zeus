@@ -37,6 +37,7 @@ import * as nostrTools from 'nostr-tools';
 
 import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
+import BackendUtils from './BackendUtils';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -829,6 +830,36 @@ describe('NostrConnectUtils', () => {
 
             expect(tx.state).toBe('pending');
             expect(tx.settled_at).toBe(0);
+        });
+    });
+
+    describe('buildNip47TransactionForLightningInvoiceLookup guards', () => {
+        const lookupReturning = (raw: unknown) => {
+            (BackendUtils as any).lookupInvoice = jest
+                .fn()
+                .mockResolvedValue(raw);
+            return NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
+                hex64('c')
+            );
+        };
+
+        it('rejects the false returned for a backend without the method', async () => {
+            await expect(lookupReturning(false)).rejects.toThrow();
+        });
+
+        it('rejects an object that carries no invoice identity', async () => {
+            await expect(
+                lookupReturning({ error: 'unable to locate invoice' })
+            ).rejects.toThrow();
+        });
+
+        it('accepts an invoice identified by payment request alone', async () => {
+            const tx = await lookupReturning({
+                bolt11: 'lnbc2500u1pvjluez',
+                status: 'unpaid'
+            });
+
+            expect(tx.invoice).toBe('lnbc2500u1pvjluez');
         });
     });
 
