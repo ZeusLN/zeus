@@ -1332,6 +1332,27 @@ export default class NostrWalletConnectStore {
         console.log(
             `NWC: Subscription results - ${connections.length} connection(s) processed (sequential pacing between relays)`
         );
+
+        // A payment can settle while the service is down, so catch up once the
+        // relays are back rather than waiting for a client to ask
+        void this.reconcileAllPendingPayInvoiceActivities();
+    }
+
+    /**
+     * Runs pending-payment reconciliation across every active connection.
+     * Cheap when nothing is pending: connections without pending pay_invoice
+     * activities return immediately, and node fetches stay rate limited.
+     */
+    private async reconcileAllPendingPayInvoiceActivities(): Promise<void> {
+        try {
+            await Promise.all(
+                this.activeConnections.map((connection) =>
+                    this.reconcilePendingPayInvoiceActivities(connection)
+                )
+            );
+        } catch (error) {
+            console.error('NWC: pending payment reconciliation failed:', error);
+        }
     }
     private unsubscribeFromConnection(connectionId: string): void {
         const unsub = this.activeSubscriptions.get(connectionId);
@@ -2891,6 +2912,12 @@ export default class NostrWalletConnectStore {
         this.appStateListener = AppState.addEventListener(
             'change',
             async (nextAppState: string) => {
+                // Independent of the persistent service: payments settle while
+                // the app is away on every platform, so catch up on return
+                if (nextAppState === 'active') {
+                    void this.reconcileAllPendingPayInvoiceActivities();
+                }
+
                 if (!this.persistentNWCServiceEnabled) {
                     return;
                 }
@@ -3048,6 +3075,12 @@ export default class NostrWalletConnectStore {
             'change',
             async (nextState: string) => {
                 if (!this.isServiceReady()) return;
+
+                // Mirrors the Android monitor: catch up on payments that
+                // settled while the app was away, regardless of keep-alive
+                if (nextState === 'active') {
+                    void this.reconcileAllPendingPayInvoiceActivities();
+                }
 
                 if (
                     nextState === 'background' &&
