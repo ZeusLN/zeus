@@ -42,6 +42,8 @@ import Base64Utils from './Base64Utils';
 import BackendUtils from './BackendUtils';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
+import CashuInvoice from '../models/CashuInvoice';
+import Base64Utils from './Base64Utils';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -940,6 +942,75 @@ describe('NostrConnectUtils', () => {
 
         it('returns undefined when there are no payments', () => {
             expect(lookup({ payment_hash: HASH_A }, [])).toBeUndefined();
+        });
+
+        it('matches a base64-encoded payment hash from the request', () => {
+            const tx = lookup({
+                payment_hash: Base64Utils.hexToBase64(HASH_A)
+            });
+
+            expect(tx?.payment_hash).toBe(HASH_A);
+        });
+    });
+
+    describe('payment hash normalization', () => {
+        // ZEUS's own NWC backend sends payment_hash base64-encoded, while
+        // stored hashes are hex — see backends/NostrWalletConnect.ts
+        const normalize = (hash?: string) =>
+            NostrConnectUtils.normalizePaymentHash(hash);
+
+        it('passes a hex hash through unchanged', () => {
+            expect(normalize(HASH_A)).toBe(HASH_A);
+        });
+
+        it('decodes a base64 hash to hex', () => {
+            expect(normalize(Base64Utils.hexToBase64(HASH_A))).toBe(HASH_A);
+        });
+
+        it('returns undefined for a missing or blank hash', () => {
+            expect(normalize(undefined)).toBeUndefined();
+            expect(normalize('   ')).toBeUndefined();
+        });
+    });
+
+    describe('findCashuInvoiceForNwcLookup', () => {
+        // BOLT11 spec reference vector; hash confirmed by decoding it
+        const BOLT11 =
+            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+        const BOLT11_HASH =
+            '0001020304050607080900010203040506070809000102030405060708090102';
+
+        const invoices = () => [
+            new CashuInvoice({ quote: 'quote-1', request: BOLT11 })
+        ];
+
+        it('matches a hex payment hash', async () => {
+            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
+                invoices(),
+                { payment_hash: BOLT11_HASH } as never
+            );
+
+            expect(found?.getPaymentRequest).toBe(BOLT11);
+        });
+
+        it('matches a base64-encoded payment hash', async () => {
+            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
+                invoices(),
+                {
+                    payment_hash: Base64Utils.hexToBase64(BOLT11_HASH)
+                } as never
+            );
+
+            expect(found?.getPaymentRequest).toBe(BOLT11);
+        });
+
+        it('does not match an unrelated hash', async () => {
+            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
+                invoices(),
+                { payment_hash: hex64('f') } as never
+            );
+
+            expect(found).toBeUndefined();
         });
     });
 });

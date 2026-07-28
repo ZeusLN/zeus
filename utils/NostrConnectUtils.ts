@@ -23,6 +23,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuToken from '../models/CashuToken';
 import Transaction from '../models/Transaction';
 
+import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
@@ -604,18 +605,21 @@ export default class NostrConnectUtils {
         invoices: CashuInvoice[],
         request: Nip47LookupInvoiceRequest
     ): Promise<CashuInvoice | undefined> {
+        const paymentHash = NostrConnectUtils.normalizePaymentHash(
+            request.payment_hash
+        );
         for (const inv of invoices) {
             if (inv.getPaymentRequest === request.invoice) {
                 return inv;
             }
-            if (!request.payment_hash) {
+            if (!paymentHash) {
                 continue;
             }
             try {
                 const decoded = await NostrConnectUtils.decodeInvoiceTags(
                     inv.getPaymentRequest
                 );
-                if (decoded.paymentHash === request.payment_hash) {
+                if (decoded.paymentHash === paymentHash) {
                     return inv;
                 }
             } catch {
@@ -678,6 +682,17 @@ export default class NostrConnectUtils {
     }
 
     /**
+     * NIP-47 payment hashes are hex, but some clients send them base64-encoded
+     * — ZEUS's own NWC backend does. Stored hashes are hex, so a request value
+     * has to be normalized before any exact comparison.
+     */
+    static normalizePaymentHash(paymentHash?: string): string | undefined {
+        const hash = paymentHash?.trim();
+        if (!hash) return undefined;
+        return hash.includes('=') ? Base64Utils.base64ToHex(hash) : hash;
+    }
+
+    /**
      * NIP-47 transaction for an outgoing Cashu payment matched by
      * lookup_invoice, by payment hash or by payment request. Answers with
      * undefined when nothing matches so the caller stays in control.
@@ -693,7 +708,7 @@ export default class NostrConnectUtils {
         const payment = NostrConnectUtils.findPaymentForInvoice(
             request.invoice || '',
             payments || [],
-            request.payment_hash
+            NostrConnectUtils.normalizePaymentHash(request.payment_hash)
         );
         if (!payment) return undefined;
 
