@@ -668,6 +668,45 @@ export default class NostrConnectUtils {
         });
     }
 
+    /**
+     * NIP-47 transaction for an outgoing Cashu payment matched by
+     * lookup_invoice, by payment hash or by payment request. Answers with
+     * undefined when nothing matches so the caller stays in control.
+     *
+     * A melt only reaches cashuStore.payments after it succeeded, so the state
+     * is settled. The mint's preimage is method-specific and optional per
+     * NUT-05, so it may legitimately be empty.
+     */
+    static buildNip47TransactionForCashuPaymentLookup(
+        payments: CashuPayment[],
+        request: Nip47LookupInvoiceRequest
+    ): Nip47Transaction | undefined {
+        const payment = NostrConnectUtils.findPaymentForInvoice(
+            request.invoice || '',
+            payments || [],
+            request.payment_hash
+        );
+        if (!payment) return undefined;
+
+        const timestamp = Math.floor(
+            Number(payment.getTimestamp) || dateTimeUtils.getCurrentTimestamp()
+        );
+
+        return NostrConnectUtils.createNip47Transaction({
+            type: 'outgoing',
+            state: 'settled',
+            invoice: payment.getPaymentRequest || '',
+            payment_hash: payment.paymentHash || '',
+            amount: satsToMillisats(Number(payment.getAmount) || 0),
+            description: payment.getMemo,
+            preimage: payment.getPreimage,
+            fees_paid: satsToMillisats(Number(payment.getFee) || 0),
+            settled_at: timestamp,
+            created_at: timestamp,
+            expires_at: 0
+        });
+    }
+
     static async buildNip47TransactionForLightningInvoiceLookup(
         r_hash: string
     ): Promise<Nip47Transaction> {
