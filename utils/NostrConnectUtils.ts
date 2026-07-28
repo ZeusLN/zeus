@@ -1521,13 +1521,10 @@ export default class NostrConnectUtils {
             filtered = filtered.filter((tx) => tx.created_at <= request.until!);
         }
 
-        // Filter by unpaid status
-        if (request.unpaid !== undefined) {
-            if (request.unpaid) {
-                filtered = filtered.filter((tx) => tx.state === 'pending');
-            } else {
-                filtered = filtered.filter((tx) => tx.state === 'settled');
-            }
+        // NIP-47 defines unpaid as "include unpaid invoices, default false", so
+        // it widens the result rather than selecting only unpaid ones
+        if (!request.unpaid) {
+            filtered = filtered.filter((tx) => tx.state === 'settled');
         }
 
         // Calculate pagination

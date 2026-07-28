@@ -1084,46 +1084,7 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const pendingPayInvoiceActivities = connection.activity.filter(
-            (activity) =>
-                activity.type === 'pay_invoice' && activity.status === 'pending'
-        );
-        if (pendingPayInvoiceActivities.length > 0) {
-            const lightningPending = pendingPayInvoiceActivities.filter(
-                (activity) => activity.payment_source !== 'cashu'
-            );
-            if (lightningPending.length > 0) {
-                const payments =
-                    await this.getPaymentsForPendingPayInvoiceRefresh(
-                        connectionId,
-                        lightningPending
-                    );
-                for (const activity of lightningPending) {
-                    const payment = payments.find(
-                        (p) =>
-                            p.getPaymentRequest === activity.id ||
-                            (!!activity.paymentHash &&
-                                p.paymentHash === activity.paymentHash)
-                    );
-                    if (!payment) continue;
-
-                    runInAction(() => {
-                        activity.payment = new Payment(payment);
-                        if (!payment.isIncomplete) {
-                            activity.status = 'success';
-                            const amountSats =
-                                Math.floor(Number(activity.satAmount)) ||
-                                Math.floor(Number(payment.getAmount) || 0);
-                            if (amountSats > 0) {
-                                connection.trackSpending(amountSats);
-                            }
-                        } else if (payment.isFailed) {
-                            activity.status = 'failed';
-                        }
-                    });
-                }
-            }
-        }
+        await this.reconcilePendingPayInvoiceActivities(connection);
 
         runInAction(() => {
             connection.activity = connection.activity.filter((activity) => {
@@ -1745,6 +1706,7 @@ export default class NostrWalletConnectStore {
             let nip47Transactions: Nip47Transaction[] = [];
 
             if (connection.hasPaymentPermissions()) {
+                await this.reconcilePendingPayInvoiceActivities(connection);
                 nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
@@ -2250,6 +2212,53 @@ export default class NostrWalletConnectStore {
         }
 
         return true;
+    }
+
+    /**
+     * Promotes pending pay_invoice activities that have since settled or failed.
+     * Used by the activity screen and by list_transactions — without the latter,
+     * an NWC client sees a settled payment as pending until someone opens the
+     * screen. Node fetches are rate limited by the helper below.
+     */
+    private async reconcilePendingPayInvoiceActivities(
+        connection: NWCConnection
+    ): Promise<void> {
+        const lightningPending = connection.activity.filter(
+            (activity) =>
+                activity.type === 'pay_invoice' &&
+                activity.status === 'pending' &&
+                activity.payment_source !== 'cashu'
+        );
+        if (lightningPending.length === 0) return;
+
+        const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
+            connection.id,
+            lightningPending
+        );
+        for (const activity of lightningPending) {
+            const payment = payments.find(
+                (p) =>
+                    p.getPaymentRequest === activity.id ||
+                    (!!activity.paymentHash &&
+                        p.paymentHash === activity.paymentHash)
+            );
+            if (!payment) continue;
+
+            runInAction(() => {
+                activity.payment = new Payment(payment);
+                if (!payment.isIncomplete) {
+                    activity.status = 'success';
+                    const amountSats =
+                        Math.floor(Number(activity.satAmount)) ||
+                        Math.floor(Number(payment.getAmount) || 0);
+                    if (amountSats > 0) {
+                        connection.trackSpending(amountSats);
+                    }
+                } else if (payment.isFailed) {
+                    activity.status = 'failed';
+                }
+            });
+        }
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(
