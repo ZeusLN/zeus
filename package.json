@@ -38,7 +38,7 @@
     "lint": "eslint . && yarn run test check-styles.test.ts --testPathIgnorePatterns=",
     "prettier": "prettier --check \"**/*.ts*\"",
     "prettier-write": "prettier --check --write \"**/*.ts*\"",
-    "gen-proto": "pbjs -p proto -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js",
+    "gen-proto": "pbjs -p proto -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js && prettier --write proto/lightning.d.ts",
     "gradlew": "cd android && ./gradlew",
     "android:clean": "rm -rf android/app/.cxx android/build && yarn gradlew clean",
     "fetch-libraries": "bash fetch-libraries.sh",
