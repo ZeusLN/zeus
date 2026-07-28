@@ -1705,12 +1705,37 @@ export default class NostrWalletConnectStore {
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
             if (this.isCashuConfigured) {
-                const result =
-                    await NostrConnectUtils.buildNip47TransactionForCashuInvoiceLookup(
+                // lookup_invoice covers both directions, and a melt never lands
+                // in the invoice list, so payments have to be searched too
+                const cashuInvoice =
+                    await NostrConnectUtils.findCashuInvoiceForNwcLookup(
                         this.cashuStore.invoices || [],
                         request
                     );
-                return { result, error: undefined };
+                if (cashuInvoice) {
+                    const result =
+                        await NostrConnectUtils.buildNip47TransactionForCashuInvoiceLookup(
+                            this.cashuStore.invoices || [],
+                            request
+                        );
+                    return { result, error: undefined };
+                }
+
+                const paymentResult =
+                    NostrConnectUtils.buildNip47TransactionForCashuPaymentLookup(
+                        this.cashuStore.payments || [],
+                        request
+                    );
+                if (paymentResult) {
+                    return { result: paymentResult, error: undefined };
+                }
+
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                    ),
+                    Nip47ErrorCode.NOT_FOUND
+                );
             }
             const rHash =
                 request.payment_hash && request.payment_hash.includes('=')

@@ -41,6 +41,7 @@ import Invoice from '../models/Invoice';
 import Base64Utils from './Base64Utils';
 import BackendUtils from './BackendUtils';
 import type { ConnectionActivity } from '../models/NWCConnection';
+import CashuPayment from '../models/CashuPayment';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -866,6 +867,79 @@ describe('NostrConnectUtils', () => {
 
                 expect(tx.payment_hash).toBe(HASH_A);
             });
+        });
+    });
+
+    describe('buildNip47TransactionForCashuPaymentLookup', () => {
+        const TIMESTAMP = 1700000000;
+        const PREIMAGE = hex64('e');
+
+        /**
+         * Mirrors what CashuStore builds after a successful melt: the decoded
+         * payment request spread in, bolt11, amount, fee and the mint preimage
+         */
+        const cashuPayment = (overrides: object = {}) =>
+            new CashuPayment({
+                payment_hash: HASH_A,
+                timestamp: TIMESTAMP,
+                bolt11: INVOICE_A,
+                amount: 2000,
+                fee: 3,
+                payment_preimage: PREIMAGE,
+                mintUrl: 'https://mint.example.com',
+                ...overrides
+            });
+
+        const lookup = (request: object, payments?: CashuPayment[]) =>
+            NostrConnectUtils.buildNip47TransactionForCashuPaymentLookup(
+                payments ?? [cashuPayment()],
+                request as never
+            );
+
+        it('finds a melted payment by payment hash', () => {
+            const tx = lookup({ payment_hash: HASH_A });
+
+            expect(tx?.payment_hash).toBe(HASH_A);
+            expect(tx?.type).toBe('outgoing');
+        });
+
+        it('finds a melted payment by payment request', () => {
+            const tx = lookup({ invoice: INVOICE_A });
+
+            expect(tx?.type).toBe('outgoing');
+        });
+
+        it('reports the mint fee in msats and no expiry', () => {
+            const tx = lookup({ payment_hash: HASH_A });
+
+            expect(tx?.amount).toBe(2000000);
+            expect(tx?.fees_paid).toBe(3000);
+            expect(tx?.expires_at).toBe(0);
+        });
+
+        it('reports the mint preimage and a settled state', () => {
+            const tx = lookup({ payment_hash: HASH_A });
+
+            expect(tx?.state).toBe('settled');
+            expect(tx?.preimage).toBe(PREIMAGE);
+            expect(tx?.settled_at).toBe(TIMESTAMP);
+        });
+
+        it('leaves the preimage empty when the mint returned none', () => {
+            const tx = lookup({ payment_hash: HASH_A }, [
+                cashuPayment({ payment_preimage: '' })
+            ]);
+
+            expect(tx?.preimage).toBe('');
+            expect(tx?.state).toBe('settled');
+        });
+
+        it('does not match an unrelated hash', () => {
+            expect(lookup({ payment_hash: HASH_B })).toBeUndefined();
+        });
+
+        it('returns undefined when there are no payments', () => {
+            expect(lookup({ payment_hash: HASH_A }, [])).toBeUndefined();
         });
     });
 });
