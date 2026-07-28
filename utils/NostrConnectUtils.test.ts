@@ -1102,4 +1102,74 @@ describe('NostrConnectUtils', () => {
             });
         });
     });
+
+    describe('list_transactions unpaid filter', () => {
+        // NIP-47: "unpaid: include unpaid invoices, optional, default false"
+        const transaction = (
+            state: 'settled' | 'pending' | 'failed',
+            type: 'incoming' | 'outgoing',
+            createdAt: number
+        ) =>
+            NostrConnectUtils.createNip47Transaction({
+                type,
+                state,
+                invoice: '',
+                payment_hash: '',
+                amount: 1000,
+                created_at: createdAt
+            });
+
+        const settledInvoice = transaction('settled', 'incoming', 400);
+        const pendingInvoice = transaction('pending', 'incoming', 300);
+        const settledPayment = transaction('settled', 'outgoing', 200);
+        const failedPayment = transaction('failed', 'outgoing', 100);
+        const all = [
+            settledInvoice,
+            pendingInvoice,
+            settledPayment,
+            failedPayment
+        ];
+
+        const filter = (request: object) =>
+            NostrConnectUtils.filterAndPaginateTransactions(
+                all,
+                request as never
+            );
+
+        it('returns only settled transactions when unpaid is not requested', () => {
+            const { transactions, totalCount } = filter({});
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
+            expect(totalCount).toBe(2);
+        });
+
+        it('returns only settled transactions when unpaid is false', () => {
+            const { transactions } = filter({ unpaid: false });
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
+        });
+
+        it('includes every state when unpaid is true', () => {
+            const { transactions, totalCount } = filter({ unpaid: true });
+
+            expect(transactions).toHaveLength(4);
+            expect(totalCount).toBe(4);
+        });
+
+        it('does not drop settled transactions when unpaid is true', () => {
+            const { transactions } = filter({ unpaid: true });
+
+            expect(transactions).toContain(settledInvoice);
+            expect(transactions).toContain(settledPayment);
+        });
+
+        it('still applies the type filter alongside unpaid', () => {
+            const { transactions } = filter({
+                unpaid: true,
+                type: 'outgoing'
+            });
+
+            expect(transactions).toEqual([settledPayment, failedPayment]);
+        });
+    });
 });
