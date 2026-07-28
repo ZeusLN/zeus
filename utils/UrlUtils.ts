@@ -3,6 +3,17 @@ import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
 import { DEFAULT_MEMPOOL_INSTANCE } from '../stores/SettingsStore';
 
 /**
+ * Bare hosts are treated as https. Zeus has accepted scheme-less hosts
+ * ('mempool.space', '192.168.1.1:8999') in custom server settings since
+ * before those fields required a scheme, so every consumer of a stored host
+ * must apply this same assumption. Keep it in one place.
+ */
+const withScheme = (host: string): string =>
+    host && !host.includes('://')
+        ? `https://${host.replace(/^\/+/, '')}`
+        : host;
+
+/**
  * Get the Esplora-compatible API base URL for the current network.
  * Used for transaction broadcasting and other API calls.
  */
@@ -15,8 +26,9 @@ const getMempoolApiUrl = (nodeInfo: {
 
     // Custom instance is used verbatim on every network
     if (instance === 'Custom' && privacy?.customMempoolInstance) {
-        let host = privacy.customMempoolInstance.trim().replace(/\/+$/, '');
-        if (!host.includes('://')) host = `https://${host}`;
+        const host = withScheme(
+            privacy.customMempoolInstance.trim().replace(/\/+$/, '')
+        );
         return `${host}/api`;
     }
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
@@ -63,20 +75,18 @@ const goToBlockExplorer = (
             ? 'testnet/'
             : '';
 
+    // Read the convention hint off the raw host, before it is stripped below.
+    // Currently '...#mempool.space' is the only meaningful hint: it tells us
+    // the explorer uses mempool.space's path scheme.
     let path: string = type;
     if (type === 'block-height') {
         path = host.endsWith('mempool.space') ? 'block' : 'block-height';
     }
 
-    let url = `https://${host}/${network}${path}/${value}`;
+    // Host may be <scheme>://<ip|host_name>:<port>[#convention_hint]
+    const base = withScheme(host).split('#')[0];
 
-    // Handle url <scheme>://<ip|host_name>:<port>[#convention_hint] in host
-    // Currently '...#mempool.space' is the only meaningful convention hint
-    if (custom && host.indexOf('://') !== -1) {
-        const hostUrl = host.split('#')[0]; // Strip optional url convention hints
-        url = `${hostUrl}/${network}${path}/${value}`;
-    }
-    goToUrl(url);
+    goToUrl(`${base}/${network}${path}/${value}`);
 };
 
 const isValidUrl = (url: string): boolean => {
@@ -149,6 +159,7 @@ const leaveZeus = (url: string) => {
 
 export default {
     isValidUrl,
+    withScheme,
     getMempoolApiUrl,
     getMempoolInstanceHost,
     goToBlockExplorerTXID,

@@ -62,13 +62,17 @@ export default class Privacy extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
+        // Values saved before these fields required a scheme are stored as
+        // bare hosts, which every consumer already resolves as https. Show
+        // the effective URL rather than flagging a working setting as
+        // invalid; storage is left alone until the user edits the field.
         this.setState({
             defaultBlockExplorer:
                 (settings.privacy && settings.privacy.defaultBlockExplorer) ||
                 'mempool.space',
-            customBlockExplorer:
-                (settings.privacy && settings.privacy.customBlockExplorer) ||
-                '',
+            customBlockExplorer: UrlUtils.withScheme(
+                (settings.privacy && settings.privacy.customBlockExplorer) || ''
+            ),
             clipboard:
                 (settings.privacy && settings.privacy.clipboard) || false,
             lurkerMode:
@@ -79,9 +83,10 @@ export default class Privacy extends React.Component<
             mempoolInstance:
                 (settings.privacy && settings.privacy.mempoolInstance) ||
                 DEFAULT_MEMPOOL_INSTANCE,
-            customMempoolInstance:
+            customMempoolInstance: UrlUtils.withScheme(
                 (settings.privacy && settings.privacy.customMempoolInstance) ||
-                ''
+                    ''
+            )
         });
     }
 
