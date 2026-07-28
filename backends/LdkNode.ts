@@ -1246,8 +1246,13 @@ export default class LdkNode {
      */
     lookupInvoice = async (data: { r_hash: string }): Promise<any> => {
         const payments = await LdkNodeInjection.payments.listPayments();
+        // Inbound only — an outbound payment carries the same hash but is not
+        // an invoice, and formatting it as one mislabels it as incoming
         const payment = data?.r_hash
-            ? payments.find((p) => p.kind.hash === data.r_hash)
+            ? payments.find(
+                  (p) =>
+                      p.kind.hash === data.r_hash && p.direction === 'inbound'
+              )
             : undefined;
 
         if (payment) {
