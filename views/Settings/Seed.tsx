@@ -61,6 +61,8 @@ interface SeedProps {
             walletSeedPhrase?: string[];
             // Implementation of the wallet being viewed (QR export, etc.).
             implementation?: string;
+            // Network of the wallet being viewed (inactive wallets only).
+            isTestNet?: boolean;
             skipWarning?: boolean;
         }
     >;
@@ -284,7 +286,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         'SeedQRExport',
                         // Only override when viewing an inactive wallet's seed.
                         // Active-wallet path keeps the existing pubkey cache.
-                        isViewingInactiveWalletSeed ? { seedPhrase } : undefined
+                        isViewingInactiveWalletSeed
+                            ? {
+                                  seedPhrase,
+                                  isTestNet: route.params?.isTestNet
+                              }
+                            : undefined
                     )
                 }
                 style={{ marginLeft: isRefundRescueKey ? 20 : 14 }}
@@ -607,8 +614,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 onPress={async () => {
                                     if (isRefundRescueKey) {
                                         navigation.goBack();
+                                    } else if (isViewingInactiveWalletSeed) {
+                                        // Inactive-wallet backup must not touch
+                                        // the global flag or jump to the active
+                                        // wallet's home screen.
+                                        navigation.goBack();
                                     } else if (
-                                        !isViewingInactiveWalletSeed &&
                                         SettingsStore.implementation ===
                                             'embedded-lnd' &&
                                         hasChannels

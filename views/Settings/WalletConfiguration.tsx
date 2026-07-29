@@ -3010,9 +3010,18 @@ export default class WalletConfiguration extends React.Component<
                                                       .trim()
                                                       .split(/\s+/)
                                                 : this.state.seedPhrase;
+                                        const walletNetwork =
+                                            implementation === 'ldk-node'
+                                                ? ldkNetwork
+                                                : embeddedLndNetwork;
+                                        const isTestNet =
+                                            (
+                                                walletNetwork || 'mainnet'
+                                            ).toLowerCase() !== 'mainnet';
                                         navigation.navigate('Seed', {
                                             walletSeedPhrase,
-                                            implementation
+                                            implementation,
+                                            isTestNet
                                         });
                                     }}
                                     secondary

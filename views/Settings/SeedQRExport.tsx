@@ -25,7 +25,6 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 
-import { nodeInfoStore } from '../../stores/Stores';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -43,6 +42,7 @@ interface SeedQRExportProps {
         'SeedQRExport',
         {
             seedPhrase?: string[];
+            isTestNet?: boolean;
         }
     >;
 }
@@ -107,6 +107,8 @@ export default class SeedQRExport extends React.PureComponent<
             // Prefer the seed passed from the Seed screen so QR export matches
             // the wallet being viewed (inactive wallets are not in SettingsStore).
             const seedFromRoute = route.params?.seedPhrase;
+            const isTestNet =
+                route.params?.isTestNet ?? NodeInfoStore!.nodeInfo.isTestNet;
             const seedPhrase: string[] =
                 seedFromRoute || SettingsStore.seedPhrase;
 
@@ -258,16 +260,14 @@ export default class SeedQRExport extends React.PureComponent<
             const nodeBase58Segwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    nodeInfoStore.nodeInfo.isTestNet
-                        ? SEGWIT_TESTNET.config
-                        : SEGWIT_MAINNET.config
+                    isTestNet ? SEGWIT_TESTNET.config : SEGWIT_MAINNET.config
                 )
                 .toBase58();
 
             const nodeBase58NativeSegwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    nodeInfoStore.nodeInfo.isTestNet
+                    isTestNet
                         ? NATIVE_SEGWIT_TESTNET.config
                         : NATIVE_SEGWIT_MAINNET.config
                 )
