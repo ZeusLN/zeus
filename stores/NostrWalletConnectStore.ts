@@ -1711,10 +1711,7 @@ export default class NostrWalletConnectStore {
                     );
                 return { result, error: undefined };
             }
-            const rHash =
-                await NostrConnectUtils.resolveLookupInvoicePaymentHash(
-                    request
-                );
+            const rHash = await NostrConnectUtils.resolvePaymentHash(request);
             if (!rHash) {
                 return NostrConnectUtils.createNip47Error(
                     localeString(

@@ -753,7 +753,7 @@ describe('NostrConnectUtils', () => {
             '0001020304050607080900010203040506070809000102030405060708090102';
 
         const resolve = (request: object) =>
-            NostrConnectUtils.resolveLookupInvoicePaymentHash(request as never);
+            NostrConnectUtils.resolvePaymentHash(request as never);
 
         it('passes a hex payment_hash through unchanged', async () => {
             await expect(resolve({ payment_hash: HASH_A })).resolves.toBe(

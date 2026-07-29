@@ -603,7 +603,7 @@ export default class NostrConnectUtils {
      * payment_hash or invoice is required". Resolves the request to a payment
      * hash in hex, or undefined when neither parameter yields one.
      */
-    static async resolveLookupInvoicePaymentHash(
+    static async resolvePaymentHash(
         request: Nip47LookupInvoiceRequest
     ): Promise<string | undefined> {
         const paymentHash = request.payment_hash?.trim();
