@@ -1058,7 +1058,6 @@ describe('NostrConnectUtils', () => {
             const payment = new Payment({
                 payment_hash: HASH_A,
                 timestamp: TIMESTAMP,
-                payment_request: INVOICE_A,
                 value: '2000',
                 fee: '2'
             });
