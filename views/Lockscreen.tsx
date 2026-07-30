@@ -263,6 +263,13 @@ export default class Lockscreen extends React.Component<
         } = this.state;
         const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
+        const isSecurityManagementFlow =
+            !!modifySecurityScreen ||
+            deletePin ||
+            deleteDuressPin ||
+            deletePassword ||
+            deleteDuressPassword;
+
         this.setState({
             error: false
         });
@@ -321,8 +328,11 @@ export default class Lockscreen extends React.Component<
                 );
             }
         } else if (
-            (duressPassphrase && passphraseAttempt === duressPassphrase) ||
-            (duressPin && pinAttempt === duressPin)
+            // duress creds only trigger the wipe on a genuine login attempt -
+            // in security management flows they count as an incorrect entry
+            !isSecurityManagementFlow &&
+            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
+                (duressPin && pinAttempt === duressPin))
         ) {
             SettingsStore.setLoginStatus(true);
             this.deleteNodes();
@@ -527,6 +537,10 @@ export default class Lockscreen extends React.Component<
                                     ? localeString(
                                           'views.Lockscreen.enterExistingPassword'
                                       )
+                                    : deleteDuressPassword
+                                    ? localeString(
+                                          'views.Lockscreen.enterLoginPassword'
+                                      )
                                     : localeString(
                                           'views.Lockscreen.enterPassword'
                                       )}
@@ -625,6 +639,10 @@ export default class Lockscreen extends React.Component<
                                     {modifySecurityScreen === 'SetDuressPin'
                                         ? localeString(
                                               'views.Lockscreen.existingPin'
+                                          )
+                                        : deleteDuressPin
+                                        ? localeString(
+                                              'views.Lockscreen.enterLoginPin'
                                           )
                                         : localeString('views.Lockscreen.pin')}
                                 </Text>
