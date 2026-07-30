@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Pin from '../../components/Pin';
+import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -107,12 +108,7 @@ export default class SetDuressPin extends React.Component<
             this.state;
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header leftComponent="Back" navigation={navigation} />
                 <View
                     style={{
@@ -222,7 +218,7 @@ export default class SetDuressPin extends React.Component<
                         </>
                     )}
                 </View>
-            </View>
+            </Screen>
         );
     }
 }
@@ -232,10 +228,12 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 20,
         textAlign: 'center',
-        marginTop: 50
+        marginTop: 10
     },
     secondaryText: {
         fontFamily: 'PPNeueMontreal-Book',
-        textAlign: 'center'
+        textAlign: 'center',
+        marginLeft: 10,
+        marginRight: 10
     }
 });

@@ -90,6 +90,24 @@ export default class Lockscreen extends React.Component<
         };
     }
 
+    get isSecurityManagementFlow(): boolean {
+        const {
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin,
+            deletePassword,
+            deleteDuressPassword
+        } = this.state;
+
+        return (
+            !!modifySecurityScreen ||
+            deletePin ||
+            deleteDuressPin ||
+            deletePassword ||
+            deleteDuressPassword
+        );
+    }
+
     proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation, route } = this.props;
         const shareIntentData = route.params?.shareIntentData;
@@ -321,8 +339,11 @@ export default class Lockscreen extends React.Component<
                 );
             }
         } else if (
-            (duressPassphrase && passphraseAttempt === duressPassphrase) ||
-            (duressPin && pinAttempt === duressPin)
+            // duress creds only trigger the wipe on a genuine login attempt -
+            // in security management flows they count as an incorrect entry
+            !this.isSecurityManagementFlow &&
+            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
+                (duressPin && pinAttempt === duressPin))
         ) {
             SettingsStore.setLoginStatus(true);
             this.deleteNodes();
@@ -490,12 +511,7 @@ export default class Lockscreen extends React.Component<
 
         return (
             <Screen>
-                {(!!modifySecurityScreen ||
-                    deletePin ||
-                    deleteDuressPin ||
-                    deletePassword ||
-                    deleteDuressPassword ||
-                    pendingNavigation) && (
+                {(this.isSecurityManagementFlow || pendingNavigation) && (
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
@@ -526,6 +542,10 @@ export default class Lockscreen extends React.Component<
                                 {modifySecurityScreen === 'SetDuressPassword'
                                     ? localeString(
                                           'views.Lockscreen.enterExistingPassword'
+                                      )
+                                    : deleteDuressPassword
+                                    ? localeString(
+                                          'views.Lockscreen.enterLoginPassword'
                                       )
                                     : localeString(
                                           'views.Lockscreen.enterPassword'
@@ -625,6 +645,10 @@ export default class Lockscreen extends React.Component<
                                     {modifySecurityScreen === 'SetDuressPin'
                                         ? localeString(
                                               'views.Lockscreen.existingPin'
+                                          )
+                                        : deleteDuressPin
+                                        ? localeString(
+                                              'views.Lockscreen.enterLoginPin'
                                           )
                                         : localeString('views.Lockscreen.pin')}
                                 </Text>
