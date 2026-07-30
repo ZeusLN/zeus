@@ -43,7 +43,6 @@ import BackendUtils from './BackendUtils';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
 import CashuInvoice from '../models/CashuInvoice';
-import Base64Utils from './Base64Utils';
 
 // Stable hex values: repeat a hex digit 64 times to fill 32 bytes
 const hex64 = (c: string) => c.repeat(64);
@@ -768,37 +767,34 @@ describe('NostrConnectUtils', () => {
             ...overrides
         });
 
-        const lookupLightningInvoice = (rawInvoice: object) => {
-            (BackendUtils as any).lookupInvoice = jest
-                .fn()
-                .mockResolvedValue(rawInvoice);
-            return NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
-                HASH_A
+        const lookupLightningInvoice = (rawInvoice: object) =>
+            NostrConnectUtils.lightningInvoiceToNip47Transaction(
+                new Invoice(rawInvoice),
+                { fallbackHash: HASH_A }
             );
-        };
 
         describe('lookup_invoice', () => {
-            it('reads the payment hash from the LND r_hash field', async () => {
-                const tx = await lookupLightningInvoice(lndInvoice());
+            it('reads the payment hash from the LND r_hash field', () => {
+                const tx = lookupLightningInvoice(lndInvoice());
 
                 expect(tx.payment_hash).toBe(HASH_A);
             });
 
-            it('reports expiry as creation plus expiry, not the creation date', async () => {
-                const tx = await lookupLightningInvoice(lndInvoice());
+            it('reports expiry as creation plus expiry, not the creation date', () => {
+                const tx = lookupLightningInvoice(lndInvoice());
 
                 expect(tx.created_at).toBe(CREATION_DATE);
                 expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
             });
 
-            it('marks an unpaid invoice past its expiry as failed', async () => {
-                const tx = await lookupLightningInvoice(lndInvoice());
+            it('marks an unpaid invoice past its expiry as failed', () => {
+                const tx = lookupLightningInvoice(lndInvoice());
 
                 expect(tx.state).toBe('failed');
             });
 
-            it('returns preimage and settle time for a settled invoice', async () => {
-                const tx = await lookupLightningInvoice(
+            it('returns preimage and settle time for a settled invoice', () => {
+                const tx = lookupLightningInvoice(
                     lndInvoice({
                         settled: true,
                         settle_date: String(SETTLE_DATE),
@@ -811,8 +807,8 @@ describe('NostrConnectUtils', () => {
                 expect(tx.settled_at).toBe(SETTLE_DATE);
             });
 
-            it('reads Core Lightning payment_hash and payment_preimage', async () => {
-                const tx = await lookupLightningInvoice({
+            it('reads Core Lightning payment_hash and payment_preimage', () => {
+                const tx = lookupLightningInvoice({
                     payment_hash: HASH_A,
                     payment_preimage: PREIMAGE,
                     bolt11: INVOICE_A,
@@ -828,8 +824,8 @@ describe('NostrConnectUtils', () => {
                 expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
             });
 
-            it('does not report a settle time for an unpaid invoice', async () => {
-                const tx = await lookupLightningInvoice({
+            it('does not report a settle time for an unpaid invoice', () => {
+                const tx = lookupLightningInvoice({
                     payment_hash: HASH_A,
                     bolt11: INVOICE_A,
                     created_at: CREATION_DATE,
@@ -853,6 +849,15 @@ describe('NostrConnectUtils', () => {
                 expect(tx.payment_hash).toBe(HASH_A);
             });
 
+            it('reports the same expiry as lookup_invoice', () => {
+                const [tx] =
+                    NostrConnectUtils.convertLightningDataToNip47Transactions({
+                        invoices: [new Invoice(lndInvoice())]
+                    });
+
+                expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
+
             it('never reports the payment request as a payment hash', () => {
                 const activity: ConnectionActivity = {
                     id: INVOICE_A,
@@ -872,7 +877,7 @@ describe('NostrConnectUtils', () => {
         });
     });
 
-    describe('buildNip47TransactionForCashuPaymentLookup', () => {
+    describe('cashuPaymentToNip47Transaction', () => {
         const TIMESTAMP = 1700000000;
         const PREIMAGE = hex64('e');
 
@@ -892,11 +897,15 @@ describe('NostrConnectUtils', () => {
                 ...overrides
             });
 
-        const lookup = (request: object, payments?: CashuPayment[]) =>
-            NostrConnectUtils.buildNip47TransactionForCashuPaymentLookup(
+        const lookup = (request: object, payments?: CashuPayment[]) => {
+            const payment = NostrConnectUtils.findPaymentByLookupRequest(
                 payments ?? [cashuPayment()],
                 request as never
             );
+            return payment
+                ? NostrConnectUtils.cashuPaymentToNip47Transaction(payment)
+                : undefined;
+        };
 
         it('finds a melted payment by payment hash', () => {
             const tx = lookup({ payment_hash: HASH_A });
@@ -973,7 +982,7 @@ describe('NostrConnectUtils', () => {
         });
     });
 
-    describe('findCashuInvoiceForNwcLookup', () => {
+    describe('findCashuInvoiceByLookupRequest', () => {
         // BOLT11 spec reference vector; hash confirmed by decoding it
         const BOLT11 =
             'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
@@ -985,32 +994,112 @@ describe('NostrConnectUtils', () => {
         ];
 
         it('matches a hex payment hash', async () => {
-            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
-                invoices(),
-                { payment_hash: BOLT11_HASH } as never
-            );
+            const found =
+                await NostrConnectUtils.findCashuInvoiceByLookupRequest(
+                    invoices(),
+                    { payment_hash: BOLT11_HASH } as never
+                );
 
             expect(found?.getPaymentRequest).toBe(BOLT11);
         });
 
         it('matches a base64-encoded payment hash', async () => {
-            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
-                invoices(),
-                {
-                    payment_hash: Base64Utils.hexToBase64(BOLT11_HASH)
-                } as never
-            );
+            const found =
+                await NostrConnectUtils.findCashuInvoiceByLookupRequest(
+                    invoices(),
+                    {
+                        payment_hash: Base64Utils.hexToBase64(BOLT11_HASH)
+                    } as never
+                );
 
             expect(found?.getPaymentRequest).toBe(BOLT11);
         });
 
         it('does not match an unrelated hash', async () => {
-            const found = await NostrConnectUtils.findCashuInvoiceForNwcLookup(
-                invoices(),
-                { payment_hash: hex64('f') } as never
-            );
+            const found =
+                await NostrConnectUtils.findCashuInvoiceByLookupRequest(
+                    invoices(),
+                    { payment_hash: hex64('f') } as never
+                );
 
             expect(found).toBeUndefined();
+        });
+    });
+
+    describe('lookupInvoiceTransaction', () => {
+        const TIMESTAMP = 1700000000;
+
+        it('finds a Lightning invoice from the node by payment hash', async () => {
+            (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
+                r_hash: Base64Utils.hexToBase64(HASH_A),
+                payment_request: INVOICE_A,
+                creation_date: String(TIMESTAMP),
+                expiry: '3600',
+                value: '1000',
+                settled: false
+            });
+
+            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
+                request: { payment_hash: HASH_A },
+                isCashu: false,
+                cashuInvoices: [],
+                cashuPayments: [],
+                lightningPayments: []
+            });
+
+            expect(tx?.type).toBe('incoming');
+            expect(tx?.payment_hash).toBe(HASH_A);
+        });
+
+        it('falls back to an outgoing Lightning payment when the node has no invoice', async () => {
+            (BackendUtils as any).lookupInvoice = jest
+                .fn()
+                .mockRejectedValue(new Error('not found'));
+            const payment = new Payment({
+                payment_hash: HASH_A,
+                timestamp: TIMESTAMP,
+                payment_request: INVOICE_A,
+                value: '2000',
+                fee: '2'
+            });
+
+            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
+                request: { payment_hash: HASH_A },
+                isCashu: false,
+                cashuInvoices: [],
+                cashuPayments: [],
+                lightningPayments: [payment]
+            });
+
+            expect(tx?.type).toBe('outgoing');
+            expect(tx?.payment_hash).toBe(HASH_A);
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalled();
+        });
+
+        it('resolves an invoice-only Lightning request from the BOLT11 string', async () => {
+            const BOLT11 =
+                'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+            (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
+                payment_hash:
+                    '0001020304050607080900010203040506070809000102030405060708090102',
+                bolt11: BOLT11,
+                created_at: TIMESTAMP,
+                expires_at: TIMESTAMP + 3600,
+                status: 'unpaid'
+            });
+
+            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
+                request: { invoice: BOLT11 },
+                isCashu: false,
+                cashuInvoices: [],
+                cashuPayments: [],
+                lightningPayments: []
+            });
+
+            expect(tx?.type).toBe('incoming');
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledWith({
+                r_hash: '0001020304050607080900010203040506070809000102030405060708090102'
+            });
         });
     });
 });

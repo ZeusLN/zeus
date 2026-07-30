@@ -4,6 +4,7 @@ import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
+import Invoice from './../models/Invoice';
 import { localeString } from './../utils/LocaleUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
@@ -47,7 +48,8 @@ export default class LndHub extends LND {
     lookupInvoice = (data: any) =>
         this.getRequest('/getuserinvoices').then((invoices: any) => {
             const invoice = (invoices || []).find(
-                (userInvoice: any) => userInvoice.payment_hash === data.r_hash
+                (userInvoice: any) =>
+                    new Invoice(userInvoice).getRHash === data.r_hash
             );
             if (!invoice) {
                 throw new Error(
