@@ -55,7 +55,14 @@ interface SeedProps {
     route: Route<
         'Seed',
         {
+            // Swap rescue-key flow only. Presence also drives rescue-key UI.
             seedPhrase?: string[];
+            // Seed for the wallet being viewed (may differ from the active node).
+            walletSeedPhrase?: string[];
+            // Implementation of the wallet being viewed (QR export, etc.).
+            implementation?: string;
+            // Network of the wallet being viewed (inactive wallets only).
+            isTestNet?: boolean;
             skipWarning?: boolean;
         }
     >;
@@ -235,10 +242,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             isChannelExporting,
             channelExportMessage
         } = this.state;
-        // Get seed phrase based on implementation
+        // Prefer an explicit seed for the wallet being viewed. SettingsStore
+        // only mirrors the active node, so inactive wallets must pass
+        // walletSeedPhrase from WalletConfiguration.
+        //
+        // walletSeedPhrase is only set for inactive wallets — when present,
+        // do not offer active-node channel export (wrong lndDir / channels).
+        const isViewingInactiveWalletSeed =
+            !!route.params?.walletSeedPhrase?.length;
         let seedPhrase: string[] | undefined;
         if (route.params?.seedPhrase) {
             seedPhrase = route.params.seedPhrase;
+        } else if (isViewingInactiveWalletSeed) {
+            seedPhrase = route.params!.walletSeedPhrase;
         } else if (SettingsStore.implementation === 'ldk-node') {
             // LDK Node stores mnemonic as a string, convert to array
             seedPhrase = SettingsStore.ldkMnemonic?.split(' ');
@@ -246,6 +262,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             seedPhrase = SettingsStore.seedPhrase;
         }
         const isRefundRescueKey = !!route.params?.seedPhrase;
+        const seedImplementation =
+            route.params?.implementation || SettingsStore.implementation;
         const isTwelveWords = seedPhrase?.length === 12;
         const hasChannels =
             ChannelsStore.channels.length > 0 ||
@@ -263,7 +281,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
         const QRExport = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('SeedQRExport')}
+                onPress={() =>
+                    navigation.navigate(
+                        'SeedQRExport',
+                        // Only override when viewing an inactive wallet's seed.
+                        // Active-wallet path keeps the existing pubkey cache.
+                        isViewingInactiveWalletSeed
+                            ? {
+                                  seedPhrase,
+                                  isTestNet: route.params?.isTestNet
+                              }
+                            : undefined
+                    )
+                }
                 style={{ marginLeft: isRefundRescueKey ? 20 : 14 }}
             >
                 <QR fill={themeColor('text')} />
@@ -345,7 +375,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 )}
                                 <DangerouslyCopySeed />
                                 {isRefundRescueKey ||
-                                SettingsStore.implementation === 'ldk-node' ? (
+                                seedImplementation === 'ldk-node' ? (
                                     <></>
                                 ) : (
                                     <QRExport />
@@ -584,6 +614,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 onPress={async () => {
                                     if (isRefundRescueKey) {
                                         navigation.goBack();
+                                    } else if (isViewingInactiveWalletSeed) {
+                                        // Inactive-wallet backup must not touch
+                                        // the global flag or jump to the active
+                                        // wallet's home screen.
+                                        navigation.goBack();
                                     } else if (
                                         SettingsStore.implementation ===
                                             'embedded-lnd' &&
@@ -647,6 +682,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 containerStyle={{ marginBottom: 10 }}
                             />
                             {!isRefundRescueKey &&
+                                !isViewingInactiveWalletSeed &&
                                 hasChannels &&
                                 SettingsStore.implementation ==
                                     'embedded-lnd' && (

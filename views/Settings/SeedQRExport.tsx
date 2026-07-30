@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Route } from '@react-navigation/native';
 import { Tab } from '@rneui/themed';
 
 import BIP32Factory from 'bip32';
@@ -24,7 +25,6 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 
-import { nodeInfoStore } from '../../stores/Stores';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -38,6 +38,13 @@ interface SeedQRExportProps {
     navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
+    route: Route<
+        'SeedQRExport',
+        {
+            seedPhrase?: string[];
+            isTestNet?: boolean;
+        }
+    >;
 }
 
 interface SeedQRExportState {
@@ -96,23 +103,33 @@ export default class SeedQRExport extends React.PureComponent<
     async initializeSeed() {
         try {
             await this.props.SettingsStore.getSettings();
-            const { NodeInfoStore, SettingsStore } = this.props;
-            const { seedPhrase }: any = SettingsStore;
+            const { NodeInfoStore, SettingsStore, route } = this.props;
+            // Prefer the seed passed from the Seed screen so QR export matches
+            // the wallet being viewed (inactive wallets are not in SettingsStore).
+            const seedFromRoute = route.params?.seedPhrase;
+            const isTestNet =
+                route.params?.isTestNet ?? NodeInfoStore!.nodeInfo.isTestNet;
+            const seedPhrase: string[] =
+                seedFromRoute || SettingsStore.seedPhrase;
 
-            const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-            const storageKey = `${pubkey}-extended-private-keys`;
-            const extendedKeys = await Storage.getItem(storageKey);
-            if (extendedKeys) {
-                const extendedKeysJson = JSON.parse(extendedKeys);
-                const { nodeBase58Segwit, nodeBase58NativeSegwit } =
-                    extendedKeysJson;
+            // Cache is keyed by the active node's pubkey — only use it when
+            // exporting the active wallet's seed (no override from route).
+            if (!seedFromRoute) {
+                const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
+                const storageKey = `${pubkey}-extended-private-keys`;
+                const extendedKeys = await Storage.getItem(storageKey);
+                if (extendedKeys) {
+                    const extendedKeysJson = JSON.parse(extendedKeys);
+                    const { nodeBase58Segwit, nodeBase58NativeSegwit } =
+                        extendedKeysJson;
 
-                this.setState({
-                    loading: false,
-                    nodeBase58Segwit,
-                    nodeBase58NativeSegwit
-                });
-                return;
+                    this.setState({
+                        loading: false,
+                        nodeBase58Segwit,
+                        nodeBase58NativeSegwit
+                    });
+                    return;
+                }
             }
 
             const bits = seedPhrase
@@ -122,9 +139,9 @@ export default class SeedQRExport extends React.PureComponent<
                 })
                 .join('');
 
-            const seedBytes = bits
-                .match(/(.{1,8})/g)
-                .map((bin: string) => parseInt(bin, 2));
+            const seedBytes = (bits.match(/(.{1,8})/g) || []).map(
+                (bin: string) => parseInt(bin, 2)
+            );
             const seed = Buffer.from(seedBytes);
 
             if (!seed || seed.length === 0 || seed[0] !== AEZEED_VERSION) {
@@ -243,25 +260,29 @@ export default class SeedQRExport extends React.PureComponent<
             const nodeBase58Segwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    nodeInfoStore.nodeInfo.isTestNet
-                        ? SEGWIT_TESTNET.config
-                        : SEGWIT_MAINNET.config
+                    isTestNet ? SEGWIT_TESTNET.config : SEGWIT_MAINNET.config
                 )
                 .toBase58();
 
             const nodeBase58NativeSegwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    nodeInfoStore.nodeInfo.isTestNet
+                    isTestNet
                         ? NATIVE_SEGWIT_TESTNET.config
                         : NATIVE_SEGWIT_MAINNET.config
                 )
                 .toBase58();
 
-            await Storage.setItem(storageKey, {
-                nodeBase58Segwit,
-                nodeBase58NativeSegwit
-            });
+            // Only cache for the active wallet — never overwrite the active
+            // node's cached keys with an inactive wallet's derived keys.
+            if (!seedFromRoute) {
+                const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
+                const storageKey = `${pubkey}-extended-private-keys`;
+                await Storage.setItem(storageKey, {
+                    nodeBase58Segwit,
+                    nodeBase58NativeSegwit
+                });
+            }
 
             this.setState({
                 loading: false,

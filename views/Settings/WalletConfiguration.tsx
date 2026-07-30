@@ -880,6 +880,8 @@ export default class WalletConfiguration extends React.Component<
                             'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
                         ),
                         onPress: () =>
+                            // Active embedded-LND only reaches this branch;
+                            // SettingsStore already has this wallet's seed.
                             navigation.navigate('Seed', { skipWarning: true }),
                         isPreferred: true
                     },
@@ -1255,8 +1257,7 @@ export default class WalletConfiguration extends React.Component<
             loading,
             createAccountError,
             createAccountSuccess,
-            createAccount,
-            seedPhrase
+            createAccount
         } = SettingsStore;
 
         const isLocalImpl =
@@ -2977,7 +2978,7 @@ export default class WalletConfiguration extends React.Component<
 
                         {((implementation === 'embedded-lnd' &&
                             adminMacaroon &&
-                            seedPhrase) ||
+                            this.state.seedPhrase?.length) ||
                             (implementation === 'ldk-node' &&
                                 ldkNodeInitialized &&
                                 ldkMnemonic)) && (
@@ -2986,16 +2987,43 @@ export default class WalletConfiguration extends React.Component<
                                     title={localeString(
                                         'views.Settings.NodeConfiguration.backUpWallet'
                                     )}
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'Seed',
+                                    onPress={() => {
+                                        // SettingsStore only mirrors the active
+                                        // node. Pass this node's seed only when
+                                        // viewing an inactive wallet so active
+                                        // backup/export paths stay unchanged.
+                                        if (active) {
+                                            navigation.navigate(
+                                                'Seed',
+                                                implementation === 'ldk-node'
+                                                    ? {
+                                                          implementation:
+                                                              'ldk-node'
+                                                      }
+                                                    : undefined
+                                            );
+                                            return;
+                                        }
+                                        const walletSeedPhrase =
                                             implementation === 'ldk-node'
-                                                ? {
-                                                      implementation: 'ldk-node'
-                                                  }
-                                                : undefined
-                                        )
-                                    }
+                                                ? (this.state.ldkMnemonic || '')
+                                                      .trim()
+                                                      .split(/\s+/)
+                                                : this.state.seedPhrase;
+                                        const walletNetwork =
+                                            implementation === 'ldk-node'
+                                                ? ldkNetwork
+                                                : embeddedLndNetwork;
+                                        const isTestNet =
+                                            (
+                                                walletNetwork || 'mainnet'
+                                            ).toLowerCase() !== 'mainnet';
+                                        navigation.navigate('Seed', {
+                                            walletSeedPhrase,
+                                            implementation,
+                                            isTestNet
+                                        });
+                                    }}
                                     secondary
                                     disabled={loading}
                                 />
