@@ -90,6 +90,24 @@ export default class Lockscreen extends React.Component<
         };
     }
 
+    get isSecurityManagementFlow(): boolean {
+        const {
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin,
+            deletePassword,
+            deleteDuressPassword
+        } = this.state;
+
+        return (
+            !!modifySecurityScreen ||
+            deletePin ||
+            deleteDuressPin ||
+            deletePassword ||
+            deleteDuressPassword
+        );
+    }
+
     proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation, route } = this.props;
         const shareIntentData = route.params?.shareIntentData;
@@ -263,13 +281,6 @@ export default class Lockscreen extends React.Component<
         } = this.state;
         const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
-        const isSecurityManagementFlow =
-            !!modifySecurityScreen ||
-            deletePin ||
-            deleteDuressPin ||
-            deletePassword ||
-            deleteDuressPassword;
-
         this.setState({
             error: false
         });
@@ -330,7 +341,7 @@ export default class Lockscreen extends React.Component<
         } else if (
             // duress creds only trigger the wipe on a genuine login attempt -
             // in security management flows they count as an incorrect entry
-            !isSecurityManagementFlow &&
+            !this.isSecurityManagementFlow &&
             ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
                 (duressPin && pinAttempt === duressPin))
         ) {
@@ -500,12 +511,7 @@ export default class Lockscreen extends React.Component<
 
         return (
             <Screen>
-                {(!!modifySecurityScreen ||
-                    deletePin ||
-                    deleteDuressPin ||
-                    deletePassword ||
-                    deleteDuressPassword ||
-                    pendingNavigation) && (
+                {(this.isSecurityManagementFlow || pendingNavigation) && (
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
