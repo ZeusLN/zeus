@@ -20,6 +20,7 @@ import {
     isOnionHttpsUrl,
     RequestMethod
 } from '../utils/TorUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 const calls = new Map<string, Promise<any>>();
 
@@ -267,15 +268,26 @@ export default class CLNRest {
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
     getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
-            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
+            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices ORDER BY created_index DESC LIMIT ${
                 data?.limit ? data.limit : 150
             };`
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
+                const bolt11 = invoice[1];
+                let creation_date: string | undefined;
+                if (bolt11) {
+                    try {
+                        creation_date = String(
+                            Bolt11Utils.decode(bolt11).timestamp
+                        );
+                    } catch (_e) {
+                        // ignore decode errors; paid_at still sorts paid invoices
+                    }
+                }
                 invoiceList.push({
                     label: invoice[0],
-                    bolt11: invoice[1],
+                    bolt11,
                     payment_hash: invoice[3],
                     amount_msat: invoice[4],
                     status: invoice[5],
@@ -284,7 +296,8 @@ export default class CLNRest {
                     payment_preimage: invoice[8],
                     description: invoice[9],
                     expires_at: invoice[10],
-                    bolt12: invoice[2]
+                    bolt12: invoice[2],
+                    creation_date
                 });
             });
 
