@@ -386,7 +386,7 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {!!formattedTimeUntilExpiry && (
+                        {!!formattedTimeUntilExpiry && !isPaid && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.expiration'

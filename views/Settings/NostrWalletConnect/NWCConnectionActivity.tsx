@@ -352,19 +352,26 @@ export default class NWCConnectionActivity extends React.Component<
         }
     };
 
-    navigateToInvoiceDetails = (item: ConnectionActivity) => {
-        const { navigation } = this.props;
+    navigateToInvoiceDetails = async (item: ConnectionActivity) => {
+        const { navigation, NostrWalletConnectStore } = this.props;
+        if (!item.invoice) return;
 
         try {
-            if (!item.invoice) return;
+            const invoice =
+                await NostrWalletConnectStore.refreshActivityInvoiceForNavigation(
+                    item
+                );
+            if (!invoice) return;
 
-            if (
+            const screen =
                 item.payment_source === 'cashu' &&
-                item.invoice instanceof CashuInvoice
-            ) {
-                navigation.navigate('CashuInvoice', { invoice: item.invoice });
-            } else if (item.invoice instanceof Invoice) {
-                navigation.navigate('Invoice', { invoice: item.invoice });
+                invoice instanceof CashuInvoice
+                    ? 'CashuInvoice'
+                    : invoice instanceof Invoice
+                    ? 'Invoice'
+                    : undefined;
+            if (screen) {
+                navigation.navigate(screen, { invoice });
             }
         } catch (e) {
             console.error('Navigation to invoice failed:', e);
@@ -380,7 +387,7 @@ export default class NWCConnectionActivity extends React.Component<
         if (item.type === 'pay_invoice') {
             this.navigateToPaymentDetails(item);
         } else if (item.type === 'make_invoice') {
-            this.navigateToInvoiceDetails(item);
+            void this.navigateToInvoiceDetails(item);
         }
     };
 

@@ -895,6 +895,7 @@ export default class NostrWalletConnectStore {
         const connection = index !== -1 ? this.connections[index] : undefined;
         return { connection, index };
     };
+
     public getActivities = async (
         connectionId: string
     ): Promise<{ name: string; activity: ConnectionActivity[] }> => {
@@ -988,28 +989,25 @@ export default class NostrWalletConnectStore {
 
         if (pendingLightningInvoiceActivities.length > 0) {
             await Promise.all(
-                pendingLightningInvoiceActivities.map(async (activity) => {
-                    const invoice = activity.invoice as Invoice | undefined;
-                    if (!invoice) return;
+                pendingLightningInvoiceActivities.map((activity) =>
+                    this.reconcilePendingLightningMakeInvoice(activity)
+                )
+            );
+        }
 
-                    const applyPaidOrExpired = (backendSaysPaid: boolean) => {
-                        const settled = backendSaysPaid || invoice.isPaid;
-                        runInAction(() => {
-                            if (settled) {
-                                activity.status = 'success';
-                            } else if (invoice.isExpired) {
-                                activity.status = 'expired';
-                            }
-                        });
-                    };
-
-                    const isInvoicePaid =
-                        await NostrConnectUtils.lookupInvoicePaidFromNode({
-                            paymentRequest: invoice.getPaymentRequest,
-                            rHash: invoice.getRHash
-                        });
-                    applyPaidOrExpired(isInvoicePaid);
-                })
+        const stalePaidLightningInvoiceActivities = connection.activity.filter(
+            (activity) =>
+                activity.type === 'make_invoice' &&
+                activity.status === 'success' &&
+                activity.payment_source !== 'cashu' &&
+                activity.invoice instanceof Invoice &&
+                !activity.invoice.isPaid
+        );
+        if (stalePaidLightningInvoiceActivities.length > 0) {
+            await Promise.all(
+                stalePaidLightningInvoiceActivities.map((activity) =>
+                    this.backfillStalePaidLightningMakeInvoice(activity)
+                )
             );
         }
 
@@ -1088,6 +1086,58 @@ export default class NostrWalletConnectStore {
         this.scheduleSave();
         return { name: connection.name, activity: connection.activity };
     };
+
+    public refreshActivityInvoiceForNavigation = async (
+        activity: ConnectionActivity
+    ): Promise<Invoice | CashuInvoice | undefined> => {
+        if (activity.type !== 'make_invoice' || !activity.invoice) {
+            return activity.invoice ?? undefined;
+        }
+
+        if (
+            activity.payment_source === 'cashu' &&
+            activity.invoice instanceof CashuInvoice
+        ) {
+            const invoice = activity.invoice;
+            if (invoice.isPaid) return invoice;
+
+            const paid = this.cashuStore.invoices?.find(
+                (inv) =>
+                    inv.getPaymentRequest === invoice.getPaymentRequest &&
+                    inv.isPaid
+            );
+            if (!paid) return invoice;
+
+            runInAction(() => {
+                activity.invoice = paid;
+                activity.status = 'success';
+            });
+            this.scheduleSave();
+            return paid;
+        }
+
+        if (activity.invoice instanceof Invoice) {
+            const invoice = activity.invoice;
+            if (invoice.isPaid) return invoice;
+
+            const refreshed = await this.refreshLightningInvoiceFromNode(
+                invoice
+            );
+            if (!refreshed) return invoice;
+
+            runInAction(() => {
+                activity.invoice = refreshed;
+                if (refreshed.isPaid) {
+                    activity.status = 'success';
+                }
+            });
+            this.scheduleSave();
+            return refreshed;
+        }
+
+        return activity.invoice;
+    };
+
     @action
     private markConnectionUsed = async (connectionId: string) => {
         const { connection } = this.getConnection({ connectionId });
@@ -2293,6 +2343,95 @@ export default class NostrWalletConnectStore {
         await this.paymentsStore.getPayments();
         this.lastPendingPaymentStatusFetchByConnection.set(connectionId, now);
         return this.paymentsStore.payments || [];
+    }
+    private findLightningInvoiceInStore(invoice: Invoice): Invoice | undefined {
+        const rHash = invoice.getRHash;
+        const paymentRequest = invoice.getPaymentRequest;
+        return this.invoicesStore.invoices?.find(
+            (inv) =>
+                (rHash && inv.getRHash === rHash) ||
+                (paymentRequest && inv.getPaymentRequest === paymentRequest)
+        );
+    }
+
+    /** Store list first, then lookupInvoice — shared by activity refresh paths. */
+    private async refreshLightningInvoiceFromNode(
+        invoice: Invoice
+    ): Promise<Invoice | undefined> {
+        const fromStore = this.findLightningInvoiceInStore(invoice);
+        if (fromStore?.isPaid) {
+            return fromStore;
+        }
+
+        const rHash = invoice.getRHash;
+        if (!rHash) {
+            return fromStore;
+        }
+
+        try {
+            const raw = await BackendUtils.lookupInvoice({ r_hash: rHash });
+            if (raw && typeof raw === 'object') {
+                return new Invoice(raw);
+            }
+        } catch {
+            // lookupInvoice throws when the hash is unknown on this backend
+        }
+        return fromStore;
+    }
+
+    private async reconcilePendingLightningMakeInvoice(
+        activity: ConnectionActivity
+    ): Promise<void> {
+        const invoice = activity.invoice as Invoice | undefined;
+        if (!invoice) return;
+
+        const settled =
+            (await NostrConnectUtils.lookupInvoicePaidFromNode({
+                paymentRequest: invoice.getPaymentRequest,
+                rHash: invoice.getRHash
+            })) || invoice.isPaid;
+
+        if (settled) {
+            const refreshed = await this.refreshLightningInvoiceFromNode(
+                invoice
+            );
+            runInAction(() => {
+                activity.status = 'success';
+                if (refreshed) {
+                    activity.invoice = refreshed;
+                }
+            });
+            return;
+        }
+
+        if (invoice.isExpired) {
+            runInAction(() => {
+                activity.status = 'expired';
+            });
+        }
+    }
+
+    private async backfillStalePaidLightningMakeInvoice(
+        activity: ConnectionActivity
+    ): Promise<void> {
+        if (
+            activity.type !== 'make_invoice' ||
+            activity.status !== 'success' ||
+            activity.payment_source === 'cashu' ||
+            !(activity.invoice instanceof Invoice) ||
+            activity.invoice.isPaid
+        ) {
+            return;
+        }
+
+        const refreshed = await this.refreshLightningInvoiceFromNode(
+            activity.invoice
+        );
+        if (!refreshed?.isPaid) return;
+
+        runInAction(() => {
+            activity.invoice = refreshed;
+        });
     }
 
     private getTransactionsStorePaymentState() {
