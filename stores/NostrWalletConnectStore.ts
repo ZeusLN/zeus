@@ -1,11 +1,4 @@
-// Ensure TextDecoder is available before any nostr-tools imports
-if (typeof global !== 'undefined' && !global.TextDecoder) {
-    const TextEncodingPolyfill = require('text-encoding');
-    global.TextDecoder = TextEncodingPolyfill.TextDecoder;
-    global.TextEncoder = TextEncodingPolyfill.TextEncoder;
-}
 import { action, computed, observable, reaction, runInAction } from 'mobx';
-
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
