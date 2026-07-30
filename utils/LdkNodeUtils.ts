@@ -306,18 +306,24 @@ export async function createLdkNodeWallet({
             failOnVssError
         });
         vssError = result.vssError;
-    } catch (e) {
+    } catch (e: any) {
         // A failed build can leave a partially-written local DB behind.
         // If it survived, later dual-store builds would read the partial
         // local state instead of VSS — remove the directory so a retry
-        // starts clean.
-        try {
-            await deleteLdkNodeWallet(nodeDir);
-        } catch (cleanupError) {
-            console.warn(
-                'LDK Node: failed to clean up wallet dir after failed init:',
-                cleanupError
-            );
+        // starts clean. On vss_error/build_in_progress the native side
+        // owns the cleanup: a timed-out build may still be running in
+        // there, and unlinking under it could leave partial state behind.
+        const nativeOwnsCleanup =
+            e?.code === 'vss_error' || e?.code === 'build_in_progress';
+        if (!nativeOwnsCleanup) {
+            try {
+                await deleteLdkNodeWallet(nodeDir);
+            } catch (cleanupError) {
+                console.warn(
+                    'LDK Node: failed to clean up wallet dir after failed init:',
+                    cleanupError
+                );
+            }
         }
         throw e;
     }

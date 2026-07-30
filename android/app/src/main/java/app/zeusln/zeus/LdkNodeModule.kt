@@ -17,6 +17,10 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var builder: Builder? = null
     @Volatile private var node: Node? = null
     private val nodeLock = Any()
+    // Dual-store build thread that outlived its timeout — still blocked in
+    // the FFI call. A new build must not touch the same storage dir until
+    // it finishes and cleans up after itself.
+    @Volatile private var pendingDualBuildThread: Thread? = null
     private var logFileObserver: LogFileObserver? = null
 
     // Stored config values for building with custom Config
@@ -371,6 +375,24 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             try {
                 this@LdkNodeModule.builder ?: throw Exception("Builder not initialized")
 
+                // A previous dual-store build may still be blocked in the FFI
+                // after its timeout was rejected. It stops its node and removes
+                // the storage dir when it finishes — starting another build over
+                // the same path before then would race that cleanup.
+                this@LdkNodeModule.pendingDualBuildThread?.let { prev ->
+                    if (prev.isAlive) {
+                        Log.w("LdkNodeModule", "buildNode: waiting up to 10s for a previous dual-store build to finish")
+                        prev.join(10_000)
+                        if (prev.isAlive) {
+                            withContext(Dispatchers.Main) {
+                                promise.reject("build_in_progress", "A previous node build is still waiting on the VSS server. Please wait a moment and try again.")
+                            }
+                            return@launch
+                        }
+                    }
+                    this@LdkNodeModule.pendingDualBuildThread = null
+                }
+
                 // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
                 // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
                 val anchorConfig = AnchorChannelsConfig(
@@ -396,6 +418,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val vssStoreId = this@LdkNodeModule.storedVssStoreId
 
                 var vssError: String? = null
+                var vssBuildPending = false
 
                 if (vssUrl != null && vssStoreId != null) {
                     try {
@@ -408,8 +431,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         var dualNode: Node? = null
                         var dualBuildError: Exception? = null
                         val latch = java.util.concurrent.CountDownLatch(1)
-                        val dualTimedOut = java.util.concurrent.atomic.AtomicBoolean(false)
+                        // Whoever wins the CAS owns the result: the build thread on
+                        // completion (caller uses it), or the caller on timeout (the
+                        // thread is orphaned and must clean up after itself).
+                        val resultClaimed = java.util.concurrent.atomic.AtomicBoolean(false)
                         val dualStoreStartMs = System.currentTimeMillis()
+                        val failHard = this@LdkNodeModule.storedVssFailOnError
+                        val storageDirPath = config.storageDirPath
 
                         val dualThread = Thread {
                             val ffiStartMs = System.currentTimeMillis()
@@ -423,19 +451,36 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                             }
                             latch.countDown()
 
-                            // If we timed out, the caller already moved on to the
-                            // fallback. Stop the orphaned node so it doesn't leak resources.
-                            if (dualTimedOut.get() && dualNode != null) {
+                            // If the caller claimed a timeout it has already rejected
+                            // and moved on — this build is orphaned. Stop the node,
+                            // and on the hard-fail (restore) path remove the storage
+                            // dir it may have partially written so a retry starts
+                            // clean. This runs here because only this thread knows
+                            // when the blocking FFI call has actually finished.
+                            if (!resultClaimed.compareAndSet(false, true)) {
                                 val totalMs = System.currentTimeMillis() - dualStoreStartMs
-                                Log.w("LdkNodeModule", "[timing] Stopping orphaned dual-store node after timeout (FFI actually finished in ${totalMs}ms)")
+                                Log.w("LdkNodeModule", "[timing] Cleaning up orphaned dual-store build after timeout (FFI actually finished in ${totalMs}ms)")
                                 try { dualNode?.stop() } catch (_: Exception) {}
+                                if (failHard) {
+                                    try { java.io.File(storageDirPath).deleteRecursively() } catch (_: Exception) {}
+                                }
                             }
                         }
                         dualThread.start()
+                        this@LdkNodeModule.pendingDualBuildThread = dualThread
 
-                        val completed = latch.await(this@LdkNodeModule.storedVssBuildTimeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                        var completed = latch.await(this@LdkNodeModule.storedVssBuildTimeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                        if (!completed && !resultClaimed.compareAndSet(false, true)) {
+                            // The FFI finished in the instant between the await timing
+                            // out and our claim — the thread won't clean up, so take
+                            // the result after all.
+                            completed = true
+                        }
+                        if (completed) {
+                            this@LdkNodeModule.pendingDualBuildThread = null
+                        }
                         if (!completed) {
-                            dualTimedOut.set(true)
+                            vssBuildPending = true
                             val elapsedMs = System.currentTimeMillis() - dualStoreStartMs
                             vssError = "VSS server at $vssUrl did not respond within ${this@LdkNodeModule.storedVssBuildTimeoutSeconds}s"
                             Log.e("LdkNodeModule", "[timing] Dual store timed out at ${elapsedMs}ms — $vssError")
@@ -457,6 +502,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 // caller can surface the error and retry
                 if (vssError != null && this@LdkNodeModule.storedVssFailOnError) {
                     this@LdkNodeModule.builder = null
+                    // A failed build can leave a partial local DB that would
+                    // shadow VSS on retry. On a fast failure remove it now; on
+                    // timeout the still-running build thread removes it once
+                    // the FFI call returns.
+                    if (!vssBuildPending) {
+                        try { java.io.File(this@LdkNodeModule.storedStorageDirPath).deleteRecursively() } catch (_: Exception) {}
+                    }
                     withContext(Dispatchers.Main) {
                         promise.reject("vss_error", vssError)
                     }

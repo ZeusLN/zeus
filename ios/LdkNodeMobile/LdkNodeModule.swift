@@ -6,6 +6,10 @@ import LDKNodeFFI
 class LdkNodeModule: RCTEventEmitter {
 
     private var node: Node?
+    // Signaled when a dual-store build that outlived its timeout finishes
+    // (including its own cleanup). A new build must not touch the same
+    // storage dir until then.
+    private var pendingBuildDoneSemaphore: DispatchSemaphore?
     private let nodeLock = NSLock()
     private var builder: Builder?
     private var logFileObserver: LogFileObserver?
@@ -380,6 +384,19 @@ class LdkNodeModule: RCTEventEmitter {
                 return
             }
 
+            // A previous dual-store build may still be blocked in the FFI
+            // after its timeout was rejected. It stops its node and removes
+            // the storage dir when it finishes — starting another build over
+            // the same path before then would race that cleanup.
+            if let pendingDone = self.pendingBuildDoneSemaphore {
+                NSLog("LdkNodeModule: buildNode: waiting up to 10s for a previous dual-store build to finish")
+                if pendingDone.wait(timeout: .now() + 10) == .timedOut {
+                    reject("build_in_progress", "A previous node build is still waiting on the VSS server. Please wait a moment and try again.", nil)
+                    return
+                }
+                self.pendingBuildDoneSemaphore = nil
+            }
+
             do {
                 // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
                 // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
@@ -403,15 +420,30 @@ class LdkNodeModule: RCTEventEmitter {
 
                 let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
                 var vssError: String? = nil
+                var vssBuildPending = false
 
                 if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
                     NSLog("LdkNodeModule: Building node with dual store (VSS + local): \(vssUrl)")
 
                     let semaphore = DispatchSemaphore(value: 0)
+                    let doneSemaphore = DispatchSemaphore(value: 0)
                     var buildResult: Node?
                     var buildError: Error?
-                    var timedOut = false
+                    // Whoever claims the result first owns it: the build closure
+                    // on completion (caller uses it), or the caller on timeout
+                    // (the build is orphaned and must clean up after itself).
+                    let claimLock = NSLock()
+                    var resultClaimed = false
+                    let claimResult: () -> Bool = {
+                        claimLock.lock()
+                        defer { claimLock.unlock() }
+                        if resultClaimed { return false }
+                        resultClaimed = true
+                        return true
+                    }
                     let dualStoreStart = CFAbsoluteTimeGetCurrent()
+                    let failHard = self.storedVssFailOnError
+                    let storageDirPath = self.storedStorageDirPath
 
                     let workItem = DispatchWorkItem {
                         let ffiStart = CFAbsoluteTimeGetCurrent()
@@ -429,21 +461,38 @@ class LdkNodeModule: RCTEventEmitter {
                         }
                         semaphore.signal()
 
-                        // If we timed out, the caller already moved on to the
-                        // fallback. Stop the orphaned node so it doesn't leak resources.
-                        if timedOut, let orphan = buildResult {
+                        // If the caller claimed a timeout it has already rejected
+                        // and moved on — this build is orphaned. Stop the node,
+                        // and on the hard-fail (restore) path remove the storage
+                        // dir it may have partially written so a retry starts
+                        // clean. This runs here because only this closure knows
+                        // when the blocking FFI call has actually finished.
+                        if !claimResult() {
                             let totalMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
-                            NSLog("LdkNodeModule: [timing] Stopping orphaned dual-store node after timeout (FFI actually finished in \(totalMs)ms)")
-                            do { try orphan.stop() } catch {}
+                            NSLog("LdkNodeModule: [timing] Cleaning up orphaned dual-store build after timeout (FFI actually finished in \(totalMs)ms)")
+                            if let orphan = buildResult {
+                                do { try orphan.stop() } catch {}
+                            }
+                            if failHard {
+                                try? FileManager.default.removeItem(atPath: storageDirPath)
+                            }
                         }
+                        doneSemaphore.signal()
                     }
 
                     DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
-                    let timeout = semaphore.wait(timeout: .now() + self.storedVssBuildTimeout)
+                    var completed = semaphore.wait(timeout: .now() + self.storedVssBuildTimeout) != .timedOut
 
-                    if timeout == .timedOut {
-                        timedOut = true
-                        workItem.cancel()
+                    if !completed && !claimResult() {
+                        // The FFI finished in the instant between the wait timing
+                        // out and our claim — the closure won't clean up, so take
+                        // the result after all.
+                        completed = true
+                    }
+
+                    if !completed {
+                        vssBuildPending = true
+                        self.pendingBuildDoneSemaphore = doneSemaphore
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         vssError = "VSS server at \(vssUrl) did not respond within \(Int(self.storedVssBuildTimeout))s"
                         NSLog("LdkNodeModule: [timing] Dual store timed out at \(elapsedMs)ms — \(vssError!)")
@@ -463,6 +512,13 @@ class LdkNodeModule: RCTEventEmitter {
                 // caller can surface the error and retry
                 if let vssError = vssError, self.storedVssFailOnError {
                     self.builder = nil
+                    // A failed build can leave a partial local DB that would
+                    // shadow VSS on retry. On a fast failure remove it now; on
+                    // timeout the still-running build closure removes it once
+                    // the FFI call returns.
+                    if !vssBuildPending {
+                        try? FileManager.default.removeItem(atPath: self.storedStorageDirPath)
+                    }
                     reject("vss_error", vssError, nil)
                     return
                 }
