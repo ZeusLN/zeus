@@ -606,16 +606,6 @@ export default class NostrConnectUtils {
         }
     }
 
-    static invoiceNotFoundMessage(): string {
-        return localeString(
-            'stores.NostrWalletConnectStore.error.invoiceNotFound'
-        );
-    }
-
-    static invoiceNotFoundError(): Error {
-        return new Error(NostrConnectUtils.invoiceNotFoundMessage());
-    }
-
     /**
      * NIP-47 payment hashes are hex, but some clients send them base64-encoded
      * — ZEUS's own NWC backend does. Stored hashes are hex, so a request value

@@ -1705,7 +1705,9 @@ export default class NostrWalletConnectStore {
 
             if (!result) {
                 return NostrConnectUtils.createNip47Error(
-                    NostrConnectUtils.invoiceNotFoundMessage(),
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                    ),
                     Nip47ErrorCode.NOT_FOUND
                 );
             }

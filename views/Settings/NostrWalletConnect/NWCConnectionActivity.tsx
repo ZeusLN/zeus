@@ -471,7 +471,7 @@ export default class NWCConnectionActivity extends React.Component<
                         </View>
                     )}
 
-                    {showExpiry && (
+                    {showExpiry && item.invoice?.formattedTimeUntilExpiry && (
                         <View style={styles.row}>
                             <ListItem.Subtitle
                                 style={[
