@@ -44,6 +44,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var storedVssStoreId: String? = null
     private var storedVssHeaders: Map<String, String> = emptyMap()
     private var storedVssBuildTimeoutSeconds: Long = 30
+    private var storedVssFailOnError: Boolean = false
 
     override fun getName(): String {
         return "LdkNodeModule"
@@ -75,6 +76,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedVssStoreId = null
         storedVssHeaders = emptyMap()
         storedVssBuildTimeoutSeconds = 30
+        storedVssFailOnError = false
     }
 
     // Extract clean error message from NodeException or other exceptions
@@ -278,6 +280,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         promise.resolve(null)
     }
 
+    @ReactMethod
+    fun setVssFailOnError(enabled: Boolean, promise: Promise) {
+        this.storedVssFailOnError = enabled
+        Log.d("LdkNodeModule", "VSS fail-on-error set to $enabled")
+        promise.resolve(null)
+    }
+
     // Crypto Methods
 
     /**
@@ -441,6 +450,17 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         vssError = "Dual store setup failed: ${e.message}"
                         Log.e("LdkNodeModule", "buildNode: $vssError", e)
                     }
+                }
+
+                // During restore-from-seed a silent local fallback would come up
+                // as a fresh node with no channels — fail hard instead so the
+                // caller can surface the error and retry
+                if (vssError != null && this@LdkNodeModule.storedVssFailOnError) {
+                    this@LdkNodeModule.builder = null
+                    withContext(Dispatchers.Main) {
+                        promise.reject("vss_error", vssError)
+                    }
+                    return@launch
                 }
 
                 // Fall back to local SQLite store if dual store failed or VSS was not configured

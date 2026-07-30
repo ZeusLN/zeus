@@ -35,6 +35,7 @@ class LdkNodeModule: RCTEventEmitter {
     private var storedVssStoreId: String?
     private var storedVssHeaders: [String: String] = [:]
     private var storedVssBuildTimeout: TimeInterval = 30
+    private var storedVssFailOnError: Bool = false
 
     @objc
     override static func moduleName() -> String! {
@@ -94,6 +95,7 @@ class LdkNodeModule: RCTEventEmitter {
         storedVssStoreId = nil
         storedVssHeaders = [:]
         storedVssBuildTimeout = 30
+        storedVssFailOnError = false
     }
 
     // MARK: - Builder Methods
@@ -213,6 +215,13 @@ class LdkNodeModule: RCTEventEmitter {
     func setVssBuildTimeout(_ timeoutSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         self.storedVssBuildTimeout = timeoutSeconds.doubleValue
         NSLog("LdkNodeModule: VSS build timeout set to \(self.storedVssBuildTimeout)s")
+        resolve(["status": "ok"])
+    }
+
+    @objc(setVssFailOnError:resolver:rejecter:)
+    func setVssFailOnError(_ enabled: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        self.storedVssFailOnError = enabled.boolValue
+        NSLog("LdkNodeModule: VSS fail-on-error set to \(self.storedVssFailOnError)")
         resolve(["status": "ok"])
     }
 
@@ -440,13 +449,22 @@ class LdkNodeModule: RCTEventEmitter {
                         NSLog("LdkNodeModule: [timing] Dual store timed out at \(elapsedMs)ms — \(vssError!)")
                     } else if let error = buildError {
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
-                        vssError = "Dual store setup failed: \(error.localizedDescription)"
+                        vssError = "Dual store setup failed: \(self.errorMessage(error))"
                         NSLog("LdkNodeModule: [timing] Dual store failed at \(elapsedMs)ms — \(vssError!)")
                     } else {
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         self.setNode(buildResult)
                         NSLog("LdkNodeModule: [timing] Node built with dual store successfully in \(elapsedMs)ms")
                     }
+                }
+
+                // During restore-from-seed a silent local fallback would come up
+                // as a fresh node with no channels — fail hard instead so the
+                // caller can surface the error and retry
+                if let vssError = vssError, self.storedVssFailOnError {
+                    self.builder = nil
+                    reject("vss_error", vssError, nil)
+                    return
                 }
 
                 // Fall back to local SQLite store if dual store failed or VSS was not configured
@@ -1745,6 +1763,29 @@ class LdkNodeModule: RCTEventEmitter {
                     return message
                 }
                 return "\(nodeError)"
+            }
+        }
+        if let buildError = error as? BuildError {
+            // All BuildError cases carry (message: String) — without this,
+            // localizedDescription stringifies the whole enum case
+            // (e.g. zeus.BuildError.ReadFailed(message: "...")). Mirror-based
+            // extraction fails on these labeled payloads, so match exhaustively.
+            switch buildError {
+            case let .InvalidSystemTime(message),
+                 let .InvalidChannelMonitor(message),
+                 let .InvalidListeningAddresses(message),
+                 let .InvalidAnnouncementAddresses(message),
+                 let .InvalidNodeAlias(message),
+                 let .RuntimeSetupFailed(message),
+                 let .ReadFailed(message),
+                 let .WriteFailed(message),
+                 let .StoragePathAccessFailed(message),
+                 let .KvStoreSetupFailed(message),
+                 let .WalletSetupFailed(message),
+                 let .LoggerSetupFailed(message),
+                 let .NetworkMismatch(message),
+                 let .AsyncPaymentsConfigMismatch(message):
+                return message
             }
         }
         return error.localizedDescription

@@ -123,6 +123,10 @@ const setVssBuildTimeout = async (timeoutSeconds: number): Promise<void> => {
     return await LdkNodeModule.setVssBuildTimeout(timeoutSeconds);
 };
 
+const setVssFailOnError = async (enabled: boolean): Promise<void> => {
+    return await LdkNodeModule.setVssFailOnError(enabled);
+};
+
 // ============================================================================
 // Mnemonic Functions
 // ============================================================================
@@ -834,7 +838,8 @@ const initializeNode = async ({
     lsps1Config,
     trustedPeers0conf,
     vssConfig,
-    vssKey
+    vssKey,
+    failOnVssError
 }: {
     network: Network;
     storagePath: string;
@@ -855,6 +860,7 @@ const initializeNode = async ({
         storeId: string;
     };
     vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
+    failOnVssError?: boolean;
 }): Promise<{ vssError?: string }> => {
     const t0 = Date.now();
     const elapsed = () => `${Date.now() - t0}ms`;
@@ -967,13 +973,23 @@ const initializeNode = async ({
     // every read falls through to VSS sequentially. Even existing nodes
     // may have an incomplete local DB (e.g. after a previous fallback
     // build), so the default is generous to avoid false alerts.
+    // Hard-fail (restore) builds get the longest window: on slow
+    // connections the full state download legitimately takes minutes,
+    // and timing out means the restore fails outright.
     const localDbPath = `${storagePath}/ldk_node_data.sqlite`;
     const hasLocalDb = await RNFS.exists(localDbPath);
-    const vssBuildTimeout = hasLocalDb ? 30 : 60;
+    const vssBuildTimeout = failOnVssError ? 180 : hasLocalDb ? 30 : 60;
     await setVssBuildTimeout(vssBuildTimeout);
+    // On restore, a silent fallback to an empty local store looks like a
+    // successful restore with no channels — make VSS failures fatal instead
+    await setVssFailOnError(!!failOnVssError);
     console.log(
         `LDK Node: [${elapsed()}] VSS build timeout set to ${vssBuildTimeout}s (${
-            hasLocalDb ? 'existing node' : 'restore / first run'
+            failOnVssError
+                ? 'restore, fail on VSS error'
+                : hasLocalDb
+                ? 'existing node'
+                : 'first run'
         })`
     );
 
@@ -1030,6 +1046,7 @@ export interface ILdkNodeInjections {
             headers?: Record<string, string>
         ) => Promise<void>;
         setVssBuildTimeout: (timeoutSeconds: number) => Promise<void>;
+        setVssFailOnError: (enabled: boolean) => Promise<void>;
     };
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
@@ -1268,6 +1285,7 @@ export interface ILdkNodeInjections {
                 privateKey: Uint8Array;
                 publicKey: Uint8Array;
             };
+            failOnVssError?: boolean;
         }) => Promise<{ vssError?: string }>;
     };
 }
@@ -1290,7 +1308,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         setLiquiditySourceLsps2,
         setTrustedPeers0conf,
         setVssServer,
-        setVssBuildTimeout
+        setVssBuildTimeout,
+        setVssFailOnError
     },
     mnemonic: {
         generateMnemonic

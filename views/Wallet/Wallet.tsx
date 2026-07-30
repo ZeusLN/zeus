@@ -669,29 +669,50 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
 
                 console.log('[LDK startup] calling startLdkNodeWallet');
-                const ldkResult = await startLdkNodeWallet({
-                    nodeDir: ldkNodeDir,
-                    seedMnemonic: ldkMnemonic,
-                    passphrase: ldkPassphrase,
-                    network: (ldkNetwork || 'mainnet') as
-                        | 'mainnet'
-                        | 'testnet'
-                        | 'signet'
-                        | 'regtest',
-                    esploraServerUrl: ldkEsploraServer,
-                    rgsServerUrl: ldkRgsServer,
-                    scorerUrl:
-                        ldkScorerUrl === undefined
-                            ? DEFAULT_SCORER_URL
-                            : ldkScorerUrl,
-                    lsps1Config,
-                    trustedPeers0conf: trustedPeers,
-                    vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
-                    skipInit: justCreated,
-                    onSyncStart: () => {
-                        SettingsStore.ldkNodeSyncing = true;
-                    }
-                });
+                let ldkResult;
+                try {
+                    ldkResult = await startLdkNodeWallet({
+                        nodeDir: ldkNodeDir,
+                        seedMnemonic: ldkMnemonic,
+                        passphrase: ldkPassphrase,
+                        network: (ldkNetwork || 'mainnet') as
+                            | 'mainnet'
+                            | 'testnet'
+                            | 'signet'
+                            | 'regtest',
+                        esploraServerUrl: ldkEsploraServer,
+                        rgsServerUrl: ldkRgsServer,
+                        scorerUrl:
+                            ldkScorerUrl === undefined
+                                ? DEFAULT_SCORER_URL
+                                : ldkScorerUrl,
+                        lsps1Config,
+                        trustedPeers0conf: trustedPeers,
+                        vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                        skipInit: justCreated,
+                        onSyncStart: () => {
+                            SettingsStore.ldkNodeSyncing = true;
+                        }
+                    });
+                } catch (e: any) {
+                    // Startup with no local DB hard-fails on VSS errors
+                    // instead of silently building a fresh (empty) node —
+                    // surface the error and let the user retry
+                    const errMsg = e?.message || e.toString();
+                    console.warn('[LDK startup] failed:', errMsg);
+                    const isVssError =
+                        e?.code === 'vss_error' || errMsg.includes('VSS');
+                    SettingsStore.error = true;
+                    SettingsStore.errorMsg = isVssError
+                        ? `${localeString(
+                              'views.Settings.SeedRecovery.vssRestoreFailed'
+                          )}\n\n${errMsg}`
+                        : errMsg;
+                    SettingsStore.ldkNodeSyncing = false;
+                    SettingsStore.setConnectingStatus(false);
+                    SettingsStore.fetchLock = false;
+                    return;
+                }
 
                 console.log('[LDK startup] startLdkNodeWallet returned');
                 SettingsStore.ldkNodeSyncing = false;
