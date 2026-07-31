@@ -874,6 +874,23 @@ describe('NostrConnectUtils', () => {
 
                 expect(tx.payment_hash).toBe(HASH_A);
             });
+
+            it('reports the same expiry as lookup_invoice for activity', () => {
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    invoice: new Invoice(lndInvoice())
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
         });
     });
 
@@ -1030,6 +1047,8 @@ describe('NostrConnectUtils', () => {
         const TIMESTAMP = 1700000000;
         const getLightningPayments = (payments: Payment[] = []) =>
             jest.fn().mockResolvedValue(payments);
+        const getCashuPayments = (payments: CashuPayment[] = []) =>
+            jest.fn().mockResolvedValue(payments);
 
         it('finds a Lightning invoice from the node by payment hash', async () => {
             (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
@@ -1046,7 +1065,7 @@ describe('NostrConnectUtils', () => {
                 request: { payment_hash: HASH_A },
                 isCashu: false,
                 cashuInvoices: [],
-                cashuPayments: [],
+                getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });
 
@@ -1071,7 +1090,7 @@ describe('NostrConnectUtils', () => {
                 request: { payment_hash: HASH_A },
                 isCashu: false,
                 cashuInvoices: [],
-                cashuPayments: [],
+                getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });
 
@@ -1098,7 +1117,7 @@ describe('NostrConnectUtils', () => {
                 request: { invoice: BOLT11 },
                 isCashu: false,
                 cashuInvoices: [],
-                cashuPayments: [],
+                getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });
 

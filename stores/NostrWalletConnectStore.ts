@@ -87,7 +87,7 @@ const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
 /** Debounce for lookup_invoice outgoing-payment fetches (NWC client polling) */
-const LOOKUP_PAYMENTS_CACHE_MS = 30_000;
+const LOOKUP_PAYMENTS_CACHE_MS = 5_000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -1735,7 +1735,8 @@ export default class NostrWalletConnectStore {
                 request,
                 isCashu: this.isCashuConfigured,
                 cashuInvoices: this.cashuStore.invoices || [],
-                cashuPayments: this.cashuStore.payments || [],
+                getCashuPayments: () =>
+                    Promise.resolve(this.cashuStore.payments || []),
                 getLightningPayments: () => this.getPaymentsForLookup()
             });
 
@@ -1752,7 +1753,7 @@ export default class NostrWalletConnectStore {
         } catch (error) {
             return NostrConnectUtils.createNip47Error(
                 (error as Error).message,
-                Nip47ErrorCode.NOT_FOUND
+                Nip47ErrorCode.INTERNAL_ERROR
             );
         }
     }
@@ -2609,6 +2610,7 @@ export default class NostrWalletConnectStore {
             });
             this.findAndUpdateConnection(connection);
         });
+        this.lookupPaymentsCache = null;
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
 

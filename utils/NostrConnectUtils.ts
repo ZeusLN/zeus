@@ -112,7 +112,7 @@ export interface Nip47LookupInvoiceContext {
     request: Nip47LookupInvoiceRequest;
     isCashu: boolean;
     cashuInvoices: CashuInvoice[];
-    cashuPayments: CashuPayment[];
+    getCashuPayments: () => Promise<CashuPayment[]>;
     getLightningPayments: () => Promise<Payment[]>;
 }
 
@@ -600,6 +600,7 @@ export default class NostrConnectUtils {
         if (!hash) return false;
         try {
             const result = await BackendUtils.lookupInvoice({ r_hash: hash });
+            if (!result || typeof result !== 'object') return false;
             return new Invoice(result).isPaid;
         } catch {
             return false;
@@ -872,7 +873,7 @@ export default class NostrConnectUtils {
         }
 
         const cashuPayment = NostrConnectUtils.findPaymentByLookupRequest(
-            ctx.cashuPayments,
+            await ctx.getCashuPayments(),
             request
         );
         return cashuPayment
@@ -1333,6 +1334,15 @@ export default class NostrConnectUtils {
         }
 
         if (activity.invoice) {
+            if (activity.invoice instanceof Invoice) {
+                const createdAt = Math.floor(
+                    activity.invoice.getCreationDate.getTime() / 1000
+                );
+                return NostrConnectUtils.lightningInvoiceExpiresAt(
+                    activity.invoice,
+                    createdAt
+                );
+            }
             if (activity.invoice.expires_at) {
                 return Number(activity.invoice.expires_at);
             }
