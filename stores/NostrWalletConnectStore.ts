@@ -86,6 +86,8 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/** Debounce for lookup_invoice outgoing-payment fetches (NWC client polling) */
+const LOOKUP_PAYMENTS_CACHE_MS = 30_000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -164,6 +166,8 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    private lookupPaymentsCache: Payment[] | null = null;
+    private lookupPaymentsFetchedAt = 0;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1732,7 +1736,7 @@ export default class NostrWalletConnectStore {
                 isCashu: this.isCashuConfigured,
                 cashuInvoices: this.cashuStore.invoices || [],
                 cashuPayments: this.cashuStore.payments || [],
-                lightningPayments: this.paymentsStore.payments || []
+                getLightningPayments: () => this.getPaymentsForLookup()
             });
 
             if (!result) {
@@ -2344,6 +2348,40 @@ export default class NostrWalletConnectStore {
         this.lastPendingPaymentStatusFetchByConnection.set(connectionId, now);
         return this.paymentsStore.payments || [];
     }
+
+    /**
+     * Outgoing payments for lookup_invoice — fetched lazily after the invoice
+     * path misses, without touching paymentsStore (that overwrites the wallet
+     * activity list and toggles its loading flag).
+     */
+    private async getPaymentsForLookup(): Promise<Payment[]> {
+        const now = Date.now();
+        if (
+            this.lookupPaymentsCache &&
+            now - this.lookupPaymentsFetchedAt < LOOKUP_PAYMENTS_CACHE_MS
+        ) {
+            return this.lookupPaymentsCache;
+        }
+
+        try {
+            const data = await BackendUtils.getPayments({
+                maxPayments: 100,
+                // lndmobile spreads this conditionally; omitting it leaves the
+                // protobuf default of false and embedded LND returns the oldest page
+                reversed: true
+            });
+            if (!data?.payments) {
+                return this.lookupPaymentsCache || [];
+            }
+            const payments = data.payments.map((p: any) => new Payment(p));
+            this.lookupPaymentsCache = payments;
+            this.lookupPaymentsFetchedAt = now;
+            return payments;
+        } catch {
+            return this.lookupPaymentsCache || [];
+        }
+    }
+
     private findLightningInvoiceInStore(invoice: Invoice): Invoice | undefined {
         const rHash = invoice.getRHash;
         const paymentRequest = invoice.getPaymentRequest;

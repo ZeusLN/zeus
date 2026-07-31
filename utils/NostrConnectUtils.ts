@@ -113,7 +113,7 @@ export interface Nip47LookupInvoiceContext {
     isCashu: boolean;
     cashuInvoices: CashuInvoice[];
     cashuPayments: CashuPayment[];
-    lightningPayments: Payment[];
+    getLightningPayments: () => Promise<Payment[]>;
 }
 
 export enum Nip47ErrorCode {
@@ -904,7 +904,7 @@ export default class NostrConnectUtils {
         }
 
         const lightningPayment = NostrConnectUtils.findPaymentByLookupRequest(
-            ctx.lightningPayments,
+            await ctx.getLightningPayments(),
             request
         );
         return lightningPayment
