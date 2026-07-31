@@ -1678,7 +1678,9 @@ export default class WalletConfiguration extends React.Component<
                                 </View>
                             </View>
 
-                            {!adminMacaroon && <WalletInterface />}
+                            {!adminMacaroon && !ldkNodeInitialized && (
+                                <WalletInterface />
+                            )}
 
                             {!adminMacaroon &&
                                 implementation === 'embedded-lnd' && (
@@ -2933,6 +2935,22 @@ export default class WalletConfiguration extends React.Component<
                             </View>
                         )}
 
+                        {((implementation === 'embedded-lnd' &&
+                            adminMacaroon) ||
+                            (implementation === 'ldk-node' &&
+                                ldkNodeInitialized)) && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Settings.WalletConfiguration.walletInterface'
+                                )}
+                                value={
+                                    INTERFACE_KEYS.find(
+                                        (k) => k.value === implementation
+                                    )?.key
+                                }
+                            />
+                        )}
+
                         {implementation === 'embedded-lnd' && adminMacaroon && (
                             <KeyValue
                                 keyValue={localeString('general.network')}
@@ -2954,6 +2972,20 @@ export default class WalletConfiguration extends React.Component<
                                 }
                             />
                         )}
+
+                        {implementation === 'ldk-node' &&
+                            ldkNodeInitialized && (
+                                <KeyValue
+                                    keyValue={localeString('general.network')}
+                                    value={localeString(
+                                        EMBEDDED_NODE_NETWORK_KEYS.find(
+                                            (k) =>
+                                                k.value ===
+                                                (ldkNetwork || 'mainnet')
+                                        )?.translateKey || 'network.mainnet'
+                                    )}
+                                />
+                            )}
 
                         {implementation === 'embedded-lnd' &&
                             recoveryCipherSeed && (
