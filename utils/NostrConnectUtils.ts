@@ -111,7 +111,7 @@ export const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 export interface Nip47LookupInvoiceContext {
     request: Nip47LookupInvoiceRequest;
     isCashu: boolean;
-    cashuInvoices: CashuInvoice[];
+    getCashuInvoices: () => Promise<CashuInvoice[]>;
     getCashuPayments: () => Promise<CashuPayment[]>;
     getLightningPayments: () => Promise<Payment[]>;
 }
@@ -857,7 +857,7 @@ export default class NostrConnectUtils {
         const { request } = ctx;
         const cashuInvoice =
             await NostrConnectUtils.findCashuInvoiceByLookupRequest(
-                ctx.cashuInvoices,
+                await ctx.getCashuInvoices(),
                 request
             );
         if (cashuInvoice) {

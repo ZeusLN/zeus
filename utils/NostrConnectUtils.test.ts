@@ -1049,6 +1049,8 @@ describe('NostrConnectUtils', () => {
             jest.fn().mockResolvedValue(payments);
         const getCashuPayments = (payments: CashuPayment[] = []) =>
             jest.fn().mockResolvedValue(payments);
+        const getCashuInvoices = (invoices: CashuInvoice[] = []) =>
+            jest.fn().mockResolvedValue(invoices);
 
         it('finds a Lightning invoice from the node by payment hash', async () => {
             (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
@@ -1064,7 +1066,7 @@ describe('NostrConnectUtils', () => {
             const tx = await NostrConnectUtils.lookupInvoiceTransaction({
                 request: { payment_hash: HASH_A },
                 isCashu: false,
-                cashuInvoices: [],
+                getCashuInvoices: getCashuInvoices(),
                 getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });
@@ -1089,7 +1091,7 @@ describe('NostrConnectUtils', () => {
             const tx = await NostrConnectUtils.lookupInvoiceTransaction({
                 request: { payment_hash: HASH_A },
                 isCashu: false,
-                cashuInvoices: [],
+                getCashuInvoices: getCashuInvoices(),
                 getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });
@@ -1116,7 +1118,7 @@ describe('NostrConnectUtils', () => {
             const tx = await NostrConnectUtils.lookupInvoiceTransaction({
                 request: { invoice: BOLT11 },
                 isCashu: false,
-                cashuInvoices: [],
+                getCashuInvoices: getCashuInvoices(),
                 getCashuPayments: getCashuPayments(),
                 getLightningPayments: getPayments
             });

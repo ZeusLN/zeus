@@ -1390,11 +1390,14 @@ export default class NostrWalletConnectStore {
      */
     private async reconcileAllPendingPayInvoiceActivities(): Promise<void> {
         try {
-            await Promise.all(
+            const changed = await Promise.all(
                 this.activeConnections.map((connection) =>
                     this.reconcilePendingPayInvoiceActivities(connection)
                 )
             );
+            if (changed.some(Boolean)) {
+                this.scheduleSave();
+            }
         } catch (error) {
             console.error('NWC: pending payment reconciliation failed:', error);
         }
@@ -1734,7 +1737,8 @@ export default class NostrWalletConnectStore {
             const result = await NostrConnectUtils.lookupInvoiceTransaction({
                 request,
                 isCashu: this.isCashuConfigured,
-                cashuInvoices: this.cashuStore.invoices || [],
+                getCashuInvoices: () =>
+                    Promise.resolve(this.cashuStore.invoices || []),
                 getCashuPayments: () =>
                     Promise.resolve(this.cashuStore.payments || []),
                 getLightningPayments: () => this.getPaymentsForLookup()
@@ -1766,7 +1770,11 @@ export default class NostrWalletConnectStore {
             let nip47Transactions: Nip47Transaction[] = [];
 
             if (connection.hasPaymentPermissions()) {
-                await this.reconcilePendingPayInvoiceActivities(connection);
+                const reconciled =
+                    await this.reconcilePendingPayInvoiceActivities(connection);
+                if (reconciled) {
+                    this.scheduleSave();
+                }
                 nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
@@ -2282,19 +2290,20 @@ export default class NostrWalletConnectStore {
      */
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
-    ): Promise<void> {
+    ): Promise<boolean> {
         const lightningPending = connection.activity.filter(
             (activity) =>
                 activity.type === 'pay_invoice' &&
                 activity.status === 'pending' &&
                 activity.payment_source !== 'cashu'
         );
-        if (lightningPending.length === 0) return;
+        if (lightningPending.length === 0) return false;
 
         const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
             connection.id,
             lightningPending
         );
+        let changed = false;
         for (const activity of lightningPending) {
             const payment = payments.find(
                 (p) =>
@@ -2304,6 +2313,7 @@ export default class NostrWalletConnectStore {
             );
             if (!payment) continue;
 
+            changed = true;
             runInAction(() => {
                 activity.payment = new Payment(payment);
                 if (!payment.isIncomplete) {
@@ -2319,6 +2329,10 @@ export default class NostrWalletConnectStore {
                 }
             });
         }
+        if (changed) {
+            this.lookupPaymentsCache = null;
+        }
+        return changed;
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(
@@ -2673,6 +2687,8 @@ export default class NostrWalletConnectStore {
 
             this.findAndUpdateConnection(connection);
         });
+        this.lookupPaymentsCache = null;
+        this.scheduleSave();
     }
 
     private async recordFailedPayment({
