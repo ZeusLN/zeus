@@ -2935,6 +2935,22 @@ export default class WalletConfiguration extends React.Component<
                             </View>
                         )}
 
+                        {((implementation === 'embedded-lnd' &&
+                            adminMacaroon) ||
+                            (implementation === 'ldk-node' &&
+                                ldkNodeInitialized)) && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Settings.WalletConfiguration.walletInterface'
+                                )}
+                                value={
+                                    INTERFACE_KEYS.find(
+                                        (k) => k.value === implementation
+                                    )?.key
+                                }
+                            />
+                        )}
+
                         {implementation === 'embedded-lnd' && adminMacaroon && (
                             <KeyValue
                                 keyValue={localeString('general.network')}
