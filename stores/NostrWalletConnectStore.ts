@@ -145,6 +145,8 @@ export default class NostrWalletConnectStore {
     @observable public iosAudioKeepAliveActive: boolean = false;
     @observable public iosAudioKeepAliveUptime: number = 0;
     @observable public iosAudioKeepAliveDisconnects: number = 0;
+    // Tail of the payment-handler queue; see enqueuePayment
+    private paymentQueue: Promise<unknown> = Promise.resolve();
     private iosAudioUptimeInterval: ReturnType<typeof setInterval> | null =
         null;
     private iosAudioInterruptedUnsub: (() => void) | null = null;
@@ -1291,7 +1293,7 @@ export default class NostrWalletConnectStore {
                     : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
-                        payHandler(request)
+                        this.enqueuePayment(() => payHandler(request))
                     );
             }
 
@@ -1489,6 +1491,21 @@ export default class NostrWalletConnectStore {
     ): Promise<T> {
         await this.markConnectionUsed(connectionId);
         return await handler();
+    }
+
+    // Serializes payment handling across all connections. Payment flows
+    // read and mutate shared singleton stores (TransactionsStore,
+    // CashuStore payReq/meltQuote) across awaits, so two concurrent
+    // pay_invoice requests would clobber each other's state: one flow
+    // can melt the other's quote, validate budget against the wrong
+    // amount, or report the other payment's result/preimage.
+    private enqueuePayment<T>(task: () => Promise<T>): Promise<T> {
+        const result = this.paymentQueue.then(task);
+        this.paymentQueue = result.then(
+            () => undefined,
+            () => undefined
+        );
+        return result;
     }
     // NWC REQUEST HANDLERS
 
