@@ -212,9 +212,30 @@ export default class NWCConnection extends BaseModel {
         );
     }
 
+    /**
+     * Sum of in-flight (pending) pay_invoice amounts on this connection's
+     * activity log. Counted against the budget so concurrent or
+     * slow-settling (hodl) payments cannot exceed the limit while their
+     * debits are deferred to reconcile. Reconcile flips an activity to
+     * success and calls trackSpending in one atomic action, so an amount
+     * is never counted in both this and totalSpendSats.
+     */
+    @computed public get pendingSpendSats(): number {
+        if (!this.activity?.length) return 0;
+        return this.activity.reduce((sum, a) => {
+            if (a.type !== 'pay_invoice' || a.status !== 'pending') {
+                return sum;
+            }
+            return sum + Math.max(0, Math.floor(Number(a.satAmount) || 0));
+        }, 0);
+    }
+
     @computed public get remainingBudget(): number {
         if (!this.hasBudgetLimit) return Infinity;
-        return Math.max(0, this.maxAmountSats! - this.totalSpendSats);
+        return Math.max(
+            0,
+            this.maxAmountSats! - this.totalSpendSats - this.pendingSpendSats
+        );
     }
 
     @computed public get budgetUsagePercentage(): number {
@@ -357,7 +378,10 @@ export default class NWCConnection extends BaseModel {
 
     public canSpend(amountSats: number): boolean {
         if (!this.hasBudgetLimit) return true;
-        return this.totalSpendSats + amountSats <= this.maxAmountSats!;
+        return (
+            this.totalSpendSats + this.pendingSpendSats + amountSats <=
+            this.maxAmountSats!
+        );
     }
 
     @action
