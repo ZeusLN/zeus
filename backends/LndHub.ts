@@ -71,11 +71,38 @@ export default class LndHub extends LND {
         Promise.resolve().then(() =>
             Bolt11Utils.decode((urlParams && urlParams[0]) || '')
         );
-    payLightningInvoice = (data: any) =>
-        this.postRequest('/payinvoice', {
-            invoice: data.payment_request,
-            amount: data.amt
-        });
+    // LndHub servers (LNbits included) block on /payinvoice until the
+    // payment resolves, which on slow routes exceeds the inherited 30s
+    // restReq default; that surfaced as premature "Request timeout"
+    // failures for payments that later settled (#2761). LndHub gets no
+    // timeout_seconds plumbing, so use the app's default payment window
+    // and mirror LND's payLightningInvoice race: headroom past the
+    // deadline, and the payment-timed-out shape instead of a
+    // retryable-looking transport error.
+    payLightningInvoice = (data: any) => {
+        const timeoutSeconds = Number(data.timeout_seconds) || 60;
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        return Promise.race([
+            forcedTimeout((timeoutSeconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            this.postRequest(
+                '/payinvoice',
+                {
+                    invoice: data.payment_request,
+                    amount: data.amt
+                },
+                (timeoutSeconds + 5) * 1000
+            )
+        ]);
+    };
     lnurlAuth = (message: string) => {
         const messageHash = new sha256Hash()
             .update(Base64Utils.stringToUint8Array(message))
