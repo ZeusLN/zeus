@@ -1,11 +1,4 @@
-// Ensure TextDecoder is available before any nostr-tools imports
-if (typeof global !== 'undefined' && !global.TextDecoder) {
-    const TextEncodingPolyfill = require('text-encoding');
-    global.TextDecoder = TextEncodingPolyfill.TextDecoder;
-    global.TextEncoder = TextEncodingPolyfill.TextEncoder;
-}
 import { action, computed, observable, reaction, runInAction } from 'mobx';
-
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
@@ -46,8 +39,6 @@ import NostrConnectUtils, {
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
-import Base64Utils from '../utils/Base64Utils';
-
 import NWCConnection, {
     BudgetRenewalType,
     ConnectionActivity,
@@ -95,6 +86,8 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/** Debounce for lookup_invoice outgoing-payment fetches (NWC client polling) */
+const LOOKUP_PAYMENTS_CACHE_MS = 5_000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -173,6 +166,8 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    private lookupPaymentsCache: Payment[] | null = null;
+    private lookupPaymentsFetchedAt = 0;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -904,6 +899,7 @@ export default class NostrWalletConnectStore {
         const connection = index !== -1 ? this.connections[index] : undefined;
         return { connection, index };
     };
+
     public getActivities = async (
         connectionId: string
     ): Promise<{ name: string; activity: ConnectionActivity[] }> => {
@@ -997,28 +993,25 @@ export default class NostrWalletConnectStore {
 
         if (pendingLightningInvoiceActivities.length > 0) {
             await Promise.all(
-                pendingLightningInvoiceActivities.map(async (activity) => {
-                    const invoice = activity.invoice as Invoice | undefined;
-                    if (!invoice) return;
+                pendingLightningInvoiceActivities.map((activity) =>
+                    this.reconcilePendingLightningMakeInvoice(activity)
+                )
+            );
+        }
 
-                    const applyPaidOrExpired = (backendSaysPaid: boolean) => {
-                        const settled = backendSaysPaid || invoice.isPaid;
-                        runInAction(() => {
-                            if (settled) {
-                                activity.status = 'success';
-                            } else if (invoice.isExpired) {
-                                activity.status = 'expired';
-                            }
-                        });
-                    };
-
-                    const isInvoicePaid =
-                        await NostrConnectUtils.lookupInvoicePaidFromNode({
-                            paymentRequest: invoice.getPaymentRequest,
-                            rHash: invoice.getRHash
-                        });
-                    applyPaidOrExpired(isInvoicePaid);
-                })
+        const stalePaidLightningInvoiceActivities = connection.activity.filter(
+            (activity) =>
+                activity.type === 'make_invoice' &&
+                activity.status === 'success' &&
+                activity.payment_source !== 'cashu' &&
+                activity.invoice instanceof Invoice &&
+                !activity.invoice.isPaid
+        );
+        if (stalePaidLightningInvoiceActivities.length > 0) {
+            await Promise.all(
+                stalePaidLightningInvoiceActivities.map((activity) =>
+                    this.backfillStalePaidLightningMakeInvoice(activity)
+                )
             );
         }
 
@@ -1084,46 +1077,7 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const pendingPayInvoiceActivities = connection.activity.filter(
-            (activity) =>
-                activity.type === 'pay_invoice' && activity.status === 'pending'
-        );
-        if (pendingPayInvoiceActivities.length > 0) {
-            const lightningPending = pendingPayInvoiceActivities.filter(
-                (activity) => activity.payment_source !== 'cashu'
-            );
-            if (lightningPending.length > 0) {
-                const payments =
-                    await this.getPaymentsForPendingPayInvoiceRefresh(
-                        connectionId,
-                        lightningPending
-                    );
-                for (const activity of lightningPending) {
-                    const payment = payments.find(
-                        (p) =>
-                            p.getPaymentRequest === activity.id ||
-                            (!!activity.paymentHash &&
-                                p.paymentHash === activity.paymentHash)
-                    );
-                    if (!payment) continue;
-
-                    runInAction(() => {
-                        activity.payment = new Payment(payment);
-                        if (!payment.isIncomplete) {
-                            activity.status = 'success';
-                            const amountSats =
-                                Math.floor(Number(activity.satAmount)) ||
-                                Math.floor(Number(payment.getAmount) || 0);
-                            if (amountSats > 0) {
-                                connection.trackSpending(amountSats);
-                            }
-                        } else if (payment.isFailed) {
-                            activity.status = 'failed';
-                        }
-                    });
-                }
-            }
-        }
+        await this.reconcilePendingPayInvoiceActivities(connection);
 
         runInAction(() => {
             connection.activity = connection.activity.filter((activity) => {
@@ -1136,6 +1090,58 @@ export default class NostrWalletConnectStore {
         this.scheduleSave();
         return { name: connection.name, activity: connection.activity };
     };
+
+    public refreshActivityInvoiceForNavigation = async (
+        activity: ConnectionActivity
+    ): Promise<Invoice | CashuInvoice | undefined> => {
+        if (activity.type !== 'make_invoice' || !activity.invoice) {
+            return activity.invoice ?? undefined;
+        }
+
+        if (
+            activity.payment_source === 'cashu' &&
+            activity.invoice instanceof CashuInvoice
+        ) {
+            const invoice = activity.invoice;
+            if (invoice.isPaid) return invoice;
+
+            const paid = this.cashuStore.invoices?.find(
+                (inv) =>
+                    inv.getPaymentRequest === invoice.getPaymentRequest &&
+                    inv.isPaid
+            );
+            if (!paid) return invoice;
+
+            runInAction(() => {
+                activity.invoice = paid;
+                activity.status = 'success';
+            });
+            this.scheduleSave();
+            return paid;
+        }
+
+        if (activity.invoice instanceof Invoice) {
+            const invoice = activity.invoice;
+            if (invoice.isPaid) return invoice;
+
+            const refreshed = await this.refreshLightningInvoiceFromNode(
+                invoice
+            );
+            if (!refreshed) return invoice;
+
+            runInAction(() => {
+                activity.invoice = refreshed;
+                if (refreshed.isPaid) {
+                    activity.status = 'success';
+                }
+            });
+            this.scheduleSave();
+            return refreshed;
+        }
+
+        return activity.invoice;
+    };
+
     @action
     private markConnectionUsed = async (connectionId: string) => {
         const { connection } = this.getConnection({ connectionId });
@@ -1371,6 +1377,30 @@ export default class NostrWalletConnectStore {
         console.log(
             `NWC: Subscription results - ${connections.length} connection(s) processed (sequential pacing between relays)`
         );
+
+        // A payment can settle while the service is down, so catch up once the
+        // relays are back rather than waiting for a client to ask
+        void this.reconcileAllPendingPayInvoiceActivities();
+    }
+
+    /**
+     * Runs pending-payment reconciliation across every active connection.
+     * Cheap when nothing is pending: connections without pending pay_invoice
+     * activities return immediately, and node fetches stay rate limited.
+     */
+    private async reconcileAllPendingPayInvoiceActivities(): Promise<void> {
+        try {
+            const changed = await Promise.all(
+                this.activeConnections.map((connection) =>
+                    this.reconcilePendingPayInvoiceActivities(connection)
+                )
+            );
+            if (changed.some(Boolean)) {
+                this.scheduleSave();
+            }
+        } catch (error) {
+            console.error('NWC: pending payment reconciliation failed:', error);
+        }
     }
     private unsubscribeFromConnection(connectionId: string): void {
         const unsub = this.activeSubscriptions.get(connectionId);
@@ -1704,19 +1734,17 @@ export default class NostrWalletConnectStore {
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
-            if (this.isCashuConfigured) {
-                const result =
-                    await NostrConnectUtils.buildNip47TransactionForCashuInvoiceLookup(
-                        this.cashuStore.invoices || [],
-                        request
-                    );
-                return { result, error: undefined };
-            }
-            const rHash =
-                request.payment_hash && request.payment_hash.includes('=')
-                    ? Base64Utils.base64ToHex(request.payment_hash)
-                    : request.payment_hash;
-            if (!rHash) {
+            const result = await NostrConnectUtils.lookupInvoiceTransaction({
+                request,
+                isCashu: this.isCashuConfigured,
+                getCashuInvoices: () =>
+                    Promise.resolve(this.cashuStore.invoices || []),
+                getCashuPayments: () =>
+                    Promise.resolve(this.cashuStore.payments || []),
+                getLightningPayments: () => this.getPaymentsForLookup()
+            });
+
+            if (!result) {
                 return NostrConnectUtils.createNip47Error(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invoiceNotFound'
@@ -1724,15 +1752,12 @@ export default class NostrWalletConnectStore {
                     Nip47ErrorCode.NOT_FOUND
                 );
             }
-            const result =
-                await NostrConnectUtils.buildNip47TransactionForLightningInvoiceLookup(
-                    rHash
-                );
+
             return { result, error: undefined };
         } catch (error) {
             return NostrConnectUtils.createNip47Error(
                 (error as Error).message,
-                Nip47ErrorCode.NOT_FOUND
+                Nip47ErrorCode.INTERNAL_ERROR
             );
         }
     }
@@ -1745,6 +1770,11 @@ export default class NostrWalletConnectStore {
             let nip47Transactions: Nip47Transaction[] = [];
 
             if (connection.hasPaymentPermissions()) {
+                const reconciled =
+                    await this.reconcilePendingPayInvoiceActivities(connection);
+                if (reconciled) {
+                    this.scheduleSave();
+                }
                 nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
@@ -2252,6 +2282,64 @@ export default class NostrWalletConnectStore {
         return true;
     }
 
+    /**
+     * Promotes pending pay_invoice activities that have since settled or failed.
+     * Used by the activity screen and by list_transactions — without the latter,
+     * an NWC client sees a settled payment as pending until someone opens the
+     * screen. Node fetches are rate limited by the helper below.
+     */
+    private async reconcilePendingPayInvoiceActivities(
+        connection: NWCConnection
+    ): Promise<boolean> {
+        const lightningPending = connection.activity.filter(
+            (activity) =>
+                activity.type === 'pay_invoice' &&
+                activity.status === 'pending' &&
+                activity.payment_source !== 'cashu'
+        );
+        if (lightningPending.length === 0) return false;
+
+        const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
+            connection.id,
+            lightningPending
+        );
+        let changed = false;
+        for (const activity of lightningPending) {
+            const payment = payments.find(
+                (p) =>
+                    p.getPaymentRequest === activity.id ||
+                    (!!activity.paymentHash &&
+                        p.paymentHash === activity.paymentHash)
+            );
+            if (!payment) continue;
+
+            let reconciled = false;
+            runInAction(() => {
+                if (activity.status !== 'pending') return;
+                reconciled = true;
+                activity.payment = new Payment(payment);
+                if (!payment.isIncomplete) {
+                    activity.status = 'success';
+                    const amountSats =
+                        Math.floor(Number(activity.satAmount)) ||
+                        Math.floor(Number(payment.getAmount) || 0);
+                    if (amountSats > 0) {
+                        connection.trackSpending(amountSats);
+                    }
+                } else if (payment.isFailed) {
+                    activity.status = 'failed';
+                }
+            });
+            if (reconciled) {
+                changed = true;
+            }
+        }
+        if (changed) {
+            this.lookupPaymentsCache = null;
+        }
+        return changed;
+    }
+
     private async getPaymentsForPendingPayInvoiceRefresh(
         connectionId: string,
         lightningPending: ConnectionActivity[]
@@ -2279,6 +2367,129 @@ export default class NostrWalletConnectStore {
         await this.paymentsStore.getPayments();
         this.lastPendingPaymentStatusFetchByConnection.set(connectionId, now);
         return this.paymentsStore.payments || [];
+    }
+
+    /**
+     * Outgoing payments for lookup_invoice — fetched lazily after the invoice
+     * path misses, without touching paymentsStore (that overwrites the wallet
+     * activity list and toggles its loading flag).
+     */
+    private async getPaymentsForLookup(): Promise<Payment[]> {
+        const now = Date.now();
+        if (
+            this.lookupPaymentsCache &&
+            now - this.lookupPaymentsFetchedAt < LOOKUP_PAYMENTS_CACHE_MS
+        ) {
+            return this.lookupPaymentsCache;
+        }
+
+        try {
+            const data = await BackendUtils.getPayments({
+                maxPayments: 100,
+                // lndmobile spreads this conditionally; omitting it leaves the
+                // protobuf default of false and embedded LND returns the oldest page
+                reversed: true
+            });
+            if (!data?.payments) {
+                return this.lookupPaymentsCache || [];
+            }
+            const payments = data.payments.map((p: any) => new Payment(p));
+            this.lookupPaymentsCache = payments;
+            this.lookupPaymentsFetchedAt = now;
+            return payments;
+        } catch {
+            return this.lookupPaymentsCache || [];
+        }
+    }
+
+    private findLightningInvoiceInStore(invoice: Invoice): Invoice | undefined {
+        const rHash = invoice.getRHash;
+        const paymentRequest = invoice.getPaymentRequest;
+        return this.invoicesStore.invoices?.find(
+            (inv) =>
+                (rHash && inv.getRHash === rHash) ||
+                (paymentRequest && inv.getPaymentRequest === paymentRequest)
+        );
+    }
+
+    /** Store list first, then lookupInvoice — shared by activity refresh paths. */
+    private async refreshLightningInvoiceFromNode(
+        invoice: Invoice
+    ): Promise<Invoice | undefined> {
+        const fromStore = this.findLightningInvoiceInStore(invoice);
+        if (fromStore?.isPaid) {
+            return fromStore;
+        }
+
+        const rHash = invoice.getRHash;
+        if (!rHash) {
+            return fromStore;
+        }
+
+        try {
+            const raw = await BackendUtils.lookupInvoice({ r_hash: rHash });
+            if (raw && typeof raw === 'object') {
+                return new Invoice(raw);
+            }
+        } catch {
+            // lookupInvoice throws when the hash is unknown on this backend
+        }
+        return fromStore;
+    }
+
+    private async reconcilePendingLightningMakeInvoice(
+        activity: ConnectionActivity
+    ): Promise<void> {
+        const invoice = activity.invoice as Invoice | undefined;
+        if (!invoice) return;
+
+        const settled =
+            (await NostrConnectUtils.lookupInvoicePaidFromNode({
+                paymentRequest: invoice.getPaymentRequest,
+                rHash: invoice.getRHash
+            })) || invoice.isPaid;
+
+        if (settled) {
+            const refreshed = await this.refreshLightningInvoiceFromNode(
+                invoice
+            );
+            runInAction(() => {
+                activity.status = 'success';
+                if (refreshed) {
+                    activity.invoice = refreshed;
+                }
+            });
+            return;
+        }
+
+        if (invoice.isExpired) {
+            runInAction(() => {
+                activity.status = 'expired';
+            });
+        }
+    }
+
+    private async backfillStalePaidLightningMakeInvoice(
+        activity: ConnectionActivity
+    ): Promise<void> {
+        if (
+            activity.type !== 'make_invoice' ||
+            activity.status !== 'success' ||
+            activity.payment_source === 'cashu' ||
+            !(activity.invoice instanceof Invoice) ||
+            activity.invoice.isPaid
+        ) {
+            return;
+        }
+
+        const refreshed = await this.refreshLightningInvoiceFromNode(
+            activity.invoice
+        );
+        if (!refreshed?.isPaid) return;
+
+        runInAction(() => {
+            activity.invoice = refreshed;
+        });
     }
 
     private getTransactionsStorePaymentState() {
@@ -2418,6 +2629,7 @@ export default class NostrWalletConnectStore {
             });
             this.findAndUpdateConnection(connection);
         });
+        this.lookupPaymentsCache = null;
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
 
@@ -2480,6 +2692,8 @@ export default class NostrWalletConnectStore {
 
             this.findAndUpdateConnection(connection);
         });
+        this.lookupPaymentsCache = null;
+        this.scheduleSave();
     }
 
     private async recordFailedPayment({
@@ -2882,6 +3096,12 @@ export default class NostrWalletConnectStore {
         this.appStateListener = AppState.addEventListener(
             'change',
             async (nextAppState: string) => {
+                // Independent of the persistent service: payments settle while
+                // the app is away on every platform, so catch up on return
+                if (nextAppState === 'active') {
+                    void this.reconcileAllPendingPayInvoiceActivities();
+                }
+
                 if (!this.persistentNWCServiceEnabled) {
                     return;
                 }
@@ -3039,6 +3259,12 @@ export default class NostrWalletConnectStore {
             'change',
             async (nextState: string) => {
                 if (!this.isServiceReady()) return;
+
+                // Mirrors the Android monitor: catch up on payments that
+                // settled while the app was away, regardless of keep-alive
+                if (nextState === 'active') {
+                    void this.reconcileAllPendingPayInvoiceActivities();
+                }
 
                 if (
                     nextState === 'background' &&

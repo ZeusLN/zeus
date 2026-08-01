@@ -4,6 +4,8 @@ import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
+import Invoice from './../models/Invoice';
+import { localeString } from './../utils/LocaleUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
 
@@ -40,6 +42,24 @@ export default class LndHub extends LND {
         this.getRequest('/getuserinvoices').then((data: any) => ({
             invoices: data
         }));
+    // Overrides LND's /v1/invoice/{r_hash}, a route LndHub does not serve.
+    // LndHub has no per-invoice endpoint returning details — /checkpayment only
+    // answers paid/unpaid — so the user's invoice list is searched by hash.
+    lookupInvoice = (data: any) =>
+        this.getRequest('/getuserinvoices').then((invoices: any) => {
+            const invoice = (invoices || []).find(
+                (userInvoice: any) =>
+                    new Invoice(userInvoice).getRHash === data.r_hash
+            );
+            if (!invoice) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceNotFound'
+                    )
+                );
+            }
+            return invoice;
+        });
 
     createInvoice = (data: any) =>
         this.postRequest('/addinvoice', {
