@@ -79,6 +79,10 @@ export default class TransactionsStore {
     // coin control
     @observable funded_psbt: string = '';
 
+    // identifies the payment the in-flight backstop timer was armed for,
+    // so it never clears the flag on behalf of a later payment
+    private paymentSequence = 0;
+
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
     channelsStore: ChannelsStore;
@@ -669,6 +673,21 @@ export default class TransactionsStore {
         ) {
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
+
+        // Backstop for the in-flight guard: if the completion callback is
+        // lost (e.g. a dropped LNC stream, or a hung request on a backend
+        // that gets no timeout_seconds), the flag would otherwise stay set
+        // and block all sends until the next reconnect. Clear it once the
+        // payment's timeout plus a grace period has elapsed.
+        const seq = ++this.paymentSequence;
+        const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
+        setTimeout(() => {
+            if (this.paymentInFlight && this.paymentSequence === seq) {
+                runInAction(() => {
+                    this.paymentInFlight = false;
+                });
+            }
+        }, backstopMs);
 
         const payFunc =
             (this.settingsStore.implementation === 'cln-rest' ||
