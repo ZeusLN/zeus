@@ -837,6 +837,27 @@ describe('NostrConnectUtils', () => {
                 expect(tx.state).not.toBe('settled');
                 expect(tx.settled_at).toBe(0);
             });
+
+            it('derives created_at from BOLT11 when CLN listinvoices omits a creation timestamp', () => {
+                // Real CLN listinvoices shape: no created_at/creation_date
+                const BOLT11 =
+                    'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+                const BOLT11_TIMESTAMP = 1700074718;
+                const tx = lookupLightningInvoice({
+                    label: 'zeus.123456',
+                    bolt11: BOLT11,
+                    payment_hash:
+                        'f2cbe056ae04a29a28b098de1eea199d8f1802900fb4f0269dac84c6f8c8762d',
+                    amount_msat: 123000,
+                    status: 'unpaid',
+                    description: 'test invoice',
+                    expires_at: BOLT11_TIMESTAMP + EXPIRY_SECONDS,
+                    created_index: 7
+                });
+
+                expect(tx.created_at).toBe(BOLT11_TIMESTAMP);
+                expect(tx.expires_at).toBe(BOLT11_TIMESTAMP + EXPIRY_SECONDS);
+            });
         });
 
         describe('list_transactions', () => {

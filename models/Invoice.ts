@@ -359,7 +359,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getCreationDate(): Date {
-        return DateTimeUtils.listDate(this.created_at || this.creation_date);
+        // CLN listinvoices omits created_at; fall back to the BOLT11 timestamp
+        return DateTimeUtils.listDate(
+            this.created_at ||
+                this.creation_date ||
+                this.decodedPaymentRequest?.timestamp ||
+                0
+        );
     }
 
     @computed public get formattedCreationDate(): string {
