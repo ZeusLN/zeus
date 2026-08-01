@@ -67,7 +67,11 @@ const doTorRequest = async (
     method: RequestMethod,
     data?: string,
     headers?: any,
-    trustInvalidCerts: boolean = false
+    trustInvalidCerts: boolean = false,
+    // Callers with a request-scoped deadline (e.g. payments, where the
+    // node holds the connection open for timeout_seconds) must pass a
+    // longer timeout or the request dies before the node can answer.
+    timeoutMs: number = REQUEST_TIMEOUT_MS
 ) => {
     await ensureTorStarted();
     const headerStr = headersToString(headers);
@@ -90,7 +94,7 @@ const doTorRequest = async (
             response = await RnTor.httpGet({
                 url,
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS,
+                timeout_ms: timeoutMs,
                 trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
@@ -99,7 +103,7 @@ const doTorRequest = async (
                 url,
                 body: data || '',
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS,
+                timeout_ms: timeoutMs,
                 trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
@@ -107,7 +111,7 @@ const doTorRequest = async (
             response = await RnTor.httpDelete({
                 url,
                 headers: headerStr,
-                timeout_ms: REQUEST_TIMEOUT_MS,
+                timeout_ms: timeoutMs,
                 trust_invalid_certs: effectiveTrustInvalidCerts
             });
             break;
