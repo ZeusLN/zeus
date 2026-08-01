@@ -74,11 +74,12 @@ export default class LndHub extends LND {
     // LndHub servers (LNbits included) block on /payinvoice until the
     // payment resolves, which on slow routes exceeds the inherited 30s
     // restReq default; that surfaced as premature "Request timeout"
-    // failures for payments that later settled (#2761). LndHub gets no
-    // timeout_seconds plumbing, so use the app's default payment window
-    // and mirror LND's payLightningInvoice race: headroom past the
-    // deadline, and the payment-timed-out shape instead of a
-    // retryable-looking transport error.
+    // failures for payments that later settled (#2761). Unlike LND
+    // (timeout_seconds) and CLN (retry_for), the LndHub protocol has no
+    // server-side payment deadline at all, so this window is purely
+    // client-imposed: the server may well still be paying after we stop
+    // listening, which is exactly why the raced payment-timed-out shape
+    // (rather than a retryable-looking transport error) matters here.
     payLightningInvoice = (data: any) => {
         const timeoutSeconds = Number(data.timeout_seconds) || 60;
 

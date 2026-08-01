@@ -84,7 +84,11 @@ export default class LND {
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
+                trusty: !certVerification,
+                // RNBlobUtil's native default is 60s; without this a
+                // payment request holding the connection open longer than
+                // that dies natively no matter what the race below allows
+                timeout: timeout || this.defaultTimeout
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
                 .then((response: any) => {
