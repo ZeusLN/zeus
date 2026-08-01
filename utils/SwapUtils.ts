@@ -1,7 +1,48 @@
 import BigNumber from 'bignumber.js';
 
+import Bolt11Utils from './Bolt11Utils';
+
 export const bigCeil = (big: BigNumber): BigNumber => {
     return big.integerValue(BigNumber.ROUND_CEIL);
+};
+
+/**
+ * Verifies a reverse-swap invoice returned by the swap host before it is
+ * paid. In a reverse swap ZEUS chooses the preimage and sends only its
+ * hash to the host; the host must return a hold invoice whose payment
+ * hash equals that hash, for the requested amount. A malicious or
+ * compromised host (custom hosts are supported) could otherwise return an
+ * invoice paying itself with an unrelated payment hash: the user pays it,
+ * the on-chain lockup that ZEUS can claim is never bound to that payment,
+ * and the lightning funds are lost. Returns { valid: false, reason } on
+ * any mismatch so the caller can abort before paying.
+ */
+export const verifyReverseSwapInvoice = (
+    invoice: string,
+    expectedPaymentHash: string,
+    expectedAmountSats: number
+): { valid: boolean; reason?: string } => {
+    let decoded;
+    try {
+        decoded = Bolt11Utils.decode(invoice);
+    } catch (e) {
+        return { valid: false, reason: 'undecodable' };
+    }
+
+    const paymentHash = (decoded.payment_hash || '').toLowerCase();
+    if (!paymentHash) {
+        return { valid: false, reason: 'missing-payment-hash' };
+    }
+    if (paymentHash !== expectedPaymentHash.toLowerCase()) {
+        return { valid: false, reason: 'payment-hash-mismatch' };
+    }
+
+    const invoiceSats = new BigNumber(decoded.num_satoshis || 0);
+    if (!invoiceSats.isEqualTo(expectedAmountSats)) {
+        return { valid: false, reason: 'amount-mismatch' };
+    }
+
+    return { valid: true };
 };
 
 export const bigFloor = (big: BigNumber): BigNumber => {

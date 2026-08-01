@@ -17,7 +17,8 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
-    SWAPS_LAST_USED_KEY
+    SWAPS_LAST_USED_KEY,
+    verifyReverseSwapInvoice
 } from '../utils/SwapUtils';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -467,6 +468,31 @@ export default class SwapStore {
                     this.loading = false;
                 });
                 console.error('Error in API response:', responseData.error);
+                return;
+            }
+
+            // Verify the host-supplied invoice before it can be paid: its
+            // payment hash must equal sha256(our preimage) and its amount
+            // must match what we requested. Without this a malicious or
+            // compromised host could return an invoice paying itself with
+            // an unrelated hash, breaking swap atomicity and losing the
+            // user's lightning funds.
+            const invoiceCheck = verifyReverseSwapInvoice(
+                responseData.invoice,
+                crypto.sha256(preimage).toString('hex'),
+                Number(invoiceAmount)
+            );
+            if (!invoiceCheck.valid) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapInvoice'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Reverse swap invoice verification failed:',
+                    invoiceCheck.reason
+                );
                 return;
             }
 
