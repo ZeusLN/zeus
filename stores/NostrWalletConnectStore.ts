@@ -1855,12 +1855,26 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
-            this.messageSignStore.signMessage(request.message);
-            const signature = this.messageSignStore.signature;
+            // Must await: signMessage resolves to this request's
+            // signature. Reading messageSignStore.signature synchronously
+            // returns the PREVIOUS request's signature (or none), pairing
+            // the wrong signature with this message.
+            const signature = await this.messageSignStore.signMessage(
+                request.message
+            );
+            if (!signature) {
+                return NostrConnectUtils.createNip47Error(
+                    this.messageSignStore.errorMessage ||
+                        localeString(
+                            'views.Settings.SignMessage.signOperationFailed'
+                        ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                );
+            }
             return {
                 result: {
                     message: request.message,
-                    signature: signature || ''
+                    signature
                 },
                 error: undefined
             };

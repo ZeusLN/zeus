@@ -164,8 +164,13 @@ export default class MessageSignStore {
             });
     };
 
+    // Resolves to the signature so awaiting callers (e.g. the NWC
+    // sign_message handler) get THIS request's signature instead of
+    // reading the shared `signature` observable, which may still hold a
+    // previous request's result. Resolves to null on error; the
+    // observable is still updated for the reactive view.
     @action
-    public signMessage = (text: string) => {
+    public signMessage = (text: string): Promise<string | null> => {
         this.loading = true;
 
         try {
@@ -179,12 +184,14 @@ export default class MessageSignStore {
 
             // Check if signOperation is a valid Promise
             if (signOperation && typeof signOperation.then === 'function') {
-                signOperation
+                return signOperation
                     .then((data: any) => {
                         if (data) {
-                            this.signature = data.zbase || data.signature;
+                            const signature = data.zbase || data.signature;
+                            this.signature = signature;
                             this.error = false;
                             this.errorMessage = '';
+                            return signature ?? null;
                         } else {
                             throw new Error(
                                 localeString(
@@ -195,6 +202,7 @@ export default class MessageSignStore {
                     })
                     .catch((error: any) => {
                         this.handleError(error, 'Unknown signing error', true);
+                        return null;
                     })
                     .finally(() => {
                         this.loading = false;
@@ -206,9 +214,11 @@ export default class MessageSignStore {
                     'views.Settings.SignMessage.signOperationFailed'
                 );
                 this.loading = false;
+                return Promise.resolve(null);
             }
         } catch (error: any) {
             this.handleError(error, 'Unknown signing error');
+            return Promise.resolve(null);
         }
     };
 
