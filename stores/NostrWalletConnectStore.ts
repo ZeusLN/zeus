@@ -2313,8 +2313,10 @@ export default class NostrWalletConnectStore {
             );
             if (!payment) continue;
 
-            changed = true;
+            let reconciled = false;
             runInAction(() => {
+                if (activity.status !== 'pending') return;
+                reconciled = true;
                 activity.payment = new Payment(payment);
                 if (!payment.isIncomplete) {
                     activity.status = 'success';
@@ -2328,6 +2330,9 @@ export default class NostrWalletConnectStore {
                     activity.status = 'failed';
                 }
             });
+            if (reconciled) {
+                changed = true;
+            }
         }
         if (changed) {
             this.lookupPaymentsCache = null;
