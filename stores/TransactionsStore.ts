@@ -569,6 +569,15 @@ export default class TransactionsStore {
         amp,
         timeout_seconds
     }: SendPaymentReq) => {
+        // Guard against double-submission: if a payment is already in flight,
+        // ignore the new request. Without this a rapid double-tap (or a
+        // re-fired swipe) dispatches two payments, and keysend in particular
+        // generates a fresh preimage per call, defeating every backend's
+        // same-hash duplicate protection.
+        if (this.loading) {
+            return;
+        }
+
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
         this.loading = true;

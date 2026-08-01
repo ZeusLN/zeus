@@ -558,6 +558,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxFeePercent
         } = this.state;
 
+        // Guard against double-submission: bail if a payment is already in
+        // flight so a rapid double-tap can't dispatch a second keysend.
+        if (TransactionsStore.loading) return;
+
         let streamingCall;
         if (enableAtomicMultiPathPayment) {
             streamingCall = TransactionsStore.sendPayment({
@@ -704,6 +708,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             UTXOsStore,
             ContactStore,
             NodeInfoStore,
+            TransactionsStore,
             navigation
         } = this.props;
         const {
@@ -758,6 +763,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             (contact: Contact) => contact.isFavourite
         );
         const isSendDisabled: boolean =
+            TransactionsStore.loading ||
             lightningBalance === 0 ||
             !satAmount ||
             satAmount === '0' ||

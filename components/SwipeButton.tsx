@@ -20,6 +20,7 @@ interface SwipeButtonProps {
     instructionText?: string;
     instructionsStyle?: object;
     containerStyle?: object;
+    disabled?: boolean;
 }
 
 const SwipeButton: React.FC<SwipeButtonProps> = ({
@@ -27,9 +28,14 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     swipeButtonStyle,
     instructionText = '',
     instructionsStyle,
-    containerStyle
+    containerStyle,
+    disabled = false
 }) => {
     const pan = useRef(new Animated.Value(0)).current;
+    // The PanResponder is created once, so read `disabled` through a ref to
+    // always see its latest value (e.g. once a payment goes in flight).
+    const disabledRef = useRef(disabled);
+    disabledRef.current = disabled;
     const screenWidth = Dimensions.get('window').width;
 
     const containerWidth = screenWidth - 40;
@@ -67,8 +73,10 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 
     const panResponder = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => !completed.current,
-            onMoveShouldSetPanResponder: () => !completed.current,
+            onStartShouldSetPanResponder: () =>
+                !completed.current && !disabledRef.current,
+            onMoveShouldSetPanResponder: () =>
+                !completed.current && !disabledRef.current,
             onPanResponderGrant: () => {
                 pan.setValue(0);
             },
@@ -82,7 +90,10 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 _e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
-                if (gesture.dx > maxTranslation * 0.95) {
+                if (
+                    gesture.dx > maxTranslation * 0.95 &&
+                    !disabledRef.current
+                ) {
                     // lock the button in the completed position before
                     // kicking off any work, so it can't be dragged again or
                     // left hanging mid-track while navigation is pending
@@ -100,7 +111,13 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     ).current;
 
     return (
-        <View style={[styles.container, containerStyle]}>
+        <View
+            style={[
+                styles.container,
+                containerStyle,
+                disabled && styles.disabled
+            ]}
+        >
             <Animated.View
                 style={[
                     styles.instructionsContainer,
@@ -159,6 +176,9 @@ const styles = StyleSheet.create({
     },
     textStyle: {
         fontSize: 18
+    },
+    disabled: {
+        opacity: 0.5
     }
 });
 

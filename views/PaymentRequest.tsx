@@ -416,7 +416,17 @@ export default class PaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { InvoicesStore, LnurlPayStore, SettingsStore } = this.props;
+        const {
+            InvoicesStore,
+            LnurlPayStore,
+            SettingsStore,
+            TransactionsStore
+        } = this.props;
+
+        // Guard against double-submission: bail if a payment is already in
+        // flight so a rapid double-tap or re-fired swipe can't dispatch twice.
+        if (TransactionsStore.loading) return;
+
         const {
             enableMultiPathPayment,
             maxParts,
@@ -480,6 +490,7 @@ export default class PaymentRequest extends React.Component<
             LnurlPayStore,
             SettingsStore,
             NodeInfoStore,
+            TransactionsStore,
             navigation
         } = this.props;
         const {
@@ -1587,6 +1598,7 @@ export default class PaymentRequest extends React.Component<
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
+                                    disabled={TransactionsStore.loading}
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
                                     )}
@@ -1613,7 +1625,10 @@ export default class PaymentRequest extends React.Component<
                                                 : undefined
                                         }
                                         onPress={this.triggerPayment}
-                                        disabled={!lightningReadyToSend}
+                                        disabled={
+                                            !lightningReadyToSend ||
+                                            TransactionsStore.loading
+                                        }
                                     />
                                 </View>
                             )}
