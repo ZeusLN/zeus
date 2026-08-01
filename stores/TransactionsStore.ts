@@ -47,6 +47,10 @@ export interface SendPaymentReq {
 
 export default class TransactionsStore {
     @observable loading = false;
+    // true only while a Lightning payment dispatched via sendPaymentInternal
+    // is in flight; `loading` is shared with other operations (getTransactions,
+    // sendCoins, broadcast) so it can't serve as the double-submission guard
+    @observable paymentInFlight = false;
     @observable crafting = false;
     @observable error = false;
     @observable error_msg: string | null;
@@ -98,6 +102,7 @@ export default class TransactionsStore {
     @action
     public reset = () => {
         this.loading = false;
+        this.paymentInFlight = false;
         this.error = false;
         this.error_msg = null;
         this.transactions = [];
@@ -574,10 +579,11 @@ export default class TransactionsStore {
         // re-fired swipe) dispatches two payments, and keysend in particular
         // generates a fresh preimage per call, defeating every backend's
         // same-hash duplicate protection.
-        if (this.loading) {
+        if (this.paymentInFlight) {
             return;
         }
 
+        this.paymentInFlight = true;
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
         this.loading = true;
@@ -741,6 +747,7 @@ export default class TransactionsStore {
     @action
     public handlePayment = (result: any) => {
         this.loading = false;
+        this.paymentInFlight = false;
         this.payment_route = result.payment_route;
 
         const payment = new Payment(result);
@@ -814,6 +821,7 @@ export default class TransactionsStore {
     public handlePaymentError = (err: Error) => {
         this.error = true;
         this.loading = false;
+        this.paymentInFlight = false;
         this.error_msg =
             errorToUserFriendly(err) || localeString('error.sendingPayment');
     };

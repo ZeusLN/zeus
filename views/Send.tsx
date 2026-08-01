@@ -560,7 +560,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap can't dispatch a second keysend.
-        if (TransactionsStore.loading) return;
+        if (TransactionsStore.paymentInFlight) return;
 
         let streamingCall;
         if (enableAtomicMultiPathPayment) {
@@ -763,7 +763,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             (contact: Contact) => contact.isFavourite
         );
         const isSendDisabled: boolean =
-            TransactionsStore.loading ||
+            TransactionsStore.paymentInFlight ||
             lightningBalance === 0 ||
             !satAmount ||
             satAmount === '0' ||

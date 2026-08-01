@@ -425,7 +425,7 @@ export default class PaymentRequest extends React.Component<
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice.
-        if (TransactionsStore.loading) return;
+        if (TransactionsStore.paymentInFlight) return;
 
         const {
             enableMultiPathPayment,
@@ -1598,7 +1598,7 @@ export default class PaymentRequest extends React.Component<
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
-                                    disabled={TransactionsStore.loading}
+                                    disabled={TransactionsStore.paymentInFlight}
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
                                     )}
@@ -1627,7 +1627,7 @@ export default class PaymentRequest extends React.Component<
                                         onPress={this.triggerPayment}
                                         disabled={
                                             !lightningReadyToSend ||
-                                            TransactionsStore.loading
+                                            TransactionsStore.paymentInFlight
                                         }
                                     />
                                 </View>
