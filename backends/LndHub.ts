@@ -80,8 +80,10 @@ export default class LndHub extends LND {
     // client-imposed: the server may well still be paying after we stop
     // listening, which is exactly why the raced payment-timed-out shape
     // (rather than a retryable-looking transport error) matters here.
+    // Zeus's payment timeout setting is neither plumbed to this backend
+    // nor exposed in the UI for it, so the window is a fixed 60s.
     payLightningInvoice = (data: any) => {
-        const timeoutSeconds = Number(data.timeout_seconds) || 60;
+        const timeoutSeconds = 60;
 
         const forcedTimeout = async (time_ms: number, response: any) => {
             await new Promise((res) => setTimeout(res, time_ms));
