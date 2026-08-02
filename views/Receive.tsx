@@ -1038,33 +1038,33 @@ export default class Receive extends React.Component<
         if (implementation === 'lnd') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
-                    // only fetch the last 10 invoices
-                    BackendUtils.getInvoices({ limit: 10 }).then(
-                        (response: any) => {
-                            const invoices = response.invoices;
-                            for (let i = 0; i < invoices.length; i++) {
-                                const result = invoices[i];
-                                if (
-                                    result.r_hash
-                                        .replace(/\+/g, '-')
-                                        .replace(/\//g, '_') === rHash &&
-                                    Number(result.amt_paid_sat) >=
-                                        Number(value) &&
-                                    Number(result.amt_paid_sat) !== 0
-                                ) {
-                                    this.handlePaymentReceived(
-                                        result.amt_paid_sat,
-                                        {
-                                            type: 'ln',
-                                            tx: result.payment_request
-                                        }
-                                    );
-                                    this.clearIntervals();
-                                    break;
-                                }
+                    // Look the invoice up directly by payment hash instead of
+                    // scanning the last 10 invoices: on busy nodes the watched
+                    // invoice can be pushed out of that window before it is
+                    // paid. LND's REST lookup endpoint expects a hex hash,
+                    // while rHash is base64url here
+                    BackendUtils.lookupInvoice({
+                        r_hash: Base64Utils.base64UrlToHex(rHash)
+                    })
+                        .then((result: any) => {
+                            const invoice = new Invoice(result);
+                            const amountPaid = invoice.getAmount;
+                            if (
+                                invoice.isPaid &&
+                                Number(amountPaid) >= Number(value) &&
+                                Number(amountPaid) !== 0
+                            ) {
+                                this.handlePaymentReceived(amountPaid, {
+                                    type: 'ln',
+                                    tx: invoice.getPaymentRequest
+                                });
+                                this.clearIntervals();
                             }
-                        }
-                    );
+                        })
+                        .catch(() => {
+                            // invoice not found or node unreachable;
+                            // retry on the next tick
+                        });
                 }, 5000);
             }
 
