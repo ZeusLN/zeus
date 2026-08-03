@@ -1,10 +1,12 @@
 import * as React from 'react';
 import {
+    StyleProp,
     StyleSheet,
     Text,
     TouchableOpacity,
     Vibration,
-    View
+    View,
+    ViewStyle
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -34,6 +36,7 @@ interface KeyValueProps {
     }>;
     mempoolLink?: () => void;
     disableCopy?: boolean;
+    containerStyle?: StyleProp<ViewStyle>;
     ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
 }
@@ -61,6 +64,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
             infoModalAdditionalButtons,
             mempoolLink,
             disableCopy,
+            containerStyle,
             ModalStore,
             SettingsStore
         } = this.props;
@@ -187,7 +191,9 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         );
 
         return (
-            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+            <View
+                style={[{ paddingTop: 10, paddingBottom: 10 }, containerStyle]}
+            >
                 <KeyValueRow />
             </View>
         );
