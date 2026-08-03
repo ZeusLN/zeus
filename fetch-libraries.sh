@@ -11,9 +11,27 @@ LDK_NODE_IOS_SHA256=$(jq "['ldk-node']['iosSha256']")
 CDK_VERSION=$(jq "['cdk']['version']")
 CDK_ANDROID_SHA256=$(jq "['cdk']['androidSha256']")
 CDK_IOS_SHA256=$(jq "['cdk']['iosSha256']")
+CDK_IOS_BINDINGS_SHA256=$(jq "['cdk']['iosBindingsSha256']")
 RESTORE_VERSION=$(jq "['zeus-cashu-restore']['version']")
 RESTORE_ANDROID_SHA256=$(jq "['zeus-cashu-restore']['androidSha256']")
 RESTORE_IOS_SHA256=$(jq "['zeus-cashu-restore']['iosSha256']")
+RESTORE_ANDROID_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['androidBindingsSha256']")
+RESTORE_IOS_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['iosBindingsSha256']")
+
+# Every hash must be 64-char lowercase hex. Fail closed on empty/malformed
+# values: macOS sha256sum -c exits 0 on improperly formatted lines, so a
+# blank hash would otherwise skip verification silently.
+for HASH in "$EMBEDDED_LND_ANDROID_SHA256" "$EMBEDDED_LND_IOS_SHA256" \
+            "$LDK_NODE_ANDROID_SHA256" "$LDK_NODE_IOS_SHA256" \
+            "$CDK_ANDROID_SHA256" "$CDK_IOS_SHA256" \
+            "$CDK_IOS_BINDINGS_SHA256" \
+            "$RESTORE_ANDROID_SHA256" "$RESTORE_IOS_SHA256" \
+            "$RESTORE_ANDROID_BINDINGS_SHA256" "$RESTORE_IOS_BINDINGS_SHA256"; do
+    if ! echo "$HASH" | grep -qE '^[0-9a-f]{64}$'; then
+        echo "Invalid or missing sha256 in $LV: '$HASH'" >&2
+        exit 1
+    fi
+done
 
 EMBEDDED_LND_ANDROID_FILE=Lndmobile.aar
 EMBEDDED_LND_IOS_FILE=Lndmobile.xcframework
@@ -53,7 +71,7 @@ if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_
     rm android/lndmobile/$EMBEDDED_LND_ANDROID_FILE
 
     # download Android LND library file
-    curl -L $EMBEDDED_LND_ANDROID_LINK > android/lndmobile/$EMBEDDED_LND_ANDROID_FILE
+    curl -fL $EMBEDDED_LND_ANDROID_LINK > android/lndmobile/$EMBEDDED_LND_ANDROID_FILE
 
     # check checksum
     if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_FILE" | sha256sum -c -; then
@@ -75,7 +93,7 @@ if ! echo "$EMBEDDED_LND_IOS_SHA256 ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FI
     rm ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip
 
     # download iOS LND library file
-    curl -L $EMBEDDED_LND_IOS_LINK > ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip
+    curl -fL $EMBEDDED_LND_IOS_LINK > ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip
 
     # check checksum
     if ! echo "$EMBEDDED_LND_IOS_SHA256 ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip" | sha256sum -c -; then
@@ -109,28 +127,15 @@ CDK_IOS_LINK=$CDK_IOS_PATH$CDK_IOS_FILE.zip
 # Android CDK
 mkdir -p android/cdk
 
-NEED_CDK_ANDROID=false
-if [ ! -f "android/cdk/$CDK_ANDROID_FILE" ]; then
-    NEED_CDK_ANDROID=true
-elif [ -n "$CDK_ANDROID_SHA256" ]; then
-    if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c - 2>/dev/null; then
-        NEED_CDK_ANDROID=true
-    fi
-fi
+if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
+    echo "CDK Android library file missing or checksum failed" >&2
 
-if [ "$NEED_CDK_ANDROID" = true ]; then
-    echo "Downloading CDK Android library..." >&2
     rm -f android/cdk/$CDK_ANDROID_FILE
-    curl -L $CDK_ANDROID_LINK > android/cdk/$CDK_ANDROID_FILE
+    curl -fL $CDK_ANDROID_LINK > android/cdk/$CDK_ANDROID_FILE
 
-    if [ -n "$CDK_ANDROID_SHA256" ]; then
-        if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
-            echo "CDK Android checksum failed" >&2
-            exit 1
-        fi
-    else
-        echo "CDK Android downloaded (checksum verification skipped)"
-        echo "SHA256: $(sha256sum android/cdk/$CDK_ANDROID_FILE | cut -d' ' -f1)"
+    if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
+        echo "CDK Android checksum failed" >&2
+        exit 1
     fi
 fi
 
@@ -138,28 +143,15 @@ fi
 mkdir -p ios/CashuDevKitLibZipFile
 mkdir -p ios/Cdk
 
-NEED_CDK_IOS=false
-if [ ! -f "ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" ]; then
-    NEED_CDK_IOS=true
-elif [ -n "$CDK_IOS_SHA256" ]; then
-    if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c - 2>/dev/null; then
-        NEED_CDK_IOS=true
-    fi
-fi
+if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c -; then
+    echo "CDK iOS library file missing or checksum failed" >&2
 
-if [ "$NEED_CDK_IOS" = true ]; then
-    echo "Downloading CDK iOS library..." >&2
     rm -f ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip
-    curl -L $CDK_IOS_LINK > ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip
+    curl -fL $CDK_IOS_LINK > ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip
 
-    if [ -n "$CDK_IOS_SHA256" ]; then
-        if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c -; then
-            echo "CDK iOS checksum failed" >&2
-            exit 1
-        fi
-    else
-        echo "CDK iOS downloaded (checksum verification skipped)"
-        echo "SHA256: $(sha256sum ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip | cut -d' ' -f1)"
+    if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c -; then
+        echo "CDK iOS checksum failed" >&2
+        exit 1
     fi
 fi
 
@@ -170,14 +162,25 @@ unzip ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip -d ios/Cdk
 
 echo "CashuDevKit iOS framework installed to ios/Cdk/$CDK_IOS_FILE"
 
-# Download matching Swift bindings from cdk-swift repo
+# Download matching Swift bindings from cdk-swift repo. When bumping the CDK
+# version, update iosBindingsSha256 in fetch-libraries-versions.json to the
+# hash of the file at the new tag.
 CDK_SWIFT_BINDINGS_URL="https://raw.githubusercontent.com/cashubtc/cdk-swift/v$CDK_VERSION/Sources/CashuDevKit/CashuDevKit.swift"
 mkdir -p ios/CashuDevKit
 
-echo "Downloading CDK Swift bindings..." >&2
-curl -L "$CDK_SWIFT_BINDINGS_URL" > ios/CashuDevKit/CashuDevKit.swift
+if ! echo "$CDK_IOS_BINDINGS_SHA256 ios/CashuDevKit/CashuDevKit.swift" | sha256sum -c -; then
+    echo "CDK Swift bindings missing or checksum failed" >&2
 
-echo "CashuDevKit Swift bindings updated to v$CDK_VERSION"
+    rm -f ios/CashuDevKit/CashuDevKit.swift
+    curl -fL "$CDK_SWIFT_BINDINGS_URL" > ios/CashuDevKit/CashuDevKit.swift
+
+    if ! echo "$CDK_IOS_BINDINGS_SHA256 ios/CashuDevKit/CashuDevKit.swift" | sha256sum -c -; then
+        echo "CDK Swift bindings checksum failed" >&2
+        exit 1
+    fi
+fi
+
+echo "CashuDevKit Swift bindings installed for v$CDK_VERSION"
 
 ######################
 # Zeus Cashu Restore #
@@ -196,28 +199,15 @@ RESTORE_KOTLIN_BINDINGS_URL="https://raw.githubusercontent.com/ZeusLN/zeus-cashu
 # Android Restore
 mkdir -p android/zeus-restore
 
-NEED_RESTORE_ANDROID=false
-if [ ! -f "android/zeus-restore/$RESTORE_ANDROID_FILE" ]; then
-    NEED_RESTORE_ANDROID=true
-elif [ -n "$RESTORE_ANDROID_SHA256" ]; then
-    if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c - 2>/dev/null; then
-        NEED_RESTORE_ANDROID=true
-    fi
-fi
+if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c -; then
+    echo "Restore Android library file missing or checksum failed" >&2
 
-if [ "$NEED_RESTORE_ANDROID" = true ]; then
-    echo "Downloading Zeus Cashu Restore Android library..." >&2
     rm -f android/zeus-restore/$RESTORE_ANDROID_FILE
-    curl -L $RESTORE_ANDROID_LINK > android/zeus-restore/$RESTORE_ANDROID_FILE
+    curl -fL $RESTORE_ANDROID_LINK > android/zeus-restore/$RESTORE_ANDROID_FILE
 
-    if [ -n "$RESTORE_ANDROID_SHA256" ]; then
-        if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c -; then
-            echo "Restore Android checksum failed" >&2
-            exit 1
-        fi
-    else
-        echo "Restore Android downloaded (checksum verification skipped)"
-        echo "SHA256: $(sha256sum android/zeus-restore/$RESTORE_ANDROID_FILE | cut -d' ' -f1)"
+    if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c -; then
+        echo "Restore Android checksum failed" >&2
+        exit 1
     fi
 fi
 
@@ -225,28 +215,15 @@ fi
 mkdir -p ios/ZeusRestoreLibZipFile
 mkdir -p ios/ZeusRestore
 
-NEED_RESTORE_IOS=false
-if [ ! -f "ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" ]; then
-    NEED_RESTORE_IOS=true
-elif [ -n "$RESTORE_IOS_SHA256" ]; then
-    if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c - 2>/dev/null; then
-        NEED_RESTORE_IOS=true
-    fi
-fi
+if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c -; then
+    echo "Restore iOS library file missing or checksum failed" >&2
 
-if [ "$NEED_RESTORE_IOS" = true ]; then
-    echo "Downloading Zeus Cashu Restore iOS library..." >&2
     rm -f ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip
-    curl -L $RESTORE_IOS_LINK > ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip
+    curl -fL $RESTORE_IOS_LINK > ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip
 
-    if [ -n "$RESTORE_IOS_SHA256" ]; then
-        if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c -; then
-            echo "Restore iOS checksum failed" >&2
-            exit 1
-        fi
-    else
-        echo "Restore iOS downloaded (checksum verification skipped)"
-        echo "SHA256: $(sha256sum ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip | cut -d' ' -f1)"
+    if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c -; then
+        echo "Restore iOS checksum failed" >&2
+        exit 1
     fi
 fi
 
@@ -256,22 +233,41 @@ unzip ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip -d ios/ZeusRestore
 
 echo "Zeus Cashu Restore iOS framework installed to ios/ZeusRestore/$RESTORE_IOS_FILE"
 
-# Download matching Swift bindings
+# Download matching uniffi bindings. When bumping the zeus-cashu-restore
+# version, update iosBindingsSha256 and androidBindingsSha256 in
+# fetch-libraries-versions.json to the hashes of the files at the new tag.
 mkdir -p ios/CashuDevKit
 
-echo "Downloading Zeus Cashu Restore Swift bindings..." >&2
-curl -L "$RESTORE_SWIFT_BINDINGS_URL" > ios/CashuDevKit/zeus_cashu_restore.swift
+if ! echo "$RESTORE_IOS_BINDINGS_SHA256 ios/CashuDevKit/zeus_cashu_restore.swift" | sha256sum -c -; then
+    echo "Restore Swift bindings missing or checksum failed" >&2
 
-echo "Zeus Cashu Restore Swift bindings updated to v$RESTORE_VERSION"
+    rm -f ios/CashuDevKit/zeus_cashu_restore.swift
+    curl -fL "$RESTORE_SWIFT_BINDINGS_URL" > ios/CashuDevKit/zeus_cashu_restore.swift
 
-# Download matching Kotlin bindings
+    if ! echo "$RESTORE_IOS_BINDINGS_SHA256 ios/CashuDevKit/zeus_cashu_restore.swift" | sha256sum -c -; then
+        echo "Restore Swift bindings checksum failed" >&2
+        exit 1
+    fi
+fi
+
+echo "Zeus Cashu Restore Swift bindings installed for v$RESTORE_VERSION"
+
 RESTORE_KOTLIN_DIR=android/app/src/main/java/uniffi/zeus_cashu_restore
 mkdir -p "$RESTORE_KOTLIN_DIR"
 
-echo "Downloading Zeus Cashu Restore Kotlin bindings..." >&2
-curl -L "$RESTORE_KOTLIN_BINDINGS_URL" > "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
+if ! echo "$RESTORE_ANDROID_BINDINGS_SHA256 $RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt" | sha256sum -c -; then
+    echo "Restore Kotlin bindings missing or checksum failed" >&2
 
-echo "Zeus Cashu Restore Kotlin bindings updated to v$RESTORE_VERSION"
+    rm -f "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
+    curl -fL "$RESTORE_KOTLIN_BINDINGS_URL" > "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
+
+    if ! echo "$RESTORE_ANDROID_BINDINGS_SHA256 $RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt" | sha256sum -c -; then
+        echo "Restore Kotlin bindings checksum failed" >&2
+        exit 1
+    fi
+fi
+
+echo "Zeus Cashu Restore Kotlin bindings installed for v$RESTORE_VERSION"
 
 #####################
 # LDK Node Android  #
@@ -285,7 +281,7 @@ if ! echo "$LDK_NODE_ANDROID_SHA256 android/ldk-node/$LDK_NODE_ANDROID_FILE" | s
     rm -f android/ldk-node/$LDK_NODE_ANDROID_FILE
     mkdir -p android/ldk-node
 
-    curl -L $LDK_NODE_ANDROID_LINK > android/ldk-node/$LDK_NODE_ANDROID_FILE
+    curl -fL $LDK_NODE_ANDROID_LINK > android/ldk-node/$LDK_NODE_ANDROID_FILE
 
     if ! echo "$LDK_NODE_ANDROID_SHA256 android/ldk-node/$LDK_NODE_ANDROID_FILE" | sha256sum -c -; then
         echo "LDK Node Android checksum failed" >&2
@@ -312,7 +308,7 @@ if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | 
     rm -f ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
 
     # download LDK Node iOS library file
-    curl -L $LDK_NODE_IOS_LINK > ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+    curl -fL $LDK_NODE_IOS_LINK > ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
 
     # check checksum
     if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then

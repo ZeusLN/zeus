@@ -83,9 +83,7 @@ Versions pinned at time of writing:
 | zeus-cashu-restore (`ZeusLN/zeus-cashu-restore` release) | `0.1.0` | `android/zeus-restore/zeus-cashu-restore.aar` | `ios/ZeusRestore/zeusRestoreFFI.xcframework` |
 
 Behavior and caveats (all verified by reading the script):
-- **SHA256 enforcement**: embedded-LND and LDK Node downloads hard-fail (`exit 1`) on checksum mismatch, always.
-- **Empty-hash skip caveat**: for `cdk` and `zeus-cashu-restore` ONLY, the checksum check is wrapped in `[ -n "$SHA256" ]` — if the hash field in `fetch-libraries-versions.json` is an empty string, verification is **skipped** and the script just prints the downloaded file's hash. All four hash fields are currently non-empty; never blank one to "fix" a checksum failure.
-- **Unchecked binding-source downloads**: the script also `curl`s uniffi **source** bindings with NO checksum: `ios/CashuDevKit/CashuDevKit.swift` (from cdk-swift tag), `ios/CashuDevKit/zeus_cashu_restore.swift` and `android/app/src/main/java/uniffi/zeus_cashu_restore/zeus_cashu_restore.kt` (from zeus-cashu-restore tag). Known supply-chain gap — labeled open, not planned-fixed.
+- **SHA256 enforcement**: ALL downloads — binaries AND the uniffi source bindings (`ios/CashuDevKit/CashuDevKit.swift`, `ios/CashuDevKit/zeus_cashu_restore.swift`, `android/app/src/main/java/uniffi/zeus_cashu_restore/zeus_cashu_restore.kt`, pinned via the `*BindingsSha256` fields) — hard-fail (`exit 1`) on checksum mismatch, always. An empty or malformed hash field in `fetch-libraries-versions.json` fails closed up front (the script validates every hash is 64-char hex before any download, because macOS `sha256sum -c` exits 0 on improperly formatted lines); never blank one to "fix" a checksum failure. (Before this hardening the bindings were curl'd from raw.githubusercontent.com tag URLs with no checksum; that supply-chain gap is closed.)
 - **`jq()` is not jq**: the script defines a shell function literally named `jq()` that is a `python3 -c` one-liner reading the versions JSON. Don't grep-conclude the repo depends on the jq binary.
 - **Error noise is normal**: the script has no `set -e`; on a fresh clone you will see `sha256sum: ... No such file or directory` and failed `rm` messages before each download, and on re-runs `mkdir: ios/LndMobileLibZipFile: File exists` (the directory doesn't exist on a truly fresh clone — its contents are gitignored). Only an explicit "checksum failed" + exit 1 is a real failure.
 - If skipped: Android fails at Gradle time (missing `.aar`/`.so`); iOS fails at Xcode link time ("framework 'Lndmobile' not found" etc.).
@@ -116,15 +114,15 @@ The `pod-install` npm package runs CocoaPods for `ios/`. On non-macOS it prints 
 - Workspace: `ios/zeus.xcworkspace` (always open the workspace, not the .xcodeproj — pods live in a companion project).
 - **One `Lndmobile.xcframework`, shared by two modules, in a misleading directory**: fetch-libraries.sh unzips it to `ios/LncMobile/` (NOT `ios/LndMobile/`). The embedded-LND Swift layer (`ios/LndMobile/Lnd.swift`, `LndMobile.swift`: `import Lndmobile`) and the LNC layer (`ios/LncMobile/LncModule.mm`, which #imports the header straight out of the xcframework) both link against it; `zeus.xcodeproj` references it at path `LncMobile/Lndmobile.xcframework`.
 - **Podfile post_install** appends to every pod's `FRAMEWORK_SEARCH_PATHS`: `"$(SRCROOT)/Cdk"`, `"$(SRCROOT)/ZeusRestore"`, `"$(SRCROOT)/LncMobile"`, and floors `IPHONEOS_DEPLOYMENT_TARGET` at 13.4. Local podspecs `ios/CashuDevKit.podspec` and `ios/ZeusCashuRestore.podspec` are consumed as `pod 'CashuDevKit', :path => '.'` / `pod 'ZeusCashuRestore', :path => '.'`.
-- Other frameworks: `ios/LdkNodeMobile/LDKNodeFFI.xcframework` (with **checked-in** binding `ios/LdkNodeMobile/LDKNode.swift`), `ios/Cdk/cdkFFI.xcframework`, `ios/ZeusRestore/zeusRestoreFFI.xcframework`; downloaded Swift bindings land in `ios/CashuDevKit/`.
+- Other frameworks: `ios/LdkNodeMobile/LDKNodeFFI.xcframework` (with **checked-in** binding `ios/LdkNodeMobile/LDKNode.swift`), `ios/Cdk/cdkFFI.xcframework`, `ios/ZeusRestore/zeusRestoreFFI.xcframework`; downloaded (sha256-pinned) Swift bindings land in `ios/CashuDevKit/`.
 
 ### uniffi binding version-match rule
 
 uniffi generates wrapper source (Kotlin/Swift) whose function/type checksums must match the compiled Rust library. In Zeus the two halves arrive by different routes:
 - **Checked into git** (must be updated by hand when the binary version bumps): `ldk_node.kt`, `LDKNode.swift`.
-- **Downloaded by fetch-libraries.sh pinned to the same version tag as the binary** (auto-matching): `CashuDevKit.swift`, `zeus_cashu_restore.swift`, `zeus_cashu_restore.kt`.
+- **Downloaded by fetch-libraries.sh pinned to the same version tag AND sha256-pinned** via the `*BindingsSha256` fields in `fetch-libraries-versions.json`: `CashuDevKit.swift`, `zeus_cashu_restore.swift`, `zeus_cashu_restore.kt`. (CDK Android bindings ship inside the checksummed `cashudevkit.aar`.)
 
-If binding source and binary versions diverge you get runtime symbol/checksum errors (uniffi aborts on API-checksum mismatch), not compile errors. When bumping `ldk-node` in `fetch-libraries-versions.json`, regenerate/replace the two checked-in binding files from the same release.
+If binding source and binary versions diverge you get runtime symbol/checksum errors (uniffi aborts on API-checksum mismatch), not compile errors. When bumping `ldk-node` in `fetch-libraries-versions.json`, regenerate/replace the two checked-in binding files from the same release. When bumping `cdk` or `zeus-cashu-restore`, update the binary hashes AND the `*BindingsSha256` fields from the same release in the same commit.
 
 ### TypeScript wrapper layers (where JS meets native)
 
@@ -148,7 +146,7 @@ Tor support is `react-native-nitro-tor` **0.6.0** (normal npm dependency, autoli
 5. **Hermes + New Architecture are ON** (`android/gradle.properties`: `hermesEnabled=true`, `newArchEnabled=true`; New Arch since RN 0.83.1 upgrade, commit `d13ebc2cd`). Consequences: pre-2026 Animated/layout patterns can crash Fabric, and Hermes regexes need input length caps — details and incident hashes in **zeus-failure-archaeology** / **zeus-debugging-playbook**.
 6. **Never hand-edit** the `react-native`/`browser` alias maps in `package.json` or `shim.js` — rn-nodeify regenerates them (§2 step 2).
 7. **`pod install` didn't run automatically from the RN CLI**: expected — `automaticPodsInstallation: false` in `react-native.config.js`; run `npx pod-install` or `cd ios && pod install`.
-8. **Checksum failure on a binary**: means the release asset changed or the download was corrupted. Delete the cached artifact (paths in §2 step 3 table) and re-run `yarn fetch-libraries`. Do NOT blank the hash in `fetch-libraries-versions.json` (empty-hash skip caveat).
+8. **Checksum failure on a binary**: means the release asset changed or the download was corrupted. Delete the cached artifact (paths in §2 step 3 table) and re-run `yarn fetch-libraries`. Do NOT blank the hash in `fetch-libraries-versions.json` (an empty hash fails closed anyway).
 9. **`gradle.properties` sets `org.gradle.parallel=false`** — a reproducible-build requirement; don't flip it for speed in a PR.
 10. **New npm dependencies require maintainer discussion first** (CONTRIBUTING.md) — see **zeus-change-control** before adding anything.
 
@@ -196,7 +194,7 @@ Re-verification one-liners for every volatile fact:
 | Postinstall chain | `node -e "console.log(require('./package.json').scripts.postinstall)"` |
 | Patch list | `ls patches/` and read `patches/index.mjs` |
 | Native binary versions + hashes | `cat fetch-libraries-versions.json` |
-| Empty-hash skip + unchecked binding downloads | `grep -n -e 'if \[ -n' -e BINDINGS_URL fetch-libraries.sh` |
+| No unchecked downloads in fetch-libraries.sh | `grep -n -e 'if \[ -n' -e 'curl -L ' fetch-libraries.sh` (expect no hits; all curls are `-fL` and every download, bindings included, is sha256-checked) |
 | Android SDK/Kotlin/NDK | `sed -n '1,10p' android/build.gradle` |
 | Gradle version | `grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties` |
 | Hermes / New Arch / parallel | `grep -n -e newArchEnabled -e hermesEnabled -e org.gradle.parallel android/gradle.properties` |
@@ -205,7 +203,7 @@ Re-verification one-liners for every volatile fact:
 | xcframework location | `grep -n 'LncMobile/Lndmobile.xcframework' ios/zeus.xcodeproj/project.pbxproj` |
 | lnc-rn not in package.json | `grep -c lnc-rn package.json` (expect 0); `grep -n lnc-rn backends/LightningNodeConnect.ts` |
 | Tooling excludes zeus_modules | `grep -n zeus_modules tsconfig.json eslint.config.js .prettierignore` |
-| Checked-in vs downloaded uniffi bindings | `git ls-files -- '*ldk_node.kt' '*LDKNode.swift' '*zeus_cashu_restore*' '*CashuDevKit.swift'` (only the first two are tracked) |
+| Checked-in vs downloaded uniffi bindings | `git ls-files -- '*ldk_node.kt' '*LDKNode.swift' '*zeus_cashu_restore*' '*CashuDevKit.swift'` (only the first two are tracked; the rest are downloaded sha256-pinned) |
 | Emulator host rule | `grep -n 10.0.2.2 CONTRIBUTING.md` |
 | CocoaPods constraint | `grep cocoapods Gemfile` |
 | nitro-tor migration commit | `git log --oneline --all --grep=nitro-tor` |
