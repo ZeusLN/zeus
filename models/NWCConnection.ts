@@ -208,7 +208,8 @@ export default class NWCConnection extends BaseModel {
 
     @computed public get budgetLimitReached(): boolean {
         return (
-            this.hasBudgetLimit && this.totalSpendSats >= this.maxAmountSats!
+            this.hasBudgetLimit &&
+            this.effectiveSpendSats >= this.maxAmountSats!
         );
     }
 
@@ -230,17 +231,27 @@ export default class NWCConnection extends BaseModel {
         }, 0);
     }
 
+    /**
+     * Total budget consumption: settled spends plus in-flight pending
+     * amounts. All budget-facing values (canSpend, remainingBudget,
+     * budgetUsagePercentage, budgetLimitReached) derive from this so the
+     * UI and enforcement always agree.
+     */
+    @computed public get effectiveSpendSats(): number {
+        return this.totalSpendSats + this.pendingSpendSats;
+    }
+
     @computed public get remainingBudget(): number {
         if (!this.hasBudgetLimit) return Infinity;
-        return Math.max(
-            0,
-            this.maxAmountSats! - this.totalSpendSats - this.pendingSpendSats
-        );
+        return Math.max(0, this.maxAmountSats! - this.effectiveSpendSats);
     }
 
     @computed public get budgetUsagePercentage(): number {
         if (!this.hasBudgetLimit) return 0;
-        return Math.min(100, (this.totalSpendSats / this.maxAmountSats!) * 100);
+        return Math.min(
+            100,
+            (this.effectiveSpendSats / this.maxAmountSats!) * 100
+        );
     }
 
     private resolveMakeInvoiceActivitySats(a: ConnectionActivity): number {
@@ -378,10 +389,7 @@ export default class NWCConnection extends BaseModel {
 
     public canSpend(amountSats: number): boolean {
         if (!this.hasBudgetLimit) return true;
-        return (
-            this.totalSpendSats + this.pendingSpendSats + amountSats <=
-            this.maxAmountSats!
-        );
+        return this.effectiveSpendSats + amountSats <= this.maxAmountSats!;
     }
 
     @action
@@ -411,6 +419,11 @@ export default class NWCConnection extends BaseModel {
             }
             if (this.budgetLimitReached) {
                 this.addWarning(ConnectionWarningType.BudgetLimitReached);
+                changed = true;
+            } else {
+                // Pending payments count toward the limit but can fail and
+                // free budget back up; clear the warning when that happens
+                this.removeWarning(ConnectionWarningType.BudgetLimitReached);
                 changed = true;
             }
         }

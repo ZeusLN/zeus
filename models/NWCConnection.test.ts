@@ -170,4 +170,82 @@ describe('NWCConnection budget accounting with pending payments', () => {
         expect(connection.canSpend(1000000)).toBe(true);
         expect(connection.remainingBudget).toBe(Infinity);
     });
+
+    it('keeps budget getters consistent when pending activity exists', () => {
+        // Budget 100k: 10k settled + 90k pending. Every budget-facing
+        // value must agree that the budget is exhausted, not just
+        // remainingBudget/canSpend.
+        const connection = baseConnection();
+        connection.trackSpending(10000);
+        connection.activity.push({
+            id: 'lnbc-hodl',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 90000
+        });
+
+        expect(connection.effectiveSpendSats).toBe(100000);
+        expect(connection.remainingBudget).toBe(0);
+        expect(connection.budgetUsagePercentage).toBe(100);
+        expect(connection.budgetLimitReached).toBe(true);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
+    it('reflects pending payments in budgetUsagePercentage', () => {
+        const connection = baseConnection();
+        connection.trackSpending(25000);
+        connection.activity.push({
+            id: 'lnbc-partial',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 25000
+        });
+
+        expect(connection.budgetUsagePercentage).toBe(50);
+        expect(connection.budgetLimitReached).toBe(false);
+    });
+
+    it('frees the budget and limit flag when a pending payment fails', () => {
+        const connection = baseConnection();
+        connection.activity.push({
+            id: 'lnbc-doomed',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 100000
+        });
+
+        expect(connection.budgetLimitReached).toBe(true);
+        expect(connection.canSpend(1)).toBe(false);
+
+        connection.activity[0].status = 'failed';
+
+        expect(connection.budgetLimitReached).toBe(false);
+        expect(connection.remainingBudget).toBe(100000);
+        expect(connection.canSpend(100000)).toBe(true);
+    });
+
+    it('clears the BudgetLimitReached warning once budget frees up', () => {
+        const connection = baseConnection();
+        connection.activity.push({
+            id: 'lnbc-transient',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 100000
+        });
+
+        connection.checkAndResetBudgetIfNeeded(1000000);
+        expect(
+            connection.warnings.some((w) => w.type === 'budget_limit_reached')
+        ).toBe(true);
+
+        connection.activity[0].status = 'failed';
+        connection.checkAndResetBudgetIfNeeded(1000000);
+        expect(
+            connection.warnings.some((w) => w.type === 'budget_limit_reached')
+        ).toBe(false);
+    });
 });
