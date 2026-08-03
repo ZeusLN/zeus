@@ -1311,6 +1311,19 @@ export default class Receive extends React.Component<
             watchedInvoicePaidAmt,
             clearUnified
         } = InvoicesStore;
+
+        // when the invoice amount doesn't cover the LSP's fee, the fee is
+        // added on top of the wrapped invoice and charged to the sender
+        const feeOnTop =
+            !!zeroConfFee &&
+            !!payment_request_amt &&
+            !new BigNumber(payment_request_amt).gt(zeroConfFee);
+        // the wrapped invoice is for amount + fee, so display the total
+        // the sender will actually pay
+        const displaySatAmount = feeOnTop
+            ? new BigNumber(satAmount).plus(zeroConfFee).toString()
+            : satAmount;
+
         const { implementation, posStatus, settings, updateSettings } =
             SettingsStore;
         const loading =
@@ -1976,6 +1989,22 @@ export default class Receive extends React.Component<
                                                     sats={zeroConfFee}
                                                     fixedUnits="sats"
                                                 />
+                                                {feeOnTop && (
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Medium',
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            marginTop: 5
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.lspFeeOnTop'
+                                                        )}
+                                                    </Text>
+                                                )}
                                                 <Text
                                                     style={{
                                                         fontFamily:
@@ -2069,7 +2098,7 @@ export default class Receive extends React.Component<
                                                             : ZIcon
                                                     }
                                                     nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
+                                                    satAmount={displaySatAmount}
                                                     displayAmount
                                                 />
                                             )}
@@ -2093,7 +2122,7 @@ export default class Receive extends React.Component<
                                                             : LightningIcon
                                                     }
                                                     nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
+                                                    satAmount={displaySatAmount}
                                                     displayAmount
                                                 />
                                             )}
@@ -2193,7 +2222,7 @@ export default class Receive extends React.Component<
                                                     textBottom
                                                     truncateLongValue
                                                     nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
+                                                    satAmount={displaySatAmount}
                                                     displayAmount
                                                 />
                                             )}
