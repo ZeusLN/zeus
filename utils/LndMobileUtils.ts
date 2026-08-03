@@ -249,6 +249,7 @@ const writeLndConfig = async ({
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
+    norest=1
     sync-freelist=1
     accept-keysend=1
     tlsdisableautofill=1
@@ -261,11 +262,9 @@ const writeLndConfig = async ({
     ${dbConfig}
     
     [Routing]
-    routing.assumechanvalid=1
     routing.strictgraphpruning=false
 
     [Bitcoin]
-    bitcoin.active=1
     bitcoin.mainnet=${isTestnet ? 0 : 1}
     bitcoin.testnet=${isTestnet ? 1 : 0}
     bitcoin.node=neutrino
