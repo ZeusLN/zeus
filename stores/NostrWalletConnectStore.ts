@@ -81,6 +81,13 @@ const SERVICE_START_DELAY_MS = 2000;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
+/**
+ * Max time a queued pay_invoice may wait behind another payment before it
+ * is rejected with RATE_LIMITED instead of executing late. Kept well under
+ * typical NWC client timeouts so we never pay an invoice whose client has
+ * already given up on the request.
+ */
+const MAX_PAYMENT_QUEUE_WAIT_MS = 30_000;
 const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 /** Min time a pay_invoice must stay pending before getActivities polls the node */
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
@@ -145,6 +152,8 @@ export default class NostrWalletConnectStore {
     @observable public iosAudioKeepAliveActive: boolean = false;
     @observable public iosAudioKeepAliveUptime: number = 0;
     @observable public iosAudioKeepAliveDisconnects: number = 0;
+    // Tail of the payment-handler queue; see enqueuePayment
+    private paymentQueue: Promise<unknown> = Promise.resolve();
     private iosAudioUptimeInterval: ReturnType<typeof setInterval> | null =
         null;
     private iosAudioInterruptedUnsub: (() => void) | null = null;
@@ -1291,7 +1300,16 @@ export default class NostrWalletConnectStore {
                     : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
-                        payHandler(request)
+                        this.enqueuePayment(
+                            () => payHandler(request),
+                            () =>
+                                NostrConnectUtils.createNip47Error(
+                                    localeString(
+                                        'stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded'
+                                    ),
+                                    Nip47ErrorCode.RATE_LIMITED
+                                )
+                        )
                     );
             }
 
@@ -1489,6 +1507,33 @@ export default class NostrWalletConnectStore {
     ): Promise<T> {
         await this.markConnectionUsed(connectionId);
         return await handler();
+    }
+
+    // Serializes payment handling across all connections. Payment flows
+    // read and mutate shared singleton stores (TransactionsStore,
+    // CashuStore payReq/meltQuote) across awaits, so two concurrent
+    // pay_invoice requests would clobber each other's state: one flow
+    // can melt the other's quote, validate budget against the wrong
+    // amount, or report the other payment's result/preimage.
+    // A request that waited past MAX_PAYMENT_QUEUE_WAIT_MS is not executed:
+    // its client has likely timed out already, and paying late would spend
+    // sats against a request the client reported as failed. `onStale`
+    // supplies the response for that case (RATE_LIMITED).
+    private enqueuePayment<T>(
+        task: () => Promise<T>,
+        onStale: () => T
+    ): Promise<T> {
+        const enqueuedAt = Date.now();
+        const result = this.paymentQueue.then(() =>
+            Date.now() - enqueuedAt > MAX_PAYMENT_QUEUE_WAIT_MS
+                ? onStale()
+                : task()
+        );
+        this.paymentQueue = result.then(
+            () => undefined,
+            () => undefined
+        );
+        return result;
     }
     // NWC REQUEST HANDLERS
 
