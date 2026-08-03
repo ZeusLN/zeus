@@ -189,7 +189,8 @@ async function initNode({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssServerUrl
+    vssServerUrl,
+    failOnVssError
 }: {
     storagePath: string;
     mnemonic: string;
@@ -206,6 +207,7 @@ async function initNode({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    failOnVssError?: boolean;
 }): Promise<{ vssError?: string }> {
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
@@ -233,7 +235,8 @@ async function initNode({
             url: vssUrl,
             storeId: vssStoreId
         },
-        vssKey
+        vssKey,
+        failOnVssError
     });
 }
 
@@ -252,7 +255,8 @@ export async function createLdkNodeWallet({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssServerUrl
+    vssServerUrl,
+    failOnVssError
 }: {
     nodeDir: string;
     seedMnemonic?: string;
@@ -270,6 +274,7 @@ export async function createLdkNodeWallet({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    failOnVssError?: boolean;
 }): Promise<{
     mnemonic: string;
     storagePath: string;
@@ -284,19 +289,44 @@ export async function createLdkNodeWallet({
         mnemonic = await generateMnemonic(wordCount);
     }
 
-    const { vssError } = await initNode({
-        storagePath,
-        mnemonic,
-        passphrase,
-        network,
-        esploraServerUrl,
-        rgsServerUrl,
-        scorerUrl,
-        listeningAddresses,
-        lsps1Config,
-        trustedPeers0conf,
-        vssServerUrl
-    });
+    let vssError: string | undefined;
+    try {
+        const result = await initNode({
+            storagePath,
+            mnemonic,
+            passphrase,
+            network,
+            esploraServerUrl,
+            rgsServerUrl,
+            scorerUrl,
+            listeningAddresses,
+            lsps1Config,
+            trustedPeers0conf,
+            vssServerUrl,
+            failOnVssError
+        });
+        vssError = result.vssError;
+    } catch (e: any) {
+        // A failed build can leave a partially-written local DB behind.
+        // If it survived, later dual-store builds would read the partial
+        // local state instead of VSS — remove the directory so a retry
+        // starts clean. On vss_error/build_in_progress the native side
+        // owns the cleanup: a timed-out build may still be running in
+        // there, and unlinking under it could leave partial state behind.
+        const nativeOwnsCleanup =
+            e?.code === 'vss_error' || e?.code === 'build_in_progress';
+        if (!nativeOwnsCleanup) {
+            try {
+                await deleteLdkNodeWallet(nodeDir);
+            } catch (cleanupError) {
+                console.warn(
+                    'LDK Node: failed to clean up wallet dir after failed init:',
+                    cleanupError
+                );
+            }
+        }
+        throw e;
+    }
 
     return {
         mnemonic,
@@ -345,6 +375,13 @@ export async function startLdkNodeWallet({
 
     if (!skipInit) {
         const storagePath = getLdkNodeStoragePath(nodeDir);
+        // If the wallet's local DB is missing (e.g. config arrived on a new
+        // device via cloud keychain sync), this start is effectively a
+        // restore-from-seed: building a fresh local node on VSS failure
+        // would look like an empty wallet and shadow the VSS backup.
+        const hasLocalDb = await RNFS.exists(
+            `${storagePath}/ldk_node_data.sqlite`
+        );
         const result = await initNode({
             storagePath,
             mnemonic: seedMnemonic,
@@ -356,7 +393,8 @@ export async function startLdkNodeWallet({
             listeningAddresses,
             lsps1Config,
             trustedPeers0conf,
-            vssServerUrl
+            vssServerUrl,
+            failOnVssError: !hasLocalDb
         });
         vssError = result.vssError;
     }

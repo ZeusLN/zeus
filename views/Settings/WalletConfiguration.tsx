@@ -1152,7 +1152,10 @@ export default class WalletConfiguration extends React.Component<
                         : ldkScorerUrl,
                 lsps1Config,
                 trustedPeers0conf: trustedPeers,
-                vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
+                vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                // If an existing seed is being imported, this is a restore:
+                // a VSS failure must not silently produce an empty wallet
+                failOnVssError: !!ldkMnemonic
             });
 
             // Node is already built — tell Wallet.tsx to skip re-init

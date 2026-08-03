@@ -809,7 +809,11 @@ export default class SeedRecovery extends React.PureComponent<
                         trustedPeers0conf: trustedPeers,
                         vssServerUrl:
                             this.props.route.params?.vssServer ||
-                            DEFAULT_VSS_SERVER
+                            DEFAULT_VSS_SERVER,
+                        // A restore that can't reach VSS must fail loudly:
+                        // falling back to an empty local store would look
+                        // like a successful restore with no channels
+                        failOnVssError: true
                     });
 
                     // Node is already built — tell Wallet.tsx to skip re-init
@@ -821,9 +825,18 @@ export default class SeedRecovery extends React.PureComponent<
                         network
                     );
                 } catch (e: any) {
+                    const rawError = e?.message || e.toString();
+                    const isVssError =
+                        e?.code === 'vss_error' ||
+                        rawError.includes('VSS') ||
+                        rawError.includes('Dual store');
                     this.setState({
                         errorCreatingWallet: true,
-                        errorMsg: e.toString(),
+                        errorMsg: isVssError
+                            ? `${localeString(
+                                  'views.Settings.SeedRecovery.vssRestoreFailed'
+                              )}\n\n${rawError}`
+                            : e.toString(),
                         successMsg: '',
                         loading: false
                     });
