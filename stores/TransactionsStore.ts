@@ -43,6 +43,10 @@ export interface SendPaymentReq {
     message?: string;
     amp?: boolean;
     timeout_seconds?: string;
+    // service-initiated payments (e.g. the NWC service path) neither set nor
+    // clear paymentInFlight, so the double-submission guard stays scoped to
+    // user-initiated sends
+    background?: boolean;
 }
 
 export default class TransactionsStore {
@@ -79,9 +83,14 @@ export default class TransactionsStore {
     // coin control
     @observable funded_psbt: string = '';
 
-    // identifies the payment the in-flight backstop timer was armed for,
-    // so it never clears the flag on behalf of a later payment
+    // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
+    // sequence of the payment that set paymentInFlight (null when none);
+    // completion callbacks and the backstop timer only clear the flag on
+    // behalf of that payment, so overlapping payments (e.g. a background
+    // NWC payment finishing while a user payment is still in flight)
+    // can't disarm each other's guard
+    private inFlightOwnerSeq: number | null = null;
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -107,6 +116,7 @@ export default class TransactionsStore {
     public reset = () => {
         this.loading = false;
         this.paymentInFlight = false;
+        this.inFlightOwnerSeq = null;
         this.error = false;
         this.error_msg = null;
         this.transactions = [];
@@ -576,18 +586,25 @@ export default class TransactionsStore {
         last_hop_pubkey,
         message,
         amp,
-        timeout_seconds
+        timeout_seconds,
+        background
     }: SendPaymentReq) => {
         // Guard against double-submission: if a payment is already in flight,
         // ignore the new request. Without this a rapid double-tap (or a
         // re-fired swipe) dispatches two payments, and keysend in particular
         // generates a fresh preimage per call, defeating every backend's
-        // same-hash duplicate protection.
-        if (this.paymentInFlight) {
+        // same-hash duplicate protection. Background (service-initiated)
+        // payments bypass the guard and never own the flag: their concurrency
+        // control lives in the service (e.g. the NWC payment queue).
+        if (this.paymentInFlight && !background) {
             return;
         }
 
-        this.paymentInFlight = true;
+        const seq = ++this.paymentSequence;
+        if (!background) {
+            this.paymentInFlight = true;
+            this.inFlightOwnerSeq = seq;
+        }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
         this.loading = true;
@@ -679,15 +696,10 @@ export default class TransactionsStore {
         // that gets no timeout_seconds), the flag would otherwise stay set
         // and block all sends until the next reconnect. Clear it once the
         // payment's timeout plus a grace period has elapsed.
-        const seq = ++this.paymentSequence;
-        const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
-        setTimeout(() => {
-            if (this.paymentInFlight && this.paymentSequence === seq) {
-                runInAction(() => {
-                    this.paymentInFlight = false;
-                });
-            }
-        }, backstopMs);
+        if (!background) {
+            const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
+            setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
+        }
 
         const payFunc =
             (this.settingsStore.implementation === 'cln-rest' ||
@@ -703,12 +715,22 @@ export default class TransactionsStore {
             payFunc(data)
                 .then((response: any) => {
                     const result = response.result || response;
-                    this.handlePayment(result);
+                    this.handlePayment(result, seq);
                 })
                 .catch((err: Error) => {
-                    this.handlePaymentError(err);
+                    this.handlePaymentError(err, seq);
                 });
         }
+    };
+
+    // Clears the in-flight guard on behalf of payment `seq`. Callers that
+    // can't identify their payment (LNC view subscriptions) omit `seq` and
+    // clear unconditionally, matching the pre-ownership behavior.
+    @action
+    private clearPaymentInFlight = (seq?: number) => {
+        if (seq !== undefined && this.inFlightOwnerSeq !== seq) return;
+        this.paymentInFlight = false;
+        this.inFlightOwnerSeq = null;
     };
 
     public sendPaymentSilently = async ({
@@ -764,9 +786,9 @@ export default class TransactionsStore {
     };
 
     @action
-    public handlePayment = (result: any) => {
+    public handlePayment = (result: any, seq?: number) => {
         this.loading = false;
-        this.paymentInFlight = false;
+        this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
 
         const payment = new Payment(result);
@@ -837,10 +859,10 @@ export default class TransactionsStore {
     };
 
     @action
-    public handlePaymentError = (err: Error) => {
+    public handlePaymentError = (err: Error, seq?: number) => {
         this.error = true;
         this.loading = false;
-        this.paymentInFlight = false;
+        this.clearPaymentInFlight(seq);
         this.error_msg =
             errorToUserFriendly(err) || localeString('error.sendingPayment');
     };
