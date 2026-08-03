@@ -1393,6 +1393,7 @@
     "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "지갑 복구에 사용하시겠습니까?",
     "views.Settings.SeedRecovery.duplicateWallet": "같은 시드 문구를 가진 지갑이 이미 존재합니다.",
     "views.Settings.SeedRecovery.invalidChecksum": "유효하지 않은 시드 문구입니다. 체크섬 검증에 실패했습니다. 단어 순서와 철자를 확인해 주세요.",
+    "views.Settings.SeedRecovery.vssRestoreFailed": "Could not download your wallet data from the backup (VSS) server, so your channels were NOT restored. Check your connection and try again.",
     "views.Settings.LdkWalletRecoverySettings.title": "복구 옵션",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength": "시드 문구가 몇 단어인가요?",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength.subtitle": "대부분의 지갑은 12단어를 사용합니다. 백업이 24단어인 경우에만 24를 선택하세요.",

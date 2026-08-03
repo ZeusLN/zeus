@@ -1393,6 +1393,7 @@
     "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "您想用它们来恢复钱包吗？",
     "views.Settings.SeedRecovery.duplicateWallet": "已存在一个使用相同助记词的钱包",
     "views.Settings.SeedRecovery.invalidChecksum": "助记词无效——校验和验证失败。请检查单词顺序和拼写。",
+    "views.Settings.SeedRecovery.vssRestoreFailed": "Could not download your wallet data from the backup (VSS) server, so your channels were NOT restored. Check your connection and try again.",
     "views.Settings.LdkWalletRecoverySettings.title": "恢复选项",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength": "您的助记词里有多少个单词？",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength.subtitle": "大多数钱包使用 12 个单词。只有当您的备份包含 24 个单词时，才选择 24 个单词。",
