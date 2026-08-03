@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "Serviciul nu a putut fi pornit",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "Numele conexiunii există deja",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Conexiune negăsită",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Conectarea {{relayUrl}} a eșuat",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Nu s-au putut încărca conexiunile",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Nu s-au putut salva conexiunile",

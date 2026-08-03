@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "服务启动失败",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "连接名称已存在",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "未找到连接",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "连接 {{relayUrl}} 失败",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "加载连接失败",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "保存连接失败",

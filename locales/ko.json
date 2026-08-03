@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "서비스 시작 실패",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "연결 이름이 이미 존재합니다",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "연결을 찾을 수 없습니다",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "{{relayUrl}} 연결 실패",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "연결을 불러오지 못했습니다",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "연결을 저장하지 못했습니다",

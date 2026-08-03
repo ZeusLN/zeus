@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "Službu se nezdařilo zahájit",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "Název připojení již existuje",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Připojení nenalezeno",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Nezdařilo se připojit {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Nezdařilo se načíst připojení",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Nezdařilo se uložit připojení",
