@@ -777,17 +777,11 @@ export default class SwapStore {
     @action
     public generateRescueKey = async () => {
         console.log('GENERATING RESCUE FILE...');
-        // A 12-word LDK Node wallet already has a 12-word BIP-39 mnemonic -
-        // reuse it instead of generating a separate rescue key. 24-word LDK
-        // wallets (and every other backend) get an independent 12-word key.
-        const { implementation, ldkMnemonic } = this.settingsStore;
-        const reuseLdkSeed =
-            implementation === 'ldk-node' &&
-            !!ldkMnemonic &&
-            ldkMnemonic.trim().split(/\s+/).length === 12;
-        const mnemonic = reuseLdkSeed
-            ? ldkMnemonic
-            : generateMnemonic(BIP39_WORD_LIST);
+        // Always generate an independent rescue key. Never reuse the wallet's
+        // BIP-39 mnemonic (e.g. an LDK Node seed): the swap master xpub is
+        // shared with the swap provider, so a rescue key derived from the
+        // wallet seed would expose the wallet's own key tree.
+        const mnemonic = generateMnemonic(BIP39_WORD_LIST);
         await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);
 
         return mnemonic;
