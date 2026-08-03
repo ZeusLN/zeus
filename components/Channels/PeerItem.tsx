@@ -25,50 +25,60 @@ export function PeerItem({
     showDisconnect
 }: PeerItemProps) {
     const title = displayName === peer.pubkey ? peer.pubkey : displayName;
-    const pingDisplay =
-        peer.ping_time != null && peer.ping_time >= 0
-            ? `${(peer.ping_time / 1000).toFixed(2)} ms`
-            : 'N/A';
 
-    const stats: Array<{ label: string; value: string | number }> = [];
-    if (pingDisplay !== 'N/A') {
+    const stats: Array<{ key: string; label: string; value: string | number }> =
+        [];
+    if (peer.ping_time != null && peer.ping_time >= 0) {
         stats.push({
+            key: 'pingTime',
             label: localeString('views.ChannelsPane.pingTime'),
-            value: pingDisplay
+            value: `${(peer.ping_time / 1000).toFixed(2)} ms`
         });
     }
     if (peer.sats_sent != null) {
-        stats.push({
-            label: localeString('views.ChannelsPane.satsSent'),
-            value: getFormattedAmount(peer.sats_sent, 'sats') ?? ''
-        });
+        const satsSent = getFormattedAmount(peer.sats_sent, 'sats');
+        if (satsSent) {
+            stats.push({
+                key: 'satsSent',
+                label: localeString('views.ChannelsPane.satsSent'),
+                value: satsSent
+            });
+        }
     }
     if (peer.sats_recv != null) {
-        stats.push({
-            label: localeString('views.ChannelsPane.satsRecv'),
-            value: getFormattedAmount(peer.sats_recv, 'sats') ?? ''
-        });
+        const satsRecv = getFormattedAmount(peer.sats_recv, 'sats');
+        if (satsRecv) {
+            stats.push({
+                key: 'satsRecv',
+                label: localeString('views.ChannelsPane.satsRecv'),
+                value: satsRecv
+            });
+        }
     }
     if (peer.num_channels != null) {
         stats.push({
+            key: 'numChannels',
             label: localeString('views.NetworkInfo.numChannels'),
             value: peer.num_channels
         });
     }
     if (peer.bytesSent) {
         stats.push({
+            key: 'bytesSent',
             label: localeString('views.ChannelsPane.bytesSent'),
             value: `${peer.bytesSent} B`
         });
     }
     if (peer.bytesRecv) {
         stats.push({
+            key: 'bytesRecv',
             label: localeString('views.ChannelsPane.bytesRecv'),
             value: `${peer.bytesRecv} B`
         });
     }
     if (peer.inbound !== undefined) {
         stats.push({
+            key: 'inbound',
             label: localeString('views.Channel.inbound'),
             value: peer.inbound
                 ? localeString('general.true')
@@ -77,6 +87,7 @@ export function PeerItem({
     }
     if (peer.connected !== undefined) {
         stats.push({
+            key: 'connected',
             label: localeString('views.ChannelsPane.connected'),
             value: peer.connected
                 ? localeString('general.true')
@@ -146,7 +157,7 @@ export function PeerItem({
                 <View style={styles.stats}>
                     {stats.map((stat) => (
                         <KeyValue
-                            key={stat.label}
+                            key={stat.key}
                             keyValue={stat.label}
                             value={stat.value}
                             disableCopy
