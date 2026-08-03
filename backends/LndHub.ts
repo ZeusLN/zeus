@@ -61,6 +61,49 @@ export default class LndHub extends LND {
             return invoice;
         });
 
+    // Scans the user's invoice list since LndHub has no per-invoice
+    // endpoint returning amount details. rHash arrives in whatever format
+    // getFormattedRhash produced when the invoice was created
+    watchInvoicePaid = (
+        { rHash, value }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const interval = setInterval(() => {
+            this.getInvoices()
+                .then((response: any) => {
+                    const invoices = response.invoices;
+                    for (let i = 0; i < invoices.length; i++) {
+                        const result = new Invoice(invoices[i]);
+                        if (
+                            result.getFormattedRhash === rHash &&
+                            result.ispaid &&
+                            Number(result.amt) >= Number(value) &&
+                            Number(result.amt) !== 0
+                        ) {
+                            clearInterval(interval);
+                            onPaid({
+                                amountSat: Number(result.amt),
+                                tx: result.payment_request,
+                                preimage: result.r_preimage
+                            });
+                            break;
+                        }
+                    }
+                })
+                .catch(() => {
+                    // node unreachable; retry on the next tick
+                });
+        }, 5000);
+        return () => clearInterval(interval);
+    };
+    // Block the inherited LND REST transaction poller; LndHub has no
+    // onchain receive support
+    watchOnchainReceived = () => () => {};
+
     createInvoice = (data: any) =>
         this.postRequest('/addinvoice', {
             amt: data.value,

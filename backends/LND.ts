@@ -5,6 +5,7 @@ import {
     isOnionHttpsUrl,
     RequestMethod
 } from '../utils/TorUtils';
+import Invoice from './../models/Invoice';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
@@ -751,6 +752,96 @@ export default class LND {
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
+    // Poll lookupInvoice for the watched payment hash instead of scanning
+    // the invoice list, which can push the watched invoice out of the
+    // window on busy nodes. rHash arrives base64url encoded from the
+    // Receive view; the REST lookup endpoint expects hex
+    watchInvoicePaid = (
+        { rHash, value }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const interval = setInterval(() => {
+            this.lookupInvoice({
+                r_hash: Base64Utils.base64UrlToHex(rHash)
+            })
+                .then((result: any) => {
+                    const invoice = new Invoice(result);
+                    const amountPaid = invoice.getAmount;
+                    if (
+                        invoice.isPaid &&
+                        Number(amountPaid) >= Number(value) &&
+                        Number(amountPaid) !== 0
+                    ) {
+                        clearInterval(interval);
+                        onPaid({
+                            amountSat: Number(amountPaid),
+                            tx: invoice.getPaymentRequest
+                        });
+                    }
+                })
+                .catch(() => {
+                    // invoice not found or node unreachable;
+                    // retry on the next tick
+                });
+        }, 5000);
+        return () => clearInterval(interval);
+    };
+    watchOnchainReceived = (
+        {
+            address,
+            value,
+            numConfPreference,
+            blockHeight
+        }: {
+            address: string;
+            value?: string | number;
+            numConfPreference: number;
+            blockHeight?: number;
+        },
+        onReceived: (payload: { amountSat: number; txid: string }) => void
+    ): (() => void) => {
+        const interval = setInterval(() => {
+            // only look for transactions in the last 3 blocks
+            this.getTransactions(
+                blockHeight ? { start_height: blockHeight - 3 } : null
+            )
+                .then((response: any) => {
+                    const txs = response.transactions;
+                    for (let i = 0; i < txs.length; i++) {
+                        const result = txs[i];
+                        if (
+                            result.dest_addresses.includes(address) &&
+                            result.num_confirmations >= numConfPreference
+                        ) {
+                            // loop through outputs since amount is negative if unconfirmed
+                            const output_details = result.output_details;
+                            for (let j = 0; j < output_details.length; j++) {
+                                const output = output_details[j];
+                                if (
+                                    Number(output.amount) >= Number(value) &&
+                                    output.address === address
+                                ) {
+                                    clearInterval(interval);
+                                    onReceived({
+                                        amountSat: Number(output.amount),
+                                        txid: result.tx_hash
+                                    });
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(() => {
+                    // node unreachable; retry on the next tick
+                });
+        }, 7000);
+        return () => clearInterval(interval);
+    };
     initChanAcceptor = (data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
             settingsStore;
