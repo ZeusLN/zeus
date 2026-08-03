@@ -1,4 +1,5 @@
 import { settingsStore, nodeInfoStore } from '../stores/Stores';
+import Invoice from '../models/Invoice';
 import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
@@ -282,6 +283,42 @@ export default class CLNRest {
             }
             return invoice;
         });
+    // Poll lookupInvoice for the watched payment hash instead of scanning
+    // the invoice list: getInvoices includes unpaid invoices, so on busy
+    // nodes the watched invoice can be pushed out of the window before
+    // it is paid. rHash arrives hex encoded from the Receive view
+    watchInvoicePaid = (
+        { rHash, value }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const interval = setInterval(() => {
+            this.lookupInvoice({ r_hash: rHash })
+                .then((result: any) => {
+                    const invoice = new Invoice(result);
+                    const amountPaid = invoice.getAmount;
+                    if (
+                        invoice.isPaid &&
+                        Number(amountPaid) >= Number(value) &&
+                        Number(amountPaid) !== 0
+                    ) {
+                        clearInterval(interval);
+                        onPaid({
+                            amountSat: Number(amountPaid),
+                            tx: invoice.getPaymentRequest
+                        });
+                    }
+                })
+                .catch(() => {
+                    // invoice not found or node unreachable;
+                    // retry on the next tick
+                });
+        }, 5000);
+        return () => clearInterval(interval);
+    };
     getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
             query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices ORDER BY created_index DESC LIMIT ${

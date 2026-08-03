@@ -142,6 +142,11 @@ class BackendUtils {
     bumpForceCloseFee = (...args: any[]) =>
         this.call('bumpForceCloseFee', args);
     lookupInvoice = (...args: any[]) => this.call('lookupInvoice', args);
+    // return an unsubscribe function, or false on backends
+    // with no real-time payment detection
+    watchInvoicePaid = (...args: any[]) => this.call('watchInvoicePaid', args);
+    watchOnchainReceived = (...args: any[]) =>
+        this.call('watchOnchainReceived', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
     subscribeInvoices = (...args: any[]) =>
         this.call('subscribeInvoices', args);
