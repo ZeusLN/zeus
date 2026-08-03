@@ -646,30 +646,34 @@ export default class Receive extends React.Component<
                     : undefined,
                 noLsp: !effectiveLspIsActive,
                 skipOnchain
-            }).then(
-                ({
-                    rHash,
-                    onChainAddress
-                }: {
-                    rHash: string;
-                    onChainAddress?: string;
-                }) => {
-                    // Store invoice for POS orders
-                    if (orderId && InvoicesStore.payment_request) {
-                        PosStore.recordInvoice({
-                            orderId,
-                            payment_request: InvoicesStore.payment_request,
-                            rHash,
-                            exchangeRate,
-                            amount: amount || '0',
-                            tip: orderTip,
-                            createdAt: Math.floor(Date.now() / 1000),
-                            expirySeconds: expirySeconds || '3600'
-                        });
+            })
+                .then(
+                    ({
+                        rHash,
+                        onChainAddress
+                    }: {
+                        rHash: string;
+                        onChainAddress?: string;
+                    }) => {
+                        // Store invoice for POS orders
+                        if (orderId && InvoicesStore.payment_request) {
+                            PosStore.recordInvoice({
+                                orderId,
+                                payment_request: InvoicesStore.payment_request,
+                                rHash,
+                                exchangeRate,
+                                amount: amount || '0',
+                                tip: orderTip,
+                                createdAt: Math.floor(Date.now() / 1000),
+                                expirySeconds: expirySeconds || '3600'
+                            });
+                        }
+                        this.subscribeInvoice(rHash, onChainAddress);
                     }
-                    this.subscribeInvoice(rHash, onChainAddress);
-                }
-            );
+                )
+                .catch(() => {
+                    // errors are surfaced via LSPStore/InvoicesStore observables
+                });
         });
     };
 
@@ -1822,12 +1826,6 @@ export default class Receive extends React.Component<
                             )}
                             {error_msg && (
                                 <ErrorMessage message={error_msg} dismissable />
-                            )}
-                            {LSPStore.flow_warning_msg && (
-                                <WarningMessage
-                                    message={LSPStore.flow_warning_msg}
-                                    dismissable
-                                />
                             )}
 
                             {showLspSettings && (
@@ -3203,20 +3201,24 @@ export default class Receive extends React.Component<
                                                                     : undefined,
                                                             noLsp: !lspIsActive,
                                                             skipOnchain
-                                                        }).then(
-                                                            ({
-                                                                rHash,
-                                                                onChainAddress
-                                                            }: {
-                                                                rHash: string;
-                                                                onChainAddress?: string;
-                                                            }) => {
-                                                                this.subscribeInvoice(
+                                                        })
+                                                            .then(
+                                                                ({
                                                                     rHash,
                                                                     onChainAddress
-                                                                );
-                                                            }
-                                                        );
+                                                                }: {
+                                                                    rHash: string;
+                                                                    onChainAddress?: string;
+                                                                }) => {
+                                                                    this.subscribeInvoice(
+                                                                        rHash,
+                                                                        onChainAddress
+                                                                    );
+                                                                }
+                                                            )
+                                                            .catch(() => {
+                                                                // errors are surfaced via LSPStore/InvoicesStore observables
+                                                            });
                                                     }}
                                                 />
                                             </View>
