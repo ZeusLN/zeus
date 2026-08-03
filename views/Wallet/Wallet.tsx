@@ -85,6 +85,7 @@ import Storage from '../../storage';
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
+import { connectivityStore } from '../../stores/Stores';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
@@ -607,6 +608,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
             CashuStore.reset();
+
+            // Seed isOffline before wallet init so LDK Node / CDK / LND can
+            // skip network-bound work (VSS sync, Esplora, RGS, Nostr restore)
+            // when offline, instead of blocking on internal 30+s timeouts.
+            connectivityStore.start();
+            await connectivityStore.checkNow();
         }
 
         LnurlPayStore.reset();

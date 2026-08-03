@@ -9,6 +9,10 @@ import SettingsStore from './SettingsStore';
 
 const POLL_INTERVAL = 15000; // 15s
 const VERIFY_TIMEOUT_MS = 5000;
+// Tight budget for the pre-startup probe — we'd rather declare ourselves
+// offline and skip 30+s of wallet-init timeouts than block startup waiting
+// for a sluggish reachability host.
+const INITIAL_PROBE_TIMEOUT_MS = 1500;
 const DEFAULT_REACHABILITY_HOST = 'mempool.space';
 const PLATFORM_REACHABILITY_URL =
     Platform.OS === 'ios'
@@ -52,9 +56,12 @@ export default class ConnectivityStore {
         this.reconnectCallbacks.push(callback);
     };
 
-    private probeUrl = async (url: string): Promise<boolean> => {
+    private probeUrl = async (
+        url: string,
+        timeoutMs: number = VERIFY_TIMEOUT_MS
+    ): Promise<boolean> => {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
         try {
             await fetch(url, {
                 method: 'HEAD',
@@ -68,12 +75,63 @@ export default class ConnectivityStore {
         }
     };
 
-    private verifyConnectivity = async (): Promise<boolean> => {
+    private verifyConnectivity = async (
+        timeoutMs: number = VERIFY_TIMEOUT_MS
+    ): Promise<boolean> => {
         const urls = [this.getReachabilityUrl(), ...FALLBACK_REACHABILITY_URLS];
         const results = await Promise.all(
-            urls.map((url) => this.probeUrl(url))
+            urls.map((url) => this.probeUrl(url, timeoutMs))
         );
         return results.some((ok) => ok);
+    };
+
+    /**
+     * Update isOffline and fire reconnect callbacks if we transitioned
+     * from offline to online. Each callback is wrapped in its own
+     * try/catch so one bad listener can't starve the rest.
+     */
+    private setOnlineState = (online: boolean) => {
+        const wasOffline = this.isOffline;
+        runInAction(() => {
+            this.isOffline = !online;
+        });
+        if (online && wasOffline) {
+            this.reconnectCallbacks.forEach((cb) => {
+                try {
+                    cb();
+                } catch (e) {
+                    console.error(
+                        'ConnectivityStore: reconnect callback failed',
+                        e
+                    );
+                }
+            });
+        }
+    };
+
+    /**
+     * Run an immediate probe with a tight budget and update isOffline.
+     * Intended to be awaited *before* wallet initialization so that
+     * downstream code (LDK Node, CashuStore) sees the correct offline
+     * state and can skip network-bound work.
+     *
+     * Sets verifyInFlight so a poll- or NetInfo-triggered check() that
+     * lands during startup bails instead of firing a redundant 5s probe.
+     */
+    public checkNow = async (
+        timeoutMs: number = INITIAL_PROBE_TIMEOUT_MS
+    ): Promise<boolean> => {
+        if (this.settingsStore.settings?.networking?.disableOfflineCheck) {
+            return true;
+        }
+        this.verifyInFlight = true;
+        try {
+            const online = await this.verifyConnectivity(timeoutMs);
+            this.setOnlineState(online);
+            return online;
+        } finally {
+            this.verifyInFlight = false;
+        }
     };
 
     /**
@@ -85,34 +143,20 @@ export default class ConnectivityStore {
         this.verifyInFlight = true;
         this.verifyConnectivity().then((online) => {
             this.verifyInFlight = false;
-            const wasOffline = this.isOffline;
-            runInAction(() => {
-                this.isOffline = !online;
-            });
-            if (online && wasOffline) {
-                this.reconnectCallbacks.forEach((cb) => cb());
-            }
+            this.setOnlineState(online);
         });
     };
 
     private updateState = (state: NetInfoState) => {
         // isConnected === false is a reliable native signal — mark immediately
         if (state.isConnected === false) {
-            runInAction(() => {
-                this.isOffline = true;
-            });
+            this.setOnlineState(false);
             return;
         }
 
         // isInternetReachable === true is reliable — mark online immediately
         if (state.isInternetReachable === true) {
-            const wasOffline = this.isOffline;
-            runInAction(() => {
-                this.isOffline = false;
-            });
-            if (wasOffline) {
-                this.reconnectCallbacks.forEach((cb) => cb());
-            }
+            this.setOnlineState(true);
             return;
         }
 
