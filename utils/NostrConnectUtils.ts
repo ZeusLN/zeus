@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
-import { relayInit, generatePrivateKey, getPublicKey } from 'nostr-tools';
+import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils';
 import {
     Nip47NotificationType,
     Nip47SingleMethod,
@@ -1710,8 +1711,9 @@ export default class NostrConnectUtils {
         connectionPrivateKey: string;
         connectionPublicKey: string;
     } {
-        const connectionPrivateKey = generatePrivateKey();
-        const connectionPublicKey = getPublicKey(connectionPrivateKey);
+        const connectionSecretKey = generateSecretKey();
+        const connectionPrivateKey = bytesToHex(connectionSecretKey);
+        const connectionPublicKey = getPublicKey(connectionSecretKey);
         const connectionUrl = NostrConnectUtils.buildWalletConnectConnectionUrl(
             walletPubKeyHex,
             relayUrl,
@@ -1953,10 +1955,10 @@ export default class NostrConnectUtils {
         status: boolean;
         error?: string | null;
     }> {
-        let relay: ReturnType<typeof relayInit> | undefined;
+        let relay: Relay | undefined;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         try {
-            relay = relayInit(relayUrl);
+            relay = new Relay(relayUrl);
             const timeout = new Promise<void>((_, reject) => {
                 timeoutId = setTimeout(
                     () =>

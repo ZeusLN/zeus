@@ -1,12 +1,6 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import {
-    getPublicKey,
-    getEventHash,
-    getSignature,
-    relayInit
-} from 'nostr-tools';
-import * as nip44 from '@nostr/tools/nip44';
+import { getPublicKey, finalizeEvent, Relay, nip44 } from 'nostr-tools';
 
 import Base64Utils from './Base64Utils';
 
@@ -37,7 +31,7 @@ export function deriveMintBackupKeypair(seed: Uint8Array): {
 
     const privateKey = sha256(combined);
     const privateKeyHex = bytesToHex(privateKey);
-    const publicKeyHex = getPublicKey(privateKeyHex);
+    const publicKeyHex = getPublicKey(privateKey);
 
     return { privateKey, privateKeyHex, publicKeyHex };
 }
@@ -76,20 +70,14 @@ export async function backupMintsToNostr(
             ['d', 'mint-list'],
             ['client', 'zeus']
         ],
-        created_at: timestamp,
-        pubkey: publicKeyHex
+        created_at: timestamp
     };
 
-    const signedEvent = {
-        ...unsignedEvent,
-        id: getEventHash(unsignedEvent),
-        sig: getSignature(unsignedEvent, privateKeyHex)
-    };
+    const signedEvent = finalizeEvent(unsignedEvent, hexToBytes(privateKeyHex));
 
     const publishPromises = relays.map(async (relayUrl) => {
         try {
-            const relay = relayInit(relayUrl);
-            await relay.connect();
+            const relay = await Relay.connect(relayUrl);
             await relay.publish(signedEvent);
             relay.close();
             return true;
@@ -159,42 +147,48 @@ function fetchFromRelay(
             resolve(null);
         }, 10000);
 
-        const relay = relayInit(relayUrl);
+        const relay = new Relay(relayUrl);
 
         relay
             .connect()
             .then(() => {
-                const sub = relay.sub([
+                const sub = relay.subscribe(
+                    [
+                        {
+                            kinds: [30078],
+                            authors: [publicKeyHex],
+                            '#d': ['mint-list'],
+                            limit: 1
+                        }
+                    ],
                     {
-                        kinds: [30078],
-                        authors: [publicKeyHex],
-                        '#d': ['mint-list'],
-                        limit: 1
+                        onevent(event: any) {
+                            try {
+                                const decrypted = nip44.decrypt(
+                                    event.content,
+                                    conversationKey
+                                );
+                                const data: MintBackupData =
+                                    JSON.parse(decrypted);
+                                clearTimeout(timeout);
+                                sub.close();
+                                relay.close();
+                                resolve(data);
+                            } catch (e) {
+                                console.warn(
+                                    'Failed to decrypt mint backup event:',
+                                    e
+                                );
+                            }
+                        },
+                        oneose() {
+                            clearTimeout(timeout);
+                            sub.close();
+                            relay.close();
+                            resolve(null);
+                        }
                     }
-                ]);
-
-                sub.on('event', (event: any) => {
-                    try {
-                        const decrypted = nip44.decrypt(
-                            event.content,
-                            conversationKey
-                        );
-                        const data: MintBackupData = JSON.parse(decrypted);
-                        clearTimeout(timeout);
-                        sub.unsub();
-                        relay.close();
-                        resolve(data);
-                    } catch (e) {
-                        console.warn('Failed to decrypt mint backup event:', e);
-                    }
-                });
-
-                sub.on('eose', () => {
-                    clearTimeout(timeout);
-                    sub.unsub();
-                    relay.close();
-                    resolve(null);
-                });
+                );
             })
             .catch(() => {
                 clearTimeout(timeout);
