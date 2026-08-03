@@ -1393,6 +1393,7 @@
     "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "¿Le gustaría utilizarlos para la recuperación de la cartera?",
     "views.Settings.SeedRecovery.duplicateWallet": "Ya existe una billetera con la misma frase semilla.",
     "views.Settings.SeedRecovery.invalidChecksum": "Invalid seed phrase — checksum failed. Please check the word order and spelling.",
+    "views.Settings.SeedRecovery.vssRestoreFailed": "Could not download your wallet data from the backup (VSS) server, so your channels were NOT restored. Check your connection and try again.",
     "views.Settings.LdkWalletRecoverySettings.title": "Recovery options",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength": "How many words is your seed phrase?",
     "views.Settings.LdkWalletRecoverySettings.seedPhraseLength.subtitle": "Most wallets use 12 words. Choose 24 only if your backup has 24 words.",
