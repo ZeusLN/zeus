@@ -44,10 +44,9 @@ export default class NostrKeys extends React.Component<
         let nsec = '';
 
         if (seed) {
-            const { privateKeyHex, publicKeyHex } =
-                deriveMintBackupKeypair(seed);
+            const { privateKey, publicKeyHex } = deriveMintBackupKeypair(seed);
             npub = nip19.npubEncode(publicKeyHex);
-            nsec = nip19.nsecEncode(privateKeyHex);
+            nsec = nip19.nsecEncode(privateKey);
         }
 
         this.state = {

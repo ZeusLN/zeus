@@ -1,4 +1,4 @@
-// Type declarations to fix @nostr/tools TextDecoder/TextEncoder usage
+// Type declarations to fix nostr-tools TextDecoder/TextEncoder usage
 declare global {
     interface TextDecoder {
         decode(

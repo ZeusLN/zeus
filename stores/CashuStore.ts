@@ -22,14 +22,13 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 import {
-    generatePrivateKey,
+    generateSecretKey,
     getPublicKey,
-    getEventHash,
-    getSignature,
-    relayInit
+    finalizeEvent,
+    Relay
 } from 'nostr-tools';
-import { schnorr } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 import NostrUtils from '../utils/NostrUtils';
 import {
@@ -2341,10 +2340,10 @@ export default class CashuStore {
                 privateKey = hexKey;
             } else {
                 // Generate anonymous keypair
-                privateKey = generatePrivateKey();
+                privateKey = bytesToHex(generateSecretKey());
             }
 
-            const publicKey = getPublicKey(privateKey);
+            const publicKey = getPublicKey(hexToBytes(privateKey));
             const npub = NostrUtils.hexToNpub(publicKey);
 
             // Build content with optional rating prefix
@@ -2367,23 +2366,20 @@ export default class CashuStore {
                     ['u', mintUrl],
                     ['d', mintUrl] // Identifier for parameterized replaceable
                 ],
-                created_at: Math.floor(Date.now() / 1000),
-                pubkey: publicKey
+                created_at: Math.floor(Date.now() / 1000)
             };
 
             // Sign the event
-            const signedEvent = {
-                ...unsignedEvent,
-                id: getEventHash(unsignedEvent),
-                sig: getSignature(unsignedEvent, privateKey)
-            };
+            const signedEvent = finalizeEvent(
+                unsignedEvent,
+                hexToBytes(privateKey)
+            );
 
             // Publish to relays
             const publishPromises = DEFAULT_NOSTR_RELAYS.map(
                 async (relayUrl) => {
                     try {
-                        const relay = relayInit(relayUrl);
-                        await relay.connect();
+                        const relay = await Relay.connect(relayUrl);
                         await relay.publish(signedEvent);
                         relay.close();
                         return true;
@@ -3670,7 +3666,7 @@ export default class CashuStore {
             console.warn('Cannot derive pubkey: no seed available');
             return null;
         }
-        return '02' + bytesToHex(schnorr.getPublicKey(privkey));
+        return '02' + bytesToHex(schnorr.getPublicKey(hexToBytes(privkey)));
     };
 
     /**

@@ -1,18 +1,14 @@
 import { action, runInAction } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
-import { schnorr } from '@noble/curves/secp256k1';
+import { schnorr } from '@noble/curves/secp256k1.js';
 import { hexToBytes } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
 import {
     nip19,
-    // @ts-ignore:next-line
-    finishEvent,
-    // @ts-ignore:next-line
-    generatePrivateKey,
-    // @ts-ignore:next-line
+    finalizeEvent,
+    generateSecretKey,
     getPublicKey,
-    // @ts-ignore:next-line
-    relayInit
+    SimplePool
 } from 'nostr-tools';
 
 import Storage from '../storage';
@@ -141,8 +137,8 @@ export default class LnurlPayStore {
                     const pmtHashBytes = hexToBytes(pmthash_sig);
                     this.isPmtHashSigValid = schnorr.verify(
                         pmtHashBytes,
-                        paymentHash,
-                        user_pubkey
+                        hexToBytes(paymentHash),
+                        hexToBytes(user_pubkey)
                     );
                 }
 
@@ -151,11 +147,13 @@ export default class LnurlPayStore {
                     const relaysBytes = hexToBytes(relays_sig);
                     this.isRelaysSigValid = schnorr.verify(
                         relaysBytes,
-                        hashjs
-                            .sha256()
-                            .update(JSON.stringify(relays))
-                            .digest('hex'),
-                        user_pubkey
+                        hexToBytes(
+                            hashjs
+                                .sha256()
+                                .update(JSON.stringify(relays))
+                                .digest('hex')
+                        ),
+                        hexToBytes(user_pubkey)
                     );
                 }
             }
@@ -170,45 +168,41 @@ export default class LnurlPayStore {
         if (!hash || !invoice || !relays) return;
 
         // create ephemeral key
-        const sk = generatePrivateKey();
-        const pk = getPublicKey(sk);
+        const sk = generateSecretKey();
 
-        const hashpk = getPublicKey(hash);
+        const hashpk = getPublicKey(hexToBytes(hash));
 
         const event = {
             kind: 55869,
-            pubkey: pk,
             created_at: Math.floor(Date.now() / 1000),
             tags: [['p', hashpk]],
             content: invoice
         };
 
         // this calculates the event id and signs the event in a single step
-        const signedEvent = finishEvent(event, sk);
+        const signedEvent = finalizeEvent(event, sk);
         console.log('signedEvent', signedEvent);
 
-        await Promise.all(
-            relays.map(async (relayItem: string) => {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', () => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
+        const pool = new SimplePool();
+        try {
+            await Promise.all(
+                pool
+                    .publish(relays, signedEvent)
+                    .map((publishPromise: Promise<string>) =>
+                        publishPromise.catch((e: any) =>
+                            console.log('failed to publish to relay', e)
+                        )
+                    )
+            );
 
-                await relay.connect();
-
-                await relay.publish(signedEvent);
-
-                console.log('event.id', signedEvent.id);
-                const eventReceived = await relay.get({
-                    ids: [signedEvent.id]
-                });
-                console.log('eventReceived', eventReceived);
-                return;
-            })
-        );
+            console.log('event.id', signedEvent.id);
+            const eventReceived = await pool.get(relays, {
+                ids: [signedEvent.id]
+            });
+            console.log('eventReceived', eventReceived);
+        } finally {
+            pool.close(relays);
+        }
 
         console.log('broadcast complete');
         return;
