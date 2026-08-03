@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "Échec du démarrage du service",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "Le nom de connexion existe déjà.",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Connexion introuvable",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Échec de la connexion à {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Échec du chargement des connexions",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Impossible d'enregistrer les connexions",
