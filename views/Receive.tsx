@@ -564,6 +564,9 @@ export default class Receive extends React.Component<
 
         // clear invoice
         this.props.InvoicesStore.reset();
+
+        // clear any LSP errors
+        this.props.LSPStore.reset(true);
     };
 
     onBack = () => {
