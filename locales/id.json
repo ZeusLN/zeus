@@ -1759,6 +1759,7 @@
     "stores.NostrWalletConnectStore.error.failedToStartService": "Gagal memulai layanan",
     "stores.NostrWalletConnectStore.error.connectionNameExists": "Nama koneksi sudah ada",
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Koneksi tidak ditemukan",
+    "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Gagal Menghubungkan ke {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Gagal memuat koneksi",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Gagal menyimpan koneksi",
