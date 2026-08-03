@@ -12,11 +12,14 @@
     "cdk": {
         "version": "0.14.2",
         "androidSha256": "e8e9ee354cf21546e49946d351a6c482355f8b3800c60a8a9348c4ae40f529cb",
-        "iosSha256": "5c4a152cdcd6aaa6bbd1aef65c43eaeeb6ebde3f0f365fb2254cefbc49d5ea49"
+        "iosSha256": "5c4a152cdcd6aaa6bbd1aef65c43eaeeb6ebde3f0f365fb2254cefbc49d5ea49",
+        "iosBindingsSha256": "9e3d83af633cd615f50d4c0b71e4cbdcc357e08e12209a2160a5236ef3f9fa28"
     },
     "zeus-cashu-restore": {
         "version": "0.1.0",
         "androidSha256": "a067b281e99489cbfae66717b3c14196033fb864be6742f994a9ae71f886f85a",
-        "iosSha256": "a5b98ce83f242b670e492e914d51a96f05e27e7c3b4c6dbde2663bb5fa720ea5"
+        "iosSha256": "a5b98ce83f242b670e492e914d51a96f05e27e7c3b4c6dbde2663bb5fa720ea5",
+        "androidBindingsSha256": "0787300e17a95fb08b1dbf49b9666a5eb84aa7afa10058c43e4566031792e32f",
+        "iosBindingsSha256": "4745dc68822d18af6446bdf88acf73ad77a493ddcc4f585552f2dd2808a7b1f8"
     }
 }
