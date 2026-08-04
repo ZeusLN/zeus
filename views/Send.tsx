@@ -546,8 +546,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
-        const { TransactionsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
+        const { TransactionsStore, navigation } = this.props;
         const {
             destination,
             maxParts,
@@ -562,9 +561,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         // flight so a rapid double-tap can't dispatch a second keysend.
         if (TransactionsStore.paymentInFlight) return;
 
-        let streamingCall;
         if (enableAtomicMultiPathPayment) {
-            streamingCall = TransactionsStore.sendPayment({
+            TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message,
@@ -574,17 +572,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            streamingCall = TransactionsStore.sendPayment({
+            TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 fee_limit_sat: feeLimitSat,
                 max_fee_percent: maxFeePercent,
                 message
             });
-        }
-
-        if (implementation === 'lightning-node-connect') {
-            this.subscribePayment(streamingCall);
         }
 
         navigation.navigate('SendingLightning');

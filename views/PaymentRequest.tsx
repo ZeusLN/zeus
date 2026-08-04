@@ -389,7 +389,7 @@ export default class PaymentRequest extends React.Component<
             );
         }
 
-        const streamingCall = TransactionsStore.sendPayment({
+        TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
@@ -401,10 +401,6 @@ export default class PaymentRequest extends React.Component<
             amp,
             timeout_seconds
         });
-
-        if (SettingsStore.implementation === 'lightning-node-connect') {
-            this.subscribePayment(streamingCall);
-        }
 
         navigation.navigate('SendingLightning', {
             enableDonations,
