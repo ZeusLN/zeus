@@ -172,35 +172,117 @@ async function clearKey(key: string) {
 }
 
 /**
- * Deletes the CDK SQLite database file
- * CDK stores all wallet state (mints, proofs, transactions) in this file
+ * Directory holding the CDK SQLite database files
+ * iOS: Application Support; Android: files dir
+ */
+function cdkDatabaseDir(): string {
+    const dirs = ReactNativeBlobUtil.fs.dirs;
+    return Platform.OS === 'ios'
+        ? `${dirs.LibraryDir}/Application Support`
+        : `${dirs.DocumentDir}/../files`;
+}
+
+/**
+ * Deletes every CDK SQLite database file (mints, proofs, transactions).
+ *
+ * CDK databases are per-wallet since v13.0.0 (e14d0e9ed):
+ * `cashu_wallet_<sha256(mnemonic)[0..8]>.db`, alongside the pre-v13 shared
+ * `cashu_wallet.db`. CDK opens SQLite with journal_mode=WAL
+ * (cdk-sqlite common.rs), so `-wal`/`-shm` sidecars can hold proof data too.
+ * Sweep everything with the prefix rather than reconstructing filenames,
+ * which is impossible once the seed keys are gone. Full-wipe paths only:
+ * this destroys every wallet's ecash state.
  */
 export async function clearCDKDatabase(): Promise<void> {
     try {
-        const dirs = ReactNativeBlobUtil.fs.dirs;
-        let dbPath: string;
-
-        if (Platform.OS === 'ios') {
-            // iOS: Application Support directory
-            dbPath = `${dirs.LibraryDir}/Application Support/cashu_wallet.db`;
-        } else {
-            // Android: files directory
-            dbPath = `${dirs.DocumentDir}/../files/cashu_wallet.db`;
-        }
-
-        const exists = await ReactNativeBlobUtil.fs.exists(dbPath);
-        if (exists) {
-            await ReactNativeBlobUtil.fs.unlink(dbPath);
-            if (__DEV__) {
-                console.log('[ClearData] CDK database deleted:', dbPath);
-            }
-        } else {
-            if (__DEV__) {
-                console.log('[ClearData] CDK database not found at:', dbPath);
+        const dbDir = cdkDatabaseDir();
+        const entries: string[] = await ReactNativeBlobUtil.fs.ls(dbDir);
+        for (const entry of entries) {
+            if (!entry.startsWith('cashu_wallet')) continue;
+            try {
+                await ReactNativeBlobUtil.fs.unlink(`${dbDir}/${entry}`);
+                if (__DEV__) {
+                    console.log(
+                        '[ClearData] CDK database file deleted:',
+                        entry
+                    );
+                }
+            } catch (e) {
+                console.warn(
+                    `[ClearData] Error deleting CDK database file ${entry}:`,
+                    e
+                );
             }
         }
     } catch (e) {
-        console.warn('[ClearData] Error deleting CDK database:', e);
+        console.warn('[ClearData] Error sweeping CDK database files:', e);
+    }
+}
+
+/**
+ * Deletes a single wallet's per-wallet CDK database (plus WAL/SHM sidecars).
+ *
+ * The filename embeds sha256(cashu mnemonic) (CashuDevKitModule.kt/.swift),
+ * reconstructed here from the node's stored `<nodeDir>-cashu-seed-phrase`,
+ * so this must run BEFORE clearNodeKeychainData wipes that key. Node-dir
+ * rules match clearNodeKeychainData: only embedded-lnd and ldk-node have an
+ * unambiguous namespace; remote nodes share the 'lnd' default, so deleting
+ * "their" database could destroy another wallet's proofs.
+ */
+export async function clearCDKDatabaseForNode(node: any): Promise<void> {
+    if (!node) return;
+
+    let nodeDir: string | null = null;
+    if (node.implementation === 'embedded-lnd') {
+        nodeDir = node.lndDir || 'lnd';
+    } else if (node.implementation === 'ldk-node') {
+        nodeDir = node.ldkNodeDir || 'ldk';
+    }
+    if (!nodeDir) return;
+
+    try {
+        const stored = await Storage.getItem(`${nodeDir}-cashu-seed-phrase`);
+        if (!stored) return;
+
+        // Stored as a JSON word array; the native modules hash the
+        // space-joined mnemonic string
+        let mnemonic: string;
+        try {
+            const parsed = JSON.parse(stored);
+            mnemonic = Array.isArray(parsed)
+                ? parsed.join(' ')
+                : String(parsed);
+        } catch {
+            mnemonic = stored;
+        }
+
+        const hash = hashjs
+            .sha256()
+            .update(mnemonic)
+            .digest('hex')
+            .slice(0, 16);
+        const dbDir = cdkDatabaseDir();
+        for (const suffix of ['', '-wal', '-shm']) {
+            const path = `${dbDir}/cashu_wallet_${hash}.db${suffix}`;
+            try {
+                if (await ReactNativeBlobUtil.fs.exists(path)) {
+                    await ReactNativeBlobUtil.fs.unlink(path);
+                    if (__DEV__) {
+                        console.log(
+                            '[ClearData] CDK wallet database file deleted:',
+                            path
+                        );
+                    }
+                }
+            } catch (e) {
+                console.warn(
+                    `[ClearData] Error deleting CDK wallet database ${path}:`,
+                    e
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error clearing CDK database for node:', e);
     }
 }
 

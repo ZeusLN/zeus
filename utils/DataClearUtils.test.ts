@@ -19,7 +19,8 @@ jest.mock('react-native-blob-util', () => ({
     fs: {
         dirs: { LibraryDir: '/lib', DocumentDir: '/docs' },
         exists: jest.fn().mockResolvedValue(false),
-        unlink: jest.fn().mockResolvedValue(undefined)
+        unlink: jest.fn().mockResolvedValue(undefined),
+        ls: jest.fn().mockResolvedValue([])
     }
 }));
 
@@ -110,9 +111,15 @@ jest.mock('../utils/SwapUtils', () => ({
 }));
 
 import hashjs from 'hash.js';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import Storage from '../storage';
-import { clearAllData, clearNodeKeychainData } from './DataClearUtils';
+import {
+    clearAllData,
+    clearNodeKeychainData,
+    clearCDKDatabase,
+    clearCDKDatabaseForNode
+} from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
@@ -424,5 +431,117 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+describe('CDK database deletion', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedExists = ReactNativeBlobUtil.fs.exists as jest.Mock;
+    const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
+    const unlinkedPaths = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedLs.mockResolvedValue([]);
+        mockedExists.mockResolvedValue(false);
+        mockedUnlink.mockResolvedValue(undefined);
+    });
+
+    describe('clearCDKDatabase (full-wipe sweep)', () => {
+        it('sweeps legacy, per-wallet, and WAL/SHM sidecar files', async () => {
+            mockedLs.mockResolvedValue([
+                'cashu_wallet.db',
+                'cashu_wallet_0123456789abcdef.db',
+                'cashu_wallet_0123456789abcdef.db-wal',
+                'cashu_wallet_0123456789abcdef.db-shm',
+                'unrelated.db'
+            ]);
+
+            await clearCDKDatabase();
+
+            const paths = unlinkedPaths();
+            expect(paths).toHaveLength(4);
+            expect(paths.every((p) => p.includes('cashu_wallet'))).toBe(true);
+            expect(paths.some((p) => p.includes('unrelated'))).toBe(false);
+        });
+
+        it('keeps sweeping when one unlink fails', async () => {
+            mockedLs.mockResolvedValue([
+                'cashu_wallet_a.db',
+                'cashu_wallet_b.db'
+            ]);
+            mockedUnlink
+                .mockRejectedValueOnce(new Error('EBUSY'))
+                .mockResolvedValue(undefined);
+
+            await clearCDKDatabase();
+
+            expect(mockedUnlink).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('clearCDKDatabaseForNode (single-wallet deletion)', () => {
+        // Must match the native modules (CashuDevKitModule.kt/.swift):
+        // first 8 bytes of sha256(space-joined mnemonic) as hex
+        const walletDbHash = (mnemonic: string) =>
+            hashjs.sha256().update(mnemonic).digest('hex').slice(0, 16);
+
+        it('deletes the db and sidecars derived from the stored cashu seed', async () => {
+            const words = ['abandon', 'ability', 'able', 'about'];
+            mockedStorageGetItem.mockImplementation((key: string) =>
+                key === 'lnd-abc-cashu-seed-phrase'
+                    ? Promise.resolve(JSON.stringify(words))
+                    : Promise.resolve(null)
+            );
+            mockedExists.mockResolvedValue(true);
+
+            await clearCDKDatabaseForNode({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc'
+            });
+
+            const expected = `cashu_wallet_${walletDbHash(words.join(' '))}.db`;
+            const paths = unlinkedPaths();
+            expect(paths.some((p) => p.endsWith(expected))).toBe(true);
+            expect(paths.some((p) => p.endsWith(`${expected}-wal`))).toBe(true);
+            expect(paths.some((p) => p.endsWith(`${expected}-shm`))).toBe(true);
+        });
+
+        it('uses the ldk default namespace for a legacy ldk-node config', async () => {
+            mockedStorageGetItem.mockImplementation((key: string) =>
+                key === 'ldk-cashu-seed-phrase'
+                    ? Promise.resolve(JSON.stringify(['some', 'words']))
+                    : Promise.resolve(null)
+            );
+            mockedExists.mockResolvedValue(true);
+
+            await clearCDKDatabaseForNode({ implementation: 'ldk-node' });
+
+            expect(mockedUnlink).toHaveBeenCalled();
+            expect(mockedStorageGetItem).toHaveBeenCalledWith(
+                'ldk-cashu-seed-phrase'
+            );
+        });
+
+        it('never deletes databases for a remote node (shared default namespace)', async () => {
+            mockedStorageGetItem.mockResolvedValue(
+                JSON.stringify(['some', 'words'])
+            );
+            mockedExists.mockResolvedValue(true);
+
+            await clearCDKDatabaseForNode({ implementation: 'lnd' });
+
+            expect(mockedUnlink).not.toHaveBeenCalled();
+        });
+
+        it('is a no-op when no cashu seed is stored', async () => {
+            await clearCDKDatabaseForNode({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc'
+            });
+
+            expect(mockedUnlink).not.toHaveBeenCalled();
+        });
     });
 });
