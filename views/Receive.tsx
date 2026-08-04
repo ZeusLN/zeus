@@ -1503,7 +1503,7 @@ export default class Receive extends React.Component<
                 Number(satAmount) > 0
                     ? `&amount=${new BigNumber(satAmount)
                           .dividedBy(SATS_PER_BTC)
-                          .toFormat()}`
+                          .toFixed()}`
                     : ''
             }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
         }
@@ -1520,7 +1520,7 @@ export default class Receive extends React.Component<
                 Number(satAmount) > 0
                     ? `amount=${new BigNumber(satAmount)
                           .dividedBy(SATS_PER_BTC)
-                          .toFormat()}`
+                          .toFixed()}`
                     : ''
             }${
                 memo

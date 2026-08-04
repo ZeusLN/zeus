@@ -105,6 +105,26 @@ describe('AddressUtils', () => {
                 satAmount: '170003'
             });
 
+            // comma group separators (emitted by old ZEUS versions)
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=1,234.56789'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '123456789000'
+            });
+
+            // ambiguous comma decimal separator must not be misread
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=1,5'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: 'NaN'
+            });
+
             // without fee
             expect(
                 AddressUtils.processBIP21Uri(
