@@ -9,7 +9,10 @@ import InvoicesStore from '../../stores/InvoicesStore';
 import SweepStore from '../../stores/SweepStore';
 
 import Button from '../../components/Button';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -145,6 +148,21 @@ export default class WIFSweeper extends React.Component<
                             />
                         </View>
                     )}
+
+                    {!sweepError &&
+                        !error &&
+                        SweepStore.unsweptTaprootSats > 0 && (
+                            <View>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Wif.taprootFundsRemain',
+                                        {
+                                            amount: SweepStore.unsweptTaprootSats.toString()
+                                        }
+                                    )}
+                                />
+                            </View>
+                        )}
 
                     <View style={{ padding: 20, flex: 1 }}>
                         <Text style={{ color: themeColor('secondaryText') }}>
