@@ -117,9 +117,13 @@ export default class SeedQRExport extends React.PureComponent<
             // written by older builds so the wallet's HD master keys do not
             // linger in the keychain after wallet deletion / data wipe
             // (KEY-006: '<pubkey>-extended-private-keys' had no deletion path).
+            // NodeInfoStore.getNodeInfo also purges on connect; this read-site
+            // purge is belt and braces for when nodeInfo is already loaded.
             if (!seedFromRoute) {
                 const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-                await Storage.removeItem(`${pubkey}-extended-private-keys`);
+                if (pubkey) {
+                    await Storage.removeItem(`${pubkey}-extended-private-keys`);
+                }
             }
 
             const bits = seedPhrase
