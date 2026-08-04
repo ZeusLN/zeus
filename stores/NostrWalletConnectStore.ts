@@ -1975,7 +1975,10 @@ export default class NostrWalletConnectStore {
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
-            timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
+            timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString(),
+            // service-initiated: don't set or clear the user-facing
+            // double-submission guard (paymentInFlight)
+            background: true
         });
         await this.waitForPaymentCompletion();
 
