@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "LSP 會收取以下金額的設定費：",
     "views.Receive.lspExplainerRoutingUnified": "如果使用閃電支付，LSP 會收取以下金額的手續費：",
     "views.Receive.lspExplainerRouting": "LSP 會收取以下金額的手續費：",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "零手續費包裝帳單",
     "views.Receive.goToLspSettings": "前往 LSP 設定",
     "views.Receive.lspSwitchExplainer1": "LSP 會提供零確認管道，可讓你在閃電網路上進行收付。",
