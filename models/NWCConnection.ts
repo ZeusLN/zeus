@@ -208,18 +208,50 @@ export default class NWCConnection extends BaseModel {
 
     @computed public get budgetLimitReached(): boolean {
         return (
-            this.hasBudgetLimit && this.totalSpendSats >= this.maxAmountSats!
+            this.hasBudgetLimit &&
+            this.effectiveSpendSats >= this.maxAmountSats!
         );
+    }
+
+    /**
+     * Sum of in-flight (pending) pay_invoice amounts on this connection's
+     * activity log. Counted against the budget so concurrent or
+     * slow-settling (hodl) payments cannot exceed the limit while their
+     * debits are deferred to reconcile. Reconcile flips an activity to
+     * success and calls trackSpending in one atomic action, so an amount
+     * is never counted in both this and totalSpendSats.
+     */
+    @computed public get pendingSpendSats(): number {
+        if (!this.activity?.length) return 0;
+        return this.activity.reduce((sum, a) => {
+            if (a.type !== 'pay_invoice' || a.status !== 'pending') {
+                return sum;
+            }
+            return sum + Math.max(0, Math.floor(Number(a.satAmount) || 0));
+        }, 0);
+    }
+
+    /**
+     * Total budget consumption: settled spends plus in-flight pending
+     * amounts. All budget-facing values (canSpend, remainingBudget,
+     * budgetUsagePercentage, budgetLimitReached) derive from this so the
+     * UI and enforcement always agree.
+     */
+    @computed public get effectiveSpendSats(): number {
+        return this.totalSpendSats + this.pendingSpendSats;
     }
 
     @computed public get remainingBudget(): number {
         if (!this.hasBudgetLimit) return Infinity;
-        return Math.max(0, this.maxAmountSats! - this.totalSpendSats);
+        return Math.max(0, this.maxAmountSats! - this.effectiveSpendSats);
     }
 
     @computed public get budgetUsagePercentage(): number {
         if (!this.hasBudgetLimit) return 0;
-        return Math.min(100, (this.totalSpendSats / this.maxAmountSats!) * 100);
+        return Math.min(
+            100,
+            (this.effectiveSpendSats / this.maxAmountSats!) * 100
+        );
     }
 
     private resolveMakeInvoiceActivitySats(a: ConnectionActivity): number {
@@ -357,7 +389,7 @@ export default class NWCConnection extends BaseModel {
 
     public canSpend(amountSats: number): boolean {
         if (!this.hasBudgetLimit) return true;
-        return this.totalSpendSats + amountSats <= this.maxAmountSats!;
+        return this.effectiveSpendSats + amountSats <= this.maxAmountSats!;
     }
 
     @action
@@ -387,6 +419,11 @@ export default class NWCConnection extends BaseModel {
             }
             if (this.budgetLimitReached) {
                 this.addWarning(ConnectionWarningType.BudgetLimitReached);
+                changed = true;
+            } else {
+                // Pending payments count toward the limit but can fail and
+                // free budget back up; clear the warning when that happens
+                this.removeWarning(ConnectionWarningType.BudgetLimitReached);
                 changed = true;
             }
         }
