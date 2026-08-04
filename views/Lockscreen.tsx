@@ -348,7 +348,7 @@ export default class Lockscreen extends React.Component<
                 (duressPin && pinAttempt === duressPin))
         ) {
             SettingsStore.setLoginStatus(true);
-            this.deleteNodes();
+            await this.deleteNodes();
         } else {
             // need to fetch updated settings to get incremented value of
             // authenticationAttempts, in case there are multiple failed attempts in a row
@@ -364,7 +364,7 @@ export default class Lockscreen extends React.Component<
             if (authenticationAttempts >= maxAuthenticationAttempts) {
                 SettingsStore.setLoginStatus(true);
                 // wipe node configs, passwords, and pins
-                this.authenticationFailure();
+                await this.authenticationFailure();
             } else {
                 await updateSettings({ authenticationAttempts }).then(() => {
                     this.setState({
