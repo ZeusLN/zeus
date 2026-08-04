@@ -103,13 +103,15 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         // BIP21 amounts must be plain decimals, but some wallets (including
         // old ZEUS versions) emit comma group separators (e.g. 1,234.56789).
         // Only de-group unambiguous thousands formatting; anything else
-        // (e.g. a comma decimal separator like 1,5) is left to fail as NaN
-        // rather than risk misreading the amount.
+        // (e.g. a comma decimal separator like 1,5) is ignored rather than
+        // risk misreading the amount.
         if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(amount)) {
             amount = amount.replace(/,/g, '');
         }
-        satAmount = new BigNumber(amount).multipliedBy(SATS_PER_BTC);
-        satAmount = satAmount.toString();
+        const parsedAmount = new BigNumber(amount).multipliedBy(SATS_PER_BTC);
+        if (!parsedAmount.isNaN()) {
+            satAmount = parsedAmount.toString();
+        }
     }
 
     if (result.lightning || result.LIGHTNING) {

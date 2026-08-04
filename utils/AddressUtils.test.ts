@@ -115,14 +115,15 @@ describe('AddressUtils', () => {
                 satAmount: '123456789000'
             });
 
-            // ambiguous comma decimal separator must not be misread
+            // ambiguous comma decimal separator must not be misread;
+            // invalid amounts are ignored but the address is kept
             expect(
                 AddressUtils.processBIP21Uri(
                     'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=1,5'
                 )
             ).toEqual({
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                satAmount: 'NaN'
+                satAmount: undefined
             });
 
             // without fee
