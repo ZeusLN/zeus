@@ -3,12 +3,13 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
 
 import { Row } from '../layout/Row';
+import KeyValue from '../KeyValue';
+import Text from '../Text';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { getFormattedAmount } from '../../utils/AmountUtils';
 
 import Peer from '../../models/Peer';
-import Text from '../Text';
 
 interface PeerItemProps {
     peer: Peer;
@@ -24,12 +25,75 @@ export function PeerItem({
     showDisconnect
 }: PeerItemProps) {
     const title = displayName === peer.pubkey ? peer.pubkey : displayName;
-    const satsSent = peer.sats_sent;
-    const satsRecv = peer.sats_recv;
-    const pingDisplay =
-        peer.ping_time != null && peer.ping_time >= 0
-            ? `${(peer.ping_time / 1000).toFixed(2)} ms`
-            : 'N/A';
+
+    const stats: Array<{ key: string; label: string; value: string | number }> =
+        [];
+    if (peer.ping_time != null && peer.ping_time >= 0) {
+        stats.push({
+            key: 'pingTime',
+            label: localeString('views.ChannelsPane.pingTime'),
+            value: `${(peer.ping_time / 1000).toFixed(2)} ms`
+        });
+    }
+    if (peer.sats_sent != null) {
+        const satsSent = getFormattedAmount(peer.sats_sent, 'sats');
+        if (satsSent) {
+            stats.push({
+                key: 'satsSent',
+                label: localeString('views.ChannelsPane.satsSent'),
+                value: satsSent
+            });
+        }
+    }
+    if (peer.sats_recv != null) {
+        const satsRecv = getFormattedAmount(peer.sats_recv, 'sats');
+        if (satsRecv) {
+            stats.push({
+                key: 'satsRecv',
+                label: localeString('views.ChannelsPane.satsRecv'),
+                value: satsRecv
+            });
+        }
+    }
+    if (peer.num_channels != null) {
+        stats.push({
+            key: 'numChannels',
+            label: localeString('views.NetworkInfo.numChannels'),
+            value: peer.num_channels
+        });
+    }
+    if (peer.bytesSent != null && peer.bytesSent !== '') {
+        stats.push({
+            key: 'bytesSent',
+            label: localeString('views.ChannelsPane.bytesSent'),
+            value: `${peer.bytesSent} B`
+        });
+    }
+    if (peer.bytesRecv != null && peer.bytesRecv !== '') {
+        stats.push({
+            key: 'bytesRecv',
+            label: localeString('views.ChannelsPane.bytesRecv'),
+            value: `${peer.bytesRecv} B`
+        });
+    }
+    if (peer.inbound !== undefined) {
+        stats.push({
+            key: 'inbound',
+            label: localeString('views.Channel.inbound'),
+            value: peer.inbound
+                ? localeString('general.true')
+                : localeString('general.false')
+        });
+    }
+    if (peer.connected !== undefined) {
+        stats.push({
+            key: 'connected',
+            label: localeString('views.ChannelsPane.connected'),
+            value: peer.connected
+                ? localeString('general.true')
+                : localeString('general.false')
+        });
+    }
 
     return (
         <TouchableOpacity
@@ -77,7 +141,7 @@ export function PeerItem({
                     )}
                 </Row>
 
-                {peer.address && (
+                {!!peer.address && (
                     <View style={styles.address}>
                         <Text
                             style={{
@@ -91,184 +155,15 @@ export function PeerItem({
                 )}
 
                 <View style={styles.stats}>
-                    <View style={styles.statRow}>
-                        <Text
-                            style={{
-                                ...styles.statLabel,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.ChannelsPane.pingTime')}
-                        </Text>
-                        <View style={styles.statValueWrap}>
-                            <Text
-                                style={{
-                                    ...styles.statValue,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {pingDisplay}
-                            </Text>
-                        </View>
-                    </View>
-                    {satsSent != null && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.ChannelsPane.satsSent')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {getFormattedAmount(satsSent, 'sats')}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {satsRecv != null && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.ChannelsPane.satsRecv')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {getFormattedAmount(satsRecv, 'sats')}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {peer.num_channels && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.NetworkInfo.numChannels')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {String(peer.num_channels)}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {peer.bytesSent && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.ChannelsPane.bytesSent')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {`${peer.bytesSent} B`}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {peer.bytesRecv && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.ChannelsPane.bytesRecv')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {`${peer.bytesRecv} B`}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {peer.inbound !== undefined && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.Channel.inbound')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {peer.inbound
-                                        ? localeString('general.true')
-                                        : localeString('general.false')}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                    {peer.connected !== undefined && (
-                        <View style={styles.statRow}>
-                            <Text
-                                style={{
-                                    ...styles.statLabel,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.ChannelsPane.connected')}
-                            </Text>
-                            <View style={styles.statValueWrap}>
-                                <Text
-                                    style={{
-                                        ...styles.statValue,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {peer.connected
-                                        ? localeString('general.true')
-                                        : localeString('general.false')}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
+                    {stats.map((stat) => (
+                        <KeyValue
+                            key={stat.key}
+                            keyValue={stat.label}
+                            value={stat.value}
+                            disableCopy
+                            containerStyle={styles.keyValue}
+                        />
+                    ))}
                 </View>
             </View>
         </TouchableOpacity>
@@ -301,30 +196,11 @@ const styles = StyleSheet.create({
         marginBottom: 6
     },
     stats: {
-        marginTop: 6,
-        gap: 2
+        marginTop: 6
     },
-    statRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        minHeight: 20
-    },
-    statLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 14,
-        flexShrink: 0,
-        marginRight: 12
-    },
-    statValueWrap: {
-        flex: 1,
-        alignItems: 'flex-end',
-        minWidth: 0
-    },
-    statValue: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 14,
-        textAlign: 'right'
+    keyValue: {
+        paddingTop: 1,
+        paddingBottom: 1
     },
     disconnectButton: {
         padding: 4,
