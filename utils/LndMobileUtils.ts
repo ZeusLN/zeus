@@ -323,13 +323,20 @@ const writeLndConfig = async ({
     await writeConfig({ lndDir, config });
 };
 
-export async function deleteLndWallet(lndDir: string) {
+/**
+ * Stops LND and deletes its data directory. Returns whether the deletion
+ * succeeded so callers that need to know (the duress/lockout wipe) can retry
+ * instead of assuming the directory is gone.
+ */
+export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     log.d('Attempting to delete Embedded LND wallet');
     try {
         await stopLnd();
         await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
+        return true;
     } catch (error) {
         log.e('Embedded LND wallet deletion failed', [error]);
+        return false;
     }
 }
 

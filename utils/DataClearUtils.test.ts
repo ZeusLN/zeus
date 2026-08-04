@@ -31,11 +31,16 @@ jest.mock('../storage', () => ({
 
 // The functions under regression - assert clearAllData delegates to them.
 jest.mock('./LndMobileUtils', () => ({
-    deleteLndWallet: jest.fn().mockResolvedValue(undefined)
+    deleteLndWallet: jest.fn().mockResolvedValue(true)
 }));
 jest.mock('./LdkNodeUtils', () => ({
     deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
+}));
+
+// Retry backoff - keep the suite from actually waiting on it
+jest.mock('./SleepUtils', () => ({
+    sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Store modules are imported only for their storage-key constants; mock them
@@ -108,11 +113,13 @@ import Storage from '../storage';
 import { clearAllData } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import { sleep } from './SleepUtils';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
 const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
 const mockedStopLdkNode = stopLdkNode as jest.Mock;
 const mockedStorageGetItem = Storage.getItem as jest.Mock;
+const mockedSleep = sleep as jest.Mock;
 
 // Keep test output clean
 jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -129,6 +136,8 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
     });
 
     it('stops and deletes the data directory for an embedded-lnd node', async () => {
@@ -211,5 +220,90 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
 
         expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
         expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+    });
+});
+
+// The wipe runs on the duress path, so a failed directory deletion must be
+// retried rather than surfaced: halting would leave the keychain and settings
+// blob unwiped, and an error in the UI would disclose the duress mechanism.
+describe('clearAllData node data directory retry', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+    });
+
+    it('retries an embedded-lnd deletion that reports failure', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-abc' }
+            ]).getItem
+        );
+        mockedDeleteLndWallet
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(true);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(2);
+        expect(mockedSleep).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries an LDK deletion that throws', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'ldk-node', ldkNodeDir: 'ldk-xyz' }
+            ]).getItem
+        );
+        mockedDeleteLdkNodeWallet
+            .mockRejectedValueOnce(new Error('EBUSY'))
+            .mockResolvedValueOnce(undefined);
+
+        await clearAllData();
+
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry a deletion that succeeded first time', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-abc' }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(1);
+        expect(mockedSleep).not.toHaveBeenCalled();
+    });
+
+    it('gives up after 3 attempts and still completes the wipe', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-abc' }
+            ]).getItem
+        );
+        mockedDeleteLndWallet.mockResolvedValue(false);
+
+        // never rejects - the caller must be free to restart
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+    });
+
+    it('still wipes later nodes after an earlier node exhausts its retries', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-1' },
+                { implementation: 'ldk-node', ldkNodeDir: 'ldk-2' }
+            ]).getItem
+        );
+        mockedDeleteLndWallet.mockResolvedValue(false);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
     });
 });
