@@ -124,6 +124,7 @@ jest.mock('../utils/RatingUtils', () => ({
 }));
 
 import hashjs from 'hash.js';
+import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import fs from 'fs';
@@ -449,6 +450,58 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+describe('clearAllData keychain backing store deletion (Android)', () => {
+    const mockedExists = ReactNativeBlobUtil.fs.exists as jest.Mock;
+    const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedExists.mockResolvedValue(true);
+        mockedUnlink.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('deletes the DataStore file and legacy prefs as the final clearing step on Android', async () => {
+        jest.replaceProperty(Platform, 'OS', 'android');
+
+        await clearAllData();
+
+        const unlinked = mockedUnlink.mock.calls.map((call) => call[0]);
+        const pbCall = unlinked.find((p: string) =>
+            p.endsWith('datastore/RN_KEYCHAIN.preferences_pb')
+        );
+        const xmlCall = unlinked.find((p: string) =>
+            p.endsWith('shared_prefs/RN_KEYCHAIN.xml')
+        );
+        expect(pbCall).toBeDefined();
+        expect(xmlCall).toBeDefined();
+
+        // Must be the LAST clearing action: any keychain write after this
+        // would re-persist react-native-keychain's cached map, resurrecting
+        // the orphans this deletion exists to kill.
+        const pbCallOrder =
+            mockedUnlink.mock.invocationCallOrder[unlinked.indexOf(pbCall)];
+        const lastRemoveItemOrder = Math.max(
+            ...mockedStorageRemoveItem.mock.invocationCallOrder
+        );
+        expect(pbCallOrder).toBeGreaterThan(lastRemoveItemOrder);
+    });
+
+    it('does not touch keychain files on iOS', async () => {
+        // Platform.OS is 'ios' by default under the react-native jest preset
+        await clearAllData();
+
+        const unlinked = mockedUnlink.mock.calls.map((call) => call[0]);
+        expect(unlinked.some((p: string) => p.includes('RN_KEYCHAIN'))).toBe(
+            false
+        );
     });
 });
 

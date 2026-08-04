@@ -195,6 +195,45 @@ async function clearKey(key: string) {
 }
 
 /**
+ * Deletes react-native-keychain's Android backing stores wholesale: the
+ * Jetpack DataStore file (current versions) and the legacy shared-prefs XML
+ * (older versions). This is the only way to remove orphaned entries that
+ * config-driven clearing can never reach: keys from wallets deleted by older
+ * builds and unenumerable hash-keyed dynamic entries. Android-only; on iOS
+ * the keychain is system-managed with no file to delete.
+ *
+ * MUST run as the final step of a full wipe: react-native-keychain caches
+ * the full preference map in memory, and any keychain write after this
+ * deletion would re-persist that map, resurrecting the orphans. Storage's
+ * write latch blocks the known writers until the post-wipe restart.
+ */
+async function clearKeychainBackingStore(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    const dirs = ReactNativeBlobUtil.fs.dirs;
+    const appRoot = `${dirs.DocumentDir}/..`;
+    const targets = [
+        `${appRoot}/files/datastore/RN_KEYCHAIN.preferences_pb`,
+        `${appRoot}/shared_prefs/RN_KEYCHAIN.xml`
+    ];
+    for (const path of targets) {
+        try {
+            if (await ReactNativeBlobUtil.fs.exists(path)) {
+                await ReactNativeBlobUtil.fs.unlink(path);
+                console.log(
+                    '[ClearData] Keychain backing store deleted:',
+                    path
+                );
+            }
+        } catch (e) {
+            console.warn(
+                `[ClearData] Error deleting keychain backing store ${path}:`,
+                e
+            );
+        }
+    }
+}
+
+/**
  * Directory holding the CDK SQLite database files
  * iOS: Application Support; Android: files dir
  */
@@ -608,6 +647,11 @@ export async function clearAllData(): Promise<void> {
     for (const key of additionalKeys) {
         await clearKey(key);
     }
+
+    // 8. Android: delete the keychain backing stores wholesale, killing the
+    // orphaned entries no config-driven clear can reach. Keep this the LAST
+    // clearing action (see clearKeychainBackingStore).
+    await clearKeychainBackingStore();
 
     console.log('[ClearData] All data cleared successfully');
 }
