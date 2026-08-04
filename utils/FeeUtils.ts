@@ -1,5 +1,12 @@
+import BigNumber from 'bignumber.js';
+
 class FeeUtils {
     static DEFAULT_ROUTING_FEE_PERCENT = 0.05;
+
+    ppmToPercent = (ppm: string | number): string => {
+        const ppmValue = new BigNumber(ppm);
+        return ppmValue.dividedBy(1000000).toString();
+    };
 
     calculateDefaultRoutingFee = (amount: number) => {
         if (amount > 1000) {
