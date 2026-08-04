@@ -1,7 +1,5 @@
 import * as React from 'react';
 import {
-    NativeModules,
-    NativeEventEmitter,
     Platform,
     ScrollView,
     StyleSheet,
@@ -122,7 +120,6 @@ export default class PaymentRequest extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
-    listener: any;
     focusListener: any;
     isComponentMounted: boolean = false;
     private scrollViewRef = React.createRef<ScrollView>();
@@ -305,30 +302,6 @@ export default class PaymentRequest extends React.Component<
             }
             await sleep(3000);
         }
-    };
-
-    subscribePayment = (streamingCall: string) => {
-        const { handlePayment, handlePaymentError } =
-            this.props.TransactionsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    try {
-                        const result = JSON.parse(event.result);
-                        if (result && result.status !== 'IN_FLIGHT') {
-                            handlePayment(result);
-                            this.listener = null;
-                        }
-                    } catch (error: any) {
-                        handlePaymentError(event.result);
-                        this.listener = null;
-                    }
-                }
-            }
-        );
     };
 
     displayFeeRecommendation = () => {

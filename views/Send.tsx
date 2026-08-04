@@ -3,8 +3,6 @@ import {
     AppState,
     FlatList,
     Image,
-    NativeModules,
-    NativeEventEmitter,
     StyleSheet,
     Text,
     View,
@@ -134,7 +132,6 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
-    listener: any;
     private backPressSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
@@ -348,7 +345,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
-        if (this.listener && this.listener.stop) this.listener.stop();
     }
 
     readClipboard = async () => {
@@ -364,30 +360,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         this.setState({ clipboard });
-    };
-
-    subscribePayment = (streamingCall: string) => {
-        const { handlePayment, handlePaymentError } =
-            this.props.TransactionsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    try {
-                        const result = JSON.parse(event.result);
-                        if (result && result.status !== 'IN_FLIGHT') {
-                            handlePayment(result);
-                            this.listener = null;
-                        }
-                    } catch (error: any) {
-                        handlePaymentError(event.result);
-                        this.listener = null;
-                    }
-                }
-            }
-        );
     };
 
     scanNfc = async () => {
