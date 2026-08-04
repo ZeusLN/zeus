@@ -446,8 +446,19 @@ export default class Lockscreen extends React.Component<
         // pre-wipe in-memory blob and re-persist it (pins, passphrases and
         // all), and a restart is also the only way to drop node credentials
         // still held in memory by the stores.
-        await clearAllData();
-        RNRestart.Restart();
+        try {
+            await clearAllData();
+        } catch (e) {
+            // never surface an error here: it would disclose the duress
+            // mechanism and there is no meaningful recovery mid-wipe
+            console.warn('[Lockscreen] wipe failed part-way', e);
+        } finally {
+            // the restart must run even after a partial wipe: the settings
+            // blob is cleared early, so a restart still lands on a fresh
+            // install state rather than stranding the user on a dead
+            // lockscreen
+            RNRestart.Restart();
+        }
     };
 
     authenticationFailure = async () => {
@@ -455,8 +466,14 @@ export default class Lockscreen extends React.Component<
         // removes the node data dirs, Cashu seeds + CDK db, swap rescue key
         // and the settings blob itself (including pins and passphrases).
         // Restart instead of writing settings back - see deleteNodes above.
-        await clearAllData();
-        RNRestart.Restart();
+        try {
+            await clearAllData();
+        } catch (e) {
+            // see deleteNodes: log only, never surface, always restart
+            console.warn('[Lockscreen] wipe failed part-way', e);
+        } finally {
+            RNRestart.Restart();
+        }
     };
 
     resetAuthenticationAttempts = () => {
