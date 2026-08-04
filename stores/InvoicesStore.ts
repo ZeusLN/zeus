@@ -457,16 +457,19 @@ export default class InvoicesStore {
                         );
                         jit_bolt11 = response as string;
                     } catch (e: any) {
-                        // Surface the LSP's rejection as a dismissable
-                        // warning, clearing the error state so the
-                        // unwrapped invoice can still be displayed
+                        // The LSP rejected the proposal: hard-fail rather
+                        // than falling back to the unwrapped invoice, which
+                        // could dead-end without the channel it needs. Clear
+                        // the fee quote so it isn't shown alongside the
+                        // error the LSP flow already surfaced.
                         runInAction(() => {
-                            this.lspStore.flow_warning_msg =
-                                this.lspStore.flow_error_msg;
-                            this.lspStore.flow_error = false;
-                            this.lspStore.flow_error_msg = '';
-                            this.lspStore.showLspSettings = false;
+                            this.lspStore.zeroConfFee = undefined;
+                            this.lspStore.feeId = undefined;
+                            this.payment_request = null;
+                            this.payment_request_amt = null;
+                            this.creatingInvoice = false;
                         });
+                        return;
                     }
                 }
 

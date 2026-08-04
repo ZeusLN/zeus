@@ -43,7 +43,6 @@ export default class LSPStore {
     @observable public error_msg: string = '';
     @observable public flow_error: boolean = false;
     @observable public flow_error_msg: string = '';
-    @observable public flow_warning_msg: string = '';
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
@@ -125,7 +124,6 @@ export default class LSPStore {
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
-        this.flow_warning_msg = '';
         this.showLspSettings = false;
     };
 
@@ -135,7 +133,6 @@ export default class LSPStore {
         this.feeId = undefined;
         this.flow_error = false;
         this.flow_error_msg = '';
-        this.flow_warning_msg = '';
         this.showLspSettings = false;
     };
 
@@ -251,6 +248,27 @@ export default class LSPStore {
 
     // Flow 2.0
 
+    // Prefer the LSP's own error message, then the raw response body,
+    // before settling for a bare HTTP status, so the real rejection
+    // reason isn't swallowed.
+    private formatFlowError = (response: any, status: number, data?: any) => {
+        const prefix = localeString('stores.LSPStore.error');
+        const message = data?.message || data?.error;
+        if (message) {
+            return `${prefix}: ${errorToUserFriendly(message)}`;
+        }
+        let body = '';
+        try {
+            body = response.text()?.toString().trim();
+        } catch (e) {}
+        // require some real content — an empty JSON body like `{}` tells
+        // the user nothing more than the status code does
+        if (body && body.length <= 200 && /[A-Za-z0-9]/.test(body)) {
+            return `${prefix}: ${body}`;
+        }
+        return `${prefix}: HTTP ${status}`;
+    };
+
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -266,9 +284,10 @@ export default class LSPStore {
                     } catch (jsonErr) {
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = `${localeString(
-                                'stores.LSPStore.error'
-                            )}: HTTP ${status}`;
+                            this.flow_error_msg = this.formatFlowError(
+                                response,
+                                status
+                            );
                         });
                         reject();
                         return;
@@ -294,15 +313,17 @@ export default class LSPStore {
                             );
                         } catch (e) {}
                     } else {
-                        const errorMsg = errorToUserFriendly(data.message);
+                        const errorMsg = this.formatFlowError(
+                            response,
+                            status,
+                            data
+                        );
                         runInAction(() => {
                             this.flow_error = true;
                             this.flow_error_msg = errorMsg;
                             // handle LSP geoblocking :(
                             if (
-                                this.error_msg.includes(
-                                    'unavailable in your country'
-                                )
+                                errorMsg.includes('unavailable in your country')
                             ) {
                                 this.showLspSettings = true;
                             }
@@ -350,9 +371,10 @@ export default class LSPStore {
                     } catch (jsonErr) {
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = `${localeString(
-                                'stores.LSPStore.error'
-                            )}: HTTP ${status}`;
+                            this.flow_error_msg = this.formatFlowError(
+                                response,
+                                status
+                            );
                         });
                         reject();
                         return;
@@ -375,13 +397,11 @@ export default class LSPStore {
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = data?.message
-                                ? `${localeString('stores.LSPStore.error')}: ${
-                                      data.message
-                                  }`
-                                : `${localeString(
-                                      'stores.LSPStore.error'
-                                  )}: HTTP ${status}`;
+                            this.flow_error_msg = this.formatFlowError(
+                                response,
+                                status,
+                                data
+                            );
                         });
                         reject();
                     }
@@ -466,7 +486,6 @@ export default class LSPStore {
     public getZeroConfInvoice = (bolt11: string) => {
         this.flow_error = false;
         this.flow_error_msg = '';
-        this.flow_warning_msg = '';
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
@@ -498,9 +517,10 @@ export default class LSPStore {
                     } catch (jsonErr) {
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = `${localeString(
-                                'stores.LSPStore.error'
-                            )}: HTTP ${status}`;
+                            this.flow_error_msg = this.formatFlowError(
+                                response,
+                                status
+                            );
                         });
                         reject();
                         return;
@@ -510,13 +530,11 @@ export default class LSPStore {
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = data?.message
-                                ? `${localeString('stores.LSPStore.error')}: ${
-                                      data.message
-                                  }`
-                                : `${localeString(
-                                      'stores.LSPStore.error'
-                                  )}: HTTP ${status}`;
+                            this.flow_error_msg = this.formatFlowError(
+                                response,
+                                status,
+                                data
+                            );
                             if (
                                 data?.message &&
                                 data.message.includes('access key')
