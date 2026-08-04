@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "LSP akan mengenakan biaya pengaturan sebagai berikut:",
     "views.Receive.lspExplainerRoutingUnified": "LSP akan mengenakan biaya pengaturan sebagai berikut, jika pembayaran dilakukan melalui Lightning:",
     "views.Receive.lspExplainerRouting": "LSP akan mengenakan biaya pengaturan sebagai berikut:",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "Faktur tanpa biaya tambahan",
     "views.Receive.goToLspSettings": "Pergi ke Pengaturan LSP",
     "views.Receive.lspSwitchExplainer1": "LSP akan memberi Anda saluran 0-conf yang memungkinkan Anda mengirim dan menerima pembayaran di jaringan Lightning.",
