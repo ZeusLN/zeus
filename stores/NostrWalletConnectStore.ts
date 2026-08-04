@@ -2050,11 +2050,25 @@ export default class NostrWalletConnectStore {
                 paymentHash
             );
 
-        if (payment) {
+        // Debit the budget on any evidence of settlement, not only when the
+        // payments-list lookup succeeds: with a preimage in hand the payment
+        // definitely settled, and skipping finalizePayment on a list miss
+        // would let the spend escape the budget permanently (it records no
+        // activity, so pendingSpendSats never sees it either).
+        if (payment || preimage) {
             await this.finalizePayment({
                 id: request.invoice,
                 type: 'pay_invoice',
-                decoded: payment,
+                decoded:
+                    payment ||
+                    NostrConnectUtils.buildSettledPaymentFallback({
+                        invoice: request.invoice,
+                        payment_source: 'lightning',
+                        amountSats,
+                        preimage,
+                        feeSats: fees_paid,
+                        paymentHash
+                    }),
                 payment_source: 'lightning',
                 connection,
                 amountSats
@@ -2205,16 +2219,26 @@ export default class NostrWalletConnectStore {
 
         // CashuStore does not surface IN_FLIGHT melts yet; add recordPendingPayment
         // plus getActivities cashu reconciliation when it does.
-        if (payment) {
-            await this.finalizePayment({
-                id: request.invoice,
-                decoded: payment,
-                type: 'pay_invoice',
-                payment_source: 'cashu',
-                amountSats,
-                connection
-            });
-        }
+        //
+        // The melt succeeded (failure returned above), so debit the budget
+        // unconditionally: gating on the payments-list lookup would let the
+        // spend escape the budget when the list misses the fresh melt.
+        await this.finalizePayment({
+            id: request.invoice,
+            decoded:
+                payment ||
+                NostrConnectUtils.buildSettledPaymentFallback({
+                    invoice: request.invoice,
+                    payment_source: 'cashu',
+                    amountSats,
+                    preimage: cashuInvoice.getPreimage,
+                    feeSats: cashuInvoice.fee
+                }),
+            type: 'pay_invoice',
+            payment_source: 'cashu',
+            amountSats,
+            connection
+        });
 
         return {
             result: {

@@ -1121,6 +1121,41 @@ export default class NostrConnectUtils {
         );
     }
 
+    // Builds a settled payment record from request-side state, for when a
+    // payment verifiably succeeded (preimage in hand) but cannot be found
+    // in the node's refreshed payments list (pagination window, indexing
+    // lag, backends with incomplete listPayments). Budget accounting must
+    // not depend on that lookup: a spend that escapes finalizePayment is
+    // never debited.
+    static buildSettledPaymentFallback({
+        invoice,
+        payment_source,
+        amountSats,
+        preimage,
+        feeSats,
+        paymentHash
+    }: {
+        invoice: string;
+        payment_source: 'lightning' | 'cashu';
+        amountSats: number;
+        preimage?: string | null;
+        feeSats?: string | number | null;
+        paymentHash?: string | null;
+    }): Payment | CashuPayment {
+        const data = {
+            payment_request: invoice,
+            ...(paymentHash ? { payment_hash: paymentHash } : {}),
+            ...(preimage ? { payment_preimage: preimage } : {}),
+            value_sat: amountSats,
+            ...(feeSats ? { fee_sat: feeSats.toString() } : {}),
+            status: 'SUCCEEDED',
+            creation_date: Math.floor(Date.now() / 1000).toString()
+        };
+        return payment_source === 'cashu'
+            ? new CashuPayment(data)
+            : new Payment(data);
+    }
+
     static findInTransitPaymentForInvoice<T extends Payment>(
         invoice: string,
         payments: T[],
