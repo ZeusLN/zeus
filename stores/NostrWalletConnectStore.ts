@@ -1859,8 +1859,12 @@ export default class NostrWalletConnectStore {
             // signature. Reading messageSignStore.signature synchronously
             // returns the PREVIOUS request's signature (or none), pairing
             // the wrong signature with this message.
+            // Force lightning mode: the shared signingMode observable may
+            // be left on 'onchain' by the Sign/Verify screen, which would
+            // sign with a wallet address instead of the node identity.
             const signature = await this.messageSignStore.signMessage(
-                request.message
+                request.message,
+                'lightning'
             );
             if (!signature) {
                 return NostrConnectUtils.createNip47Error(

@@ -169,13 +169,19 @@ export default class MessageSignStore {
     // reading the shared `signature` observable, which may still hold a
     // previous request's result. Resolves to null on error; the
     // observable is still updated for the reactive view.
+    // `mode` overrides the shared `signingMode` observable without
+    // mutating it, so background callers don't inherit (or clobber)
+    // the Sign/Verify screen's state.
     @action
-    public signMessage = (text: string): Promise<string | null> => {
+    public signMessage = (
+        text: string,
+        mode?: 'lightning' | 'onchain'
+    ): Promise<string | null> => {
         this.loading = true;
 
         try {
             const signOperation =
-                this.signingMode === 'lightning'
+                (mode ?? this.signingMode) === 'lightning'
                     ? BackendUtils.signMessage(text)
                     : BackendUtils.signMessageWithAddr(
                           text,
