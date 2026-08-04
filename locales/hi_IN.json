@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "LSP निम्नलिखित राशि को सेटअप शुल्क के रूप में लेगा:",
     "views.Receive.lspExplainerRoutingUnified": "LSP निम्नलिखित राशि को शुल्क के रूप में लेगा, यदि लाइटनिंग के माध्यम से भुगतान किया जाता है:",
     "views.Receive.lspExplainerRouting": "LSP निम्नलिखित राशि को शुल्क के रूप में लेगा:",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "शून्य-शुल्क रैप्ड इनवॉइस",
     "views.Receive.goToLspSettings": "LSP सेटिंग्स पर जाएं",
     "views.Receive.lspSwitchExplainer1": "LSP आपको 0-कन्फ चैनल्स प्रदान करेगा जो आपको लाइटनिंग नेटवर्क पर भुगतान भेजने और प्राप्त करने की अनुमति देंगे।",
