@@ -2422,6 +2422,7 @@
     "views.Swaps.missingAmount": "Please enter an amount",
     "views.Swaps.generateInvoice": "Generate invoice",
     "views.Swaps.generateInvoiceFailed": "Failed to generate invoice",
+    "views.Swaps.invalidReverseSwapInvoice": "The swap provider returned an invoice that does not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
     "views.Swaps.generateOnchainAddress": "Generate on-chain address",
     "views.Swaps.generateOnchainAddressFailed": "Failed to generate on-chain address",
     "views.Swaps.noUpdates": "No updates found!",
