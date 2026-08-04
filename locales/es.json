@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "LSP tomará la siguiente cantidad como una tarifa de configuración:",
     "views.Receive.lspExplainerRoutingUnified": "LSP tomará la siguiente cantidad como una tarifa de configuración, si se paga por Lightning:",
     "views.Receive.lspExplainerRouting": "LSP tomará la siguiente cantidad como una tarifa de configuración:",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "Factura Zero-fee envuelta",
     "views.Receive.goToLspSettings": "Ir a la configuración de LSP",
     "views.Receive.lspSwitchExplainer1": "El LSP le proporcionará canales 0-Conf que le permitirán enviar y recibir pagos en la Lightning Network.",
