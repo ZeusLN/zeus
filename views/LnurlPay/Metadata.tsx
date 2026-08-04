@@ -20,9 +20,21 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
         } catch (err) {
             keypairs = [];
         }
-        const text: string = keypairs
+        const rawText: string = keypairs
             .filter(([typ]: any) => typ === 'text/plain')
             .map(([, content]: any) => content)[0];
+
+        // Some LNURL pay servers percent-encode the description (e.g. spaces as
+        // %20). Decode it for display, falling back to the raw value if it isn't
+        // valid percent-encoding (e.g. a literal "%").
+        let text: string = rawText;
+        if (rawText) {
+            try {
+                text = decodeURI(rawText);
+            } catch {
+                text = rawText;
+            }
+        }
 
         const image: string = keypairs
             .filter(([typ]: any) => typ.slice(0, 6) === 'image/')
