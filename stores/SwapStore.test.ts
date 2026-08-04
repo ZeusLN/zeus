@@ -34,7 +34,6 @@ jest.mock('../utils/UrlUtils', () => ({
 // settings from the store graph
 jest.mock('./Stores', () => ({}));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
-jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({
     crypto: { sha256: jest.fn() },
     initEccLib: jest.fn()

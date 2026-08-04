@@ -12,7 +12,7 @@ import { RouteProp } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
 import { initEccLib } from 'bitcoinjs-lib';
 import { ECPairFactory } from 'ecpair';
-import ecc from '@bitcoinerlab/secp256k1';
+import ecc from '../../zeus_modules/noble_ecc';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
