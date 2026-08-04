@@ -1221,4 +1221,70 @@ describe('NostrConnectUtils', () => {
             expect(transactions).toEqual([settledPayment, failedPayment]);
         });
     });
+
+    describe('buildSettledPaymentFallback', () => {
+        const invoice = 'lnbc210n1fallbackfixture';
+        const preimage = hex64('a');
+        const paymentHash = hex64('b');
+
+        it('builds a settled lightning Payment from request-side state', () => {
+            const payment = NostrConnectUtils.buildSettledPaymentFallback({
+                invoice,
+                payment_source: 'lightning',
+                amountSats: 21000,
+                preimage,
+                feeSats: '21',
+                paymentHash
+            });
+
+            expect(payment).toBeInstanceOf(Payment);
+            expect(payment).not.toBeInstanceOf(CashuPayment);
+            expect(payment.getPaymentRequest).toBe(invoice);
+            expect(payment.paymentHash).toBe(paymentHash);
+            expect(payment.getPreimage).toBe(preimage);
+            expect(payment.getAmount).toBe(21000);
+            expect(payment.getFee).toBe('21');
+            expect(NostrConnectUtils.isSettledPayment(payment)).toBe(true);
+        });
+
+        it('builds a CashuPayment for the cashu source', () => {
+            const payment = NostrConnectUtils.buildSettledPaymentFallback({
+                invoice,
+                payment_source: 'cashu',
+                amountSats: 500,
+                preimage
+            });
+
+            expect(payment).toBeInstanceOf(CashuPayment);
+            expect(payment.getPaymentRequest).toBe(invoice);
+            expect(payment.getAmount).toBe(500);
+        });
+
+        it('constructs without optional fields instead of throwing', () => {
+            const payment = NostrConnectUtils.buildSettledPaymentFallback({
+                invoice,
+                payment_source: 'lightning',
+                amountSats: 1000
+            });
+
+            expect(payment.getPaymentRequest).toBe(invoice);
+            expect(payment.getAmount).toBe(1000);
+            expect(payment.getPreimage).toBe('');
+            expect(payment.getFee).toBe('0');
+            expect(payment.status).toBe('SUCCEEDED');
+        });
+
+        it('accepts numeric fees and null preimage', () => {
+            const payment = NostrConnectUtils.buildSettledPaymentFallback({
+                invoice,
+                payment_source: 'lightning',
+                amountSats: 1000,
+                preimage: null,
+                feeSats: 3
+            });
+
+            expect(payment.getFee).toBe('3');
+            expect(payment.getPreimage).toBe('');
+        });
+    });
 });
