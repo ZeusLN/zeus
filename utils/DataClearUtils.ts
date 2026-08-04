@@ -367,6 +367,30 @@ async function deleteNodeDataDirectory(node: any): Promise<boolean> {
 }
 
 /**
+ * Stops and deletes a single node's on-disk data directory, retrying on
+ * failure. The likely cause of failure is a file handle still held by a node
+ * that hasn't finished shutting down, which clears on its own after a moment.
+ * Returns whether the directory was removed. Exported so single-wallet
+ * deletion (WalletConfiguration.deleteNodeConfig) shares the wipe path's
+ * retry behavior instead of assuming the first attempt succeeded.
+ */
+export async function deleteNodeDataDirectoryWithRetry(
+    node: any
+): Promise<boolean> {
+    for (let attempt = 1; attempt <= NODE_DIR_DELETE_ATTEMPTS; attempt++) {
+        if (await deleteNodeDataDirectory(node)) return true;
+
+        if (attempt < NODE_DIR_DELETE_ATTEMPTS) {
+            await sleep(NODE_DIR_RETRY_DELAY_MS);
+        }
+    }
+    console.warn(
+        `[ClearData] Gave up deleting node data directory after ${NODE_DIR_DELETE_ATTEMPTS} attempts`
+    );
+    return false;
+}
+
+/**
  * Clears the LNC pairing credentials for a given pairing phrase.
  * Keys are namespaced by sha256(pairingPhrase), so they can only be removed
  * when the phrase is known (it lives in the node config).
@@ -429,17 +453,7 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
     if (!settings?.nodes || !Array.isArray(settings.nodes)) return;
 
     for (const node of settings.nodes) {
-        for (let attempt = 1; attempt <= NODE_DIR_DELETE_ATTEMPTS; attempt++) {
-            if (await deleteNodeDataDirectory(node)) break;
-
-            if (attempt < NODE_DIR_DELETE_ATTEMPTS) {
-                await sleep(NODE_DIR_RETRY_DELAY_MS);
-            } else {
-                console.warn(
-                    `[ClearData] Gave up deleting node data directory after ${NODE_DIR_DELETE_ATTEMPTS} attempts`
-                );
-            }
-        }
+        await deleteNodeDataDirectoryWithRetry(node);
     }
 }
 

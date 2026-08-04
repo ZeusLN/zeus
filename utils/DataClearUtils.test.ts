@@ -118,7 +118,8 @@ import {
     clearAllData,
     clearNodeKeychainData,
     clearCDKDatabase,
-    clearCDKDatabaseForNode
+    clearCDKDatabaseForNode,
+    deleteNodeDataDirectoryWithRetry
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
@@ -431,6 +432,55 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+describe('deleteNodeDataDirectoryWithRetry (single-wallet deletion path)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedSleep.mockResolvedValue(undefined);
+    });
+
+    it('retries a failed embedded-lnd directory deletion and reports success', async () => {
+        mockedDeleteLndWallet
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(true);
+
+        const result = await deleteNodeDataDirectoryWithRetry({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(result).toBe(true);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-abc');
+    });
+
+    it('gives up after the attempt limit and reports failure', async () => {
+        mockedDeleteLndWallet.mockResolvedValue(false);
+
+        const result = await deleteNodeDataDirectoryWithRetry({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(result).toBe(false);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+    });
+
+    it('stops the LDK node before deleting its directory', async () => {
+        mockedStopLdkNode.mockResolvedValue(undefined);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+
+        const result = await deleteNodeDataDirectoryWithRetry({
+            implementation: 'ldk-node',
+            ldkNodeDir: 'ldk-2'
+        });
+
+        expect(result).toBe(true);
+        expect(mockedStopLdkNode).toHaveBeenCalled();
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
     });
 });
 

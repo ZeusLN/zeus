@@ -73,18 +73,17 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import {
     clearNodeKeychainData,
     clearCDKDatabase,
-    clearCDKDatabaseForNode
+    clearCDKDatabaseForNode,
+    deleteNodeDataDirectoryWithRetry
 } from '../../utils/DataClearUtils';
 import {
     optimizeNeutrinoPeers,
     createLndWallet,
-    deleteLndWallet,
     stopLnd
 } from '../../utils/LndMobileUtils';
 import {
     createLdkNodeWallet,
     stopLdkNode,
-    deleteLdkNodeWallet,
     getDefaultEsploraServer,
     getDefaultRgsServer,
     DEFAULT_VSS_SERVER,
@@ -812,12 +811,16 @@ export default class WalletConfiguration extends React.Component<
                 justDeletedWallet: active
             });
 
-            // Delete wallet data after settings are updated
-            if (implementation === 'embedded-lnd') {
-                await deleteLndWallet(lndDir || 'lnd');
-            }
-            if (implementation === 'ldk-node' && ldkNodeDir) {
-                await deleteLdkNodeWallet(ldkNodeDir);
+            // Delete wallet data after settings are updated. Retried: the
+            // node may still hold file handles while shutting down, which
+            // clears on its own after a moment.
+            const dirDeleted = await deleteNodeDataDirectoryWithRetry(
+                deletedNode ?? { implementation, lndDir, ldkNodeDir }
+            );
+            if (!dirDeleted) {
+                console.warn(
+                    'Node data directory could not be fully deleted for removed wallet'
+                );
             }
 
             if (newNodes.length === 0) {
