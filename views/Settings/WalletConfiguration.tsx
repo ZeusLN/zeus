@@ -784,6 +784,14 @@ export default class WalletConfiguration extends React.Component<
                 await stopLdkNode();
             }
 
+            // Clear this node's keychain material (Cashu seeds/keys namespaced
+            // by node dir, LNC pairing credentials) so it does not outlive the
+            // wallet. This must happen before updateSettings removes the node
+            // config: the hashed LNC keys can only be reconstructed from the
+            // pairing phrase stored there, so a crash after the config is gone
+            // would orphan them permanently.
+            await clearNodeKeychainData(deletedNode);
+
             // Update settings first to clear node references before
             // deleting files — prevents stale references if navigation
             // triggers a reconnect
@@ -805,11 +813,6 @@ export default class WalletConfiguration extends React.Component<
             if (implementation === 'ldk-node' && ldkNodeDir) {
                 await deleteLdkNodeWallet(ldkNodeDir);
             }
-
-            // Clear this node's keychain material (Cashu seeds/keys namespaced
-            // by node dir, LNC pairing credentials) so it does not outlive the
-            // wallet.
-            await clearNodeKeychainData(deletedNode);
 
             if (newNodes.length === 0) {
                 // The CDK ecash database is shared across wallets, so only
