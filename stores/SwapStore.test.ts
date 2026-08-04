@@ -42,7 +42,6 @@ jest.mock('../utils/UrlUtils', () => ({
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
-jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({
     crypto: { sha256: jest.fn() },
     initEccLib: jest.fn()
