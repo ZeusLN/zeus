@@ -2867,11 +2867,10 @@ export default class NostrWalletConnectStore {
         );
 
         for (const activity of pending) {
-            const payment = payments.find(
-                (p) =>
-                    p.getPaymentRequest === activity.id ||
-                    (!!activity.paymentHash &&
-                        p.paymentHash === activity.paymentHash)
+            const payment = NostrConnectUtils.findPaymentForInvoice(
+                activity.id,
+                payments,
+                activity.paymentHash
             );
             if (!payment) {
                 if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
@@ -2887,6 +2886,55 @@ export default class NostrWalletConnectStore {
                     changed = true;
                 }
             });
+        }
+
+        // Expiry pass: a pending older than the HTLC-lifetime bound cannot
+        // still be in flight. Confirm with a definitive wide fetch (the
+        // regular refresh may be a throttled cached list); resolve it if the
+        // payment turns up, otherwise mark it failed so its budget
+        // reservation is released. A failed fetch skips the pass entirely —
+        // only a real look at the node may expire a reservation.
+        const expiryCandidates = pending.filter(
+            (activity) =>
+                activity.status === 'pending' &&
+                NostrConnectUtils.isPendingPayInvoiceExpired(activity)
+        );
+        if (expiryCandidates.length > 0) {
+            const definitive = await this.getPaymentsForPendingExpiryCheck();
+            if (definitive) {
+                for (const activity of expiryCandidates) {
+                    const payment = NostrConnectUtils.findPaymentForInvoice(
+                        activity.id,
+                        definitive,
+                        activity.paymentHash
+                    );
+                    if (payment) {
+                        // Note: if the node still reports it in flight
+                        // (zombie payment), the node is the authority — the
+                        // reservation stays.
+                        runInAction(() => {
+                            if (
+                                this.applyPayInvoiceReconcile(
+                                    activity,
+                                    connection,
+                                    payment
+                                )
+                            ) {
+                                changed = true;
+                            }
+                        });
+                        continue;
+                    }
+                    runInAction(() => {
+                        if (activity.status !== 'pending') return;
+                        activity.status = 'failed';
+                        activity.error = localeString(
+                            'stores.NostrWalletConnectStore.error.pendingPaymentExpired'
+                        );
+                        changed = true;
+                    });
+                }
+            }
         }
 
         if (changed) {
@@ -2974,6 +3022,25 @@ export default class NostrWalletConnectStore {
             before.paymentHash !== listed.paymentHash ||
             before.paymentStatus !== listed.status
         );
+    }
+
+    // Definitive payments fetch for the pending-expiry pass: wide window,
+    // direct from the backend (paymentsStore.getPayments would overwrite
+    // the wallet activity list and toggle its loading flag). Returns null
+    // on failure so the caller cannot expire anything without a real look.
+    private async getPaymentsForPendingExpiryCheck(): Promise<
+        Payment[] | null
+    > {
+        try {
+            const data = await BackendUtils.getPayments({
+                maxPayments: 2000,
+                reversed: true
+            });
+            if (!data?.payments) return null;
+            return data.payments.map((p: any) => new Payment(p));
+        } catch {
+            return null;
+        }
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(

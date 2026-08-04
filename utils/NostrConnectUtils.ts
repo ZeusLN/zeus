@@ -1129,6 +1129,28 @@ export default class NostrConnectUtils {
         );
     }
 
+    // A dispatched Lightning payment cannot remain genuinely in flight
+    // past its route's CLTV limit (lnd caps outgoing CLTV at 2016 blocks,
+    // roughly 14 days). A pending pay_invoice activity older than this
+    // whose payment a fresh payments-list fetch still cannot find is
+    // treated as failed, releasing its budget reservation; otherwise a
+    // list miss reserves budget forever (pendingSpendSats derives from
+    // activity status and survives budget renewal).
+    static readonly PENDING_PAY_INVOICE_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
+
+    static isPendingPayInvoiceExpired(
+        activity: { createdAt?: Date },
+        nowMs: number = Date.now()
+    ): boolean {
+        // Unknown age never expires: only definitive evidence may release
+        // a budget reservation.
+        if (!activity.createdAt) return false;
+        return (
+            nowMs - activity.createdAt.getTime() >=
+            NostrConnectUtils.PENDING_PAY_INVOICE_EXPIRY_MS
+        );
+    }
+
     // Builds a settled payment record from request-side state, for when a
     // payment verifiably succeeded (preimage in hand) but cannot be found
     // in the node's refreshed payments list (pagination window, indexing
