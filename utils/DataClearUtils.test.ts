@@ -390,6 +390,25 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         expect(removedKeys()).toContain('ldk-2-cashu-seed-phrase');
     });
 
+    it('falls back to the "lnd" namespace for a legacy embedded-lnd node without lndDir', async () => {
+        await clearNodeKeychainData({ implementation: 'embedded-lnd' });
+
+        expect(removedKeys()).toContain('lnd-cashu-seed-phrase');
+    });
+
+    it('falls back to the "ldk" namespace for a legacy ldk-node without ldkNodeDir', async () => {
+        await clearNodeKeychainData({ implementation: 'ldk-node' });
+
+        expect(removedKeys()).toContain('ldk-cashu-seed-phrase');
+    });
+
+    it('never clears the default namespaces for a remote node without dirs', async () => {
+        await clearNodeKeychainData({ implementation: 'lnd' });
+
+        expect(removedKeys()).not.toContain('lnd-cashu-seed-phrase');
+        expect(removedKeys()).not.toContain('ldk-cashu-seed-phrase');
+    });
+
     it('clears hashed LNC credentials from the pairing phrase', async () => {
         const pairingPhrase = 'over hover clever trigger';
         await clearNodeKeychainData({

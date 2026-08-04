@@ -312,6 +312,18 @@ export async function clearNodeKeychainData(node: any): Promise<void> {
     if (node.ldkNodeDir) {
         await clearCashuDataForNode(node.ldkNodeDir);
     }
+    // Legacy configs can predate explicit node dirs (see the `lndDir || 'lnd'`
+    // fallbacks in WalletConfiguration/getNodeDir). Mirror getNodeDir()'s
+    // defaults so those wallets' Cashu keys are cleared too. Gate on
+    // implementation: only one config can occupy a default namespace per
+    // implementation, and remote nodes must never clear the 'lnd'/'ldk'
+    // namespaces owned by embedded wallets.
+    if (node.implementation === 'embedded-lnd' && !node.lndDir) {
+        await clearCashuDataForNode('lnd');
+    }
+    if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
+        await clearCashuDataForNode('ldk');
+    }
     if (node.pairingPhrase) {
         await clearLncCredentials(node.pairingPhrase);
     }
