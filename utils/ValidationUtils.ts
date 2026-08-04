@@ -4,6 +4,9 @@ const HOST_REGEX =
 // in paths we have more allowed chars
 const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
 const PORT_REGEX = /^:\d+$/;
+const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
+const NWC_HEX_32_BYTES = /^[a-fA-F0-9]{64}$/;
+const NWC_RELAY_URL = /^wss?:\/\/.+/i;
 
 interface ValidationOptions {
     requireHttps?: boolean;
@@ -77,6 +80,34 @@ const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
     const normalizedPhrase = phrase.trim().replace(/\s+/g, ' ');
     if (!/^[a-zA-Z\s]+$/.test(normalizedPhrase)) return false;
     return normalizedPhrase.split(' ').length === 10;
+};
+
+const isValidNwcRelayUrl = (relay: string): boolean => {
+    return typeof relay === 'string' && NWC_RELAY_URL.test(relay);
+};
+
+const isValidNostrWalletConnectUrl = (url: string): boolean => {
+    if (!url || typeof url !== 'string') return false;
+    const normalizedUrl = url.trim().replace(/\s+/g, ' ');
+    if (!normalizedUrl.startsWith(NOSTR_WALLET_CONNECT_PREFIX)) return false;
+
+    const pathAndQuery = normalizedUrl.slice(
+        NOSTR_WALLET_CONNECT_PREFIX.length
+    );
+    const queryIndex = pathAndQuery.indexOf('?');
+    if (queryIndex === -1) return false;
+
+    const walletPubKeyHex = pathAndQuery.slice(0, queryIndex);
+    if (!NWC_HEX_32_BYTES.test(walletPubKeyHex)) return false;
+
+    const params = new URLSearchParams(pathAndQuery.slice(queryIndex + 1));
+    const relays = params.getAll('relay');
+    const secret = params.get('secret');
+
+    if (!secret || !NWC_HEX_32_BYTES.test(secret)) return false;
+    if (relays.length === 0 || !relays.every(isValidNwcRelayUrl)) return false;
+
+    return true;
 };
 
 const validateNodePubkey = (pubkey: string): boolean => {
@@ -160,6 +191,7 @@ const ValidationUtils = {
     hasValidRuneChars,
     hasValidMacaroonChars,
     hasValidPairingPhraseCharsAndWordcount,
+    isValidNostrWalletConnectUrl,
     validateNodePubkey,
     validateNodeHost
 };
