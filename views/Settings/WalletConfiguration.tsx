@@ -71,6 +71,10 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
+    clearNodeKeychainData,
+    clearCDKDatabase
+} from '../../utils/DataClearUtils';
+import {
     optimizeNeutrinoPeers,
     createLndWallet,
     deleteLndWallet,
@@ -746,6 +750,7 @@ export default class WalletConfiguration extends React.Component<
         const { index, implementation, lndDir, ldkNodeDir, active } =
             this.state;
         const { nodes } = settings;
+        const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
             const newNodes: any = [];
@@ -801,7 +806,16 @@ export default class WalletConfiguration extends React.Component<
                 await deleteLdkNodeWallet(ldkNodeDir);
             }
 
+            // Clear this node's keychain material (Cashu seeds/keys namespaced
+            // by node dir, LNC pairing credentials) so it does not outlive the
+            // wallet.
+            await clearNodeKeychainData(deletedNode);
+
             if (newNodes.length === 0) {
+                // The CDK ecash database is shared across wallets, so only
+                // delete it once the last wallet is gone (otherwise it would
+                // wipe other wallets' proofs).
+                await clearCDKDatabase();
                 navigation.navigate('IntroSplash');
             } else {
                 navigation.popTo('Wallets');

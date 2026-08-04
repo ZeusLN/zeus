@@ -109,8 +109,10 @@ jest.mock('../utils/SwapUtils', () => ({
     SWAPS_LAST_USED_KEY: 'swaps-last-used-key'
 }));
 
+import hashjs from 'hash.js';
+
 import Storage from '../storage';
-import { clearAllData } from './DataClearUtils';
+import { clearAllData, clearNodeKeychainData } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
@@ -120,6 +122,14 @@ const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
 const mockedStopLdkNode = stopLdkNode as jest.Mock;
 const mockedStorageGetItem = Storage.getItem as jest.Mock;
 const mockedSleep = sleep as jest.Mock;
+const mockedStorageRemoveItem = Storage.removeItem as jest.Mock;
+
+const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
+
+// clearKey() clears each key via Storage.removeItem(rawKey); asserting on it is
+// the cleanest way to prove a namespaced key was targeted by a wipe.
+const removedKeys = () =>
+    mockedStorageRemoveItem.mock.calls.map((call) => call[0]);
 
 // Keep test output clean
 jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -305,5 +315,95 @@ describe('clearAllData node data directory retry', () => {
 
         expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
+    });
+});
+
+describe('clearAllData orphaned key material (KEY-006 regression)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+    });
+
+    it('clears the LDK-node-namespaced Cashu seed phrase (== wallet mnemonic)', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'ldk-node', ldkNodeDir: 'ldk-node-xyz' }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        // Previously only lndDir was iterated, so this key survived a full wipe
+        expect(removedKeys()).toContain('ldk-node-xyz-cashu-seed-phrase');
+    });
+
+    it('clears the default "ldk" node dir Cashu data', async () => {
+        mockedStorageGetItem.mockImplementation(settingsWithNodes([]).getItem);
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain('ldk-cashu-seed-phrase');
+    });
+
+    it('clears the hashed LNC pairing credentials for an LNC node', async () => {
+        const pairingPhrase = 'cherry truth mask employ box silver mass bunker';
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                {
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase
+                }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(removedKeys()).toContain(baseKey);
+        expect(removedKeys()).toContain(`${baseKey}:host`);
+    });
+});
+
+describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('clears Cashu data for an embedded-lnd node dir', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(removedKeys()).toContain('lnd-abc-cashu-seed-phrase');
+    });
+
+    it('clears Cashu data for an ldk-node dir', async () => {
+        await clearNodeKeychainData({
+            implementation: 'ldk-node',
+            ldkNodeDir: 'ldk-2'
+        });
+
+        expect(removedKeys()).toContain('ldk-2-cashu-seed-phrase');
+    });
+
+    it('clears hashed LNC credentials from the pairing phrase', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(removedKeys()).toContain(baseKey);
+        expect(removedKeys()).toContain(`${baseKey}:host`);
+    });
+
+    it('is a no-op for a null node', async () => {
+        await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
+        expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
     });
 });

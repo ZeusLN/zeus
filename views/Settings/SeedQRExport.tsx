@@ -112,24 +112,14 @@ export default class SeedQRExport extends React.PureComponent<
             const seedPhrase: string[] =
                 seedFromRoute || SettingsStore.seedPhrase;
 
-            // Cache is keyed by the active node's pubkey — only use it when
-            // exporting the active wallet's seed (no override from route).
+            // Never persist derived extended private keys. Always recompute
+            // them from the seed below, and proactively delete any cache
+            // written by older builds so the wallet's HD master keys do not
+            // linger in the keychain after wallet deletion / data wipe
+            // (KEY-006: '<pubkey>-extended-private-keys' had no deletion path).
             if (!seedFromRoute) {
                 const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-                const storageKey = `${pubkey}-extended-private-keys`;
-                const extendedKeys = await Storage.getItem(storageKey);
-                if (extendedKeys) {
-                    const extendedKeysJson = JSON.parse(extendedKeys);
-                    const { nodeBase58Segwit, nodeBase58NativeSegwit } =
-                        extendedKeysJson;
-
-                    this.setState({
-                        loading: false,
-                        nodeBase58Segwit,
-                        nodeBase58NativeSegwit
-                    });
-                    return;
-                }
+                await Storage.removeItem(`${pubkey}-extended-private-keys`);
             }
 
             const bits = seedPhrase
@@ -272,17 +262,6 @@ export default class SeedQRExport extends React.PureComponent<
                         : NATIVE_SEGWIT_MAINNET.config
                 )
                 .toBase58();
-
-            // Only cache for the active wallet — never overwrite the active
-            // node's cached keys with an inactive wallet's derived keys.
-            if (!seedFromRoute) {
-                const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-                const storageKey = `${pubkey}-extended-private-keys`;
-                await Storage.setItem(storageKey, {
-                    nodeBase58Segwit,
-                    nodeBase58NativeSegwit
-                });
-            }
 
             this.setState({
                 loading: false,

@@ -57,6 +57,14 @@ import {
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
+import hashjs from 'hash.js';
+
+// LNC credentials are persisted by backends/LNC/credentialStore.ts under
+// `lnc-rn:<sha256(pairingPhrase)>` and `...:host`. Reconstruct those keys from
+// each node's pairing phrase so a wipe removes them (clearing the literal
+// `lnc-rn` prefix alone never matches the hashed keys).
+const LNC_STORAGE_KEY = 'lnc-rn';
+const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
 
 const KEY_PREFIX = 'zeus:';
 
@@ -167,7 +175,7 @@ async function clearKey(key: string) {
  * Deletes the CDK SQLite database file
  * CDK stores all wallet state (mints, proofs, transactions) in this file
  */
-async function clearCDKDatabase(): Promise<void> {
+export async function clearCDKDatabase(): Promise<void> {
     try {
         const dirs = ReactNativeBlobUtil.fs.dirs;
         let dbPath: string;
@@ -277,6 +285,39 @@ async function deleteNodeDataDirectory(node: any): Promise<boolean> {
 }
 
 /**
+ * Clears the LNC pairing credentials for a given pairing phrase.
+ * Keys are namespaced by sha256(pairingPhrase), so they can only be removed
+ * when the phrase is known (it lives in the node config).
+ */
+async function clearLncCredentials(pairingPhrase: string) {
+    const baseKey = `${LNC_STORAGE_KEY}:${lncHash(pairingPhrase)}`;
+    await clearKey(baseKey);
+    await clearKey(`${baseKey}:host`);
+}
+
+/**
+ * Clears all node-namespaced keychain material for a single node config:
+ * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
+ *   ldkNodeDir for LDK) - CashuStore.getNodeDir
+ * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
+ *
+ * Exported so both clearAllData() and single-wallet deletion
+ * (WalletConfiguration.deleteNodeConfig) clear the same set of keys.
+ */
+export async function clearNodeKeychainData(node: any): Promise<void> {
+    if (!node) return;
+    if (node.lndDir) {
+        await clearCashuDataForNode(node.lndDir);
+    }
+    if (node.ldkNodeDir) {
+        await clearCashuDataForNode(node.ldkNodeDir);
+    }
+    if (node.pairingPhrase) {
+        await clearLncCredentials(node.pairingPhrase);
+    }
+}
+
+/**
  * Stops and deletes the on-disk node data directories (channel state, wallet
  * db) for every configured node. clearKey/clearCashuDataForNode only touch
  * keychain and Cashu storage; the LND/LDK node directories must be unlinked
@@ -334,21 +375,16 @@ export async function clearAllData(): Promise<void> {
         console.warn('[ClearData] Could not read settings:', e);
     }
 
-    // 2. Clear Cashu data for all known nodes
+    // 2. Clear node-namespaced keychain material (Cashu keys for both LND and
+    // LDK node dirs, plus LNC pairing credentials) for every known node.
     if (settings?.nodes && Array.isArray(settings.nodes)) {
         for (const node of settings.nodes) {
-            if (node.lndDir) {
-                if (__DEV__) {
-                    console.log(
-                        `[ClearData] Clearing Cashu data for node: ${node.lndDir}`
-                    );
-                }
-                await clearCashuDataForNode(node.lndDir);
-            }
+            await clearNodeKeychainData(node);
         }
     }
-    // Also try common lndDir values
+    // Also try common node-dir defaults (getNodeDir falls back to 'lnd' / 'ldk')
     await clearCashuDataForNode('lnd');
+    await clearCashuDataForNode('ldk');
     await clearCashuDataForNode('');
 
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
