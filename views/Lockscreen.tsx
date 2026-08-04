@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RNRestart from 'react-native-restart';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -23,6 +24,7 @@ import ShowHideToggle from '../components/ShowHideToggle';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
+import { clearAllData } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -346,7 +348,7 @@ export default class Lockscreen extends React.Component<
                 (duressPin && pinAttempt === duressPin))
         ) {
             SettingsStore.setLoginStatus(true);
-            this.deleteNodes();
+            await this.deleteNodes();
         } else {
             // need to fetch updated settings to get incremented value of
             // authenticationAttempts, in case there are multiple failed attempts in a row
@@ -362,7 +364,7 @@ export default class Lockscreen extends React.Component<
             if (authenticationAttempts >= maxAuthenticationAttempts) {
                 SettingsStore.setLoginStatus(true);
                 // wipe node configs, passwords, and pins
-                this.authenticationFailure();
+                await this.authenticationFailure();
             } else {
                 await updateSettings({ authenticationAttempts }).then(() => {
                     this.setState({
@@ -436,34 +438,42 @@ export default class Lockscreen extends React.Component<
         });
     };
 
-    deleteNodes = () => {
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-
-        updateSettings({
-            nodes: undefined,
-            selectedNode: undefined,
-            authenticationAttempts: 0
-        }).then(() => {
-            this.proceed('IntroSplash');
-        });
+    deleteNodes = async () => {
+        // Fully wipe wallet data (node data dirs, Cashu seeds + CDK db, swap
+        // rescue key, keychain) so the duress action leaves no recoverable key
+        // material behind - not just the settings `nodes` pointer. Restart
+        // instead of writing settings: updateSettings() would merge into the
+        // pre-wipe in-memory blob and re-persist it (pins, passphrases and
+        // all), and a restart is also the only way to drop node credentials
+        // still held in memory by the stores.
+        try {
+            await clearAllData();
+        } catch (e) {
+            // never surface an error here: it would disclose the duress
+            // mechanism and there is no meaningful recovery mid-wipe
+            console.warn('[Lockscreen] wipe failed part-way', e);
+        } finally {
+            // the restart must run even after a partial wipe: the settings
+            // blob is cleared early, so a restart still lands on a fresh
+            // install state rather than stranding the user on a dead
+            // lockscreen
+            RNRestart.Restart();
+        }
     };
 
-    authenticationFailure = () => {
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-
-        updateSettings({
-            nodes: undefined,
-            selectedNode: undefined,
-            passphrase: '',
-            duressPassphrase: '',
-            pin: '',
-            duressPin: '',
-            authenticationAttempts: 0
-        }).then(() => {
-            this.proceed('IntroSplash');
-        });
+    authenticationFailure = async () => {
+        // Fully wipe wallet data on repeated failed logins. clearAllData()
+        // removes the node data dirs, Cashu seeds + CDK db, swap rescue key
+        // and the settings blob itself (including pins and passphrases).
+        // Restart instead of writing settings back - see deleteNodes above.
+        try {
+            await clearAllData();
+        } catch (e) {
+            // see deleteNodes: log only, never surface, always restart
+            console.warn('[Lockscreen] wipe failed part-way', e);
+        } finally {
+            RNRestart.Restart();
+        }
     };
 
     resetAuthenticationAttempts = () => {
