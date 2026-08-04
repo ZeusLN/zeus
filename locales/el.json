@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "Το LSP θα λάβει το ακόλουθο ποσό ως τέλος εγκατάστασης:",
     "views.Receive.lspExplainerRoutingUnified": "Το LSP θα λάβει το ακόλουθο ποσό ως τέλος εγκατάστασης, εάν πληρωθεί μέσω lightning:",
     "views.Receive.lspExplainerRouting": "Το LSP θα λάβει το ακόλουθο ποσό ως τέλος εγκατάστασης:",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "'Τυλιγμένα' τιμολόγια μηδενικού τέλους",
     "views.Receive.goToLspSettings": "Μετάβαση στις ρυθμίσεις LSP",
     "views.Receive.lspSwitchExplainer1": "Το LSP θα σας παρέχει κανάλια 0-επιβεβαιώσεων που θα σας επιτρέπουν να στέλνετε και να λαμβάνετε πληρωμές στο δίκτυο Lightning.",
