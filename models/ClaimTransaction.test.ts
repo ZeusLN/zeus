@@ -1,4 +1,4 @@
-import ecc from '@bitcoinerlab/secp256k1';
+import ecc from '../zeus_modules/noble_ecc';
 import { ECPairFactory } from 'ecpair';
 
 import {
