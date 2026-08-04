@@ -1900,12 +1900,30 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
-            this.messageSignStore.signMessage(request.message);
-            const signature = this.messageSignStore.signature;
+            // Must await: signMessage resolves to this request's
+            // signature. Reading messageSignStore.signature synchronously
+            // returns the PREVIOUS request's signature (or none), pairing
+            // the wrong signature with this message.
+            // Force lightning mode: the shared signingMode observable may
+            // be left on 'onchain' by the Sign/Verify screen, which would
+            // sign with a wallet address instead of the node identity.
+            const signature = await this.messageSignStore.signMessage(
+                request.message,
+                'lightning'
+            );
+            if (!signature) {
+                return NostrConnectUtils.createNip47Error(
+                    this.messageSignStore.errorMessage ||
+                        localeString(
+                            'views.Settings.SignMessage.signOperationFailed'
+                        ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                );
+            }
             return {
                 result: {
                     message: request.message,
-                    signature: signature || ''
+                    signature
                 },
                 error: undefined
             };
