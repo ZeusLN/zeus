@@ -54,6 +54,15 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY
 } from '../utils/SwapUtils';
+import {
+    NWC_CONNECTIONS_KEY,
+    NWC_CLIENT_KEYS,
+    NWC_SERVICE_KEYS,
+    NWC_CASHU_ENABLED,
+    NWC_LUD16_ENABLED,
+    NWC_PERSISTENT_SERVICE_ENABLED
+} from '../stores/NostrWalletConnectStore';
+import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
@@ -93,6 +102,20 @@ const STORAGE_KEYS = [
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
+    // NWC service and client key material (nostr secret keys) plus flags
+    NWC_CONNECTIONS_KEY,
+    NWC_CLIENT_KEYS,
+    NWC_SERVICE_KEYS,
+    NWC_CASHU_ENABLED,
+    NWC_LUD16_ENABLED,
+    NWC_PERSISTENT_SERVICE_ENABLED,
+    // Rating prompt state
+    PAYMENT_COUNT_KEY,
+    RATING_DISMISSED_KEY,
+    // LnurlPayStore writes 'lnurlpay:<paymentHash>' entries with no index to
+    // enumerate them; at least clear the bare key written when a hash is
+    // undefined. Hash-keyed entries are a documented residual.
+    'lnurlpay:',
     // Legacy keys
     LEGACY_CONTACTS_KEY,
     LEGACY_NOTES_KEY,

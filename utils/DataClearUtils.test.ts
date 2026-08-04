@@ -110,6 +110,18 @@ jest.mock('../utils/SwapUtils', () => ({
     SWAPS_RESCUE_KEY: 'swaps-rescue-key',
     SWAPS_LAST_USED_KEY: 'swaps-last-used-key'
 }));
+jest.mock('../stores/NostrWalletConnectStore', () => ({
+    NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',
+    NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
+    NWC_SERVICE_KEYS: 'zeus-nwc-service-keys',
+    NWC_CASHU_ENABLED: 'zeus-nwc-cashu-enabled',
+    NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
+    NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
+}));
+jest.mock('../utils/RatingUtils', () => ({
+    PAYMENT_COUNT_KEY: 'successfulPaymentCount',
+    RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
+}));
 
 import hashjs from 'hash.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -446,6 +458,19 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         mockedStorageGetItem.mockResolvedValue(null);
         mockedDeleteLndWallet.mockResolvedValue(true);
         mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+    });
+
+    // Found on-device after a full wipe: NWC service keys (nostr secret key
+    // material) survived because NostrWalletConnectStore's keys were never in
+    // the wipe list.
+    it('clears NWC key material and rating state', async () => {
+        await clearAllData();
+
+        expect(removedKeys()).toContain('zeus-nwc-service-keys');
+        expect(removedKeys()).toContain('zeus-nwc-client-keys');
+        expect(removedKeys()).toContain('zeus-nwc-connections');
+        expect(removedKeys()).toContain('successfulPaymentCount');
+        expect(removedKeys()).toContain('lnurlpay:');
     });
 
     // Observed on-device: an async updateSettings landed ~20ms after the wipe
