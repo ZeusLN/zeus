@@ -2135,6 +2135,8 @@
     "views.PSBT.derivation": "Derivation",
     "views.PSBT.noData": "No data",
     "views.PSBT.couldNotDecode": "Could not decode PSBT",
+    "views.PSBT.script": "Script",
+    "views.PSBT.feeUnknown": "Unknown (PSBT is missing input UTXO data)",
     "views.TxHex.TxInfo": "Transaction Info",
     "views.TxHex.channelWarning": "No channel loaded in the channel funding flow engine. DO NOT PUBLISH if this transaction is for a channel open.",
     "views.TxHex.broadcast": "Broadcast TX",
