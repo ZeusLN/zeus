@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-// @ts-ignore:next-line
-import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { schnorr } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
+import { schnorr } from '@noble/curves/secp256k1.js';
 import hashjs from 'hash.js';
 
 import Button from '../../components/Button';
@@ -70,8 +69,9 @@ export default class NostrKey extends React.Component<
 
         let nostrPublicKey, nostrNsec, nostrNpub;
         if (nostrPrivateKey) {
-            nostrPublicKey = getPublicKey(nostrPrivateKey);
-            nostrNsec = nip19.nsecEncode(nostrPrivateKey);
+            const nostrSecretKey = hexToBytes(nostrPrivateKey);
+            nostrPublicKey = getPublicKey(nostrSecretKey);
+            nostrNsec = nip19.nsecEncode(nostrSecretKey);
             nostrNpub = nip19.npubEncode(nostrPublicKey);
         }
 
@@ -88,9 +88,10 @@ export default class NostrKey extends React.Component<
     }
 
     generateNostrKeys = () => {
-        const nostrPrivateKey = generatePrivateKey();
-        const nostrPublicKey = getPublicKey(nostrPrivateKey);
-        const nostrNsec = nip19.nsecEncode(nostrPrivateKey);
+        const nostrSecretKey = generateSecretKey();
+        const nostrPrivateKey = bytesToHex(nostrSecretKey);
+        const nostrPublicKey = getPublicKey(nostrSecretKey);
+        const nostrNsec = nip19.nsecEncode(nostrSecretKey);
         const nostrNpub = nip19.npubEncode(nostrPublicKey);
 
         this.setState({
@@ -228,18 +229,18 @@ export default class NostrKey extends React.Component<
                                                     if (text.includes('nsec')) {
                                                         let { type, data } =
                                                             nip19.decode(text);
-                                                        if (
-                                                            type === 'nsec' &&
-                                                            typeof data ===
-                                                                'string'
-                                                        ) {
+                                                        if (type === 'nsec') {
                                                             nostrPrivateKey =
-                                                                data;
+                                                                bytesToHex(
+                                                                    data as Uint8Array
+                                                                );
                                                         }
                                                     }
                                                     nostrPublicKey =
                                                         getPublicKey(
-                                                            nostrPrivateKey
+                                                            hexToBytes(
+                                                                nostrPrivateKey
+                                                            )
                                                         );
                                                     nostrNpub =
                                                         nip19.npubEncode(
@@ -343,15 +344,19 @@ export default class NostrKey extends React.Component<
                                                         .nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        hashjs
-                                                            .sha256()
-                                                            .update(
-                                                                JSON.stringify(
-                                                                    relays
+                                                        hexToBytes(
+                                                            hashjs
+                                                                .sha256()
+                                                                .update(
+                                                                    JSON.stringify(
+                                                                        relays
+                                                                    )
                                                                 )
-                                                            )
-                                                            .digest('hex'),
-                                                        nostrPrivateKey
+                                                                .digest('hex')
+                                                        ),
+                                                        hexToBytes(
+                                                            nostrPrivateKey
+                                                        )
                                                     )
                                                 );
                                                 try {

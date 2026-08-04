@@ -18,7 +18,8 @@ import {
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk';
 
-import { getPublicKey, generatePrivateKey } from 'nostr-tools';
+import { getPublicKey, generateSecretKey } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils';
 
 import {
     Platform,
@@ -2806,10 +2807,10 @@ export default class NostrWalletConnectStore {
     // STORAGE OPERATIONS
 
     private generateWalletServiceKeys(): WalletServiceKeys {
-        const walletServiceSecretKey = generatePrivateKey();
+        const walletServiceSecretKey = generateSecretKey();
         const walletServicePubkey = getPublicKey(walletServiceSecretKey);
         return {
-            privateKey: walletServiceSecretKey,
+            privateKey: bytesToHex(walletServiceSecretKey),
             publicKey: walletServicePubkey
         };
     }

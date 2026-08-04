@@ -1,4 +1,5 @@
 import { nip19 } from 'nostr-tools';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 /**
  * Validates an npub string format using regex.
@@ -119,7 +120,7 @@ class NostrUtils {
             if (decoded.type !== 'nsec') {
                 return null;
             }
-            return decoded.data as string;
+            return bytesToHex(decoded.data as Uint8Array);
         } catch {
             return null;
         }
@@ -142,7 +143,7 @@ class NostrUtils {
         }
 
         try {
-            return nip19.nsecEncode(trimmed);
+            return nip19.nsecEncode(hexToBytes(trimmed));
         } catch {
             return null;
         }
