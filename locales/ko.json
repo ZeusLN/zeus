@@ -882,6 +882,7 @@
     "views.Receive.lspExplainer": "LSP가 다음 수량만큼을 초기 설정 비용으로 가져갑니다:",
     "views.Receive.lspExplainerRoutingUnified": "라이트닝으로 결제 받을 경우, LSP가 다음 수량만큼을 수수료로 가져갑니다:",
     "views.Receive.lspExplainerRouting": "LSP가 다음 수량만큼을 수수료로 가져갑니다:",
+    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
     "views.Receive.lspExplainerZeroFeeWrapper": "수수료 없는 래핑 인보이스",
     "views.Receive.goToLspSettings": "LSP 설정 페이지로 이동",
     "views.Receive.lspSwitchExplainer1": "LSP가 라이트닝 네트워크에서 결제를 받거나 보낼 수 있게 해 주는 미확정(0-conf) 채널들을 제공해 줄 것입니다.",
