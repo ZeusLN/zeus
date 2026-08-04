@@ -287,49 +287,74 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
 }
 
 /**
+ * Suffixes of every node-dir-namespaced Cashu storage key written by
+ * CashuStore (`<nodeDir>-cashu-<suffix>`). Kept complete by the drift guard
+ * in DataClearUtils.test.ts, which extracts the `-cashu-` literals from
+ * stores/CashuStore.ts and fails when a new key is written but not cleared.
+ */
+export const CASHU_KEY_SUFFIXES = [
+    'mintUrls',
+    'selectedMintUrl',
+    'selectedMintUrls',
+    'multiMintSelectedUrls',
+    'totalBalanceSats',
+    'invoices',
+    'payments',
+    'received-tokens',
+    'sent-tokens',
+    'offline-pending-tokens',
+    'offline-spent-tokens',
+    'seed-version',
+    'seed-phrase',
+    'seed',
+    'original-seed-version',
+    'v1-restore-done',
+    'dismissedUpgradeThreshold',
+    'randomizeMintSelection',
+    'nostrMintBackupTimestamp'
+];
+
+/**
  * Clears Cashu data for a specific node directory
  */
 async function clearCashuDataForNode(lndDir: string) {
-    // Clear app-level Cashu storage keys
-    const cashuKeys = [
-        `${lndDir}-cashu-mintUrls`,
-        `${lndDir}-cashu-selectedMintUrl`,
-        `${lndDir}-cashu-totalBalanceSats`,
-        `${lndDir}-cashu-invoices`,
-        `${lndDir}-cashu-payments`,
-        `${lndDir}-cashu-received-tokens`,
-        `${lndDir}-cashu-sent-tokens`,
-        `${lndDir}-cashu-seed-version`,
-        `${lndDir}-cashu-seed-phrase`,
-        `${lndDir}-cashu-seed`
-    ];
-
-    for (const key of cashuKeys) {
-        await clearKey(key);
-    }
-
-    // Try to clear per-mint wallet keys (legacy storage)
-    // Note: After CDK migration, mintUrls are stored in CDK database, not local storage
-    // These keys may still exist from before migration
+    // Read the legacy pre-CDK mint list BEFORE clearing: the loop below
+    // removes the mintUrls key this read depends on
+    let legacyMintUrls: string[] = [];
     try {
         const mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
         if (mintUrlsJson) {
-            const mintUrls = JSON.parse(mintUrlsJson);
-            if (Array.isArray(mintUrls)) {
-                for (const mintUrl of mintUrls) {
-                    // walletId format: ${lndDir}==${mintUrl}
-                    const walletId = `${lndDir}==${mintUrl}`;
-                    const walletKeys = [
-                        `${walletId}-mintInfo`,
-                        `${walletId}-counter`,
-                        `${walletId}-proofs`,
-                        `${walletId}-balance`,
-                        `${walletId}-pubkey`
-                    ];
-                    for (const walletKey of walletKeys) {
-                        await clearKey(walletKey);
-                    }
-                }
+            const parsed = JSON.parse(mintUrlsJson);
+            if (Array.isArray(parsed)) {
+                legacyMintUrls = parsed;
+            }
+        }
+    } catch (e) {
+        console.warn(
+            `[ClearData] Error reading Cashu mint list for ${lndDir}:`,
+            e
+        );
+    }
+
+    // Clear app-level Cashu storage keys
+    for (const suffix of CASHU_KEY_SUFFIXES) {
+        await clearKey(`${lndDir}-cashu-${suffix}`);
+    }
+
+    // Clear per-mint wallet keys (legacy pre-CDK storage)
+    try {
+        for (const mintUrl of legacyMintUrls) {
+            // walletId format: ${lndDir}==${mintUrl}
+            const walletId = `${lndDir}==${mintUrl}`;
+            const walletKeys = [
+                `${walletId}-mintInfo`,
+                `${walletId}-counter`,
+                `${walletId}-proofs`,
+                `${walletId}-balance`,
+                `${walletId}-pubkey`
+            ];
+            for (const walletKey of walletKeys) {
+                await clearKey(walletKey);
             }
         }
     } catch (e) {

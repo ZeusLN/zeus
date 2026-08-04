@@ -113,13 +113,17 @@ jest.mock('../utils/SwapUtils', () => ({
 import hashjs from 'hash.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import fs from 'fs';
+import path from 'path';
+
 import Storage from '../storage';
 import {
     clearAllData,
     clearNodeKeychainData,
     clearCDKDatabase,
     clearCDKDatabaseForNode,
-    deleteNodeDataDirectoryWithRetry
+    deleteNodeDataDirectoryWithRetry,
+    CASHU_KEY_SUFFIXES
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
@@ -432,6 +436,61 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+describe('Cashu key clearing completeness', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    // Found on-device: '<nodeDir>-cashu-original-seed-version' survived wallet
+    // deletion because CashuStore had grown keys the clear list never learned
+    // about. Scan the store's source so the next new key fails this test
+    // instead of surviving a wipe.
+    it('CASHU_KEY_SUFFIXES covers every -cashu- key CashuStore writes', () => {
+        const source = fs.readFileSync(
+            path.join(__dirname, '../stores/CashuStore.ts'),
+            'utf8'
+        );
+        const found = Array.from(
+            source.matchAll(/-cashu-([A-Za-z0-9-]+)/g),
+            (m) => m[1]
+        );
+        const missing = [...new Set(found)].filter(
+            (suffix) => !CASHU_KEY_SUFFIXES.includes(suffix)
+        );
+        expect(missing).toEqual([]);
+    });
+
+    it('clears the keys the on-device test found surviving', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(removedKeys()).toContain('lnd-abc-cashu-original-seed-version');
+        expect(removedKeys()).toContain('lnd-abc-cashu-offline-pending-tokens');
+        expect(removedKeys()).toContain('lnd-abc-cashu-offline-spent-tokens');
+    });
+
+    it('clears legacy per-mint wallet keys using the mint list read before clearing', async () => {
+        mockedStorageGetItem.mockImplementation((key: string) =>
+            key === 'lnd-abc-cashu-mintUrls'
+                ? Promise.resolve(JSON.stringify(['https://mint.example']))
+                : Promise.resolve(null)
+        );
+
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(removedKeys()).toContain('lnd-abc==https://mint.example-proofs');
+        expect(removedKeys()).toContain(
+            'lnd-abc==https://mint.example-counter'
+        );
     });
 });
 
