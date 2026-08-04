@@ -62,14 +62,14 @@ export function PeerItem({
             value: peer.num_channels
         });
     }
-    if (peer.bytesSent) {
+    if (peer.bytesSent != null && peer.bytesSent !== '') {
         stats.push({
             key: 'bytesSent',
             label: localeString('views.ChannelsPane.bytesSent'),
             value: `${peer.bytesSent} B`
         });
     }
-    if (peer.bytesRecv) {
+    if (peer.bytesRecv != null && peer.bytesRecv !== '') {
         stats.push({
             key: 'bytesRecv',
             label: localeString('views.ChannelsPane.bytesRecv'),
