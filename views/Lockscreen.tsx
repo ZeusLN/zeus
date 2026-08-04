@@ -23,6 +23,7 @@ import ShowHideToggle from '../components/ShowHideToggle';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
+import { clearAllData } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -436,9 +437,14 @@ export default class Lockscreen extends React.Component<
         });
     };
 
-    deleteNodes = () => {
+    deleteNodes = async () => {
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
+
+        // Fully wipe wallet data (node data dirs, Cashu seeds + CDK db, swap
+        // rescue key, keychain) so the duress action leaves no recoverable key
+        // material behind - not just the settings `nodes` pointer.
+        await clearAllData();
 
         updateSettings({
             nodes: undefined,
@@ -449,9 +455,14 @@ export default class Lockscreen extends React.Component<
         });
     };
 
-    authenticationFailure = () => {
+    authenticationFailure = async () => {
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
+
+        // Fully wipe wallet data on repeated failed logins, then clear the
+        // local auth secrets. clearAllData() removes the node data dirs, Cashu
+        // seeds + CDK db, and swap rescue key the settings wipe leaves behind.
+        await clearAllData();
 
         updateSettings({
             nodes: undefined,

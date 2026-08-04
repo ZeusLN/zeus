@@ -54,6 +54,8 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY
 } from '../utils/SwapUtils';
+import { deleteLndWallet } from './LndMobileUtils';
+import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 
 const KEY_PREFIX = 'zeus:';
 
@@ -248,6 +250,31 @@ async function clearCashuDataForNode(lndDir: string) {
 }
 
 /**
+ * Stops and deletes the on-disk node data directories (channel state, wallet
+ * db) for every configured node. clearKey/clearCashuDataForNode only touch
+ * keychain and Cashu storage; the LND/LDK node directories must be unlinked
+ * separately or seed-bearing wallet state survives a "wipe".
+ */
+async function clearNodeDataDirectories(settings: any): Promise<void> {
+    if (!settings?.nodes || !Array.isArray(settings.nodes)) return;
+
+    for (const node of settings.nodes) {
+        try {
+            if (node.implementation === 'embedded-lnd') {
+                // deleteLndWallet stops LND before unlinking the directory
+                await deleteLndWallet(node.lndDir || 'lnd');
+            } else if (node.implementation === 'ldk-node' && node.ldkNodeDir) {
+                // deleteLdkNodeWallet does not stop the node itself
+                await stopLdkNode();
+                await deleteLdkNodeWallet(node.ldkNodeDir);
+            }
+        } catch (e) {
+            console.warn('[ClearData] Error clearing node data directory:', e);
+        }
+    }
+}
+
+/**
  * Clears all app data including:
  * - Storage (new zeus: namespace)
  * - Old keychain entries (local and cloud)
@@ -255,6 +282,7 @@ async function clearCashuDataForNode(lndDir: string) {
  * - EncryptedStorage
  * - Dynamic keys (notes, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
+ * - LND/LDK on-disk node data directories (channel + wallet state)
  *
  * After clearing, the app should be restarted.
  */
@@ -291,6 +319,11 @@ export async function clearAllData(): Promise<void> {
 
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
     await clearCDKDatabase();
+
+    // 2c. Stop and delete the on-disk LND/LDK node data directories. These
+    // hold channel + wallet state and are not covered by the keychain/Cashu
+    // clears above, so they must be unlinked explicitly.
+    await clearNodeDataDirectories(settings);
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
