@@ -4,11 +4,7 @@ import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
-import {
-    validateMnemonic,
-    mnemonicToSeedSync,
-    generateMnemonic
-} from '@scure/bip39';
+import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -17,7 +13,8 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
-    SWAPS_LAST_USED_KEY
+    SWAPS_LAST_USED_KEY,
+    isValidRescueKey
 } from '../utils/SwapUtils';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -818,7 +815,7 @@ export default class SwapStore {
     }) => {
         const mnemonic = seedArray.join(' ');
 
-        if (!validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
+        if (!isValidRescueKey(mnemonic)) {
             return {
                 success: false,
                 error: localeString('views.Swaps.rescueKey.invalid')

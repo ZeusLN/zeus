@@ -5,7 +5,8 @@ import {
     calculateReceiveAmount,
     calculateServiceFeeOnSend,
     calculateSendAmount,
-    calculateLimit
+    calculateLimit,
+    isValidRescueKey
 } from './SwapUtils';
 
 describe('SwapUtils', () => {
@@ -119,6 +120,67 @@ describe('SwapUtils', () => {
         it('should return limit as-is when in reverse mode', () => {
             const result = calculateLimit(940, 1, 50, true);
             expect(result).toBe(940);
+        });
+    });
+
+    describe('isValidRescueKey', () => {
+        // BIP39 reference vector (128-bit entropy of all zeroes)
+        const validMnemonic =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+        it('should accept a valid 12-word mnemonic', () => {
+            expect(isValidRescueKey(validMnemonic)).toBe(true);
+            expect(
+                isValidRescueKey(
+                    'legal winner thank year wave sausage worth useful legal winner thank yellow'
+                )
+            ).toBe(true);
+        });
+
+        it('should tolerate surrounding and irregular whitespace', () => {
+            expect(
+                isValidRescueKey(`  ${validMnemonic.replace(/ /g, '   ')}  `)
+            ).toBe(true);
+        });
+
+        it('should reject 12 wordlist words with a bad checksum', () => {
+            // all-abandon fails the checksum (valid vector ends in 'about')
+            expect(isValidRescueKey('abandon '.repeat(12).trim())).toBe(false);
+        });
+
+        it('should reject a single-word typo to another valid word', () => {
+            expect(
+                isValidRescueKey(validMnemonic.replace(/about$/, 'zoo'))
+            ).toBe(false);
+        });
+
+        it('should reject a word-order transposition', () => {
+            expect(
+                isValidRescueKey(
+                    'about abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon'
+                )
+            ).toBe(false);
+        });
+
+        it('should reject words outside the BIP39 wordlist', () => {
+            expect(
+                isValidRescueKey(validMnemonic.replace(/about$/, 'notaword'))
+            ).toBe(false);
+        });
+
+        it('should reject wrong word counts, including valid 24-word seeds', () => {
+            expect(isValidRescueKey('')).toBe(false);
+            expect(
+                isValidRescueKey(
+                    validMnemonic.split(' ').slice(0, 11).join(' ')
+                )
+            ).toBe(false);
+            // valid BIP39 mnemonic, but rescue keys must be exactly 12 words
+            expect(
+                isValidRescueKey(
+                    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art'
+                )
+            ).toBe(false);
         });
     });
 });

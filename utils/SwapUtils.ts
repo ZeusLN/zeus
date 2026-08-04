@@ -1,4 +1,7 @@
 import BigNumber from 'bignumber.js';
+import { validateMnemonic } from '@scure/bip39';
+
+import { BIP39_WORD_LIST } from './Bip39Utils';
 
 export const bigCeil = (big: BigNumber): BigNumber => {
     return big.integerValue(BigNumber.ROUND_CEIL);
@@ -12,6 +15,17 @@ export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
+
+export const RESCUE_KEY_WORD_COUNT = 12;
+
+// Swap rescue keys are 12-word BIP39 mnemonics; the checksum must be
+// enforced before persisting, since refund keys derived from a corrupted
+// seed cannot be reproduced from the user's real backup.
+export const isValidRescueKey = (mnemonic: string): boolean => {
+    const words = mnemonic?.trim().split(/\s+/) || [];
+    if (words.length !== RESCUE_KEY_WORD_COUNT) return false;
+    return validateMnemonic(words.join(' '), BIP39_WORD_LIST);
+};
 
 export const calculateReceiveAmount = (
     sendAmount: BigNumber,

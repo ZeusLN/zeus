@@ -81,7 +81,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
-import { SWAPS_RESCUE_KEY } from '../../utils/SwapUtils';
+import { SWAPS_RESCUE_KEY, isValidRescueKey } from '../../utils/SwapUtils';
 
 import Storage from '../../storage';
 
@@ -1381,7 +1381,11 @@ export default class SeedRecovery extends React.PureComponent<
                                                         importedData.mnemonic
                                                             .trim()
                                                             .split(/\s+/);
-                                                    if (words.length === 12) {
+                                                    if (
+                                                        isValidRescueKey(
+                                                            words.join(' ')
+                                                        )
+                                                    ) {
                                                         this.setState({
                                                             seedArray: words
                                                         });
@@ -1474,21 +1478,22 @@ export default class SeedRecovery extends React.PureComponent<
                                                 }
                                             );
                                         } else if (restoreRescueKey) {
-                                            console.log(
-                                                'Verifying rescue key...'
-                                            );
-
                                             const mnemonic = seedArray
                                                 .join(' ')
                                                 .trim();
 
+                                            if (!isValidRescueKey(mnemonic)) {
+                                                this.setState({
+                                                    errorMsg: localeString(
+                                                        'views.Settings.SeedRecovery.invalidChecksum'
+                                                    )
+                                                });
+                                                return;
+                                            }
+
                                             await Storage.setItem(
                                                 SWAPS_RESCUE_KEY,
                                                 mnemonic
-                                            );
-
-                                            console.log(
-                                                'Rescue key verified and saved!'
                                             );
 
                                             navigation.goBack();
