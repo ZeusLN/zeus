@@ -497,6 +497,14 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
 export async function clearAllData(): Promise<void> {
     console.log('[ClearData] Starting to clear all data...');
 
+    // 0. Block all Storage writes for the rest of this JS context. The app
+    // keeps running until the post-wipe restart lands, and an async writer
+    // (biometry check, push token, connection events) calling
+    // updateSettings would re-persist the full in-memory settings blob,
+    // resurrecting every wallet config after the wipe. Observed on-device:
+    // the settings write landed ~20ms after the wipe finished.
+    Storage.blockWrites();
+
     // 1. First, try to get settings to find node-specific data
     let settings: any = null;
     try {

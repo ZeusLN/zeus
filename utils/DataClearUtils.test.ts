@@ -27,7 +27,8 @@ jest.mock('react-native-blob-util', () => ({
 jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(true),
-    setItem: jest.fn().mockResolvedValue(true)
+    setItem: jest.fn().mockResolvedValue(true),
+    blockWrites: jest.fn()
 }));
 
 // The functions under regression - assert clearAllData delegates to them.
@@ -436,6 +437,29 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+describe('clearAllData write latch (settings resurrection regression)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+    });
+
+    // Observed on-device: an async updateSettings landed ~20ms after the wipe
+    // finished and re-persisted the full in-memory settings blob (every node
+    // config) because getSettings falls back to memory on a storage miss.
+    it('blocks Storage writes before clearing anything', async () => {
+        const mockedBlockWrites = (Storage as any).blockWrites as jest.Mock;
+
+        await clearAllData();
+
+        expect(mockedBlockWrites).toHaveBeenCalled();
+        expect(mockedBlockWrites.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedStorageRemoveItem.mock.invocationCallOrder[0]
+        );
     });
 });
 
