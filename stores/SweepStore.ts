@@ -13,6 +13,8 @@ import { localeString } from '../utils/LocaleUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ecc from '../zeus_modules/noble_ecc';
 
+bitcoin.initEccLib(ecc);
+
 export default class SweepStore {
     @observable sweepErrorMsg: string | null = null;
     @observable sweepError: boolean = false;
@@ -22,7 +24,8 @@ export default class SweepStore {
     @observable txId: string | null = null;
     @observable fee: number = 0;
     @observable feeRate: string = '';
-    @observable addressType: AddressType = 'p2wpkh';
+    @observable sweptAddressTypes: AddressType[] = [];
+    @observable unsweptTaprootSats: number = 0;
     @observable utxos: any[] = [];
     @observable psbt: bitcoin.Psbt;
     @observable privateKey: string;
@@ -57,10 +60,10 @@ export default class SweepStore {
         return utxos;
     }
 
-    async detectAddressWithUtxos(
+    async detectAddressesWithUtxos(
         publicKey: Buffer,
         network: bitcoin.Network
-    ): Promise<{ address: string; type: AddressType; utxos: any[] }> {
+    ): Promise<{ address: string; type: AddressType; utxos: any[] }[]> {
         const addresses: { type: AddressType; address: string }[] = [];
 
         addresses.push({
@@ -93,19 +96,178 @@ export default class SweepStore {
             }).address!
         });
 
+        // A key may have received funds on multiple script types over its
+        // lifetime, so collect them all to avoid leaving funds behind
+        const detected: { address: string; type: AddressType; utxos: any[] }[] =
+            [];
         for (const { type, address } of addresses) {
             const utxos = await this.getUtxosFromAddress(address);
             if (utxos && utxos.length > 0) {
-                return { type, address, utxos };
+                detected.push({ type, address, utxos });
             }
         }
 
-        throw new Error(localeString('views.Wif.noUtxosFound'));
+        if (detected.length === 0) {
+            throw new Error(localeString('views.Wif.noUtxosFound'));
+        }
+
+        return detected;
+    }
+
+    async addInputsForType(
+        psbt: bitcoin.Psbt,
+        type: AddressType,
+        utxos: any[],
+        publicKey: Buffer
+    ): Promise<number> {
+        let totalSats = 0;
+
+        if (type === 'p2pkh') {
+            for (const utxo of utxos) {
+                const { txid, vout } = utxo;
+                const res = await fetch(
+                    `${UrlUtils.getMempoolApiUrl(
+                        this.nodeInfoStore.nodeInfo
+                    )}/tx/${txid}/hex`
+                );
+
+                if (!res.ok)
+                    throw new Error(
+                        localeString('views.Wif.failedToFetchTxHex', {
+                            txid
+                        })
+                    );
+
+                const rawTxHex = await res.text();
+                const fundingTx = bitcoin.Transaction.fromHex(rawTxHex);
+
+                // A legacy signature does not commit to the input value,
+                // so take it from the funding transaction, not from the
+                // explorer's listing, once that transaction is known to
+                // be the one the UTXO belongs to
+                if (fundingTx.getId() !== txid)
+                    throw new Error(
+                        localeString('views.Wif.fundingTxMismatch', {
+                            txid
+                        })
+                    );
+
+                const output = fundingTx.outs[vout];
+
+                if (!output)
+                    throw new Error(
+                        localeString('views.Wif.outputIndexNotFound', {
+                            vout,
+                            txid
+                        })
+                    );
+
+                totalSats += output.value;
+
+                psbt.addInput({
+                    hash: txid,
+                    index: vout,
+                    nonWitnessUtxo: Buffer.from(rawTxHex, 'hex')
+                });
+            }
+        } else if (type === 'p2wpkh') {
+            for (const utxo of utxos) {
+                const { txid, vout } = utxo;
+
+                const res = await fetch(
+                    `${UrlUtils.getMempoolApiUrl(
+                        this.nodeInfoStore.nodeInfo
+                    )}/tx/${txid}`
+                );
+                if (!res.ok)
+                    throw new Error(
+                        localeString('views.Wif.failedToFetchTxDetails', {
+                            txid
+                        })
+                    );
+
+                const tx = await res.json();
+                const output = tx.vout[vout];
+
+                if (!output)
+                    throw new Error(
+                        localeString('views.Wif.outputIndexNotFound', {
+                            vout,
+                            txid
+                        })
+                    );
+
+                const value = Math.round(output.value);
+                totalSats += value;
+
+                const scriptPubKeyHex = output.scriptpubkey;
+                const script = Buffer.from(scriptPubKeyHex, 'hex');
+
+                psbt.addInput({
+                    hash: txid,
+                    index: vout,
+                    witnessUtxo: {
+                        script,
+                        value
+                    }
+                });
+            }
+        } else if (type === 'p2sh-p2wpkh') {
+            for (const utxo of utxos) {
+                const { txid, vout } = utxo;
+
+                const value = utxo.value;
+                totalSats += value;
+                const res = await fetch(
+                    `${UrlUtils.getMempoolApiUrl(
+                        this.nodeInfoStore.nodeInfo
+                    )}/tx/${txid}`
+                );
+                if (!res.ok)
+                    throw new Error(
+                        localeString('views.Wif.failedToFetchTxDetails', {
+                            txid
+                        })
+                    );
+
+                const tx = await res.json();
+                const output = tx.vout[vout];
+
+                if (!output)
+                    throw new Error(
+                        localeString('views.Wif.outputNotFound', {
+                            vout,
+                            txid
+                        })
+                    );
+                const scriptPubKeyHex = output.scriptpubkey;
+                const script = Buffer.from(scriptPubKeyHex, 'hex');
+
+                psbt.addInput({
+                    hash: txid,
+                    index: vout,
+                    witnessUtxo: {
+                        script,
+                        value
+                    },
+                    redeemScript: bitcoin.payments.p2wpkh({
+                        pubkey: publicKey,
+                        network: this.network
+                    }).output
+                });
+            }
+        }
+
+        return totalSats;
     }
 
     @action
     async prepareSweepInputs(wif: string) {
         this.wif = wif;
+        this.onChainBalance = 0;
+        this.unsweptTaprootSats = 0;
+        this.sweptAddressTypes = [];
+        this.utxos = [];
         this.network = AddressUtils.bitcoinNetworkForNode(
             this.nodeInfoStore.nodeInfo
         );
@@ -117,21 +279,23 @@ export default class SweepStore {
             this.privateKey = Buffer.from(privateKey).toString('hex');
             const publicKey = Buffer.from(getPublicKey(privateKey, true));
 
-            const result = await this.detectAddressWithUtxos(
+            const detected = await this.detectAddressesWithUtxos(
                 publicKey,
                 this.network
             );
 
-            this.addressType = result.type;
-            this.utxos = result.utxos;
-            let totalSats = 0;
-
-            // Built locally and published together with its balance below, so
-            // overlapping calls cannot add inputs to each other's PSBT
-            const psbt = new bitcoin.Psbt({ network: this.network });
-
             // P2TR sweeps are not yet supported — ZEUS-3276
-            if (this.addressType === 'p2tr') {
+            const taproot = detected.find(({ type }) => type === 'p2tr');
+            const supported = detected.filter(({ type }) => type !== 'p2tr');
+
+            this.unsweptTaprootSats = taproot
+                ? taproot.utxos.reduce(
+                      (sum: number, utxo: any) => sum + utxo.value,
+                      0
+                  )
+                : 0;
+
+            if (supported.length === 0) {
                 this.sweepError = true;
                 this.sweepErrorMsg = localeString(
                     'views.Wif.addressTypeNotSupported'
@@ -139,151 +303,21 @@ export default class SweepStore {
                 return;
             }
 
-            if (this.addressType === 'p2pkh') {
-                for (const utxo of this.utxos) {
-                    const { txid, vout } = utxo;
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
-                            this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}/hex`
-                    );
+            this.sweptAddressTypes = supported.map(({ type }) => type);
+            this.utxos = supported.flatMap(({ utxos }) => utxos);
+            let totalSats = 0;
 
-                    if (!res.ok)
-                        throw new Error(
-                            localeString('views.Wif.failedToFetchTxHex', {
-                                txid
-                            })
-                        );
+            // Built locally and published together with its balance below, so
+            // overlapping calls cannot add inputs to each other's PSBT
+            const psbt = new bitcoin.Psbt({ network: this.network });
 
-                    const rawTxHex = await res.text();
-                    const fundingTx = bitcoin.Transaction.fromHex(rawTxHex);
-
-                    // A legacy signature does not commit to the input value,
-                    // so take it from the funding transaction, not from the
-                    // explorer's listing, once that transaction is known to
-                    // be the one the UTXO belongs to
-                    if (fundingTx.getId() !== txid)
-                        throw new Error(
-                            localeString('views.Wif.fundingTxMismatch', {
-                                txid
-                            })
-                        );
-
-                    const output = fundingTx.outs[vout];
-
-                    if (!output)
-                        throw new Error(
-                            localeString('views.Wif.outputIndexNotFound', {
-                                vout,
-                                txid
-                            })
-                        );
-
-                    totalSats += output.value;
-
-                    psbt.addInput({
-                        hash: txid,
-                        index: vout,
-                        nonWitnessUtxo: Buffer.from(rawTxHex, 'hex')
-                    });
-                }
-            } else if (this.addressType === 'p2wpkh') {
-                for (const utxo of this.utxos) {
-                    const { txid, vout } = utxo;
-
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
-                            this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}`
-                    );
-                    if (!res.ok)
-                        throw new Error(
-                            localeString('views.Wif.failedToFetchTxDetails', {
-                                txid
-                            })
-                        );
-
-                    const tx = await res.json();
-                    const output = tx.vout[vout];
-
-                    if (!output)
-                        throw new Error(
-                            localeString('views.Wif.outputIndexNotFound', {
-                                vout,
-                                txid
-                            })
-                        );
-
-                    const value = Math.round(output.value);
-                    totalSats += value;
-
-                    const scriptPubKeyHex = output.scriptpubkey;
-                    const script = Buffer.from(scriptPubKeyHex, 'hex');
-
-                    psbt.addInput({
-                        hash: txid,
-                        index: vout,
-                        witnessUtxo: {
-                            script,
-                            value
-                        }
-                    });
-                }
-            } else if (this.addressType === 'p2sh-p2wpkh') {
-                for (const utxo of this.utxos) {
-                    const { txid, vout } = utxo;
-
-                    const value = utxo.value;
-                    totalSats += value;
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
-                            this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}`
-                    );
-                    if (!res.ok)
-                        throw new Error(
-                            localeString('views.Wif.failedToFetchTxDetails', {
-                                txid
-                            })
-                        );
-
-                    const tx = await res.json();
-                    const output = tx.vout[vout];
-
-                    if (!output)
-                        throw new Error(
-                            localeString('views.Wif.outputNotFound', {
-                                vout,
-                                txid
-                            })
-                        );
-                    const scriptPubKeyHex = output.scriptpubkey;
-                    const script = Buffer.from(scriptPubKeyHex, 'hex');
-
-                    const privKeyBuf = Buffer.from(this.privateKey, 'hex');
-                    const fullPub = ecc.pointFromScalar(privKeyBuf, true);
-
-                    if (!fullPub) {
-                        throw new Error(
-                            localeString('views.Wif.failedToDerivePubkey')
-                        );
-                    }
-
-                    const pubkey = Buffer.from(fullPub);
-
-                    psbt.addInput({
-                        hash: txid,
-                        index: vout,
-                        witnessUtxo: {
-                            script,
-                            value
-                        },
-                        redeemScript: bitcoin.payments.p2wpkh({
-                            pubkey,
-                            network: this.network
-                        }).output
-                    });
-                }
+            for (const { type, utxos } of supported) {
+                totalSats += await this.addInputsForType(
+                    psbt,
+                    type,
+                    utxos,
+                    publicKey
+                );
             }
             this.psbt = psbt;
             this.onChainBalance = totalSats;
