@@ -64,6 +64,36 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                         navigation={navigation}
                     />
                     <ScrollView>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() => navigation.navigate('TokenVault')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('cashu.tokenVault.title')}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('cashu.tokenVault.subtitle')}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+
                         {seedVersion === 'v2-bip39' && !isLdk && (
                             <>
                                 <ListItem
