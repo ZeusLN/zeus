@@ -1287,4 +1287,56 @@ describe('NostrConnectUtils', () => {
             expect(payment.getPreimage).toBe('');
         });
     });
+
+    describe('isPendingPayInvoiceExpired', () => {
+        const now = 1_700_000_000_000;
+        const days = (n: number) => n * 24 * 60 * 60 * 1000;
+
+        it('does not expire fresh or sub-threshold activities', () => {
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now) },
+                    now
+                )
+            ).toBe(false);
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(13)) },
+                    now
+                )
+            ).toBe(false);
+        });
+
+        it('expires at and beyond the 14-day bound', () => {
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(14)) },
+                    now
+                )
+            ).toBe(true);
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(60)) },
+                    now
+                )
+            ).toBe(true);
+        });
+
+        it('never expires an activity of unknown age', () => {
+            expect(NostrConnectUtils.isPendingPayInvoiceExpired({}, now)).toBe(
+                false
+            );
+        });
+
+        it('expiry message is not an ignorable error (would be pruned)', () => {
+            // The activity-cleanup filter drops failed activities whose
+            // error matches isIgnorableError; the expiry message must
+            // survive it to preserve the audit trail.
+            expect(
+                NostrConnectUtils.isIgnorableError(
+                    'Payment was unresolved for 14 days and could not be found on the node; it was marked failed and its reserved budget was released.'
+                )
+            ).toBe(false);
+        });
+    });
 });
