@@ -21,7 +21,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
 import Pill from '../Pill';
 
-import { cashuStore, utxosStore } from '../../stores/Stores';
+import { cashuStore, channelsStore, utxosStore } from '../../stores/Stores';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -29,6 +29,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+import Channel from '../../models/Channel';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
@@ -73,6 +74,7 @@ type DataRow = {
     layer: string;
     subtitle?: string;
     balance: string | number;
+    reserve?: number;
     // TODO check if exists
     count?: number;
     watchOnly?: boolean;
@@ -276,10 +278,41 @@ const Row = ({ item }: { item: DataRow }) => {
                     {!item.needsConfig && (
                         <View style={styles.rightContent}>
                             <Amount
-                                sats={item.balance}
+                                sats={
+                                    item.reserve && item.reserve > 0
+                                        ? new BigNumber(item.balance)
+                                              .minus(item.reserve)
+                                              .toNumber()
+                                        : item.balance
+                                }
                                 sensitive
                                 colorOverride={themeColor('buttonText')}
                             />
+                            {item.reserve != null && item.reserve > 0 && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('buttonText'),
+                                            fontSize: 10,
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            marginRight: 2
+                                        }}
+                                    >
+                                        {`${localeString('general.reserve')}:`}
+                                    </Text>
+                                    <Amount
+                                        sats={item.reserve}
+                                        sensitive
+                                        colorOverride={themeColor('buttonText')}
+                                        fontSize={10}
+                                    />
+                                </View>
+                            )}
                             {/* Show custodial pill below balance for Ecash */}
                             {isEcash && item.custodial && (
                                 <View style={styles.pillRight}>
@@ -440,8 +473,19 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         } = this.props;
 
         const { settings } = SettingsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const {
+            totalBlockchainBalance,
+            lightningBalance,
+            reservedBalanceAnchorChan
+        } = BalanceStore!;
         const { totalBalanceSats, mintUrls, mintInfos } = CashuStore!;
+
+        // Sum local channel reserves across all active channels
+        const lightningChannelReserve = channelsStore.channels.reduce(
+            (sum: number, channel: Channel) =>
+                sum + Number(channel.localReserveBalance || 0),
+            0
+        );
 
         const otherAccounts = editMode
             ? this.props.UTXOsStore?.accounts
@@ -453,13 +497,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         DATA.push({
             layer: 'Lightning',
-            balance: Number(lightningBalance).toFixed(3)
+            balance: Number(lightningBalance).toFixed(3),
+            reserve: lightningChannelReserve
         });
 
         if (BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
                 layer: 'On-chain',
-                balance: Number(totalBlockchainBalance).toFixed(3)
+                balance: Number(totalBlockchainBalance).toFixed(3),
+                reserve: reservedBalanceAnchorChan
             });
         }
 
