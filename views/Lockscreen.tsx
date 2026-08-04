@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RNRestart from 'react-native-restart';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -438,43 +439,24 @@ export default class Lockscreen extends React.Component<
     };
 
     deleteNodes = async () => {
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-
         // Fully wipe wallet data (node data dirs, Cashu seeds + CDK db, swap
         // rescue key, keychain) so the duress action leaves no recoverable key
-        // material behind - not just the settings `nodes` pointer.
+        // material behind - not just the settings `nodes` pointer. Restart
+        // instead of writing settings: updateSettings() would merge into the
+        // pre-wipe in-memory blob and re-persist it (pins, passphrases and
+        // all), and a restart is also the only way to drop node credentials
+        // still held in memory by the stores.
         await clearAllData();
-
-        updateSettings({
-            nodes: undefined,
-            selectedNode: undefined,
-            authenticationAttempts: 0
-        }).then(() => {
-            this.proceed('IntroSplash');
-        });
+        RNRestart.Restart();
     };
 
     authenticationFailure = async () => {
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-
-        // Fully wipe wallet data on repeated failed logins, then clear the
-        // local auth secrets. clearAllData() removes the node data dirs, Cashu
-        // seeds + CDK db, and swap rescue key the settings wipe leaves behind.
+        // Fully wipe wallet data on repeated failed logins. clearAllData()
+        // removes the node data dirs, Cashu seeds + CDK db, swap rescue key
+        // and the settings blob itself (including pins and passphrases).
+        // Restart instead of writing settings back - see deleteNodes above.
         await clearAllData();
-
-        updateSettings({
-            nodes: undefined,
-            selectedNode: undefined,
-            passphrase: '',
-            duressPassphrase: '',
-            pin: '',
-            duressPin: '',
-            authenticationAttempts: 0
-        }).then(() => {
-            this.proceed('IntroSplash');
-        });
+        RNRestart.Restart();
     };
 
     resetAuthenticationAttempts = () => {
