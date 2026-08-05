@@ -563,7 +563,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     params
                 );
                 if (updated.success) {
-                    // Relay change rotates the client secret — show the new
+                    // Relay change rotates the client secret; show the new
                     // pairing URL so the app can re-connect.
                     if (updated.nostrUrl) {
                         navigation.navigate('NWCConnectionQR', {
