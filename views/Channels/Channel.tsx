@@ -35,7 +35,7 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import { ContactAvatar } from '../../components/ContactAvatar';
-import { SharedText } from '../../components/SharedTransition';
+import { SharedScreen, SharedText } from '../../components/SharedTransition';
 
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -414,634 +414,604 @@ export default class ChannelView extends React.Component<
         );
 
         return (
-            <Screen>
-                <Header
-                    leftComponent="Back"
-                    onBack={() => {
-                        ChannelsStore.clearCloseChannelErr();
-                    }}
-                    rightComponent={
-                        editableFees && !BackendUtils.isLocalWallet() ? (
-                            <EditFees />
-                        ) : (
-                            <></>
-                        )
-                    }
-                    placement="right"
-                    navigation={navigation}
-                />
-                <ScrollView
-                    style={styles.content}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.center}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                ...styles.alias
-                            }}
-                        >
-                            {`${peerDisplay}`}
-                        </Text>
-                        {remotePubkey && (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    UrlUtils.goToBlockExplorerPubkey(
-                                        remotePubkey,
-                                        testnet
-                                    )
-                                }
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('highlight'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        ...styles.pubkey
-                                    }}
-                                >
-                                    {remotePubkey
-                                        ? (() => {
-                                              const maskedPubkey: string | any =
-                                                  PrivacyUtils.sensitiveValue({
-                                                      input: remotePubkey
-                                                  });
-                                              return (
-                                                  maskedPubkey.slice(0, 6) +
-                                                  '...' +
-                                                  maskedPubkey.slice(-6)
-                                              );
-                                          })()
-                                        : ''}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                        {remotePubkey && this.renderContactLink(remotePubkey)}
-                    </View>
-                    <View style={{ height: 40 }}>
-                        <BalanceSlider
-                            sendingCapacity={lurkerMode ? 50 : sendingCapacity}
-                            receivingCapacity={
-                                lurkerMode ? 50 : receivingCapacity
-                            }
-                            localBalance={lurkerMode ? 50 : localBalance}
-                            remoteBalance={lurkerMode ? 50 : remoteBalance}
-                            localReserveBalance={
-                                lurkerMode ? 50 : localReserveBalance
-                            }
-                            remoteReserveBalance={
-                                lurkerMode ? 50 : remoteReserveBalance
-                            }
-                        />
-                    </View>
-                    <Text
-                        style={{
-                            ...styles.status,
-                            color: themeColor('text'),
-                            marginBottom: confs ? 6 : 18
+            <SharedScreen>
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        onBack={() => {
+                            ChannelsStore.clearCloseChannelErr();
                         }}
+                        rightComponent={
+                            editableFees && !BackendUtils.isLocalWallet() ? (
+                                <EditFees />
+                            ) : (
+                                <></>
+                            )
+                        }
+                        placement="right"
+                        navigation={navigation}
+                    />
+                    <ScrollView
+                        style={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
                     >
-                        {pendingOpen
-                            ? localeString('views.Channel.pendingOpen')
-                            : pendingClose || closing
-                            ? localeString('views.Channel.pendingClose')
-                            : forceClose
-                            ? localeString('views.Channel.forceClose')
-                            : closeHeight || to_us_msat
-                            ? localeString('views.Channel.closed')
-                            : isActive
-                            ? localeString('general.active')
-                            : localeString('views.Channel.inactive')}
-                    </Text>
-                    {confs && (
+                        <View style={styles.center}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    ...styles.alias
+                                }}
+                            >
+                                {`${peerDisplay}`}
+                            </Text>
+                            {remotePubkey && (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        UrlUtils.goToBlockExplorerPubkey(
+                                            remotePubkey,
+                                            testnet
+                                        )
+                                    }
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('highlight'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            ...styles.pubkey
+                                        }}
+                                    >
+                                        {remotePubkey
+                                            ? (() => {
+                                                  const maskedPubkey:
+                                                      | string
+                                                      | any = PrivacyUtils.sensitiveValue(
+                                                      {
+                                                          input: remotePubkey
+                                                      }
+                                                  );
+                                                  return (
+                                                      maskedPubkey.slice(0, 6) +
+                                                      '...' +
+                                                      maskedPubkey.slice(-6)
+                                                  );
+                                              })()
+                                            : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {remotePubkey &&
+                                this.renderContactLink(remotePubkey)}
+                        </View>
+                        <View style={{ height: 40 }}>
+                            <BalanceSlider
+                                sendingCapacity={
+                                    lurkerMode ? 50 : sendingCapacity
+                                }
+                                receivingCapacity={
+                                    lurkerMode ? 50 : receivingCapacity
+                                }
+                                localBalance={lurkerMode ? 50 : localBalance}
+                                remoteBalance={lurkerMode ? 50 : remoteBalance}
+                                localReserveBalance={
+                                    lurkerMode ? 50 : localReserveBalance
+                                }
+                                remoteReserveBalance={
+                                    lurkerMode ? 50 : remoteReserveBalance
+                                }
+                            />
+                        </View>
                         <Text
                             style={{
                                 ...styles.status,
                                 color: themeColor('text'),
-                                marginTop: 0
+                                marginBottom: confs ? 6 : 18
                             }}
                         >
-                            {`${localeString('views.OpenChannel.numConf')}: ${
-                                confs.current
-                            } / ${confs.total}`}
+                            {pendingOpen
+                                ? localeString('views.Channel.pendingOpen')
+                                : pendingClose || closing
+                                ? localeString('views.Channel.pendingClose')
+                                : forceClose
+                                ? localeString('views.Channel.forceClose')
+                                : closeHeight || to_us_msat
+                                ? localeString('views.Channel.closed')
+                                : isActive
+                                ? localeString('general.active')
+                                : localeString('views.Channel.inactive')}
                         </Text>
-                    )}
-                    {!!renewalInfo.maxExtensionInBlocks && (
-                        <>
-                            <Row
-                                justify="space-between"
-                                style={{ marginTop: 10, marginBottom: 10 }}
+                        {confs && (
+                            <Text
+                                style={{
+                                    ...styles.status,
+                                    color: themeColor('text'),
+                                    marginTop: 0
+                                }}
                             >
-                                {renewalInfo.expiresInBlocks ? (
-                                    <View style={{ width: '50%' }}>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {renewalInfo.expiresInBlocks > 0
-                                                ? localeString(
-                                                      'views.Channel.lease.expiresIn'
-                                                  )
-                                                : localeString(
-                                                      'views.Activity.expired'
-                                                  )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >{`${numberWithCommas(
-                                            renewalInfo.expiresInBlocks
-                                        )} ${localeString(
-                                            'general.blocks'
-                                        )}\n ~${
-                                            renewalInfo.expiresMonths
-                                                ? `${numberWithCommas(
-                                                      Math.abs(
-                                                          renewalInfo.expiresMonths
+                                {`${localeString(
+                                    'views.OpenChannel.numConf'
+                                )}: ${confs.current} / ${confs.total}`}
+                            </Text>
+                        )}
+                        {!!renewalInfo.maxExtensionInBlocks && (
+                            <>
+                                <Row
+                                    justify="space-between"
+                                    style={{ marginTop: 10, marginBottom: 10 }}
+                                >
+                                    {renewalInfo.expiresInBlocks ? (
+                                        <View style={{ width: '50%' }}>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {renewalInfo.expiresInBlocks > 0
+                                                    ? localeString(
+                                                          'views.Channel.lease.expiresIn'
                                                       )
-                                                  )} ${localeString(
-                                                      new BigNumber(
+                                                    : localeString(
+                                                          'views.Activity.expired'
+                                                      )}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text')
+                                                }}
+                                            >{`${numberWithCommas(
+                                                renewalInfo.expiresInBlocks
+                                            )} ${localeString(
+                                                'general.blocks'
+                                            )}\n ~${
+                                                renewalInfo.expiresMonths
+                                                    ? `${numberWithCommas(
                                                           Math.abs(
                                                               renewalInfo.expiresMonths
                                                           )
-                                                      ).gt(1)
-                                                          ? 'time.months'
-                                                          : 'time.month'
-                                                  ).toLowerCase()}`
-                                                : ''
-                                        }${
-                                            renewalInfo.expiresMonths &&
-                                            renewalInfo.expiresDays
-                                                ? ', '
-                                                : ''
-                                        }${
-                                            renewalInfo.expiresDays
-                                                ? `${numberWithCommas(
-                                                      Math.abs(
-                                                          renewalInfo.expiresDays
-                                                      )
-                                                  )} ${localeString(
-                                                      new BigNumber(
+                                                      )} ${localeString(
+                                                          new BigNumber(
+                                                              Math.abs(
+                                                                  renewalInfo.expiresMonths
+                                                              )
+                                                          ).gt(1)
+                                                              ? 'time.months'
+                                                              : 'time.month'
+                                                      ).toLowerCase()}`
+                                                    : ''
+                                            }${
+                                                renewalInfo.expiresMonths &&
+                                                renewalInfo.expiresDays
+                                                    ? ', '
+                                                    : ''
+                                            }${
+                                                renewalInfo.expiresDays
+                                                    ? `${numberWithCommas(
                                                           Math.abs(
                                                               renewalInfo.expiresDays
                                                           )
-                                                      ).gt(1)
-                                                          ? 'time.days'
-                                                          : 'time.day'
-                                                  ).toLowerCase()}`
-                                                : ''
-                                        }`}</Text>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={{ width: '50%' }}
-                                        onPress={() => {
-                                            ModalStore.toggleInfoModal({
-                                                text: [
-                                                    localeString(
-                                                        'views.Channel.lease.lspDiscretion.explainer1'
-                                                    ),
-                                                    localeString(
-                                                        'views.Channel.lease.lspDiscretion.explainer2'
+                                                      )} ${localeString(
+                                                          new BigNumber(
+                                                              Math.abs(
+                                                                  renewalInfo.expiresDays
+                                                              )
+                                                          ).gt(1)
+                                                              ? 'time.days'
+                                                              : 'time.day'
+                                                      ).toLowerCase()}`
+                                                    : ''
+                                            }`}</Text>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={{ width: '50%' }}
+                                            onPress={() => {
+                                                ModalStore.toggleInfoModal({
+                                                    text: [
+                                                        localeString(
+                                                            'views.Channel.lease.lspDiscretion.explainer1'
+                                                        ),
+                                                        localeString(
+                                                            'views.Channel.lease.lspDiscretion.explainer2'
+                                                        )
+                                                    ]
+                                                });
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
                                                     )
-                                                ]
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.lease.outboundChannel'
+                                                )}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.Channel.lease.lspDiscretion'
+                                                )} ⓘ`}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    <ElementButton
+                                        title={
+                                            renewalInfo.expiresInBlocks
+                                                ? localeString(
+                                                      'views.Channel.lease.extendLease'
+                                                  )
+                                                : localeString(
+                                                      'views.Channel.lease.purchaseLease'
+                                                  )
+                                        }
+                                        onPress={() => {
+                                            navigation.navigate('LSPS7', {
+                                                chanId: renewalInfo.scid,
+                                                maxExtensionInBlocks:
+                                                    renewalInfo.maxExtensionInBlocks,
+                                                expirationBlock:
+                                                    renewalInfo.expirationBlock
                                             });
                                         }}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Channel.lease.outboundChannel'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.Channel.lease.lspDiscretion'
-                                            )} ⓘ`}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                <ElementButton
-                                    title={
-                                        renewalInfo.expiresInBlocks
-                                            ? localeString(
-                                                  'views.Channel.lease.extendLease'
-                                              )
-                                            : localeString(
-                                                  'views.Channel.lease.purchaseLease'
-                                              )
-                                    }
-                                    onPress={() => {
-                                        navigation.navigate('LSPS7', {
-                                            chanId: renewalInfo.scid,
-                                            maxExtensionInBlocks:
-                                                renewalInfo.maxExtensionInBlocks,
-                                            expirationBlock:
-                                                renewalInfo.expirationBlock
-                                        });
-                                    }}
-                                    ViewComponent={LinearGradient as any}
-                                    linearGradientProps={{
-                                        colors: [
-                                            'rgb(180, 26, 20)',
-                                            'rgb(255, 169, 0)'
-                                        ],
-                                        start: { x: 0, y: 0.5 },
-                                        end: { x: 1, y: 0.5 }
-                                    }}
-                                    buttonStyle={{
-                                        borderRadius: 5
-                                    }}
-                                    titleStyle={{
-                                        ...styles.text,
-                                        fontSize: 15
-                                    }}
-                                />
-                            </Row>
-
-                            <Divider
-                                orientation="horizontal"
-                                style={{ margin: 20 }}
-                            />
-                        </>
-                    )}
-                    {channelId && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.channelId')}
-                            value={channelId}
-                        />
-                    )}
-                    {shortChannelId && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.scid')}
-                            value={shortChannelId}
-                        />
-                    )}
-
-                    {(showPeerAliasScid ||
-                        showAliasScids ||
-                        showZeroConfConfirmedScid) && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                this.setState({
-                                    aliasToggle: !aliasToggle
-                                });
-                            }}
-                        >
-                            <View>
-                                <Row justify="space-between">
-                                    <View style={{ flex: 1 }}>
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.Channel.aliases'
-                                            )}
-                                        />
-                                    </View>
-                                    {aliasToggle ? (
-                                        <CaretDown
-                                            fill={themeColor('text')}
-                                            width="20"
-                                            height="20"
-                                        />
-                                    ) : (
-                                        <CaretRight
-                                            fill={themeColor('text')}
-                                            width="20"
-                                            height="20"
-                                        />
-                                    )}
+                                        ViewComponent={LinearGradient as any}
+                                        linearGradientProps={{
+                                            colors: [
+                                                'rgb(180, 26, 20)',
+                                                'rgb(255, 169, 0)'
+                                            ],
+                                            start: { x: 0, y: 0.5 },
+                                            end: { x: 1, y: 0.5 }
+                                        }}
+                                        buttonStyle={{
+                                            borderRadius: 5
+                                        }}
+                                        titleStyle={{
+                                            ...styles.text,
+                                            fontSize: 15
+                                        }}
+                                    />
                                 </Row>
-                            </View>
-                        </TouchableOpacity>
-                    )}
 
-                    {aliasToggle && (
-                        <>
-                            {showAliasScids && (
-                                <KeyValue
-                                    keyValue={
-                                        aliasScids.length > 1
-                                            ? localeString(
-                                                  'views.Channel.aliasScids'
-                                              )
-                                            : localeString(
-                                                  'views.Channel.aliasScid'
-                                              )
-                                    }
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: aliasScids.join(', ')
-                                    })}
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ margin: 20 }}
                                 />
-                            )}
-                            {showPeerAliasScid && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.peerAliasScid'
-                                    )}
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: peerScidAlias
-                                    })}
-                                />
-                            )}
-                            {showZeroConfConfirmedScid && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.zeroConfConfirmedScid'
-                                    )}
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: zeroConfConfirmedScid
-                                    })}
-                                />
-                            )}
-                        </>
-                    )}
-                    {zero_conf && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.zeroConf')}
-                            value={localeString('general.true')}
-                        />
-                    )}
-                    {!(closeHeight || closeType) && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.unannounced')}
-                            value={
-                                privateChannel
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            color={privateChannel ? 'green' : '#808000'}
-                        />
-                    )}
-                    {getCommitmentType && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.commitmentType'
-                            )}
-                            value={getCommitmentType}
-                        />
-                    )}
-                    {chain_hash && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.chainHash')}
-                            value={chain_hash}
-                            sensitive
-                        />
-                    )}
-                    {!!closeHeight && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.closeHeight')}
-                            value={closeHeight}
-                            color={themeColor('highlight')}
-                            sensitive
-                            mempoolLink={() =>
-                                UrlUtils.goToBlockExplorerBlockHeight(
-                                    closeHeight,
-                                    testnet
-                                )
-                            }
-                        />
-                    )}
-                    {closeType && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.closeType')}
-                            value={closeType}
-                            sensitive
-                        />
-                    )}
-                    {getOpenInitiator && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.openInitiator'
-                            )}
-                            value={getOpenInitiator}
-                            sensitive
-                        />
-                    )}
-                    {getCloseInitiator && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.closeInitiator'
-                            )}
-                            value={getCloseInitiator}
-                            sensitive
-                        />
-                    )}
-                    {closing_txid && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.closingTxId')}
-                            value={closing_txid}
-                            sensitive
-                            color={themeColor('highlight')}
-                            mempoolLink={() =>
-                                UrlUtils.goToBlockExplorerTXID(
-                                    closing_txid,
-                                    testnet
-                                )
-                            }
-                        />
-                    )}
-                    {closing_tx_hash && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.closingTxHash'
-                            )}
-                            value={closing_tx_hash}
-                            sensitive
-                            color={themeColor('highlight')}
-                            mempoolLink={() =>
-                                UrlUtils.goToBlockExplorerTXID(
-                                    closing_tx_hash,
-                                    testnet
-                                )
-                            }
-                        />
-                    )}
-                    {(pendingOpen ||
-                        pendingClose ||
-                        closing ||
-                        !BackendUtils.isLNDBased()) &&
-                        channel_point && (
+                            </>
+                        )}
+                        {channelId && (
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.Channel.channelPoint'
+                                    'views.Channel.channelId'
                                 )}
-                                value={channel_point}
+                                value={channelId}
+                            />
+                        )}
+                        {shortChannelId && (
+                            <KeyValue
+                                keyValue={localeString('views.Channel.scid')}
+                                value={shortChannelId}
+                            />
+                        )}
+
+                        {(showPeerAliasScid ||
+                            showAliasScids ||
+                            showZeroConfConfirmedScid) && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.setState({
+                                        aliasToggle: !aliasToggle
+                                    });
+                                }}
+                            >
+                                <View>
+                                    <Row justify="space-between">
+                                        <View style={{ flex: 1 }}>
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Channel.aliases'
+                                                )}
+                                            />
+                                        </View>
+                                        {aliasToggle ? (
+                                            <CaretDown
+                                                fill={themeColor('text')}
+                                                width="20"
+                                                height="20"
+                                            />
+                                        ) : (
+                                            <CaretRight
+                                                fill={themeColor('text')}
+                                                width="20"
+                                                height="20"
+                                            />
+                                        )}
+                                    </Row>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+
+                        {aliasToggle && (
+                            <>
+                                {showAliasScids && (
+                                    <KeyValue
+                                        keyValue={
+                                            aliasScids.length > 1
+                                                ? localeString(
+                                                      'views.Channel.aliasScids'
+                                                  )
+                                                : localeString(
+                                                      'views.Channel.aliasScid'
+                                                  )
+                                        }
+                                        value={PrivacyUtils.sensitiveValue({
+                                            input: aliasScids.join(', ')
+                                        })}
+                                    />
+                                )}
+                                {showPeerAliasScid && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.peerAliasScid'
+                                        )}
+                                        value={PrivacyUtils.sensitiveValue({
+                                            input: peerScidAlias
+                                        })}
+                                    />
+                                )}
+                                {showZeroConfConfirmedScid && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.zeroConfConfirmedScid'
+                                        )}
+                                        value={PrivacyUtils.sensitiveValue({
+                                            input: zeroConfConfirmedScid
+                                        })}
+                                    />
+                                )}
+                            </>
+                        )}
+                        {zero_conf && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.zeroConf'
+                                )}
+                                value={localeString('general.true')}
+                            />
+                        )}
+                        {!(closeHeight || closeType) && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.unannounced'
+                                )}
+                                value={
+                                    privateChannel
+                                        ? localeString('general.true')
+                                        : localeString('general.false')
+                                }
+                                color={privateChannel ? 'green' : '#808000'}
+                            />
+                        )}
+                        {getCommitmentType && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.commitmentType'
+                                )}
+                                value={getCommitmentType}
+                            />
+                        )}
+                        {chain_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.chainHash'
+                                )}
+                                value={chain_hash}
                                 sensitive
+                            />
+                        )}
+                        {!!closeHeight && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closeHeight'
+                                )}
+                                value={closeHeight}
                                 color={themeColor('highlight')}
+                                sensitive
                                 mempoolLink={() =>
-                                    UrlUtils.goToBlockExplorerTXID(
-                                        channel_point,
+                                    UrlUtils.goToBlockExplorerBlockHeight(
+                                        closeHeight,
                                         testnet
                                     )
                                 }
                             />
                         )}
-                    {!!pending_htlcs && pending_htlcs.length > 0 && (
-                        <TouchableOpacity
-                            onPress={() =>
-                                navigation.navigate('PendingHTLCs', {
-                                    pending_htlcs
-                                })
-                            }
-                        >
-                            <View style={styles.tappableRow}>
-                                <Row justify="space-between">
-                                    <Row>
-                                        <HourglassIcon
-                                            fill={themeColor('highlight')}
-                                            width={17}
-                                            height={17}
-                                            style={{ marginRight: 5 }}
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.tappableRowText,
-                                                color: themeColor('highlight')
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.PendingHTLCs.title'
-                                            )} (${pending_htlcs.length})`}
-                                        </Text>
-                                    </Row>
-                                    <CaretRight
-                                        fill={themeColor('secondaryText')}
-                                        width="20"
-                                        height="20"
-                                    />
-                                </Row>
-                            </View>
-                        </TouchableOpacity>
-                    )}
-
-                    {blocks_til_maturity > 0 && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.blocksTilMaturity'
-                            )}
-                            value={`${blocks_til_maturity} ${localeString(
-                                'general.blocks'
-                            )} (~${duration(
-                                blocks_til_maturity * 10,
-                                'minutes'
-                            ).humanize()})`}
-                        />
-                    )}
-
-                    <Divider orientation="horizontal" style={{ margin: 20 }} />
-
-                    <KeyValue
-                        keyValue={localeString('views.Channel.channelBalance')}
-                    />
-                    {settled_balance && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.settledBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={settled_balance}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                            sensitive
-                        />
-                    )}
-                    {time_locked_balance && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.timeLockedBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={time_locked_balance}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                            sensitive
-                        />
-                    )}
-                    <KeyValue
-                        keyValue={localeString('views.Channel.localBalance')}
-                        value={
-                            <Amount
-                                sats={localBalance}
+                        {closeType && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closeType'
+                                )}
+                                value={closeType}
                                 sensitive
-                                toggleable
-                                color={
-                                    isBelowReserve
-                                        ? 'warningReserve'
-                                        : undefined
+                            />
+                        )}
+                        {getOpenInitiator && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.openInitiator'
+                                )}
+                                value={getOpenInitiator}
+                                sensitive
+                            />
+                        )}
+                        {getCloseInitiator && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closeInitiator'
+                                )}
+                                value={getCloseInitiator}
+                                sensitive
+                            />
+                        )}
+                        {closing_txid && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxId'
+                                )}
+                                value={closing_txid}
+                                sensitive
+                                color={themeColor('highlight')}
+                                mempoolLink={() =>
+                                    UrlUtils.goToBlockExplorerTXID(
+                                        closing_txid,
+                                        testnet
+                                    )
                                 }
                             />
-                        }
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Channel.remoteBalance')}
-                        value={
-                            <Amount sats={remoteBalance} sensitive toggleable />
-                        }
-                    />
-                    {unsettled_balance !== '0' && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.unsettledBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={unsettled_balance}
+                        )}
+                        {closing_tx_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.closingTxHash'
+                                )}
+                                value={closing_tx_hash}
+                                sensitive
+                                color={themeColor('highlight')}
+                                mempoolLink={() =>
+                                    UrlUtils.goToBlockExplorerTXID(
+                                        closing_tx_hash,
+                                        testnet
+                                    )
+                                }
+                            />
+                        )}
+                        {(pendingOpen ||
+                            pendingClose ||
+                            closing ||
+                            !BackendUtils.isLNDBased()) &&
+                            channel_point && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelPoint'
+                                    )}
+                                    value={channel_point}
                                     sensitive
-                                    toggleable
+                                    color={themeColor('highlight')}
+                                    mempoolLink={() =>
+                                        UrlUtils.goToBlockExplorerTXID(
+                                            channel_point,
+                                            testnet
+                                        )
+                                    }
                                 />
-                            }
+                            )}
+                        {!!pending_htlcs && pending_htlcs.length > 0 && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('PendingHTLCs', {
+                                        pending_htlcs
+                                    })
+                                }
+                            >
+                                <View style={styles.tappableRow}>
+                                    <Row justify="space-between">
+                                        <Row>
+                                            <HourglassIcon
+                                                fill={themeColor('highlight')}
+                                                width={17}
+                                                height={17}
+                                                style={{ marginRight: 5 }}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.tappableRowText,
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PendingHTLCs.title'
+                                                )} (${pending_htlcs.length})`}
+                                            </Text>
+                                        </Row>
+                                        <CaretRight
+                                            fill={themeColor('secondaryText')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    </Row>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+
+                        {blocks_til_maturity > 0 && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.blocksTilMaturity'
+                                )}
+                                value={`${blocks_til_maturity} ${localeString(
+                                    'general.blocks'
+                                )} (~${duration(
+                                    blocks_til_maturity * 10,
+                                    'minutes'
+                                ).humanize()})`}
+                            />
+                        )}
+
+                        <Divider
+                            orientation="horizontal"
+                            style={{ margin: 20 }}
                         />
-                    )}
-                    <KeyValue
-                        keyValue={localeString('views.Channel.Total.outbound')}
-                        value={
-                            <Amount
-                                sats={sendingCapacity}
-                                sensitive
-                                toggleable
-                            />
-                        }
-                        indicatorColor={themeColor('outbound')}
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Channel.Total.inbound')}
-                        value={
-                            <Amount
-                                sats={receivingCapacity}
-                                sensitive
-                                toggleable
-                            />
-                        }
-                        indicatorColor={themeColor('inbound')}
-                    />
-                    {!!local_chan_reserve_sat && (
+
                         <KeyValue
                             keyValue={localeString(
-                                'views.Channel.localReserve'
+                                'views.Channel.channelBalance'
+                            )}
+                        />
+                        {settled_balance && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.settledBalance'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={settled_balance}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                                sensitive
+                            />
+                        )}
+                        {time_locked_balance && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.timeLockedBalance'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={time_locked_balance}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                                sensitive
+                            />
+                        )}
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.localBalance'
                             )}
                             value={
                                 <Amount
-                                    sats={local_chan_reserve_sat}
+                                    sats={localBalance}
                                     sensitive
                                     toggleable
                                     color={
@@ -1051,305 +1021,397 @@ export default class ChannelView extends React.Component<
                                     }
                                 />
                             }
-                            infoModalText={localeString(
-                                'views.Channel.localReserve.info'
-                            )}
-                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
-                            indicatorColor={themeColor('outboundReserve')}
                         />
-                    )}
-                    {!!remote_chan_reserve_sat && (
                         <KeyValue
                             keyValue={localeString(
-                                'views.Channel.remoteReserve'
+                                'views.Channel.remoteBalance'
                             )}
                             value={
                                 <Amount
-                                    sats={remote_chan_reserve_sat}
+                                    sats={remoteBalance}
                                     sensitive
                                     toggleable
                                 />
                             }
-                            infoModalText={localeString(
-                                'views.Channel.remoteReserve.info'
-                            )}
-                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
-                            indicatorColor={themeColor('inboundReserve')}
                         />
-                    )}
-                    {capacity && (
+                        {unsettled_balance !== '0' && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.unsettledBalance'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={unsettled_balance}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        )}
                         <KeyValue
-                            keyValue={localeString('views.Channel.capacity')}
+                            keyValue={localeString(
+                                'views.Channel.Total.outbound'
+                            )}
                             value={
-                                <Amount sats={capacity} sensitive toggleable />
+                                <Amount
+                                    sats={sendingCapacity}
+                                    sensitive
+                                    toggleable
+                                />
                             }
+                            indicatorColor={themeColor('outbound')}
                         />
-                    )}
-
-                    <Divider orientation="horizontal" style={{ margin: 20 }} />
-
-                    {BackendUtils.isLNDBased() && editableFees && (
-                        <FeeBreakdown
-                            isActive={isActive}
-                            isClosed={!!closeHeight || !!closeType}
-                            channelId={channelId}
-                            peerDisplay={peerDisplay}
-                            channelPoint={channel_point}
-                            initiator={initiator}
-                            total_satoshis_received={total_satoshis_received}
-                            total_satoshis_sent={total_satoshis_sent}
-                            commit_fee={commit_fee}
-                            commit_weight={commit_weight}
-                            csv_delay={csv_delay}
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.Total.inbound'
+                            )}
+                            value={
+                                <Amount
+                                    sats={receivingCapacity}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            indicatorColor={themeColor('inbound')}
                         />
-                    )}
-                    {BackendUtils.supportsForwardingHistory() &&
-                        BackendUtils.supportsForwardingHistoryChannelFilter(
-                            NodeInfoStore.nodeInfo?.version
-                        ) &&
-                        channelId && (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ margin: 20 }}
-                                />
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate('Routing', {
-                                            filterChanIdIn: channelId
-                                        })
-                                    }
-                                >
-                                    <View style={styles.tappableRow}>
-                                        <Row justify="space-between">
-                                            <Text
-                                                style={styles.tappableRowText}
-                                            >
-                                                {localeString(
-                                                    'views.Channel.routingHistory'
-                                                )}
-                                            </Text>
-                                            <CaretRight
-                                                fill={themeColor(
-                                                    'secondaryText'
-                                                )}
-                                                width="20"
-                                                height="20"
-                                            />
-                                        </Row>
-                                    </View>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    {BackendUtils.supportsBumpFee() && pendingOpen && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.BumpFee.titleAlt')}
-                                onPress={() =>
-                                    navigation.navigate('BumpFee', {
-                                        outpoint: channel.channel_point,
-                                        pendingOpen: true
-                                    })
+                        {!!local_chan_reserve_sat && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.localReserve'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={local_chan_reserve_sat}
+                                        sensitive
+                                        toggleable
+                                        color={
+                                            isBelowReserve
+                                                ? 'warningReserve'
+                                                : undefined
+                                        }
+                                    />
                                 }
-                                noUppercase
+                                infoModalText={localeString(
+                                    'views.Channel.localReserve.info'
+                                )}
+                                infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                                indicatorColor={themeColor('outboundReserve')}
                             />
-                        </View>
-                    )}
-                    {BackendUtils.supportsBumpFee() &&
-                        (pendingClose || closing) &&
-                        closing_txid && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.BumpFee.titleClose'
-                                    )}
-                                    onPress={() =>
-                                        navigation.navigate('BumpFee', {
-                                            outpoint: `${closing_txid}:0`,
-                                            pendingClose: true
-                                        })
-                                    }
-                                    noUppercase
-                                />
-                            </View>
                         )}
-                    {BackendUtils.supportsBumpFee() &&
-                        forceClose &&
-                        !blocks_til_maturity && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.BumpFee.titleClose'
-                                    )}
-                                    onPress={() =>
-                                        navigation.navigate('BumpFee', {
-                                            chan_point: channel.channel_point,
-                                            forceClose: true
-                                        })
-                                    }
-                                    noUppercase
-                                />
-                            </View>
-                        )}
-                    {this.state.channel.isOpen && (
-                        <View
-                            style={{
-                                ...styles.button,
-                                marginTop: 20,
-                                marginBottom: confirmCloseChannel ? 0 : 50
-                            }}
-                        >
-                            <Button
-                                title={
-                                    confirmCloseChannel
-                                        ? localeString(
-                                              'views.Channel.cancelClose'
-                                          )
-                                        : localeString('views.Channel.close')
+                        {!!remote_chan_reserve_sat && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.remoteReserve'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={remote_chan_reserve_sat}
+                                        sensitive
+                                        toggleable
+                                    />
                                 }
-                                onPress={() =>
-                                    this.setState({
-                                        confirmCloseChannel:
-                                            !confirmCloseChannel
-                                    })
-                                }
-                                warning={!confirmCloseChannel}
+                                infoModalText={localeString(
+                                    'views.Channel.remoteReserve.info'
+                                )}
+                                infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                                indicatorColor={themeColor('inboundReserve')}
                             />
-                        </View>
-                    )}
-                    {confirmCloseChannel && (
-                        <View>
-                            {closingChannel && (
-                                <View style={{ margin: 20, marginBottom: 40 }}>
-                                    <LoadingIndicator />
-                                </View>
-                            )}
-                            {!closingChannel && closeChannelErr && (
-                                <ErrorMessage message={closeChannelErr} />
-                            )}
-                            {BackendUtils.supportsForceClose() && (
+                        )}
+                        {capacity && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.capacity'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={capacity}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        )}
+
+                        <Divider
+                            orientation="horizontal"
+                            style={{ margin: 20 }}
+                        />
+
+                        {BackendUtils.isLNDBased() && editableFees && (
+                            <FeeBreakdown
+                                isActive={isActive}
+                                isClosed={!!closeHeight || !!closeType}
+                                channelId={channelId}
+                                peerDisplay={peerDisplay}
+                                channelPoint={channel_point}
+                                initiator={initiator}
+                                total_satoshis_received={
+                                    total_satoshis_received
+                                }
+                                total_satoshis_sent={total_satoshis_sent}
+                                commit_fee={commit_fee}
+                                commit_weight={commit_weight}
+                                csv_delay={csv_delay}
+                            />
+                        )}
+                        {BackendUtils.supportsForwardingHistory() &&
+                            BackendUtils.supportsForwardingHistoryChannelFilter(
+                                NodeInfoStore.nodeInfo?.version
+                            ) &&
+                            channelId && (
                                 <>
-                                    <View style={{ marginBottom: 10 }}>
-                                        <Text
-                                            infoModalText={[
-                                                localeString(
-                                                    'views.Channel.forceClose.infoText1'
-                                                ),
-                                                localeString(
-                                                    'views.Channel.forceClose.infoText2'
-                                                )
-                                            ]}
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text'),
-                                                top: 20
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Channel.forceClose'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={forceCloseChannel}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    forceCloseChannel:
-                                                        !forceCloseChannel
-                                                })
-                                            }
-                                        />
-                                    </View>
-                                    {BackendUtils.isLNDBased() &&
-                                        !forceCloseChannel && (
-                                            <>
+                                    <Divider
+                                        orientation="horizontal"
+                                        style={{ margin: 20 }}
+                                    />
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('Routing', {
+                                                filterChanIdIn: channelId
+                                            })
+                                        }
+                                    >
+                                        <View style={styles.tappableRow}>
+                                            <Row justify="space-between">
                                                 <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Channel.closingRate'
-                                                    )}
-                                                </Text>
-                                                <OnchainFeeInput
-                                                    fee={satPerByte}
-                                                    onChangeFee={(
-                                                        text: string
-                                                    ) => {
-                                                        this.setState({
-                                                            satPerByte: text
-                                                        });
-                                                    }}
-                                                    navigation={navigation}
-                                                />
-
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                    infoModalText={
-                                                        closeAddress
-                                                            ? localeString(
-                                                                  'views.Channel.externalAddress.info2'
-                                                              )
-                                                            : localeString(
-                                                                  'views.Channel.externalAddress.info1'
-                                                              )
+                                                    style={
+                                                        styles.tappableRowText
                                                     }
                                                 >
                                                     {localeString(
-                                                        'views.Channel.externalAddress'
+                                                        'views.Channel.routingHistory'
                                                     )}
                                                 </Text>
-                                                <TextInput
-                                                    placeholder={'bc1...'}
-                                                    value={deliveryAddress}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) => {
-                                                        this.setState({
-                                                            deliveryAddress:
-                                                                text
-                                                        });
-                                                    }}
-                                                    locked={
-                                                        closingChannel ||
-                                                        (closeAddress !==
-                                                            undefined &&
-                                                            closeAddress !== '')
-                                                    }
+                                                <CaretRight
+                                                    fill={themeColor(
+                                                        'secondaryText'
+                                                    )}
+                                                    width="20"
+                                                    height="20"
                                                 />
-                                            </>
-                                        )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
                                 </>
                             )}
+                        {BackendUtils.supportsBumpFee() && pendingOpen && (
                             <View style={styles.button}>
                                 <Button
                                     title={localeString(
-                                        'views.Channel.confirmClose'
+                                        'views.BumpFee.titleAlt'
                                     )}
                                     onPress={() =>
-                                        this.closeChannel(
-                                            channel_point,
-                                            channelId,
-                                            satPerByte,
-                                            forceCloseChannel,
-                                            deliveryAddress
-                                        )
+                                        navigation.navigate('BumpFee', {
+                                            outpoint: channel.channel_point,
+                                            pendingOpen: true
+                                        })
                                     }
-                                    warning
+                                    noUppercase
                                 />
                             </View>
-                        </View>
-                    )}
-                </ScrollView>
-            </Screen>
+                        )}
+                        {BackendUtils.supportsBumpFee() &&
+                            (pendingClose || closing) &&
+                            closing_txid && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.BumpFee.titleClose'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('BumpFee', {
+                                                outpoint: `${closing_txid}:0`,
+                                                pendingClose: true
+                                            })
+                                        }
+                                        noUppercase
+                                    />
+                                </View>
+                            )}
+                        {BackendUtils.supportsBumpFee() &&
+                            forceClose &&
+                            !blocks_til_maturity && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.BumpFee.titleClose'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('BumpFee', {
+                                                chan_point:
+                                                    channel.channel_point,
+                                                forceClose: true
+                                            })
+                                        }
+                                        noUppercase
+                                    />
+                                </View>
+                            )}
+                        {this.state.channel.isOpen && (
+                            <View
+                                style={{
+                                    ...styles.button,
+                                    marginTop: 20,
+                                    marginBottom: confirmCloseChannel ? 0 : 50
+                                }}
+                            >
+                                <Button
+                                    title={
+                                        confirmCloseChannel
+                                            ? localeString(
+                                                  'views.Channel.cancelClose'
+                                              )
+                                            : localeString(
+                                                  'views.Channel.close'
+                                              )
+                                    }
+                                    onPress={() =>
+                                        this.setState({
+                                            confirmCloseChannel:
+                                                !confirmCloseChannel
+                                        })
+                                    }
+                                    warning={!confirmCloseChannel}
+                                />
+                            </View>
+                        )}
+                        {confirmCloseChannel && (
+                            <View>
+                                {closingChannel && (
+                                    <View
+                                        style={{ margin: 20, marginBottom: 40 }}
+                                    >
+                                        <LoadingIndicator />
+                                    </View>
+                                )}
+                                {!closingChannel && closeChannelErr && (
+                                    <ErrorMessage message={closeChannelErr} />
+                                )}
+                                {BackendUtils.supportsForceClose() && (
+                                    <>
+                                        <View style={{ marginBottom: 10 }}>
+                                            <Text
+                                                infoModalText={[
+                                                    localeString(
+                                                        'views.Channel.forceClose.infoText1'
+                                                    ),
+                                                    localeString(
+                                                        'views.Channel.forceClose.infoText2'
+                                                    )
+                                                ]}
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text'),
+                                                    top: 20
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.forceClose'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={forceCloseChannel}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        forceCloseChannel:
+                                                            !forceCloseChannel
+                                                    })
+                                                }
+                                            />
+                                        </View>
+                                        {BackendUtils.isLNDBased() &&
+                                            !forceCloseChannel && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Channel.closingRate'
+                                                        )}
+                                                    </Text>
+                                                    <OnchainFeeInput
+                                                        fee={satPerByte}
+                                                        onChangeFee={(
+                                                            text: string
+                                                        ) => {
+                                                            this.setState({
+                                                                satPerByte: text
+                                                            });
+                                                        }}
+                                                        navigation={navigation}
+                                                    />
+
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                        infoModalText={
+                                                            closeAddress
+                                                                ? localeString(
+                                                                      'views.Channel.externalAddress.info2'
+                                                                  )
+                                                                : localeString(
+                                                                      'views.Channel.externalAddress.info1'
+                                                                  )
+                                                        }
+                                                    >
+                                                        {localeString(
+                                                            'views.Channel.externalAddress'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={'bc1...'}
+                                                        value={deliveryAddress}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) => {
+                                                            this.setState({
+                                                                deliveryAddress:
+                                                                    text
+                                                            });
+                                                        }}
+                                                        locked={
+                                                            closingChannel ||
+                                                            (closeAddress !==
+                                                                undefined &&
+                                                                closeAddress !==
+                                                                    '')
+                                                        }
+                                                    />
+                                                </>
+                                            )}
+                                    </>
+                                )}
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Channel.confirmClose'
+                                        )}
+                                        onPress={() =>
+                                            this.closeChannel(
+                                                channel_point,
+                                                channelId,
+                                                satPerByte,
+                                                forceCloseChannel,
+                                                deliveryAddress
+                                            )
+                                        }
+                                        warning
+                                    />
+                                </View>
+                            </View>
+                        )}
+                    </ScrollView>
+                </Screen>
+            </SharedScreen>
         );
     }
 }

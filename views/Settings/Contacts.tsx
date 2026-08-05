@@ -7,7 +7,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { SharedText } from '../../components/SharedTransition';
+import { SharedScreen, SharedText } from '../../components/SharedTransition';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -339,41 +339,97 @@ export default class Contacts extends React.Component<
         );
 
         return (
-            <Screen>
-                <Header
-                    leftComponent="Back"
-                    containerStyle={{ borderBottomWidth: 0 }}
-                    centerComponent={
-                        SendScreen ? undefined : (
-                            <NostrichIcon
-                                onPress={() =>
-                                    navigation.navigate('NostrContacts')
-                                }
-                                fill={themeColor('text')}
-                                width={30}
-                                height={30}
-                            />
-                        )
-                    }
-                    rightComponent={SendScreen ? undefined : <AddButton />}
-                    placement="right"
-                    navigation={navigation}
-                />
-                {contacts.length > 0 && (
-                    <>
-                        {SendScreen ? (
-                            <View>
-                                {(!CashuLockSettingsScreen ||
-                                    hasCashuContacts) && (
-                                    <>
-                                        <Divider
-                                            orientation="horizontal"
-                                            style={{ marginTop: 14 }}
-                                            color={themeColor('separator')}
-                                        />
+            <SharedScreen>
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        containerStyle={{ borderBottomWidth: 0 }}
+                        centerComponent={
+                            SendScreen ? undefined : (
+                                <NostrichIcon
+                                    onPress={() =>
+                                        navigation.navigate('NostrContacts')
+                                    }
+                                    fill={themeColor('text')}
+                                    width={30}
+                                    height={30}
+                                />
+                            )
+                        }
+                        rightComponent={SendScreen ? undefined : <AddButton />}
+                        placement="right"
+                        navigation={navigation}
+                    />
+                    {contacts.length > 0 && (
+                        <>
+                            {SendScreen ? (
+                                <View>
+                                    {(!CashuLockSettingsScreen ||
+                                        hasCashuContacts) && (
+                                        <>
+                                            <Divider
+                                                orientation="horizontal"
+                                                style={{ marginTop: 14 }}
+                                                color={themeColor('separator')}
+                                            />
+                                            <SearchBar
+                                                placeholder={localeString(
+                                                    'views.Settings.Contacts.searchBar1'
+                                                )}
+                                                // @ts-ignore:next-line
+                                                onChangeText={this.updateSearch}
+                                                value={this.state.search}
+                                                inputStyle={{
+                                                    color: themeColor('text')
+                                                }}
+                                                placeholderTextColor={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                containerStyle={{
+                                                    backgroundColor: 'none',
+                                                    borderTopWidth: 0,
+                                                    borderBottomWidth: 0
+                                                }}
+                                                inputContainerStyle={{
+                                                    backgroundColor: 'none'
+                                                }}
+                                                // @ts-ignore:next-line
+                                                searchIcon={
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 20,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.Contacts.to'
+                                                        )}
+                                                    </Text>
+                                                }
+                                                leftIconContainerStyle={{
+                                                    marginLeft: 18,
+                                                    marginRight: -8,
+                                                    marginBottom: 6
+                                                }}
+                                                multiline={true}
+                                            />
+                                            <Divider
+                                                orientation="horizontal"
+                                                color={themeColor('separator')}
+                                            />
+                                        </>
+                                    )}
+                                </View>
+                            ) : (
+                                <>
+                                    {(!CashuLockSettingsScreen ||
+                                        hasCashuContacts) && (
                                         <SearchBar
                                             placeholder={localeString(
-                                                'views.Settings.Contacts.searchBar1'
+                                                'views.Settings.Contacts.searchBar2'
                                             )}
                                             // @ts-ignore:next-line
                                             onChangeText={this.updateSearch}
@@ -385,207 +441,155 @@ export default class Contacts extends React.Component<
                                                 'secondaryText'
                                             )}
                                             containerStyle={{
-                                                backgroundColor: 'none',
+                                                backgroundColor: 'transparent',
                                                 borderTopWidth: 0,
                                                 borderBottomWidth: 0
                                             }}
                                             inputContainerStyle={{
-                                                backgroundColor: 'none'
+                                                borderRadius: 15,
+                                                backgroundColor:
+                                                    themeColor('secondary')
                                             }}
-                                            // @ts-ignore:next-line
-                                            searchIcon={
-                                                <Text
-                                                    style={{
-                                                        fontSize: 20,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.Contacts.to'
-                                                    )}
-                                                </Text>
-                                            }
-                                            leftIconContainerStyle={{
-                                                marginLeft: 18,
-                                                marginRight: -8,
-                                                marginBottom: 6
-                                            }}
-                                            multiline={true}
                                         />
-                                        <Divider
-                                            orientation="horizontal"
-                                            color={themeColor('separator')}
-                                        />
-                                    </>
-                                )}
+                                    )}
+                                </>
+                            )}
+                        </>
+                    )}
+                    <ScrollView>
+                        {/* Render favorite contacts */}
+                        {favoriteContacts.length > 0 && (
+                            <View style={{ margin: 28 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.Contacts.favorites'
+                                    ).toUpperCase()} (${
+                                        favoriteContacts.length
+                                    })`}
+                                </Text>
                             </View>
-                        ) : (
-                            <>
-                                {(!CashuLockSettingsScreen ||
-                                    hasCashuContacts) && (
-                                    <SearchBar
-                                        placeholder={localeString(
-                                            'views.Settings.Contacts.searchBar2'
-                                        )}
-                                        // @ts-ignore:next-line
-                                        onChangeText={this.updateSearch}
-                                        value={this.state.search}
-                                        inputStyle={{
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor={themeColor(
-                                            'secondaryText'
-                                        )}
-                                        containerStyle={{
-                                            backgroundColor: 'transparent',
-                                            borderTopWidth: 0,
-                                            borderBottomWidth: 0
-                                        }}
-                                        inputContainerStyle={{
-                                            borderRadius: 15,
-                                            backgroundColor:
-                                                themeColor('secondary')
-                                        }}
-                                    />
-                                )}
-                            </>
                         )}
-                    </>
-                )}
-                <ScrollView>
-                    {/* Render favorite contacts */}
-                    {favoriteContacts.length > 0 && (
-                        <View style={{ margin: 28 }}>
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {`${localeString(
-                                    'views.Settings.Contacts.favorites'
-                                ).toUpperCase()} (${favoriteContacts.length})`}
-                            </Text>
-                        </View>
-                    )}
-                    <FlatList
-                        data={favoriteContacts}
-                        renderItem={this.renderContactItem}
-                        keyExtractor={(item) => item.contactId || item.id}
-                        scrollEnabled={false}
-                        removeClippedSubviews={false}
-                    />
+                        <FlatList
+                            data={favoriteContacts}
+                            renderItem={this.renderContactItem}
+                            keyExtractor={(item) => item.contactId || item.id}
+                            scrollEnabled={false}
+                            removeClippedSubviews={false}
+                        />
 
-                    {/* Render non-favorite contacts */}
-                    {nonFavoriteContacts.length > 0 && (
-                        <View
-                            style={{
-                                margin: 28,
-                                marginTop:
-                                    favoriteContacts.length === 0 ? 28 : 10
-                            }}
-                        >
-                            <Text
+                        {/* Render non-favorite contacts */}
+                        {nonFavoriteContacts.length > 0 && (
+                            <View
                                 style={{
-                                    fontSize: 16,
-                                    color: themeColor('secondaryText')
+                                    margin: 28,
+                                    marginTop:
+                                        favoriteContacts.length === 0 ? 28 : 10
                                 }}
                             >
-                                {`${localeString(
-                                    'views.Settings.Contacts.contacts'
-                                ).toUpperCase()} (${
-                                    nonFavoriteContacts.length
-                                })`}
-                            </Text>
-                        </View>
-                    )}
-                    <FlatList
-                        data={nonFavoriteContacts}
-                        renderItem={this.renderContactItem}
-                        keyExtractor={(item) => item.contactId || item.id}
-                        scrollEnabled={false}
-                        removeClippedSubviews={false}
-                    />
-                    {!loading &&
-                        filteredContacts.length > 0 &&
-                        !CashuLockSettingsScreen && (
-                            <Button
-                                title={localeString(
-                                    'views.Settings.Contacts.deleteAllContacts'
-                                )}
-                                onPress={() => {
-                                    confirmAction(
-                                        localeString(
-                                            'views.Settings.Contacts.deleteAllContacts'
-                                        ),
-                                        localeString(
-                                            'views.Settings.Contacts.deleteAllContacts.confirm'
-                                        ),
-                                        {
-                                            text: localeString(
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.Contacts.contacts'
+                                    ).toUpperCase()} (${
+                                        nonFavoriteContacts.length
+                                    })`}
+                                </Text>
+                            </View>
+                        )}
+                        <FlatList
+                            data={nonFavoriteContacts}
+                            renderItem={this.renderContactItem}
+                            keyExtractor={(item) => item.contactId || item.id}
+                            scrollEnabled={false}
+                            removeClippedSubviews={false}
+                        />
+                        {!loading &&
+                            filteredContacts.length > 0 &&
+                            !CashuLockSettingsScreen && (
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.Contacts.deleteAllContacts'
+                                    )}
+                                    onPress={() => {
+                                        confirmAction(
+                                            localeString(
                                                 'views.Settings.Contacts.deleteAllContacts'
                                             ),
-                                            style: 'destructive',
-                                            onPress: async () => {
-                                                await Storage.setItem(
-                                                    CONTACTS_KEY,
-                                                    []
-                                                );
-                                                ContactStore?.loadContacts();
-                                            }
-                                        },
-                                        {
-                                            text: localeString(
-                                                'general.cancel'
+                                            localeString(
+                                                'views.Settings.Contacts.deleteAllContacts.confirm'
                                             ),
-                                            onPress: () => void 0,
-                                            isPreferred: true
-                                        }
-                                    );
-                                }}
-                                containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
-                            />
+                                            {
+                                                text: localeString(
+                                                    'views.Settings.Contacts.deleteAllContacts'
+                                                ),
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    await Storage.setItem(
+                                                        CONTACTS_KEY,
+                                                        []
+                                                    );
+                                                    ContactStore?.loadContacts();
+                                                }
+                                            },
+                                            {
+                                                text: localeString(
+                                                    'general.cancel'
+                                                ),
+                                                onPress: () => void 0,
+                                                isPreferred: true
+                                            }
+                                        );
+                                    }}
+                                    containerStyle={{
+                                        borderColor: themeColor('delete')
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('delete')
+                                    }}
+                                    secondary
+                                />
+                            )}
+                        {loading ? (
+                            <LoadingIndicator />
+                        ) : (
+                            ((CashuLockSettingsScreen && !hasCashuContacts) ||
+                                (!CashuLockSettingsScreen &&
+                                    contacts.length === 0)) && (
+                                <Button
+                                    title={localeString(
+                                        CashuLockSettingsScreen
+                                            ? 'cashu.noContactsWithCashuPubkey'
+                                            : 'views.Settings.Contacts.noContacts'
+                                    )}
+                                    icon={{
+                                        name: 'error-outline',
+                                        size: 25,
+                                        color: themeColor('text')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'transparent',
+                                        borderRadius: 30
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                    onPress={() => ContactStore?.loadContacts()}
+                                />
+                            )
                         )}
-                    {loading ? (
-                        <LoadingIndicator />
-                    ) : (
-                        ((CashuLockSettingsScreen && !hasCashuContacts) ||
-                            (!CashuLockSettingsScreen &&
-                                contacts.length === 0)) && (
-                            <Button
-                                title={localeString(
-                                    CashuLockSettingsScreen
-                                        ? 'cashu.noContactsWithCashuPubkey'
-                                        : 'views.Settings.Contacts.noContacts'
-                                )}
-                                icon={{
-                                    name: 'error-outline',
-                                    size: 25,
-                                    color: themeColor('text')
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'transparent',
-                                    borderRadius: 30
-                                }}
-                                titleStyle={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                                onPress={() => ContactStore?.loadContacts()}
-                            />
-                        )
-                    )}
-                </ScrollView>
-            </Screen>
+                    </ScrollView>
+                </Screen>
+            </SharedScreen>
         );
     }
 }
