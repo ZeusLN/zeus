@@ -19,7 +19,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import Storage from '../../storage';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import Star from '../../assets/images/SVG/Star.svg';
 
@@ -257,7 +257,7 @@ export default class SelectCurrency extends React.Component<
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,

@@ -271,9 +271,6 @@ export default class ProductCategoryDetails extends React.Component<
                                         placeholder={localeString(
                                             'views.Settings.POS.Category.name'
                                         )}
-                                        placeholderTextColor={themeColor(
-                                            'secondaryText'
-                                        )}
                                         style={styles.textInput}
                                     />
                                 </View>

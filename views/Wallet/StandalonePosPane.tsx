@@ -29,7 +29,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
 
@@ -466,7 +466,7 @@ export default class StandalonePosPane extends React.PureComponent<
                         inputStyle={{
                             color: themeColor('text')
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,

@@ -20,7 +20,7 @@ import { ContactAvatar } from '../../components/ContactAvatar';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
 
@@ -381,9 +381,7 @@ export default class Contacts extends React.Component<
                                             inputStyle={{
                                                 color: themeColor('text')
                                             }}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
+                                            placeholderTextColor={placeholderColor()}
                                             containerStyle={{
                                                 backgroundColor: 'none',
                                                 borderTopWidth: 0,
@@ -436,9 +434,7 @@ export default class Contacts extends React.Component<
                                         inputStyle={{
                                             color: themeColor('text')
                                         }}
-                                        placeholderTextColor={themeColor(
-                                            'secondaryText'
-                                        )}
+                                        placeholderTextColor={placeholderColor()}
                                         containerStyle={{
                                             backgroundColor: 'transparent',
                                             borderTopWidth: 0,

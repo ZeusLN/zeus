@@ -10,7 +10,7 @@ import Screen from '../../components/Screen';
 import SettingsStore, { LOCALE_KEYS } from '../../stores/SettingsStore';
 
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 interface LanguageProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -93,7 +93,7 @@ export default class Language extends React.Component<
                         inputStyle={{
                             color: themeColor('text')
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,

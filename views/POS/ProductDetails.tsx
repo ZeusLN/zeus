@@ -324,9 +324,6 @@ export default class ProductDetails extends React.Component<
                                                 placeholder={localeString(
                                                     'views.Settings.POS.Product.name'
                                                 )}
-                                                placeholderTextColor={themeColor(
-                                                    'secondaryText'
-                                                )}
                                                 style={styles.textInput}
                                             />
                                             <TextInput
@@ -338,9 +335,6 @@ export default class ProductDetails extends React.Component<
                                                 value={product?.sku}
                                                 placeholder={localeString(
                                                     'views.Settings.POS.Product.sku'
-                                                )}
-                                                placeholderTextColor={themeColor(
-                                                    'secondaryText'
                                                 )}
                                                 style={styles.textInput}
                                                 autoCapitalize="none"

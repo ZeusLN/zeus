@@ -10,7 +10,7 @@ import {
     View,
     ViewStyle
 } from 'react-native';
-import { themeColor } from './../utils/ThemeUtils';
+import { placeholderColor, themeColor } from './../utils/ThemeUtils';
 
 interface TextInputProps {
     placeholder?: string;
@@ -175,7 +175,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                                 : themeColor('text'))
                     }}
                     placeholderTextColor={
-                        placeholderTextColor || themeColor('secondaryText')
+                        placeholderTextColor || placeholderColor()
                     }
                     editable={!locked}
                     keyboardType={keyboardType}

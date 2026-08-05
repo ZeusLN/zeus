@@ -12,7 +12,7 @@ import UnitsStore from '../stores/UnitsStore';
 import FiatStore from '../stores/FiatStore';
 
 import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, numberWithDecimals } from '../utils/UnitsUtils';
 
 import BitcoinIcon from '../assets/images/SVG/bitcoin-icon.svg';
@@ -294,7 +294,7 @@ export default class CurrencyList extends React.Component<
                         color: themeColor('text'),
                         fontFamily: 'PPNeueMontreal-Book'
                     }}
-                    placeholderTextColor={themeColor('secondaryText')}
+                    placeholderTextColor={placeholderColor()}
                     containerStyle={{
                         backgroundColor: 'transparent',
                         borderTopWidth: 0,

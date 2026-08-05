@@ -13,7 +13,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import CashuStore from '../../stores/CashuStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 interface RecoverMintQuoteProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -207,7 +207,7 @@ export default class RecoverMintQuote extends React.Component<
                         placeholder={localeString(
                             'views.Cashu.RecoverMintQuote.quoteIdPlaceholder'
                         )}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         style={{
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book',

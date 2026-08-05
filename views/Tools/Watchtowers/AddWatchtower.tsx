@@ -198,7 +198,6 @@ export default class AddWatchtower extends React.Component<
                                     : themeColor('error')
                             }
                             placeholder={'02abc...'}
-                            placeholderTextColor={themeColor('secondaryText')}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
@@ -236,7 +235,6 @@ export default class AddWatchtower extends React.Component<
                             placeholder={localeString(
                                 'views.OpenChannel.hostPort'
                             )}
-                            placeholderTextColor={themeColor('secondaryText')}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />

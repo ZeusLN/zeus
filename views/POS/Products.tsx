@@ -12,7 +12,7 @@ import Screen from '../../components/Screen';
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 import Product from '../../models/Product';
 
 interface ProductsProps {
@@ -131,7 +131,7 @@ export default class Products extends React.Component<
                         inputStyle={{
                             color: themeColor('text')
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,
