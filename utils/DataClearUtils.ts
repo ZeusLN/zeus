@@ -63,6 +63,7 @@ import {
     NWC_PERSISTENT_SERVICE_ENABLED
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
+import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
@@ -493,11 +494,15 @@ async function clearLncCredentials(pairingPhrase: string) {
  * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
  *   ldkNodeDir for LDK) - CashuStore.getNodeDir
  * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
+ * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006)
  *
  * Exported so both clearAllData() and single-wallet deletion
  * (WalletConfiguration.deleteNodeConfig) clear the same set of keys.
  */
-export async function clearNodeKeychainData(node: any): Promise<void> {
+export async function clearNodeKeychainData(
+    node: any,
+    opts?: { skipXprvPurge?: boolean }
+): Promise<void> {
     if (!node) return;
     if (node.lndDir) {
         await clearCashuDataForNode(node.lndDir);
@@ -519,6 +524,31 @@ export async function clearNodeKeychainData(node: any): Promise<void> {
     }
     if (node.pairingPhrase) {
         await clearLncCredentials(node.pairingPhrase);
+    }
+    // Builds between Jan 2025 (ba70ce58f) and the removal in this PR
+    // cached ypriv/zpriv under '<pubkey>-extended-private-keys'. The node
+    // pubkey is not stored in the config, so re-derive it from the aezeed
+    // (entropy -> BIP32 master -> m/1017'/coinType'/6'/0/0, lnd's node
+    // identity key). Derivation failure means a non-default aezeed
+    // passphrase; those wallets never had the cache written, because the
+    // export screen's decryption failed the same way before its write.
+    if (
+        !opts?.skipXprvPurge &&
+        node.implementation === 'embedded-lnd' &&
+        Array.isArray(node.seedPhrase) &&
+        node.seedPhrase.length > 0
+    ) {
+        try {
+            const nodeId = await deriveEmbeddedNodeId(
+                node.seedPhrase,
+                node.embeddedLndNetwork?.toLowerCase?.() === 'testnet'
+            );
+            if (nodeId) {
+                await clearKey(`${nodeId}-extended-private-keys`);
+            }
+        } catch (e) {
+            console.warn('[ClearData] Error purging xprv cache for node:', e);
+        }
     }
 }
 
@@ -582,7 +612,14 @@ export async function clearAllData(): Promise<void> {
     // LDK node dirs, plus LNC pairing credentials) for every known node.
     if (settings?.nodes && Array.isArray(settings.nodes)) {
         for (const node of settings.nodes) {
-            await clearNodeKeychainData(node);
+            // Skip the scrypt-heavy xprv re-derivation on Android: the
+            // backing-store deletion in step 8 removes every keychain entry
+            // wholesale, and this path runs on the duress wipe, where added
+            // seconds per embedded wallet matter. iOS has no backing store
+            // to delete, so it must pay for the derivation here.
+            await clearNodeKeychainData(node, {
+                skipXprvPurge: Platform.OS === 'android'
+            });
         }
     }
     // Also try common node-dir defaults (getNodeDir falls back to 'lnd' / 'ldk')

@@ -45,6 +45,17 @@ jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
+// The real derivation runs scrypt (N=32768); its correctness is pinned by
+// AezeedUtils.test.ts against lnd-generated golden vectors. Here only the
+// wiring matters: the derived pubkey must be turned into a cleared key.
+jest.mock('./AezeedUtils', () => ({
+    deriveEmbeddedNodeId: jest
+        .fn()
+        .mockResolvedValue(
+            '020b4e17f82873d40c1abff7a9140b6a56c04a845e1abe6ab71ef3269836d47abd'
+        )
+}));
+
 // Store modules are imported only for their storage-key constants; mock them
 // so the real (native-dependency-heavy) store modules are never loaded.
 jest.mock('../stores/SettingsStore', () => ({
@@ -131,6 +142,7 @@ import fs from 'fs';
 import path from 'path';
 
 import Storage from '../storage';
+import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
     clearAllData,
     clearNodeKeychainData,
@@ -450,6 +462,121 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+});
+
+// Reviewer follow-up on KEY-006: '<pubkey>-extended-private-keys' was not
+// removed by clearAllData / clearNodeKeychainData because the pubkey is not
+// in the node config. It is now re-derived from the embedded wallet's aezeed
+// so deletion and (iOS) full wipes can clear the entry.
+describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
+    const mockedDerive = deriveEmbeddedNodeId as jest.Mock;
+    const NODE_ID =
+        '020b4e17f82873d40c1abff7a9140b6a56c04a845e1abe6ab71ef3269836d47abd';
+    const XPRV_KEY = `${NODE_ID}-extended-private-keys`;
+    const seedPhrase = ['absorb', 'spawn', 'orbit', 'course'];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+        mockedDerive.mockResolvedValue(NODE_ID);
+    });
+
+    it('clears the xprv cache on single-wallet deletion (mainnet)', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc',
+            seedPhrase,
+            embeddedLndNetwork: 'Mainnet'
+        });
+
+        expect(mockedDerive).toHaveBeenCalledWith(seedPhrase, false);
+        expect(removedKeys()).toContain(XPRV_KEY);
+    });
+
+    it('derives with coin type 1 for a Testnet wallet', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc',
+            seedPhrase,
+            embeddedLndNetwork: 'Testnet'
+        });
+
+        expect(mockedDerive).toHaveBeenCalledWith(seedPhrase, true);
+    });
+
+    it('does not attempt derivation without a seed phrase', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc'
+        });
+
+        expect(mockedDerive).not.toHaveBeenCalled();
+    });
+
+    it('does not attempt derivation for remote nodes', async () => {
+        await clearNodeKeychainData({
+            implementation: 'lnd',
+            seedPhrase
+        });
+
+        expect(mockedDerive).not.toHaveBeenCalled();
+    });
+
+    it('still clears the other node keys when derivation fails (custom aezeed passphrase)', async () => {
+        mockedDerive.mockRejectedValueOnce(
+            new Error('Decryption failed. Invalid passphrase?')
+        );
+
+        await expect(
+            clearNodeKeychainData({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc',
+                seedPhrase
+            })
+        ).resolves.toBeUndefined();
+
+        expect(removedKeys()).toContain('lnd-abc-cashu-seed-phrase');
+        expect(removedKeys()).not.toContain(XPRV_KEY);
+    });
+
+    it('clears the xprv cache during a full wipe on iOS', async () => {
+        // Platform.OS is 'ios' by default under the react-native jest preset
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'lnd-abc',
+                    seedPhrase,
+                    embeddedLndNetwork: 'Mainnet'
+                }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain(XPRV_KEY);
+    });
+
+    it('skips the scrypt-heavy derivation on an Android full wipe (backing store deletion covers it)', async () => {
+        jest.replaceProperty(Platform, 'OS', 'android');
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'lnd-abc',
+                    seedPhrase,
+                    embeddedLndNetwork: 'Mainnet'
+                }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        expect(mockedDerive).not.toHaveBeenCalled();
+        jest.restoreAllMocks();
     });
 });
 
