@@ -2068,6 +2068,8 @@ export default class NostrWalletConnectStore {
                 paymentHash
             );
 
+        const feeSats = Number(payment?.getFee || fees_paid) || 0;
+
         // Debit the budget on any evidence of settlement, not only when the
         // payments-list lookup succeeds: with a preimage in hand the payment
         // definitely settled, and skipping finalizePayment on a list miss
@@ -2089,16 +2091,15 @@ export default class NostrWalletConnectStore {
                     }),
                 payment_source: 'lightning',
                 connection,
-                amountSats
+                amountSats,
+                feeSats
             });
         }
 
         return {
             result: {
                 preimage: preimage || payment?.getPreimage || '',
-                fees_paid: satsToMillisats(
-                    Number(fees_paid) || Number(payment?.getFee) || 0
-                )
+                fees_paid: satsToMillisats(feeSats)
             },
             error: undefined
         };
@@ -2241,6 +2242,7 @@ export default class NostrWalletConnectStore {
         // The melt succeeded (failure returned above), so debit the budget
         // unconditionally: gating on the payments-list lookup would let the
         // spend escape the budget when the list misses the fresh melt.
+        const feeSats = Number(cashuInvoice.getFee || payment?.getFee || 0);
         await this.finalizePayment({
             id: request.invoice,
             decoded:
@@ -2255,6 +2257,7 @@ export default class NostrWalletConnectStore {
             type: 'pay_invoice',
             payment_source: 'cashu',
             amountSats,
+            feeSats,
             connection
         });
 
@@ -2264,7 +2267,7 @@ export default class NostrWalletConnectStore {
                     cashuInvoice.getPreimage ||
                     cashuInvoice.getPaymentRequest ||
                     '',
-                fees_paid: satsToMillisats(cashuInvoice.fee || 0)
+                fees_paid: satsToMillisats(feeSats)
             },
             error: undefined
         };
@@ -2413,8 +2416,12 @@ export default class NostrWalletConnectStore {
                     const amountSats =
                         Math.floor(Number(activity.satAmount)) ||
                         Math.floor(Number(payment.getAmount) || 0);
-                    if (amountSats > 0) {
-                        connection.trackSpending(amountSats);
+                    const feeSats = Number(payment.getFee) || 0;
+                    activity.fees_paid = feeSats;
+                    const spendSats =
+                        amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+                    if (spendSats > 0) {
+                        connection.trackSpending(spendSats);
                     }
                 } else if (payment.isFailed) {
                     activity.status = 'failed';
@@ -2696,7 +2703,8 @@ export default class NostrWalletConnectStore {
         payment_source,
         decoded,
         connection,
-        amountSats
+        amountSats,
+        feeSats = 0
     }: {
         id: string;
         type: ConnectionActivityType;
@@ -2704,9 +2712,12 @@ export default class NostrWalletConnectStore {
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
         amountSats: number;
+        feeSats?: number;
     }): Promise<void> {
+        // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
+        const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
         runInAction(() => {
-            connection.trackSpending(amountSats);
+            connection.trackSpending(amountSats + budgetFeeSats);
             connection.activity.push({
                 id,
                 type,
@@ -2715,7 +2726,9 @@ export default class NostrWalletConnectStore {
                         ? new CashuPayment(decoded)
                         : new Payment(decoded),
                 status: 'success',
-                payment_source
+                payment_source,
+                satAmount: amountSats,
+                fees_paid: feeSats
             });
             this.findAndUpdateConnection(connection);
         });

@@ -286,6 +286,11 @@ export default class NWCConnectionActivity extends React.Component<
         return item.satAmount;
     };
 
+    getFee = (item: ConnectionActivity) => {
+        if (item.type !== 'pay_invoice') return 0;
+        return item.payment?.getFee || item.fees_paid || 0;
+    };
+
     getActivityMemo = (item: ConnectionActivity): string | undefined => {
         const payment: any = item.payment;
         const invoice: any = item.invoice;
@@ -411,6 +416,8 @@ export default class NWCConnectionActivity extends React.Component<
     renderActivityListItem = ({ item }: { item: ConnectionActivity }) => {
         const title = this.getActivityTitle(item);
         const subtitleNode = this.getActivitySubtitleNode(item);
+        const amountColor = this.getAmountColor(item);
+        const fee = this.getFee(item);
         const displayTime =
             item.invoice?.getDisplayTime || item.payment?.getDisplayTime;
         const displayTimeShort =
@@ -443,11 +450,41 @@ export default class NWCConnectionActivity extends React.Component<
                         >
                             {title}
                         </ListItem.Title>
-                        <Amount
-                            sats={this.getAmount(item)}
-                            sensitive
-                            color={this.getAmountColor(item)}
-                        />
+                        <View
+                            style={{
+                                ...styles.rightCell,
+                                flexDirection: 'row',
+                                flexWrap: 'wrap',
+                                columnGap: 5,
+                                rowGap: -5,
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Amount
+                                sats={this.getAmount(item)}
+                                sensitive
+                                color={amountColor}
+                            />
+                            {!!fee && fee != 0 && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 16
+                                        }}
+                                    >
+                                        +
+                                    </Text>
+                                    <Amount
+                                        sats={fee}
+                                        sensitive
+                                        color={amountColor}
+                                        fee
+                                        roundAmount
+                                    />
+                                </>
+                            )}
+                        </View>
                     </View>
 
                     {showTimeRow && (
@@ -661,6 +698,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontFamily: 'PPNeueMontreal-Book',
         flexShrink: 1
+    },
+    rightCell: {
+        fontFamily: 'PPNeueMontreal-Book',
+        textAlign: 'right',
+        flexShrink: 0
     },
     leftCellSecondary: {
         fontFamily: 'PPNeueMontreal-Book',
