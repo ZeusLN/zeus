@@ -27,6 +27,7 @@ export const SENSITIVE_KEYS: string[] = [
     'ldkMnemonic',
     'ldkPassphrase',
     // top-level secrets
+    'nostrPrivateKey', // Zaplocker signing key (settings.lightningAddress)
     'passphrase',
     'duressPassphrase',
     'pin',

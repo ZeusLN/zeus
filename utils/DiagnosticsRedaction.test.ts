@@ -14,6 +14,10 @@ describe('redactSettings', () => {
         duressPin: '0000',
         lspAccessKey: 'lsp-key',
         pos: { squareAccessToken: 'sq-token' },
+        lightningAddress: {
+            enabled: true,
+            nostrPrivateKey: 'nsec-hex-zaplocker-key'
+        },
         fiatEnabled: true,
         selectedNode: 0,
         nodes: [
@@ -66,6 +70,8 @@ describe('redactSettings', () => {
         expect(out.duressPin).toBe(REDACTED);
         expect(out.lspAccessKey).toBe(REDACTED);
         expect(out.pos.squareAccessToken).toBe(REDACTED);
+        expect(out.lightningAddress.nostrPrivateKey).toBe(REDACTED);
+        expect(out.lightningAddress.enabled).toBe(true);
 
         expect(out.nodes[0].macaroonHex).toBe(REDACTED);
         expect(out.nodes[1].username).toBe(REDACTED);
