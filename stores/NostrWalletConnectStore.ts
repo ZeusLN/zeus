@@ -799,8 +799,18 @@ export default class NostrWalletConnectStore {
             }
 
             if (relayUrlChanged && rotatedSecret) {
-                await this.subscribeToConnection(connection);
-                await this.saveConnections();
+                // Rotation (new key stored + pubkey rebound) is already durable.
+                // If subscribe/save fails here, still return the pairing URL so
+                // the UI can show the QR; subscription recovers on restart.
+                try {
+                    await this.subscribeToConnection(connection);
+                    await this.saveConnections();
+                } catch (error) {
+                    console.warn(
+                        'NWC: Relay change rotation persisted but subscribe/save failed; returning pairing URL anyway:',
+                        error
+                    );
+                }
                 await this.deleteClientKeys(oldPubkey);
 
                 return {
