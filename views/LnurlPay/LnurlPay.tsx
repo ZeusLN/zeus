@@ -162,17 +162,21 @@ export default class LnurlPay extends React.Component<
             // If only amount is provided, use it and derive satAmount
             finalAmount = amount;
             finalSatAmount = getSatAmount(amount);
-        } else {
-            // Fall back to min sat amount
+        } else if (lnurl.minSendable === lnurl.maxSendable) {
+            // Fixed amount: prefill the locked input with the required amount
             const { amount: unformattedAmount } = getUnformattedAmount({
                 sats: minSendableSats
             });
-            const unspecifiedDefault =
+            finalAmount =
                 units === 'sats'
                     ? minSendableSats.toString()
                     : unformattedAmount;
-            finalAmount = amount && amount != 0 ? amount : unspecifiedDefault;
             finalSatAmount = minSendableSats;
+        } else {
+            // Variable amount: start empty so the user doesn't have to
+            // delete a prefilled value
+            finalAmount = '';
+            finalSatAmount = '';
         }
 
         // Find matching contact by Lightning Address
@@ -600,7 +604,9 @@ export default class LnurlPay extends React.Component<
                                 buttonStyle={{
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                disabled={loading}
+                                disabled={
+                                    loading || !satAmount || satAmount == 0
+                                }
                             />
                         </View>
                     </View>
