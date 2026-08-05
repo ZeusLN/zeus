@@ -23,8 +23,8 @@ const config = {
         // PlatformConstants / TurboModuleRegistry.
         blockList: [
             defaultConfig.resolver.blockList,
-            /zeus_modules[/\\].+[/\\]node_modules[/\\]react-native[/\\].*/,
-            /zeus_modules[/\\].+[/\\]node_modules[/\\]@react-native[/\\].*/
+            /zeus_modules[/\\].+[/\\]node_modules[/\\]react-native[/\\]/,
+            /zeus_modules[/\\].+[/\\]node_modules[/\\]@react-native[/\\]/
         ],
         extraNodeModules: {
             'react-native': path.resolve(__dirname, 'node_modules/react-native')
