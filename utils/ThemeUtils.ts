@@ -95,6 +95,7 @@ const Junkie: { [key: string]: any } = {
     modalBackground: 'rgb(51, 51, 51)',
     text: 'white',
     secondaryText: 'lightgray',
+    placeholderText: '#A7A9AC',
     highlight: 'rgb(249, 212, 0)',
     error: '#992600',
     separator: 'darkgray',
@@ -173,6 +174,7 @@ const Purple: { [key: string]: any } = {
     modalBackground: '#dbd0e1',
     text: '#776d86',
     secondaryText: '#6f7286',
+    placeholderText: '#948BA3',
     highlight: '#ffd24b',
     error: '#C9592D',
     separator: '##9fa3bf',
@@ -208,6 +210,7 @@ const Deadpool: { [key: string]: any } = {
     modalBackground: '#000',
     text: '#F4F9FF',
     secondaryText: '#F4F9FF',
+    placeholderText: '#E8A0A6',
     highlight: '#ffd24b',
     error: '#D12531',
     separator: '#D12531',
@@ -283,7 +286,8 @@ const Popsicle: { [key: string]: any } = {
     separator: '#141414',
     bolt: '#fff',
     chain: '#fff',
-    secondaryText: 'lightgray'
+    secondaryText: 'lightgray',
+    placeholderText: '#A7A9AC'
 };
 
 const Nostrich: { [key: string]: any } = {
@@ -310,7 +314,8 @@ const Desert: { [key: string]: any } = {
     modalBackground: '#141414',
     separator: '#141414',
     text: '#FFFFFF',
-    secondaryText: '#E8E8E8'
+    secondaryText: '#E8E8E8',
+    placeholderText: '#A7A9AC'
 };
 
 const OrangeCreamSoda: { [key: string]: any } = {
@@ -320,7 +325,8 @@ const OrangeCreamSoda: { [key: string]: any } = {
     secondary: '#141414',
     modalBackground: '#141414',
     separator: '#141414',
-    secondaryText: '#E6E6E6'
+    secondaryText: '#E6E6E6',
+    placeholderText: '#A7A9AC'
 };
 
 const Mint: { [key: string]: any } = {
@@ -336,6 +342,7 @@ const Mint: { [key: string]: any } = {
     background: '#46B48A',
     modalBackground: '#46B48A',
     secondaryText: '#FFFDF2',
+    placeholderText: '#A7A9AC',
     separator: '#141414',
     highlight: '#ffd24b',
     bolt: '#fff',
@@ -360,7 +367,8 @@ const Watermelon: { [key: string]: any } = {
     highlight: '#ffd24b',
     bolt: '#fff',
     chain: '#fff',
-    secondaryText: 'lightgray'
+    secondaryText: 'lightgray',
+    placeholderText: '#A7A9AC'
 };
 
 const Radioactive: { [key: string]: any } = {
@@ -445,6 +453,13 @@ export function themeColor(themeString: string): any {
         default:
             return Dark[themeString];
     }
+}
+
+// Color for placeholder text in inputs and search bars. Some themes use a
+// secondaryText that is nearly identical to text, so they define a dedicated
+// placeholderText color to keep placeholders distinguishable from user input.
+export function placeholderColor(): string {
+    return themeColor('placeholderText') || themeColor('secondaryText');
 }
 
 // based on https://stackoverflow.com/a/41491220/1836528

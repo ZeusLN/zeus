@@ -8,7 +8,7 @@ import { FilterOptions } from '../../components/Channels/FilterOptions';
 import SortButton from '../../components/Channels/SortButton';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import ChannelsStore, {
     ChannelsType,
@@ -165,7 +165,7 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,

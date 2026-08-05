@@ -22,7 +22,7 @@ import { Tag } from '../../../components/Channels/Tag';
 import SettingsStore from '../../../stores/SettingsStore';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 
-import { themeColor } from '../../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import UrlUtils from '../../../utils/UrlUtils';
@@ -527,9 +527,7 @@ export default class NWCConnectionsList extends React.Component<
                                             styles.searchInput,
                                             { color: themeColor('text') }
                                         ]}
-                                        placeholderTextColor={themeColor(
-                                            'secondaryText'
-                                        )}
+                                        placeholderTextColor={placeholderColor()}
                                         containerStyle={{
                                             backgroundColor: 'transparent',
                                             borderTopWidth: 0,

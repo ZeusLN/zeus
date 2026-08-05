@@ -18,7 +18,7 @@ import Screen from '../../../components/Screen';
 import BackendUtils from '../../../utils/BackendUtils';
 
 import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../../utils/ThemeUtils';
 import Base64Utils from '../../../utils/Base64Utils';
 
 import Add from '../../../assets/images/SVG/Add.svg';
@@ -298,9 +298,7 @@ export default class Watchtowers extends React.Component<
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
+                                placeholderTextColor={placeholderColor()}
                                 containerStyle={{
                                     backgroundColor: 'transparent',
                                     borderTopWidth: 0,

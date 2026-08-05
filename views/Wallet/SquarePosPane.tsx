@@ -18,7 +18,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 interface SquarePosPaneProps {
     navigation: NativeStackNavigationProp<any, any>;
     ActivityStore?: ActivityStore;
@@ -150,7 +150,7 @@ export default class SquarePosPane extends React.PureComponent<
                         }}
                         value={search}
                         inputStyle={{ color: themeColor('text') }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,

@@ -27,7 +27,7 @@ import { Row } from '../../components/layout/Row';
 import AddressUtils from '../../utils/AddressUtils';
 import { confirmAction } from '../../utils/ActionUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import ContactStore from '../../stores/ContactStore';
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
@@ -133,7 +133,7 @@ const ContactInputField = ({
                 }}
                 value={value}
                 placeholder={placeholder}
-                placeholderTextColor={themeColor('secondaryText')}
+                placeholderTextColor={placeholderColor()}
                 style={[
                     styles.fieldInput,
                     {
@@ -924,9 +924,7 @@ export default class AddContact extends React.Component<
                                 placeholder={localeString(
                                     'views.Settings.AddContact.name'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
+                                placeholderTextColor={placeholderColor()}
                                 style={dynamicStyles.textInput}
                                 autoCapitalize="none"
                             />
@@ -949,9 +947,7 @@ export default class AddContact extends React.Component<
                                 placeholder={localeString(
                                     'views.Settings.AddContact.description'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
+                                placeholderTextColor={placeholderColor()}
                                 style={[dynamicStyles.textInput]}
                                 autoCapitalize="none"
                             />

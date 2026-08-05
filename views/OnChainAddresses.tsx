@@ -24,7 +24,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import AddressUtils from '../utils/AddressUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { placeholderColor, themeColor } from '../utils/ThemeUtils';
 
 import UTXOsStore from '../stores/UTXOsStore';
 
@@ -569,7 +569,7 @@ export default class OnChainAddresses extends React.Component<
                         inputStyle={{
                             color: themeColor('text')
                         }}
-                        placeholderTextColor={themeColor('secondaryText')}
+                        placeholderTextColor={placeholderColor()}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             borderTopWidth: 0,
