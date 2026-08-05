@@ -170,6 +170,7 @@ interface WalletConfigurationState {
     // NWC
     nostrWalletConnectUrl: string;
     deletingWallet: boolean;
+    saving: boolean;
     // Errors
     lndhubUrlError: boolean;
     usernameError: boolean;
@@ -238,6 +239,7 @@ export default class WalletConfiguration extends React.Component<
         creatingWallet: false,
         errorCreatingWallet: false,
         deletingWallet: false,
+        saving: false,
         // embedded ldk node
         ldkMnemonic: '',
         ldkPassphrase: '',
@@ -575,6 +577,10 @@ export default class WalletConfiguration extends React.Component<
             throw new Error('lndhub settings missing.');
         }
 
+        // Block the action buttons until navigation: a second Save (or a
+        // Delete) firing mid-write would re-persist the stale nodes array.
+        this.setState({ saving: true });
+
         const node = {
             nickname,
             dismissCustodialWarning,
@@ -641,53 +647,58 @@ export default class WalletConfiguration extends React.Component<
             };
         }
 
-        updateSettings(update).then(async () => {
-            if (recoveryCipherSeed) {
-                await updateSettings({
-                    recovery: true
+        updateSettings(update)
+            .then(async () => {
+                if (recoveryCipherSeed) {
+                    await updateSettings({
+                        recovery: true
+                    });
+                }
+
+                this.setState({
+                    saved: true
                 });
-            }
 
-            this.setState({
-                saved: true
-            });
-
-            const activeNodeIndex = settings.selectedNode || 0;
-            if (index === activeNodeIndex) {
-                // updating active node
-                if (originalNode != null) {
-                    const diff = differenceBy(
-                        Object.entries(originalNode),
-                        Object.entries(node),
-                        (entry) => entry[0] + entry[1]
-                    ).filter(
-                        (entry) =>
-                            entry[0] !== 'nickname' && entry[0] !== 'photo'
-                    );
-                    if (diff.length === 0) {
-                        // only nickname or photo was edited - no reconnect necessary
-                        navigation.goBack();
-                        return;
+                const activeNodeIndex = settings.selectedNode || 0;
+                if (index === activeNodeIndex) {
+                    // updating active node
+                    if (originalNode != null) {
+                        const diff = differenceBy(
+                            Object.entries(originalNode),
+                            Object.entries(node),
+                            (entry) => entry[0] + entry[1]
+                        ).filter(
+                            (entry) =>
+                                entry[0] !== 'nickname' && entry[0] !== 'photo'
+                        );
+                        if (diff.length === 0) {
+                            // only nickname or photo was edited - no reconnect necessary
+                            navigation.goBack();
+                            return;
+                        }
                     }
-                }
-                if (implementation === 'lightning-node-connect') {
-                    BackendUtils.disconnect();
-                }
-                setConnectingStatus(true);
-                navigation.popTo('Wallet');
-            } else {
-                if (newEmbeddedLndWallet) {
-                    // New wallet created - trigger fresh connection
-                    // LND was already stopped in createNewWallet(), just navigate
+                    if (implementation === 'lightning-node-connect') {
+                        BackendUtils.disconnect();
+                    }
                     setConnectingStatus(true);
                     navigation.popTo('Wallet');
-                } else if (this.state.newEntry) {
-                    navigation.navigate('Wallets');
                 } else {
-                    navigation.goBack();
+                    if (newEmbeddedLndWallet) {
+                        // New wallet created - trigger fresh connection
+                        // LND was already stopped in createNewWallet(), just navigate
+                        setConnectingStatus(true);
+                        navigation.popTo('Wallet');
+                    } else if (this.state.newEntry) {
+                        navigation.navigate('Wallets');
+                    } else {
+                        navigation.goBack();
+                    }
                 }
-            }
-        });
+            })
+            .catch((error: any) => {
+                console.error('Error saving wallet configuration:', error);
+                this.setState({ saving: false });
+            });
     };
 
     copyNodeConfig = () => {
@@ -744,6 +755,7 @@ export default class WalletConfiguration extends React.Component<
     };
 
     deleteNodeConfig = async () => {
+        if (this.state.deletingWallet) return;
         this.setState({ deletingWallet: true });
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
@@ -1306,6 +1318,7 @@ export default class WalletConfiguration extends React.Component<
             creatingWallet,
             errorCreatingWallet,
             deletingWallet,
+            saving,
             // LDK Node
             ldkMnemonic,
             ldkNetwork,
@@ -1331,6 +1344,11 @@ export default class WalletConfiguration extends React.Component<
             createAccountSuccess,
             createAccount
         } = SettingsStore;
+
+        // A save or delete in flight: block every action button so a
+        // concurrent updateSettings cannot re-persist stale node configs
+        // (e.g. resurrecting a wallet mid-deletion).
+        const processing = loading || saving || deletingWallet;
 
         const isLocalImpl =
             implementation === 'embedded-lnd' || implementation === 'ldk-node';
@@ -1418,7 +1436,7 @@ export default class WalletConfiguration extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {(loading || deletingWallet) && (
+                            {processing && (
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
@@ -3236,9 +3254,9 @@ export default class WalletConfiguration extends React.Component<
                                                 this.saveWalletConfiguration();
                                             }
                                         }}
-                                        // disable save button if loading, required input missing or input invalid
+                                        // disable save button if processing, required input missing or input invalid
                                         disabled={
-                                            loading ||
+                                            processing ||
                                             hostError ||
                                             (host &&
                                                 !ValidationUtils.isValidServerAddress(
@@ -3326,7 +3344,7 @@ export default class WalletConfiguration extends React.Component<
                                     onPress={() =>
                                         this.setWalletConfigurationAsActive()
                                     }
-                                    disabled={loading}
+                                    disabled={processing}
                                 />
                             </View>
                         )}
@@ -3355,7 +3373,7 @@ export default class WalletConfiguration extends React.Component<
                                             this.copyNodeConfig();
                                         }}
                                         secondary
-                                        disabled={loading}
+                                        disabled={processing}
                                     />
                                 </View>
                             )}
@@ -3368,7 +3386,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                     onPress={this.handleDeletePress}
                                     warning
-                                    disabled={loading}
+                                    disabled={processing}
                                 />
                             </View>
                         )}
