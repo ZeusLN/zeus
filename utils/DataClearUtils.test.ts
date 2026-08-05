@@ -507,6 +507,27 @@ describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
         expect(mockedDerive).toHaveBeenCalledWith(seedPhrase, true);
     });
 
+    it('derives with coin type 1 for any non-mainnet network (mutinynet)', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc',
+            seedPhrase,
+            embeddedLndNetwork: 'mutinynet'
+        });
+
+        expect(mockedDerive).toHaveBeenCalledWith(seedPhrase, true);
+    });
+
+    it('defaults a config without embeddedLndNetwork to mainnet (coin type 0)', async () => {
+        await clearNodeKeychainData({
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-abc',
+            seedPhrase
+        });
+
+        expect(mockedDerive).toHaveBeenCalledWith(seedPhrase, false);
+    });
+
     it('does not attempt derivation without a seed phrase', async () => {
         await clearNodeKeychainData({
             implementation: 'embedded-lnd',

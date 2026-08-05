@@ -100,14 +100,15 @@ export async function decodeAezeedEntropy(
 /**
  * Derives the lnd node identity pubkey (hex-encoded, compressed) from wallet
  * entropy: BIP32 master -> m/1017'/coinType'/6'/0/0 (purpose 1017, key
- * family 6 = node key). Coin type is 0 on mainnet and 1 on testnet,
- * matching btcd's HDCoinType params.
+ * family 6 = node key). Coin type is 0 on mainnet and 1 on every other
+ * network: btcd's HDCoinType is 1 for testnet, signet (mutinynet), and
+ * regtest alike.
  */
 export function deriveNodeIdFromEntropy(
     entropy: Buffer,
-    isTestNet: boolean
+    nonMainnet: boolean
 ): string {
-    const coinType = isTestNet ? 1 : 0;
+    const coinType = nonMainnet ? 1 : 0;
     return bip32
         .fromSeed(entropy)
         .derivePath(`m/1017'/${coinType}'/6'/0/0`)
@@ -122,8 +123,8 @@ export function deriveNodeIdFromEntropy(
  */
 export async function deriveEmbeddedNodeId(
     seedPhrase: string[],
-    isTestNet: boolean
+    nonMainnet: boolean
 ): Promise<string> {
     const entropy = await decodeAezeedEntropy(seedPhrase);
-    return deriveNodeIdFromEntropy(entropy, isTestNet);
+    return deriveNodeIdFromEntropy(entropy, nonMainnet);
 }

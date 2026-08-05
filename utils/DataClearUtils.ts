@@ -539,9 +539,14 @@ export async function clearNodeKeychainData(
         node.seedPhrase.length > 0
     ) {
         try {
+            // Coin type 1 for every non-mainnet network: testnet, signet
+            // (mutinynet), and regtest share HDCoinType 1. Matches the
+            // `(network || 'mainnet').toLowerCase() !== 'mainnet'` rule
+            // WalletConfiguration uses for the same field.
             const nodeId = await deriveEmbeddedNodeId(
                 node.seedPhrase,
-                node.embeddedLndNetwork?.toLowerCase?.() === 'testnet'
+                String(node.embeddedLndNetwork || 'mainnet').toLowerCase() !==
+                    'mainnet'
             );
             if (nodeId) {
                 await clearKey(`${nodeId}-extended-private-keys`);
