@@ -5,6 +5,7 @@ import ChannelsStore from './ChannelsStore';
 import SettingsStore from './SettingsStore';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import BackendUtils from '../utils/BackendUtils';
+import Storage from '../storage';
 
 import Channel from '../models/Channel';
 
@@ -20,6 +21,8 @@ export default class NodeInfoStore {
     @observable public supportsListingOffers: boolean;
     channelsStore: ChannelsStore;
     settingsStore: SettingsStore;
+    // nodeIds whose legacy xprv cache has been purged this session
+    private purgedXprvCacheFor: string | null = null;
 
     constructor(channelsStore: ChannelsStore, settingsStore: SettingsStore) {
         this.channelsStore = channelsStore;
@@ -76,6 +79,21 @@ export default class NodeInfoStore {
                         this.supportsListingOffers =
                             BackendUtils.supportsListingOffers();
                     });
+                    // Purge the legacy '<pubkey>-extended-private-keys' xprv
+                    // cache written by older builds (KEY-006). Done here,
+                    // where the node pubkey is definitionally known: the
+                    // SeedQRExport read-site purge silently no-ops when
+                    // nodeInfo has not loaded yet (observed on-device), and
+                    // this also covers users who never open that screen.
+                    if (
+                        nodeInfo.nodeId &&
+                        this.purgedXprvCacheFor !== nodeInfo.nodeId
+                    ) {
+                        this.purgedXprvCacheFor = nodeInfo.nodeId;
+                        Storage.removeItem(
+                            `${nodeInfo.nodeId}-extended-private-keys`
+                        ).catch(() => {});
+                    }
                     resolve(nodeInfo);
                 })
                 .catch((error: any) => {
