@@ -544,61 +544,6 @@ export default class AddOrEditNWCConnection extends React.Component<
         return params;
     };
 
-    regenerateConnection = async () => {
-        const { NostrWalletConnectStore, route, navigation } = this.props;
-        const { connectionId } = route.params ?? {};
-
-        if (!connectionId) {
-            this.setState({
-                error: localeString(
-                    'stores.NostrWalletConnectStore.error.connectionNotFound'
-                )
-            });
-            return;
-        }
-        this.setState({ loading: true, error: '' });
-        try {
-            await NostrWalletConnectStore.loadConnections();
-            const { connection } = NostrWalletConnectStore.getConnection({
-                connectionId
-            });
-            if (!connection) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.connectionNotFound'
-                    )
-                );
-            }
-            const totalSpendSats = connection.totalSpendSats;
-            const lastBudgetReset = connection.lastBudgetReset;
-            const createdAt = connection.createdAt;
-            const params = await this.buildConnectionParams(
-                false,
-                connectionId
-            );
-            if (!params) return;
-            params.totalSpendSats = totalSpendSats;
-            params.lastBudgetReset = lastBudgetReset;
-            params.createdAt = createdAt;
-            await NostrWalletConnectStore.deleteConnection(connectionId);
-            const nostrUrl = await NostrWalletConnectStore.createConnection(
-                params
-            );
-            if (nostrUrl) {
-                const createdConnection =
-                    NostrWalletConnectStore.connections[0];
-                navigation.navigate('NWCConnectionQR', {
-                    connectionId: createdConnection.id,
-                    nostrUrl
-                });
-            }
-        } catch (error) {
-            this.setState({ error: (error as Error).message, loading: false });
-        } finally {
-            this.setState({ loading: false });
-        }
-    };
-
     createOrUpdateConnection = async () => {
         const { NostrWalletConnectStore, route, navigation } = this.props;
         const { connectionId, isEdit } = route.params ?? {};
@@ -817,19 +762,15 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     getButtonTitle = (): string => {
         const { route } = this.props;
-        if (!route.params?.isEdit) {
+        if (route.params?.isEdit) {
             return localeString(
-                'views.Settings.NostrWalletConnect.createConnection'
+                'views.Settings.NostrWalletConnect.updateConnection'
             );
         }
 
-        return this.isRelayChanged()
-            ? localeString(
-                  'views.Settings.NostrWalletConnect.regenerateConnection'
-              )
-            : localeString(
-                  'views.Settings.NostrWalletConnect.updateConnection'
-              );
+        return localeString(
+            'views.Settings.NostrWalletConnect.createConnection'
+        );
     };
 
     isButtonDisabled = (): boolean => {
@@ -1422,11 +1363,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     <View style={styles.bottomButtonContainer}>
                         <Button
                             title={this.getButtonTitle()}
-                            onPress={
-                                route.params?.isEdit && this.isRelayChanged()
-                                    ? this.regenerateConnection
-                                    : this.createOrUpdateConnection
-                            }
+                            onPress={this.createOrUpdateConnection}
                             secondary={this.isButtonDisabled()}
                             disabled={this.isButtonDisabled()}
                             noUppercase
