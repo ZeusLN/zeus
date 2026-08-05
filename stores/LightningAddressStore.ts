@@ -863,8 +863,8 @@ export default class LightningAddressStore {
                     // If server returns a token, receive it
                     if (redeemData.token) {
                         console.log(
-                            'Receiving token from server:',
-                            redeemData.token
+                            'Receiving token from server for quote:',
+                            quote_id
                         );
                         // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
                         const signingKey =

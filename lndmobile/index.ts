@@ -434,7 +434,6 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         const listener = LndMobileEventEmitter.addListener(
             'RouterSendPaymentV2',
             (e) => {
-                console.log(e);
                 const error = checkLndStreamErrorResponse(
                     'RouterSendPaymentV2',
                     e
@@ -447,14 +446,12 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
                 }
 
                 const response = decodeSendPaymentV2Result(e.data);
-                console.log(response);
-
                 resolve(response);
                 listener.remove();
             }
         );
 
-        const response = await sendStreamCommand<
+        await sendStreamCommand<
             routerrpc.ISendPaymentRequest,
             routerrpc.SendPaymentRequest
         >(
@@ -465,7 +462,6 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
             },
             false
         );
-        console.log(response);
     });
 };
 

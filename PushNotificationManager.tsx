@@ -22,7 +22,7 @@ export default class PushNotificationManager extends React.Component<any, any> {
         Notifications.events().registerRemoteNotificationsRegistered(
             (event) => {
                 const deviceToken = event.deviceToken;
-                console.log('Device Token Received', deviceToken);
+                if (__DEV__) console.log('Device Token Received', deviceToken);
                 lightningAddressStore.setDeviceToken(deviceToken);
             }
         );
@@ -52,7 +52,11 @@ export default class PushNotificationManager extends React.Component<any, any> {
     registerNotificationEvents = () => {
         Notifications.events().registerNotificationReceivedForeground(
             (notification, completion) => {
-                console.log('Notification Received - Foreground', notification);
+                if (__DEV__)
+                    console.log(
+                        'Notification Received - Foreground',
+                        notification
+                    );
                 // Don't display redeem notification if auto-redeem is on
                 if (
                     settingsStore.settings?.lightningAddress
@@ -83,7 +87,11 @@ export default class PushNotificationManager extends React.Component<any, any> {
 
         Notifications.events().registerNotificationOpened(
             (notification, completion) => {
-                console.log('Notification opened by device user', notification);
+                if (__DEV__)
+                    console.log(
+                        'Notification opened by device user',
+                        notification
+                    );
                 console.log(
                     `Notification opened with an action identifier: ${notification.identifier}`
                 );
@@ -94,7 +102,11 @@ export default class PushNotificationManager extends React.Component<any, any> {
 
         Notifications.events().registerNotificationReceivedBackground(
             (notification, completion: any) => {
-                console.log('Notification Received - Background', notification);
+                if (__DEV__)
+                    console.log(
+                        'Notification Received - Background',
+                        notification
+                    );
                 // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
                 completion({ alert: true, sound: true, badge: false });
             }
@@ -102,7 +114,11 @@ export default class PushNotificationManager extends React.Component<any, any> {
 
         Notifications.getInitialNotification()
             .then((notification) => {
-                console.log('Initial notification was:', notification || 'N/A');
+                if (__DEV__)
+                    console.log(
+                        'Initial notification was:',
+                        notification || 'N/A'
+                    );
                 this.goToNwcActivityFromNotif(notification?.payload);
             })
             .catch((err) =>

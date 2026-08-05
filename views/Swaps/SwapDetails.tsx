@@ -330,7 +330,7 @@ export default class SwapDetails extends React.Component<
                             createdResponse.id,
                             endpoint
                         );
-                        console.log('Fetched claim details:', claimTxDetails);
+                        console.log('Fetched claim details');
 
                         const isValid = this.validatePreimage(
                             claimTxDetails?.preimage,
