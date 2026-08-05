@@ -701,13 +701,34 @@ export default class NostrWalletConnectStore {
                 updates.name = newName;
             }
             const oldRelayUrl = connection.relayUrl;
+            const oldPubkey = connection.pubkey;
             const newRelayUrl = updates.relayUrl;
-            const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
+            const relayUrlChanged = !!(
+                newRelayUrl && newRelayUrl !== oldRelayUrl
+            );
 
             if (relayUrlChanged) {
                 this.unsubscribeFromConnection(connectionId);
                 if (!this.nwcWalletServices.has(newRelayUrl)) {
-                    await this.initializeNWCWalletServices();
+                    this.nwcWalletServices.set(
+                        newRelayUrl,
+                        new NWCWalletService({
+                            relayUrls: [newRelayUrl]
+                        })
+                    );
+                }
+                if (!this.publishedRelays.has(newRelayUrl)) {
+                    const nwcWalletService =
+                        this.nwcWalletServices.get(newRelayUrl);
+                    if (
+                        nwcWalletService &&
+                        this.walletServiceKeys?.privateKey
+                    ) {
+                        await this.publishWalletServiceInfoWithRetry(
+                            nwcWalletService,
+                            newRelayUrl
+                        );
+                    }
                 }
             }
 
@@ -735,15 +756,32 @@ export default class NostrWalletConnectStore {
                 }
                 this.findAndUpdateConnection(connection);
             });
-            await this.subscribeToConnection(connection);
+
             if (relayUrlChanged) {
-                return {
-                    nostrUrl:
-                        this.generateConnectionSecret(newRelayUrl)
-                            .connectionUrl,
-                    success: true
-                };
+                const {
+                    connectionUrl,
+                    connectionPrivateKey,
+                    connectionPublicKey
+                } = this.generateConnectionSecret(newRelayUrl);
+
+                await this.storeClientKeys(
+                    connectionPublicKey,
+                    connectionPrivateKey
+                );
+                await this.deleteClientKeys(oldPubkey);
+
+                runInAction(() => {
+                    connection.pubkey = connectionPublicKey;
+                    this.findAndUpdateConnection(connection);
+                });
+
+                await this.subscribeToConnection(connection);
+                await this.saveConnections();
+
+                return { nostrUrl: connectionUrl, success: true };
             }
+
+            await this.subscribeToConnection(connection);
             return { success: true };
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
