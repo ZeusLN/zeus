@@ -818,8 +818,15 @@ export default class WalletConfiguration extends React.Component<
                 deletedNode ?? { implementation, lndDir, ldkNodeDir }
             );
             if (!dirDeleted) {
-                console.warn(
-                    'Node data directory could not be fully deleted for removed wallet'
+                // Surface the failure instead of navigating away as if the
+                // deletion succeeded: the directory holds wallet and channel
+                // state. The config is already gone, so retrying from the
+                // captured node object is the only remaining path; Skip is
+                // offered so a permanently held file handle cannot strand
+                // the user here. (The duress wipe path never comes through
+                // here and stays silent by design.)
+                await this.promptRetryDataDirDeletion(
+                    deletedNode ?? { implementation, lndDir, ldkNodeDir }
                 );
             }
 
@@ -837,6 +844,42 @@ export default class WalletConfiguration extends React.Component<
             this.setState({ deletingWallet: false });
         }
     };
+
+    // Alert loop for a node data directory that survived deletion retries.
+    // Resolves once a retry succeeds or the user explicitly skips, so the
+    // caller only navigates on an informed decision, never on silent failure.
+    private promptRetryDataDirDeletion = (node: any): Promise<void> =>
+        new Promise((resolve) => {
+            const prompt = () => {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString(
+                        'views.Settings.WalletConfiguration.deleteWallet.dataDirError'
+                    ),
+                    [
+                        {
+                            text: localeString('general.retry'),
+                            onPress: async () => {
+                                const dirDeleted =
+                                    await deleteNodeDataDirectoryWithRetry(
+                                        node
+                                    );
+                                if (dirDeleted) resolve();
+                                else prompt();
+                            },
+                            isPreferred: true
+                        },
+                        {
+                            text: localeString('general.skip'),
+                            style: 'destructive',
+                            onPress: () => resolve()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            };
+            prompt();
+        });
 
     private handleDeletePress = () => {
         confirmAction(
