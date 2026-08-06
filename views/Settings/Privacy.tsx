@@ -30,6 +30,7 @@ interface PrivacyState {
     clipboard: boolean;
     lurkerMode: boolean;
     enableMempoolRates: boolean;
+    enableBranta: boolean;
 }
 
 @inject('SettingsStore')
@@ -45,7 +46,8 @@ export default class Privacy extends React.Component<
         customBlockExplorer: '',
         clipboard: false,
         lurkerMode: false,
-        enableMempoolRates: false
+        enableMempoolRates: false,
+        enableBranta: true
     };
 
     async componentDidMount() {
@@ -66,7 +68,8 @@ export default class Privacy extends React.Component<
                 (settings.privacy && settings.privacy.lurkerMode) || false,
             enableMempoolRates:
                 (settings.privacy && settings.privacy.enableMempoolRates) ||
-                false
+                false,
+            enableBranta: settings.branta?.enabled !== false
         });
     }
 
@@ -86,7 +89,8 @@ export default class Privacy extends React.Component<
             customBlockExplorer,
             clipboard,
             lurkerMode,
-            enableMempoolRates
+            enableMempoolRates,
+            enableBranta
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
 
@@ -283,6 +287,47 @@ export default class Privacy extends React.Component<
                                             ...settings.privacy,
                                             enableMempoolRates:
                                                 !enableMempoolRates
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                                infoModalText={localeString(
+                                    'views.Settings.Privacy.enableBranta.explainer'
+                                )}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.enableBranta'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={enableBranta}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableBranta: !enableBranta
+                                    });
+                                    await updateSettings({
+                                        branta: {
+                                            enabled: !enableBranta
                                         }
                                     });
                                 }}
