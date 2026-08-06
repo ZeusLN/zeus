@@ -153,6 +153,7 @@ export default class SeedRecovery extends React.PureComponent<
     SeedRecoveryState
 > {
     textInput: React.RefObject<TextInputRN | null>;
+    private removeBeforeRemoveListener?: () => void;
     constructor(props: SeedRecoveryProps) {
         super(props);
 
@@ -230,6 +231,23 @@ export default class SeedRecovery extends React.PureComponent<
     }
 
     async componentDidMount() {
+        // Backing out of SCB entry (header arrow, iOS swipe, Android
+        // hardware back) must return to the seed grid, not pop the
+        // screen and discard the hand-entered seed
+        this.removeBeforeRemoveListener = this.props.navigation.addListener(
+            'beforeRemove',
+            (e) => {
+                if (
+                    this.state.selectedInputType === 'scb' &&
+                    (e.data.action.type === 'GO_BACK' ||
+                        e.data.action.type === 'POP')
+                ) {
+                    e.preventDefault();
+                    this.exitScbEntry();
+                }
+            }
+        );
+
         await this.initFromProps(this.props);
 
         const { SettingsStore, route } = this.props;
@@ -254,6 +272,18 @@ export default class SeedRecovery extends React.PureComponent<
             await this.initFromProps(this.props);
         }
     }
+
+    componentWillUnmount() {
+        this.removeBeforeRemoveListener?.();
+    }
+
+    exitScbEntry = () => {
+        Keyboard.dismiss();
+        this.setState({
+            selectedInputType: null,
+            selectedText: ''
+        });
+    };
 
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
@@ -1242,13 +1272,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             title={localeString(
                                                 'general.confirm'
                                             )}
-                                            onPress={() => {
-                                                Keyboard.dismiss();
-                                                this.setState({
-                                                    selectedInputType: null,
-                                                    selectedText: ''
-                                                });
-                                            }}
+                                            onPress={() => this.exitScbEntry()}
                                             secondary
                                         />
                                     </View>
