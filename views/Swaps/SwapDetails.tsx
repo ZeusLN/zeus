@@ -711,18 +711,19 @@ export default class SwapDetails extends React.Component<
         const { navigation, SwapStore } = this.props;
 
         const { updates, error, failureReason, swapData } = this.state;
+        const status = updates || swapData.status;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
         const progressUpdate = swapData.isSubmarineSwap
-            ? updates === SwapState.InvoiceSet
+            ? status === SwapState.InvoiceSet
                 ? localeString('views.SwapDetails.waitingForOnchainTx')
-                : updates === SwapState.TransactionMempool
+                : status === SwapState.TransactionMempool
                 ? localeString('views.SwapDetails.waitingForConf')
                 : ''
-            : updates === SwapState.Created
+            : status === SwapState.Created
             ? localeString('views.SwapDetails.waitingForInvoicePayment')
-            : updates === SwapState.TransactionMempool
+            : status === SwapState.TransactionMempool
             ? localeString('views.SwapDetails.waitingForConf')
             : '';
 
@@ -751,11 +752,14 @@ export default class SwapDetails extends React.Component<
 
         const showRefundButton =
             swapData.lockupTransaction &&
-            (updates === SwapState.InvoiceFailedToPay ||
-                updates === SwapState.TransactionLockupFailed ||
+            (status === SwapState.InvoiceFailedToPay ||
+                status === SwapState.TransactionLockupFailed ||
                 (swapData.isSubmarineSwap &&
-                    updates === SwapState.SwapExpired) ||
+                    status === SwapState.SwapExpired) ||
                 (failure && error));
+
+        const showReverseRedeemButton =
+            swapData.isReverseSwap && status === SwapState.TransactionClaimed;
 
         return (
             <Screen>
@@ -842,11 +846,11 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
 
-                    {updates && (
+                    {status && (
                         <KeyValue
                             keyValue={localeString('general.status')}
-                            value={SwapStore?.formatStatus(updates)}
-                            color={SwapStore?.statusColor(updates as SwapState)}
+                            value={SwapStore?.formatStatus(status)}
+                            color={SwapStore?.statusColor(status as SwapState)}
                         />
                     )}
 
@@ -984,8 +988,8 @@ export default class SwapDetails extends React.Component<
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
-                {(updates === SwapState.InvoiceSet ||
-                    updates === SwapState.Created) && (
+                {(status === SwapState.InvoiceSet ||
+                    status === SwapState.Created) && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{
@@ -1006,6 +1010,24 @@ export default class SwapDetails extends React.Component<
                 {showRefundButton && (
                     <Button
                         title={localeString('views.Swaps.refundSwap')}
+                        containerStyle={{ paddingVertical: 10 }}
+                        onPress={() => {
+                            const { endpoint } = this.props.route.params;
+                            navigation.navigate('RefundSwap', {
+                                swapData: new Swap({
+                                    ...swapData,
+                                    endpoint
+                                })
+                            });
+                        }}
+                        secondary
+                    />
+                )}
+                {showReverseRedeemButton && (
+                    <Button
+                        title={localeString(
+                            'views.Settings.LightningAddressInfo.redeem'
+                        )}
                         containerStyle={{ paddingVertical: 10 }}
                         onPress={() => {
                             const { endpoint } = this.props.route.params;
