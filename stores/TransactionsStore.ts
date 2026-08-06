@@ -709,23 +709,19 @@ export default class TransactionsStore {
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
 
-        if (this.settingsStore.implementation === 'lightning-node-connect') {
-            return payFunc(data);
-        } else {
-            payFunc(data)
-                .then((response: any) => {
-                    const result = response.result || response;
-                    this.handlePayment(result, seq);
-                })
-                .catch((err: Error) => {
-                    this.handlePaymentError(err, seq);
-                });
-        }
+        payFunc(data)
+            .then((response: any) => {
+                const result = response.result || response;
+                this.handlePayment(result, seq);
+            })
+            .catch((err: Error) => {
+                this.handlePaymentError(err, seq);
+            });
     };
 
     // Clears the in-flight guard on behalf of payment `seq`. Callers that
-    // can't identify their payment (LNC view subscriptions) omit `seq` and
-    // clear unconditionally, matching the pre-ownership behavior.
+    // can't identify their payment omit `seq` and clear unconditionally,
+    // matching the pre-ownership behavior.
     @action
     private clearPaymentInFlight = (seq?: number) => {
         if (seq !== undefined && this.inFlightOwnerSeq !== seq) return;
@@ -770,19 +766,15 @@ export default class TransactionsStore {
 
         const payFunc = BackendUtils.payLightningInvoice;
 
-        if (this.settingsStore.implementation === 'lightning-node-connect') {
-            return payFunc(data);
-        } else {
-            return payFunc(data)
-                .then((response: any) => {
-                    const result = response.result || response;
-                    return result;
-                })
-                .catch((err: any) => {
-                    console.error('Payment error:', err);
-                    throw err;
-                });
-        }
+        return payFunc(data)
+            .then((response: any) => {
+                const result = response.result || response;
+                return result;
+            })
+            .catch((err: any) => {
+                console.error('Payment error:', err);
+                throw err;
+            });
     };
 
     @action
