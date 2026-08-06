@@ -7,8 +7,9 @@ import { decode as wifDecode } from 'wif';
 
 import NodeInfoStore from './NodeInfoStore';
 
-import wifUtils, { AddressType } from '../utils/WIFUtils';
+import { AddressType } from '../utils/WIFUtils';
 import { localeString } from '../utils/LocaleUtils';
+import UrlUtils from '../utils/UrlUtils';
 import ecc from '../zeus_modules/noble_ecc';
 
 export default class SweepStore {
@@ -41,9 +42,11 @@ export default class SweepStore {
         this.sweepErrorMsg = '';
     }
 
-    async getUtxosFromAddress(address: string, network: string) {
+    async getUtxosFromAddress(address: string) {
         const res = await fetch(
-            `${wifUtils.baseUrl(network)}/address/${address}/utxo`
+            `${UrlUtils.getMempoolApiUrl(
+                this.nodeInfoStore.nodeInfo
+            )}/address/${address}/utxo`
         );
         if (!res.ok) {
             throw new Error(localeString('views.Wif.errorFetchingUtxos'));
@@ -55,8 +58,7 @@ export default class SweepStore {
 
     async detectAddressWithUtxos(
         publicKey: Buffer,
-        network: bitcoin.Network,
-        networkStr: string
+        network: bitcoin.Network
     ): Promise<{ address: string; type: AddressType; utxos: any[] }> {
         const addresses: { type: AddressType; address: string }[] = [];
 
@@ -91,7 +93,7 @@ export default class SweepStore {
         });
 
         for (const { type, address } of addresses) {
-            const utxos = await this.getUtxosFromAddress(address, networkStr);
+            const utxos = await this.getUtxosFromAddress(address);
             if (utxos && utxos.length > 0) {
                 return { type, address, utxos };
             }
@@ -111,8 +113,6 @@ export default class SweepStore {
             : bitcoin.networks.bitcoin;
         this.network = network;
 
-        const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
-
         try {
             const { privateKey } = wifDecode(this.wif);
             this.privateKey = Buffer.from(privateKey).toString('hex');
@@ -120,8 +120,7 @@ export default class SweepStore {
 
             const result = await this.detectAddressWithUtxos(
                 publicKey,
-                this.network,
-                networkStr
+                this.network
             );
 
             this.addressType = result.type;
@@ -144,7 +143,9 @@ export default class SweepStore {
                     const { txid, vout } = utxo;
                     totalSats += utxo.value;
                     const res = await fetch(
-                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}/hex`
+                        `${UrlUtils.getMempoolApiUrl(
+                            this.nodeInfoStore.nodeInfo
+                        )}/tx/${txid}/hex`
                     );
 
                     if (!res.ok)
@@ -167,7 +168,9 @@ export default class SweepStore {
                     const { txid, vout } = utxo;
 
                     const res = await fetch(
-                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                        `${UrlUtils.getMempoolApiUrl(
+                            this.nodeInfoStore.nodeInfo
+                        )}/tx/${txid}`
                     );
                     if (!res.ok)
                         throw new Error(
@@ -209,7 +212,9 @@ export default class SweepStore {
                     const value = utxo.value;
                     totalSats += value;
                     const res = await fetch(
-                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                        `${UrlUtils.getMempoolApiUrl(
+                            this.nodeInfoStore.nodeInfo
+                        )}/tx/${txid}`
                     );
                     if (!res.ok)
                         throw new Error(

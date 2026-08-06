@@ -6,9 +6,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import StealthIcon from '../../assets/images/SVG/Hidden.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
-import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    BLOCK_EXPLORER_KEYS,
+    DEFAULT_MEMPOOL_INSTANCE,
+    MEMPOOL_INSTANCE_KEYS
+} from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -30,6 +35,8 @@ interface PrivacyState {
     clipboard: boolean;
     lurkerMode: boolean;
     enableMempoolRates: boolean;
+    mempoolInstance: string;
+    customMempoolInstance: string;
 }
 
 @inject('SettingsStore')
@@ -45,7 +52,9 @@ export default class Privacy extends React.Component<
         customBlockExplorer: '',
         clipboard: false,
         lurkerMode: false,
-        enableMempoolRates: false
+        enableMempoolRates: false,
+        mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
+        customMempoolInstance: ''
     };
 
     async componentDidMount() {
@@ -53,22 +62,42 @@ export default class Privacy extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
+        // Values saved before these fields required a scheme are stored as
+        // bare hosts, which every consumer already resolves as https. Show
+        // the effective URL rather than flagging a working setting as
+        // invalid; storage is left alone until the user edits the field.
         this.setState({
             defaultBlockExplorer:
                 (settings.privacy && settings.privacy.defaultBlockExplorer) ||
                 'mempool.space',
-            customBlockExplorer:
-                (settings.privacy && settings.privacy.customBlockExplorer) ||
-                '',
+            customBlockExplorer: UrlUtils.withScheme(
+                (settings.privacy && settings.privacy.customBlockExplorer) || ''
+            ),
             clipboard:
                 (settings.privacy && settings.privacy.clipboard) || false,
             lurkerMode:
                 (settings.privacy && settings.privacy.lurkerMode) || false,
             enableMempoolRates:
                 (settings.privacy && settings.privacy.enableMempoolRates) ||
-                false
+                false,
+            mempoolInstance:
+                (settings.privacy && settings.privacy.mempoolInstance) ||
+                DEFAULT_MEMPOOL_INSTANCE,
+            customMempoolInstance: UrlUtils.withScheme(
+                (settings.privacy && settings.privacy.customMempoolInstance) ||
+                    ''
+            )
         });
     }
+
+    // Both fields require a full http(s) URL, matching the other custom
+    // server settings. The block explorer's optional '#mempool.space'
+    // convention hint parses as a URL fragment, and is only honored by
+    // goToBlockExplorer when a scheme is present anyway.
+    isValidCustomUrl = (text: string): boolean => {
+        const trimmed = text.trim();
+        return trimmed === '' || UrlUtils.isValidUrl(trimmed);
+    };
 
     renderSeparator = () => (
         <View
@@ -86,9 +115,17 @@ export default class Privacy extends React.Component<
             customBlockExplorer,
             clipboard,
             lurkerMode,
-            enableMempoolRates
+            enableMempoolRates,
+            mempoolInstance,
+            customMempoolInstance
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
+
+        const customBlockExplorerError =
+            !this.isValidCustomUrl(customBlockExplorer);
+        const customMempoolInstanceError = !this.isValidCustomUrl(
+            customMempoolInstance
+        );
 
         return (
             <Screen>
@@ -141,10 +178,16 @@ export default class Privacy extends React.Component<
                             </Text>
                             <TextInput
                                 value={customBlockExplorer}
+                                placeholder="https://explorer.mynode.local"
+                                error={customBlockExplorerError}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                                 onChangeText={async (text: string) => {
                                     this.setState({
                                         customBlockExplorer: text
                                     });
+
+                                    if (!this.isValidCustomUrl(text)) return;
 
                                     await updateSettings({
                                         privacy: {
@@ -154,6 +197,20 @@ export default class Privacy extends React.Component<
                                     });
                                 }}
                             />
+                            {customBlockExplorerError && (
+                                <Text
+                                    style={{
+                                        color: themeColor('error'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 12,
+                                        marginTop: 4
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Privacy.invalidCustomUrl'
+                                    )}
+                                </Text>
+                            )}
                         </>
                     )}
 
@@ -288,6 +345,85 @@ export default class Privacy extends React.Component<
                                 }}
                             />
                         </View>
+                    </View>
+
+                    <View style={{ marginTop: 20 }}>
+                        <DropdownSetting
+                            title={localeString(
+                                'views.Settings.Privacy.mempoolInstance'
+                            )}
+                            infoModalText={[
+                                localeString(
+                                    'views.Settings.Privacy.mempoolInstance.explainer1'
+                                ),
+                                localeString(
+                                    'views.Settings.Privacy.mempoolInstance.explainer2'
+                                )
+                            ]}
+                            selectedValue={mempoolInstance}
+                            onValueChange={async (value: string) => {
+                                this.setState({
+                                    mempoolInstance: value
+                                });
+                                await updateSettings({
+                                    privacy: {
+                                        ...settings.privacy,
+                                        mempoolInstance: value
+                                    }
+                                });
+                            }}
+                            values={MEMPOOL_INSTANCE_KEYS}
+                            disabled={SettingsStore.settingsUpdateInProgress}
+                        />
+
+                        {mempoolInstance === 'Custom' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('general.custom')}
+                                </Text>
+                                <TextInput
+                                    value={customMempoolInstance}
+                                    placeholder="https://mempool.mynode.local"
+                                    error={customMempoolInstanceError}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            customMempoolInstance: text
+                                        });
+
+                                        if (!this.isValidCustomUrl(text))
+                                            return;
+
+                                        await updateSettings({
+                                            privacy: {
+                                                ...settings.privacy,
+                                                customMempoolInstance: text
+                                            }
+                                        });
+                                    }}
+                                />
+                                {customMempoolInstanceError && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('error'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 12,
+                                            marginTop: 4
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Privacy.invalidCustomUrl'
+                                        )}
+                                    </Text>
+                                )}
+                            </>
+                        )}
                     </View>
 
                     {Platform.OS === 'android' && (
