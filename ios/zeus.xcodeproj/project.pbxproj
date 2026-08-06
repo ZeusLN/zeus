@@ -233,6 +233,34 @@
 		NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */; };
 		NWCLIS000000000000000002 /* NWCWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000004 /* NWCWidgetIntent.swift */; };
 		NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWCLIS000000000000000006 /* NWCAmbientTracks.swift */; };
+		APICONSW000000000000001 /* AppIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = APICONSW000000000000002 /* AppIcon.swift */; };
+		APICONOB000000000000003 /* AppIcon.m in Sources */ = {isa = PBXBuildFile; fileRef = APICONOB000000000000004 /* AppIcon.m */; };
+		APFL2X00000000000000001 /* AppIconFlat@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APFL2X00000000000000002 /* AppIconFlat@2x.png */; };
+		APFL3X00000000000000003 /* AppIconFlat@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APFL3X00000000000000004 /* AppIconFlat@3x.png */; };
+		APYE2X00000000000000005 /* AppIconYellow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APYE2X00000000000000006 /* AppIconYellow@2x.png */; };
+		APYE3X00000000000000007 /* AppIconYellow@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APYE3X00000000000000008 /* AppIconYellow@3x.png */; };
+		APMD2X00000000000000009 /* AppIconGradient@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMD2X00000000000000010 /* AppIconGradient@2x.png */; };
+		APMD3X00000000000000011 /* AppIconGradient@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMD3X00000000000000012 /* AppIconGradient@3x.png */; };
+		APMF2X00000000000000013 /* AppIconMaxFlat@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMF2X00000000000000014 /* AppIconMaxFlat@2x.png */; };
+		APMF3X00000000000000015 /* AppIconMaxFlat@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMF3X00000000000000016 /* AppIconMaxFlat@3x.png */; };
+		APMY2X00000000000000017 /* AppIconMaxYellow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMY2X00000000000000018 /* AppIconMaxYellow@2x.png */; };
+		APMY3X00000000000000019 /* AppIconMaxYellow@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMY3X00000000000000020 /* AppIconMaxYellow@3x.png */; };
+		APRD2X00000000000000021 /* AppIconRed@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APRD2X00000000000000022 /* AppIconRed@2x.png */; };
+		APRD3X00000000000000023 /* AppIconRed@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APRD3X00000000000000024 /* AppIconRed@3x.png */; };
+		APGR2X00000000000000025 /* AppIconGradientRed@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APGR2X00000000000000026 /* AppIconGradientRed@2x.png */; };
+		APGR3X00000000000000027 /* AppIconGradientRed@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APGR3X00000000000000028 /* AppIconGradientRed@3x.png */; };
+		APBW2X00000000000000029 /* AppIconBlackAndWhite@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APBW2X00000000000000030 /* AppIconBlackAndWhite@2x.png */; };
+		APBW3X00000000000000031 /* AppIconBlackAndWhite@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APBW3X00000000000000032 /* AppIconBlackAndWhite@3x.png */; };
+		APMR2X00000000000000033 /* AppIconMaxRed@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMR2X00000000000000034 /* AppIconMaxRed@2x.png */; };
+		APMR3X00000000000000035 /* AppIconMaxRed@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMR3X00000000000000036 /* AppIconMaxRed@3x.png */; };
+		APMG2X00000000000000037 /* AppIconMaxGradientRed@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMG2X00000000000000038 /* AppIconMaxGradientRed@2x.png */; };
+		APMG3X00000000000000039 /* AppIconMaxGradientRed@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMG3X00000000000000040 /* AppIconMaxGradientRed@3x.png */; };
+		APMW2X00000000000000041 /* AppIconMaxBlackAndWhite@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMW2X00000000000000042 /* AppIconMaxBlackAndWhite@2x.png */; };
+		APMW3X00000000000000043 /* AppIconMaxBlackAndWhite@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMW3X00000000000000044 /* AppIconMaxBlackAndWhite@3x.png */; };
+		APGI2X00000000000000045 /* AppIconGradientInverse@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APGI2X00000000000000046 /* AppIconGradientInverse@2x.png */; };
+		APGI3X00000000000000047 /* AppIconGradientInverse@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */; };
+		APMI2X00000000000000049 /* AppIconMaxGradientInverse@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */; };
+		APMI3X00000000000000051 /* AppIconMaxGradientInverse@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -728,6 +756,34 @@
 		NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCLiveActivityShared.swift; path = NWCWidget/NWCLiveActivityShared.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000004 /* NWCWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCWidgetIntent.swift; path = NWCWidget/NWCWidgetIntent.swift; sourceTree = "<group>"; };
 		NWCLIS000000000000000006 /* NWCAmbientTracks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NWCAmbientTracks.swift; path = NWCWidget/NWCAmbientTracks.swift; sourceTree = "<group>"; };
+		APICONSW000000000000002 /* AppIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppIcon.swift; path = zeus/AppIcon.swift; sourceTree = "<group>"; };
+		APICONOB000000000000004 /* AppIcon.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppIcon.m; path = zeus/AppIcon.m; sourceTree = "<group>"; };
+		APFL2X00000000000000002 /* AppIconFlat@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconFlat@2x.png"; path = "zeus/AppIconFlat@2x.png"; sourceTree = "<group>"; };
+		APFL3X00000000000000004 /* AppIconFlat@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconFlat@3x.png"; path = "zeus/AppIconFlat@3x.png"; sourceTree = "<group>"; };
+		APYE2X00000000000000006 /* AppIconYellow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconYellow@2x.png"; path = "zeus/AppIconYellow@2x.png"; sourceTree = "<group>"; };
+		APYE3X00000000000000008 /* AppIconYellow@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconYellow@3x.png"; path = "zeus/AppIconYellow@3x.png"; sourceTree = "<group>"; };
+		APMD2X00000000000000010 /* AppIconGradient@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradient@2x.png"; path = "zeus/AppIconGradient@2x.png"; sourceTree = "<group>"; };
+		APMD3X00000000000000012 /* AppIconGradient@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradient@3x.png"; path = "zeus/AppIconGradient@3x.png"; sourceTree = "<group>"; };
+		APMF2X00000000000000014 /* AppIconMaxFlat@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxFlat@2x.png"; path = "zeus/AppIconMaxFlat@2x.png"; sourceTree = "<group>"; };
+		APMF3X00000000000000016 /* AppIconMaxFlat@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxFlat@3x.png"; path = "zeus/AppIconMaxFlat@3x.png"; sourceTree = "<group>"; };
+		APMY2X00000000000000018 /* AppIconMaxYellow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxYellow@2x.png"; path = "zeus/AppIconMaxYellow@2x.png"; sourceTree = "<group>"; };
+		APMY3X00000000000000020 /* AppIconMaxYellow@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxYellow@3x.png"; path = "zeus/AppIconMaxYellow@3x.png"; sourceTree = "<group>"; };
+		APRD2X00000000000000022 /* AppIconRed@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconRed@2x.png"; path = "zeus/AppIconRed@2x.png"; sourceTree = "<group>"; };
+		APRD3X00000000000000024 /* AppIconRed@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconRed@3x.png"; path = "zeus/AppIconRed@3x.png"; sourceTree = "<group>"; };
+		APGR2X00000000000000026 /* AppIconGradientRed@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradientRed@2x.png"; path = "zeus/AppIconGradientRed@2x.png"; sourceTree = "<group>"; };
+		APGR3X00000000000000028 /* AppIconGradientRed@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradientRed@3x.png"; path = "zeus/AppIconGradientRed@3x.png"; sourceTree = "<group>"; };
+		APBW2X00000000000000030 /* AppIconBlackAndWhite@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconBlackAndWhite@2x.png"; path = "zeus/AppIconBlackAndWhite@2x.png"; sourceTree = "<group>"; };
+		APBW3X00000000000000032 /* AppIconBlackAndWhite@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconBlackAndWhite@3x.png"; path = "zeus/AppIconBlackAndWhite@3x.png"; sourceTree = "<group>"; };
+		APMR2X00000000000000034 /* AppIconMaxRed@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxRed@2x.png"; path = "zeus/AppIconMaxRed@2x.png"; sourceTree = "<group>"; };
+		APMR3X00000000000000036 /* AppIconMaxRed@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxRed@3x.png"; path = "zeus/AppIconMaxRed@3x.png"; sourceTree = "<group>"; };
+		APMG2X00000000000000038 /* AppIconMaxGradientRed@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientRed@2x.png"; path = "zeus/AppIconMaxGradientRed@2x.png"; sourceTree = "<group>"; };
+		APMG3X00000000000000040 /* AppIconMaxGradientRed@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientRed@3x.png"; path = "zeus/AppIconMaxGradientRed@3x.png"; sourceTree = "<group>"; };
+		APMW2X00000000000000042 /* AppIconMaxBlackAndWhite@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxBlackAndWhite@2x.png"; path = "zeus/AppIconMaxBlackAndWhite@2x.png"; sourceTree = "<group>"; };
+		APMW3X00000000000000044 /* AppIconMaxBlackAndWhite@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxBlackAndWhite@3x.png"; path = "zeus/AppIconMaxBlackAndWhite@3x.png"; sourceTree = "<group>"; };
+		APGI2X00000000000000046 /* AppIconGradientInverse@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradientInverse@2x.png"; path = "zeus/AppIconGradientInverse@2x.png"; sourceTree = "<group>"; };
+		APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradientInverse@3x.png"; path = "zeus/AppIconGradientInverse@3x.png"; sourceTree = "<group>"; };
+		APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientInverse@2x.png"; path = "zeus/AppIconMaxGradientInverse@2x.png"; sourceTree = "<group>"; };
+		APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientInverse@3x.png"; path = "zeus/AppIconMaxGradientInverse@3x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -919,6 +975,34 @@
 				NWC1A2B3C4D5E6F700000003 /* NWCAudioKeepAlive.h */,
 				NWC1A2B3C4D5E6F700000002 /* NWCAudioKeepAlive.m */,
 				NWCLA000000000000000009 /* NWCActivityManager.swift */,
+				APICONSW000000000000002 /* AppIcon.swift */,
+				APICONOB000000000000004 /* AppIcon.m */,
+				APFL2X00000000000000002 /* AppIconFlat@2x.png */,
+				APFL3X00000000000000004 /* AppIconFlat@3x.png */,
+				APYE2X00000000000000006 /* AppIconYellow@2x.png */,
+				APYE3X00000000000000008 /* AppIconYellow@3x.png */,
+				APMD2X00000000000000010 /* AppIconGradient@2x.png */,
+				APMD3X00000000000000012 /* AppIconGradient@3x.png */,
+				APMF2X00000000000000014 /* AppIconMaxFlat@2x.png */,
+				APMF3X00000000000000016 /* AppIconMaxFlat@3x.png */,
+				APMY2X00000000000000018 /* AppIconMaxYellow@2x.png */,
+				APMY3X00000000000000020 /* AppIconMaxYellow@3x.png */,
+				APRD2X00000000000000022 /* AppIconRed@2x.png */,
+				APRD3X00000000000000024 /* AppIconRed@3x.png */,
+				APGR2X00000000000000026 /* AppIconGradientRed@2x.png */,
+				APGR3X00000000000000028 /* AppIconGradientRed@3x.png */,
+				APBW2X00000000000000030 /* AppIconBlackAndWhite@2x.png */,
+				APBW3X00000000000000032 /* AppIconBlackAndWhite@3x.png */,
+				APMR2X00000000000000034 /* AppIconMaxRed@2x.png */,
+				APMR3X00000000000000036 /* AppIconMaxRed@3x.png */,
+				APMG2X00000000000000038 /* AppIconMaxGradientRed@2x.png */,
+				APMG3X00000000000000040 /* AppIconMaxGradientRed@3x.png */,
+				APMW2X00000000000000042 /* AppIconMaxBlackAndWhite@2x.png */,
+				APMW3X00000000000000044 /* AppIconMaxBlackAndWhite@3x.png */,
+				APGI2X00000000000000046 /* AppIconGradientInverse@2x.png */,
+				APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */,
+				APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */,
+				APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */,
 				NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */,
 				NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */,
 				NWCLIS000000000000000006 /* NWCAmbientTracks.swift */,
@@ -1898,6 +1982,32 @@
 				0C8E90F4436943B3B46D23EA /* vpn.png in Resources */,
 				F839704FD2364C238CC5F649 /* calculator.png in Resources */,
 				E242D201C074449AB143DD11 /* qrscanner.png in Resources */,
+				APFL2X00000000000000001 /* AppIconFlat@2x.png in Resources */,
+				APFL3X00000000000000003 /* AppIconFlat@3x.png in Resources */,
+				APYE2X00000000000000005 /* AppIconYellow@2x.png in Resources */,
+				APYE3X00000000000000007 /* AppIconYellow@3x.png in Resources */,
+				APMD2X00000000000000009 /* AppIconGradient@2x.png in Resources */,
+				APMD3X00000000000000011 /* AppIconGradient@3x.png in Resources */,
+				APMF2X00000000000000013 /* AppIconMaxFlat@2x.png in Resources */,
+				APMF3X00000000000000015 /* AppIconMaxFlat@3x.png in Resources */,
+				APMY2X00000000000000017 /* AppIconMaxYellow@2x.png in Resources */,
+				APMY3X00000000000000019 /* AppIconMaxYellow@3x.png in Resources */,
+				APRD2X00000000000000021 /* AppIconRed@2x.png in Resources */,
+				APRD3X00000000000000023 /* AppIconRed@3x.png in Resources */,
+				APGR2X00000000000000025 /* AppIconGradientRed@2x.png in Resources */,
+				APGR3X00000000000000027 /* AppIconGradientRed@3x.png in Resources */,
+				APBW2X00000000000000029 /* AppIconBlackAndWhite@2x.png in Resources */,
+				APBW3X00000000000000031 /* AppIconBlackAndWhite@3x.png in Resources */,
+				APMR2X00000000000000033 /* AppIconMaxRed@2x.png in Resources */,
+				APMR3X00000000000000035 /* AppIconMaxRed@3x.png in Resources */,
+				APMG2X00000000000000037 /* AppIconMaxGradientRed@2x.png in Resources */,
+				APMG3X00000000000000039 /* AppIconMaxGradientRed@3x.png in Resources */,
+				APMW2X00000000000000041 /* AppIconMaxBlackAndWhite@2x.png in Resources */,
+				APMW3X00000000000000043 /* AppIconMaxBlackAndWhite@3x.png in Resources */,
+				APGI2X00000000000000045 /* AppIconGradientInverse@2x.png in Resources */,
+				APGI3X00000000000000047 /* AppIconGradientInverse@3x.png in Resources */,
+				APMI2X00000000000000049 /* AppIconMaxGradientInverse@2x.png in Resources */,
+				APMI3X00000000000000051 /* AppIconMaxGradientInverse@3x.png in Resources */,
 				80E7BDE37DC54344B6C4B4A2 /* temple.jpeg in Resources */,
 				6762879556A94083B2FB0AEB /* journey.jpeg in Resources */,
 				A053381B1FAD44C8AEC582AF /* zeus.jpeg in Resources */,
@@ -2076,6 +2186,8 @@
 				NWC1A2B3C4D5E6F700000001 /* NWCAudioKeepAlive.m in Sources */,
 				NWCLA000000000000000001 /* NWCWidgetAttributes.swift in Sources */,
 				NWCLA000000000000000003 /* NWCActivityManager.swift in Sources */,
+				APICONSW000000000000001 /* AppIcon.swift in Sources */,
+				APICONOB000000000000003 /* AppIcon.m in Sources */,
 				NWCLB000000000000000001 /* NWCLiveActivityBridge.swift in Sources */,
 				NWCLIS000000000000000001 /* NWCLiveActivityShared.swift in Sources */,
 				NWCLIS000000000000000005 /* NWCAmbientTracks.swift in Sources */,

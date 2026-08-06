@@ -89,6 +89,21 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
     removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
+    appIcon?:
+        | 'maxGradient'
+        | 'maxFlat'
+        | 'maxYellow'
+        | 'maxGradientInverse'
+        | 'maxRed'
+        | 'maxGradientRed'
+        | 'maxBlackAndWhite'
+        | 'gradient'
+        | 'flat'
+        | 'yellow'
+        | 'gradientInverse'
+        | 'red'
+        | 'gradientRed'
+        | 'blackAndWhite';
 }
 
 export enum PosEnabled {
