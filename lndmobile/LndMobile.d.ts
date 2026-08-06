@@ -130,7 +130,6 @@ export interface ILndMobileTools {
     DEBUG_deleteWallet(network: string): Promise<boolean>;
     DEBUG_deleteDatafolder(): Promise<null>;
     DEBUG_listProcesses(): Promise<string>;
-    checkLndProcessExist(): Promise<boolean>;
     deleteTLSCerts(): Promise<boolean>;
     restartApp(): void;
     setPersistentMode(enabled: boolean): Promise<void>;

@@ -166,7 +166,11 @@ export default class SyncStore {
         // initial fetch
         while (!this.nodeInfo?.block_height) {
             if (!this.isSyncing) return;
-            await this.getNodeInfo();
+            try {
+                await this.getNodeInfo();
+            } catch {
+                // wallet locked / RPC not ready during LND startup
+            }
             if (!this.nodeInfo?.block_height) {
                 await sleep(3000);
             }
@@ -178,7 +182,9 @@ export default class SyncStore {
         while (this.numBlocksUntilSynced > 0) {
             if (!this.isSyncing) break; // Abort when reset() called (e.g. LND stopped for wallet creation)
             await sleep(2000);
-            this.getNodeInfo().then(() => this.setSyncInfo());
+            this.getNodeInfo()
+                .then(() => this.setSyncInfo())
+                .catch(() => {});
 
             // only query Mempool instance every 30 seconds
             const queryMempool = i === 14;
@@ -195,11 +201,13 @@ export default class SyncStore {
     };
 
     public checkRecoveryStatus = () => {
-        BackendUtils.getRecoveryInfo().then((data: any) => {
-            if (data.recovery_mode && !data.recovery_finished) {
-                this.startRecovering();
-            }
-        });
+        BackendUtils.getRecoveryInfo()
+            .then((data: any) => {
+                if (data.recovery_mode && !data.recovery_finished) {
+                    this.startRecovering();
+                }
+            })
+            .catch(() => {});
     };
 
     private getRecoveryStatus = async () => {
@@ -227,7 +235,11 @@ export default class SyncStore {
 
         while (this.isRecovering) {
             await sleep(2000);
-            await this.getRecoveryStatus();
+            try {
+                await this.getRecoveryStatus();
+            } catch {
+                // wallet locked / RPC not ready during recovery
+            }
         }
     };
 
