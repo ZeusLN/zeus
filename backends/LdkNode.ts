@@ -124,6 +124,31 @@ export default class LdkNode {
         };
     };
 
+    // rHash arrives hex encoded from the Receive view
+    watchInvoicePaid = (
+        { rHash }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const unsubscribe = this.subscribeToEvents((event) => {
+            if (
+                event.type === 'paymentReceived' &&
+                rHash &&
+                event.paymentHash === rHash
+            ) {
+                unsubscribe();
+                onPaid({
+                    amountSat: Math.floor(event.amountMsat / 1000),
+                    tx: event.paymentHash
+                });
+            }
+        });
+        return unsubscribe;
+    };
+
     /**
      * Start the event loop
      */

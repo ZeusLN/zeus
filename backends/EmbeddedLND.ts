@@ -3,6 +3,7 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
+import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
 
 import {
     checkLndStreamErrorResponse,
@@ -418,10 +419,129 @@ export default class EmbeddedLND extends LND {
     terminateWatchtowerSession = async (sessionId: string) =>
         await WatchtowerClientTerminateSession(sessionId);
 
-    // TODO rewrite subscription logic, starting on Receive view
-    // subscribeInvoice = (r_hash: string) =>
-    //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
-    // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
+    // rHash arrives hex encoded from the Receive view
+    watchInvoicePaid = (
+        { rHash }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const listener = LndMobileEventEmitter.addListener(
+            'SubscribeInvoices',
+            (e: any) => {
+                try {
+                    const error = checkLndStreamErrorResponse(
+                        'SubscribeInvoices',
+                        e
+                    );
+                    if (error === 'EOF') {
+                        listener.remove();
+                        return;
+                    } else if (error) {
+                        console.error('Got error from SubscribeInvoices', [
+                            error
+                        ]);
+                        listener.remove();
+                        return;
+                    }
+
+                    const invoice = lndMobile.wallet.decodeInvoiceResult(
+                        e.data
+                    );
+
+                    if (
+                        invoice.settled &&
+                        // @ts-ignore:next-line
+                        Base64Utils.bytesToHex(invoice.r_hash) === rHash
+                    ) {
+                        listener.remove();
+                        onPaid({
+                            amountSat: Number(invoice.amt_paid_sat),
+                            tx: invoice.payment_request,
+                            preimage: Base64Utils.bytesToHex(
+                                // @ts-ignore:next-line
+                                invoice.r_preimage
+                            )
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    listener.remove();
+                }
+            }
+        );
+
+        lndMobile.wallet
+            .subscribeInvoices()
+            .catch((error) =>
+                console.error('subscribeInvoices error', [error])
+            );
+
+        return () => listener.remove();
+    };
+    watchOnchainReceived = (
+        {
+            address,
+            value,
+            numConfPreference
+        }: {
+            address: string;
+            value?: string | number;
+            numConfPreference: number;
+            blockHeight?: number;
+        },
+        onReceived: (payload: { amountSat: number; txid: string }) => void
+    ): (() => void) => {
+        const listener = LndMobileEventEmitter.addListener(
+            'SubscribeTransactions',
+            (e: any) => {
+                try {
+                    const error = checkLndStreamErrorResponse(
+                        'SubscribeTransactions',
+                        e
+                    );
+                    if (error === 'EOF') {
+                        listener.remove();
+                        return;
+                    } else if (error) {
+                        console.error('Got error from SubscribeTransactions', [
+                            error
+                        ]);
+                        listener.remove();
+                        return;
+                    }
+
+                    const transaction = decodeSubscribeTransactionsResult(
+                        e.data
+                    );
+                    if (
+                        transaction.dest_addresses.includes(address) &&
+                        transaction.num_confirmations > numConfPreference &&
+                        Number(transaction.amount) >= Number(value)
+                    ) {
+                        listener.remove();
+                        onReceived({
+                            amountSat: Number(transaction.amount),
+                            txid: transaction.tx_hash
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    listener.remove();
+                }
+            }
+        );
+
+        lndMobile.onchain
+            .subscribeTransactions()
+            .catch((error) =>
+                console.error('subscribeTransactions error', [error])
+            );
+
+        return () => listener.remove();
+    };
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
     supportsWatchtowerClient = () => true;

@@ -625,6 +625,98 @@ export default class LightningNodeConnect {
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
     subscribeTransactions = () =>
         this.lnc.lnd.lightning.subscribeTransactions();
+    watchInvoicePaid = (
+        { rHash }: { rHash: string; value?: string | number },
+        onPaid: (payload: {
+            amountSat: number;
+            tx?: string;
+            preimage?: string;
+        }) => void
+    ): (() => void) => {
+        const { LncModule } = NativeModules;
+        const eventName = this.subscribeInvoice(rHash);
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        const listener = eventEmitter.addListener(eventName, (event: any) => {
+            if (event.result) {
+                if (
+                    typeof event.result === 'string' &&
+                    event.result.includes('rpc error: code = Canceled')
+                ) {
+                    listener.remove();
+                    return;
+                }
+                try {
+                    const result = JSON.parse(event.result);
+                    if (result === 'EOF') {
+                        listener.remove();
+                        return;
+                    }
+                    if (result.settled) {
+                        listener.remove();
+                        onPaid({
+                            amountSat: Number(result.amt_paid_sat),
+                            tx: result.payment_request,
+                            preimage: result.r_preimage
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    listener.remove();
+                }
+            }
+        });
+        return () => listener.remove();
+    };
+    watchOnchainReceived = (
+        {
+            address,
+            value,
+            numConfPreference
+        }: {
+            address: string;
+            value?: string | number;
+            numConfPreference: number;
+            blockHeight?: number;
+        },
+        onReceived: (payload: { amountSat: number; txid: string }) => void
+    ): (() => void) => {
+        const { LncModule } = NativeModules;
+        const eventName = this.subscribeTransactions();
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        const listener = eventEmitter.addListener(eventName, (event: any) => {
+            if (event.result) {
+                if (
+                    typeof event.result === 'string' &&
+                    event.result.includes('rpc error: code = Canceled')
+                ) {
+                    listener.remove();
+                    return;
+                }
+                try {
+                    const result = JSON.parse(event.result);
+                    if (result === 'EOF') {
+                        listener.remove();
+                        return;
+                    }
+                    if (
+                        result.dest_addresses.includes(address) &&
+                        result.num_confirmations >= numConfPreference &&
+                        Number(result.amount) >= Number(value)
+                    ) {
+                        listener.remove();
+                        onReceived({
+                            amountSat: Number(result.amount),
+                            txid: result.tx_hash
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    listener.remove();
+                }
+            }
+        });
+        return () => listener.remove();
+    };
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = nodeInfoStore;

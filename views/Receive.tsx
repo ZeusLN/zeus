@@ -1,8 +1,6 @@
 import * as React from 'react';
 import {
     Dimensions,
-    NativeEventEmitter,
-    NativeModules,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
@@ -56,7 +54,6 @@ import TextInput from '../components/TextInput';
 import { Spacer } from '../components/layout/Spacer';
 import Accordion from '../components/Accordion';
 
-import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
 
 import ChannelsStore from '../stores/ChannelsStore';
@@ -75,7 +72,6 @@ import BalanceStore from '../stores/BalanceStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
-import Base64Utils from '../utils/Base64Utils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
@@ -87,13 +83,6 @@ import {
     expirySecondsFromInput,
     localizedExpiryDuration
 } from '../utils/ExpiryUtils';
-
-import lndMobile from '../lndmobile/LndMobileInjection';
-import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
-import {
-    checkLndStreamErrorResponse,
-    LndMobileEventEmitter
-} from '../utils/LndMobileUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -243,11 +232,8 @@ export default class Receive extends React.Component<
         };
     }
 
-    listener: any;
-    listenerSecondary: any;
-    ldkUnsubscribe: (() => void) | null = null;
-    lnInterval: any;
-    onChainInterval: any;
+    unsubscribeInvoiceWatch: (() => void) | null = null;
+    unsubscribeOnchainWatch: (() => void) | null = null;
     hopPickerRef: HopPicker | null;
 
     private getDefaultIndex = (): number => {
@@ -540,27 +526,28 @@ export default class Receive extends React.Component<
         this.cleanup();
     }
 
-    clearListeners = () => {
-        if (this.listener && this.listener.stop) this.listener.stop();
-        if (this.listenerSecondary && this.listenerSecondary.stop)
-            this.listenerSecondary.stop();
-        if (this.ldkUnsubscribe) {
-            this.ldkUnsubscribe();
-            this.ldkUnsubscribe = null;
+    stopInvoiceWatcher = () => {
+        if (this.unsubscribeInvoiceWatch) {
+            this.unsubscribeInvoiceWatch();
+            this.unsubscribeInvoiceWatch = null;
         }
     };
 
-    clearIntervals = () => {
-        if (this.lnInterval) clearInterval(this.lnInterval);
-        if (this.onChainInterval) clearInterval(this.onChainInterval);
+    stopOnchainWatcher = () => {
+        if (this.unsubscribeOnchainWatch) {
+            this.unsubscribeOnchainWatch();
+            this.unsubscribeOnchainWatch = null;
+        }
+    };
+
+    stopWatchers = () => {
+        this.stopInvoiceWatcher();
+        this.stopOnchainWatcher();
     };
 
     cleanup = () => {
         // kill all listeners and pollers
-        if (this.listener && this.listener.stop) this.listener.stop();
-        if (this.listenerSecondary && this.listenerSecondary.stop)
-            this.listenerSecondary.stop();
-        this.clearIntervals();
+        this.stopWatchers();
 
         // clear invoice
         this.props.InvoicesStore.reset();
@@ -814,10 +801,10 @@ export default class Receive extends React.Component<
         }
     };
 
-    subscribeInvoice = async (rHash?: string, onChainAddress?: string) => {
+    subscribeInvoice = (rHash?: string, onChainAddress?: string) => {
         const { SettingsStore, NodeInfoStore } = this.props;
         const { value } = this.state;
-        const { implementation, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
 
         const numConfPreference =
@@ -825,365 +812,52 @@ export default class Receive extends React.Component<
                 ? 1
                 : 0;
 
-        if (implementation === 'embedded-lnd') {
-            if (rHash) {
-                this.listener = LndMobileEventEmitter.addListener(
-                    'SubscribeInvoices',
-                    (e: any) => {
-                        try {
-                            const error = checkLndStreamErrorResponse(
-                                'SubscribeInvoices',
-                                e
-                            );
-                            if (error === 'EOF') {
-                                this.listener?.remove();
-                                return;
-                            } else if (error) {
-                                console.error(
-                                    'Got error from SubscribeInvoices',
-                                    [error]
-                                );
-                                this.listener?.remove();
-                                return;
-                            }
-
-                            const invoice =
-                                lndMobile.wallet.decodeInvoiceResult(e.data);
-
-                            if (
-                                invoice.settled &&
-                                // @ts-ignore:next-line
-                                Base64Utils.bytesToHex(invoice.r_hash) === rHash
-                            ) {
-                                this.handlePaymentReceived(
-                                    Number(invoice.amt_paid_sat),
-                                    {
-                                        type: 'ln',
-                                        tx: invoice.payment_request,
-                                        preimage: Base64Utils.bytesToHex(
-                                            // @ts-ignore:next-line
-                                            invoice.r_preimage
-                                        )
-                                    }
-                                );
-                                this.listener?.remove();
-                            }
-                        } catch (error) {
-                            console.error(error);
-                            this.listener?.remove();
-                        }
-                    }
-                );
-            }
-
-            if (onChainAddress) {
-                this.listenerSecondary = LndMobileEventEmitter.addListener(
-                    'SubscribeTransactions',
-                    (e: any) => {
-                        try {
-                            const error = checkLndStreamErrorResponse(
-                                'SubscribeTransactions',
-                                e
-                            );
-                            if (error === 'EOF') {
-                                this.listenerSecondary?.remove();
-                                return;
-                            } else if (error) {
-                                console.error(
-                                    'Got error from SubscribeTransactions',
-                                    [error]
-                                );
-                                this.listenerSecondary?.remove();
-                                return;
-                            }
-
-                            const transaction =
-                                decodeSubscribeTransactionsResult(e.data);
-                            if (
-                                onChainAddress &&
-                                transaction.dest_addresses.includes(
-                                    onChainAddress
-                                ) &&
-                                transaction.num_confirmations >
-                                    numConfPreference &&
-                                Number(transaction.amount) >= Number(value)
-                            ) {
-                                this.handlePaymentReceived(
-                                    Number(transaction.amount),
-                                    {
-                                        type: 'onchain',
-                                        tx: transaction.tx_hash
-                                    }
-                                );
-                                this.listenerSecondary?.remove();
-                            }
-                        } catch (error) {
-                            console.error(error);
-                            this.listenerSecondary?.remove();
-                        }
-                    }
-                );
-            }
-
-            await lndMobile.wallet.subscribeInvoices();
-            await lndMobile.onchain.subscribeTransactions();
-        }
-
-        if (implementation === 'lightning-node-connect') {
-            const { LncModule } = NativeModules;
-            if (rHash) {
-                const eventName = BackendUtils.subscribeInvoice(rHash);
-                const eventEmitter = new NativeEventEmitter(LncModule);
-                this.listener = eventEmitter.addListener(
-                    eventName,
-                    (event: any) => {
-                        if (event.result) {
-                            if (
-                                typeof event.result === 'string' &&
-                                event.result.includes(
-                                    'rpc error: code = Canceled'
-                                )
-                            ) {
-                                this.listener?.remove();
-                                return;
-                            }
-                            try {
-                                const result = JSON.parse(event.result);
-                                if (result === 'EOF') {
-                                    this.listener?.remove();
-                                    return;
-                                }
-                                if (result.settled) {
-                                    this.handlePaymentReceived(
-                                        result.amt_paid_sat,
-                                        {
-                                            type: 'ln',
-                                            tx: result.payment_request,
-                                            preimage: result.r_preimage
-                                        }
-                                    );
-                                    this.listener?.remove();
-                                }
-                            } catch (error) {
-                                console.error(error);
-                                this.listener?.remove();
-                            }
-                        }
-                    }
-                );
-            }
-
-            if (onChainAddress) {
-                const eventName2 = BackendUtils.subscribeTransactions();
-                const eventEmitter2 = new NativeEventEmitter(LncModule);
-                this.listenerSecondary = eventEmitter2.addListener(
-                    eventName2,
-                    (event: any) => {
-                        if (event.result) {
-                            if (
-                                typeof event.result === 'string' &&
-                                event.result.includes(
-                                    'rpc error: code = Canceled'
-                                )
-                            ) {
-                                this.listenerSecondary?.remove();
-                                return;
-                            }
-                            try {
-                                const result = JSON.parse(event.result);
-                                if (result === 'EOF') {
-                                    this.listenerSecondary?.remove();
-                                    return;
-                                }
-                                if (
-                                    result.dest_addresses.includes(
-                                        onChainAddress
-                                    ) &&
-                                    result.num_confirmations >=
-                                        numConfPreference &&
-                                    Number(result.amount) >= Number(value)
-                                ) {
-                                    this.handlePaymentReceived(result.amount, {
-                                        type: 'onchain',
-                                        tx: result.tx_hash
-                                    });
-                                    this.listenerSecondary?.remove();
-                                }
-                            } catch (error) {
-                                console.error(error);
-                                this.listenerSecondary?.remove();
-                            }
-                        }
-                    }
-                );
-            }
-        }
-
-        if (implementation === 'ldk-node') {
-            const ldkBackend = BackendUtils.ldkNode;
-
-            this.ldkUnsubscribe = ldkBackend.subscribeToEvents((event) => {
-                if (event.type === 'paymentReceived') {
-                    const amountSat = Math.floor(event.amountMsat / 1000);
-
-                    // Check if this is the invoice we're watching
-                    if (rHash && event.paymentHash === rHash) {
-                        this.handlePaymentReceived(amountSat, {
-                            type: 'ln',
-                            tx: event.paymentHash
-                        });
-
-                        if (this.ldkUnsubscribe) {
-                            this.ldkUnsubscribe();
-                            this.ldkUnsubscribe = null;
-                        }
-                    }
+        if (rHash) {
+            this.stopInvoiceWatcher();
+            const unsubscribe = BackendUtils.watchInvoicePaid(
+                { rHash, value },
+                ({
+                    amountSat,
+                    tx,
+                    preimage
+                }: {
+                    amountSat: number;
+                    tx?: string;
+                    preimage?: string;
+                }) => {
+                    this.stopWatchers();
+                    this.handlePaymentReceived(amountSat, {
+                        type: 'ln',
+                        tx: tx || '',
+                        preimage
+                    });
                 }
-            });
+            );
+            // backends without real-time payment detection return
+            // false from the dispatcher
+            if (typeof unsubscribe === 'function')
+                this.unsubscribeInvoiceWatch = unsubscribe;
         }
 
-        if (implementation === 'lnd') {
-            if (rHash) {
-                this.lnInterval = setInterval(() => {
-                    // Look the invoice up directly by payment hash instead of
-                    // scanning the last 10 invoices: on busy nodes the watched
-                    // invoice can be pushed out of that window before it is
-                    // paid. LND's REST lookup endpoint expects a hex hash,
-                    // while rHash is base64url here
-                    BackendUtils.lookupInvoice({
-                        r_hash: Base64Utils.base64UrlToHex(rHash)
-                    })
-                        .then((result: any) => {
-                            const invoice = new Invoice(result);
-                            const amountPaid = invoice.getAmount;
-                            if (
-                                invoice.isPaid &&
-                                Number(amountPaid) >= Number(value) &&
-                                Number(amountPaid) !== 0
-                            ) {
-                                this.handlePaymentReceived(amountPaid, {
-                                    type: 'ln',
-                                    tx: invoice.getPaymentRequest
-                                });
-                                this.clearIntervals();
-                            }
-                        })
-                        .catch(() => {
-                            // invoice not found or node unreachable;
-                            // retry on the next tick
-                        });
-                }, 5000);
-            }
-
-            // this is workaround that manually calls your transactions every 30 secs
-            if (onChainAddress) {
-                this.onChainInterval = setInterval(() => {
-                    // only look for transactions in the last 3 blocks
-                    BackendUtils.getTransactions(
-                        nodeInfo && nodeInfo.block_height
-                            ? {
-                                  start_height: nodeInfo.block_height - 3
-                              }
-                            : null
-                    ).then((response: any) => {
-                        const txs = response.transactions;
-                        for (let i = 0; i < txs.length; i++) {
-                            const result = txs[i];
-                            if (
-                                result.dest_addresses.includes(
-                                    onChainAddress
-                                ) &&
-                                result.num_confirmations >= numConfPreference
-                            ) {
-                                // loop through outputs since amount is negative if unconfirmed
-                                const output_details = result.output_details;
-                                for (
-                                    let j = 0;
-                                    j < output_details.length;
-                                    j++
-                                ) {
-                                    const output = output_details[j];
-                                    if (
-                                        Number(output.amount) >=
-                                            Number(value) &&
-                                        output.address === onChainAddress
-                                    ) {
-                                        this.handlePaymentReceived(
-                                            output.amount,
-                                            {
-                                                type: 'onchain',
-                                                tx: result.tx_hash
-                                            }
-                                        );
-                                        this.clearIntervals();
-                                        // break parent loop
-                                        i = txs.length;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+        if (onChainAddress) {
+            this.stopOnchainWatcher();
+            const unsubscribe = BackendUtils.watchOnchainReceived(
+                {
+                    address: onChainAddress,
+                    value,
+                    numConfPreference,
+                    blockHeight: nodeInfo?.block_height
+                },
+                ({ amountSat, txid }: { amountSat: number; txid: string }) => {
+                    this.stopWatchers();
+                    this.handlePaymentReceived(amountSat, {
+                        type: 'onchain',
+                        tx: txid
                     });
-                }, 7000);
-            }
-        }
-
-        if (implementation === 'cln-rest') {
-            if (rHash) {
-                this.lnInterval = setInterval(() => {
-                    // Look the invoice up directly by payment hash instead of
-                    // scanning the last 10 invoices: getInvoices now includes
-                    // unpaid invoices, so on busy nodes the watched invoice
-                    // can be pushed out of that window before it is paid
-                    BackendUtils.lookupInvoice({ r_hash: rHash })
-                        .then((result: any) => {
-                            const invoice = new Invoice(result);
-                            const amountPaid = invoice.getAmount;
-                            if (
-                                invoice.isPaid &&
-                                Number(amountPaid) >= Number(value) &&
-                                Number(amountPaid) !== 0
-                            ) {
-                                this.handlePaymentReceived(amountPaid, {
-                                    type: 'ln',
-                                    tx: invoice.getPaymentRequest
-                                });
-                                this.clearIntervals();
-                            }
-                        })
-                        .catch(() => {
-                            // invoice not found or node unreachable —
-                            // retry on the next tick
-                        });
-                }, 5000);
-            }
-        }
-
-        if (implementation === 'lndhub') {
-            if (rHash) {
-                this.lnInterval = setInterval(() => {
-                    BackendUtils.getInvoices().then((response: any) => {
-                        const invoices = response.invoices;
-                        for (let i = 0; i < invoices.length; i++) {
-                            const result = new Invoice(invoices[i]);
-                            if (
-                                result.getFormattedRhash === rHash &&
-                                result.ispaid &&
-                                Number(result.amt) >= Number(value) &&
-                                Number(result.amt) !== 0
-                            ) {
-                                this.handlePaymentReceived(Number(result.amt), {
-                                    type: 'ln',
-                                    tx: result.payment_request,
-                                    preimage: result.r_preimage
-                                });
-                                this.clearIntervals();
-                                break;
-                            }
-                        }
-                    });
-                }, 5000);
-            }
+                }
+            );
+            if (typeof unsubscribe === 'function')
+                this.unsubscribeOnchainWatch = unsubscribe;
         }
     };
 
