@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { optimizeNeutrinoPeers, createLndWallet } from './LndMobileUtils';
+import { createLndWallet } from './LndMobileUtils';
+import { optimizeNeutrinoPeers } from './NeutrinoPeersUtils';
 import { createLdkNodeWallet } from './LdkNodeUtils';
 import { localeString } from './LocaleUtils';
 

@@ -4,7 +4,12 @@ import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 
-import { NEUTRINO_PING_THRESHOLD_MS, pingPeer } from '../utils/LndMobileUtils';
+import {
+    NeutrinoProbeRecord,
+    bitcoinP2pPort,
+    isWeakNeutrinoProbeOutcome,
+    probeNeutrinoPeerList
+} from '../utils/NeutrinoPeersUtils';
 
 const ZOMBIE_CHAN_THRESHOLD = 21000;
 
@@ -73,56 +78,53 @@ export default class AlertStore {
     };
 
     @action
+    public setNeutrinoPeerAlertsFromProbes = (
+        probes: NeutrinoProbeRecord[]
+    ) => {
+        this.problematicNeutrinoPeers = probes
+            .filter((probe) => isWeakNeutrinoProbeOutcome(probe.ms))
+            .map((probe) => ({
+                peer: probe.peer,
+                ms:
+                    typeof probe.ms === 'number'
+                        ? probe.ms
+                        : probe.ms === 'Timed out'
+                        ? localeString(
+                              'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
+                          )
+                        : localeString(
+                              'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
+                          )
+            }));
+
+        if (this.problematicNeutrinoPeers.length > 0) {
+            this.hasError = true;
+            this.neutrinoPeerError = true;
+            return;
+        }
+
+        this.neutrinoPeerError = false;
+        if (
+            !this.zombieError &&
+            !this.vssError &&
+            !this.esploraError &&
+            !this.rgsError
+        ) {
+            this.hasError = false;
+        }
+    };
+
+    @action
     public checkNeutrinoPeers = async () => {
         const peers =
             this.settingsStore.embeddedLndNetwork === 'Testnet'
                 ? this.settingsStore.settings.neutrinoPeersTestnet
                 : this.settingsStore.settings.neutrinoPeersMainnet;
 
-        const results: any = [];
-        for (let i = 0; i < peers.length; i++) {
-            const peer = peers[i];
-            await new Promise(async (resolve) => {
-                try {
-                    const result = await pingPeer(peer);
-                    console.log(`# ${peer} - ${result.ms}`);
-                    results.push({
-                        peer,
-                        ms: result.reachable
-                            ? result.ms
-                            : localeString(
-                                  'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable'
-                              )
-                    });
-                    resolve(true);
-                } catch (e) {
-                    console.log('e', e);
-                    results.push({
-                        peer,
-                        ms: localeString(
-                            'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
-                        )
-                    });
-                    resolve(true);
-                }
-            });
-        }
-
-        const filteredResults = results.filter((result: any) => {
-            return (
-                result.ms ===
-                    localeString(
-                        'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
-                    ) ||
-                (Number.isInteger(result.ms) &&
-                    result.ms > NEUTRINO_PING_THRESHOLD_MS)
-            );
-        });
-
-        this.problematicNeutrinoPeers = filteredResults;
-        if (this.problematicNeutrinoPeers.length > 0) {
-            this.hasError = true;
-            this.neutrinoPeerError = true;
-        }
+        const p2pPort = bitcoinP2pPort(
+            this.settingsStore.embeddedLndNetwork === 'Testnet'
+        );
+        const probes = await probeNeutrinoPeerList(peers, p2pPort);
+        this.setNeutrinoPeerAlertsFromProbes(probes);
     };
 }
