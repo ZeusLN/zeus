@@ -2068,7 +2068,7 @@ export default class NostrWalletConnectStore {
                 paymentHash
             );
 
-        const feeSats = Number(payment?.getFee || fees_paid) || 0;
+        const feeSats = Number(payment?.getFee) || Number(fees_paid) || 0;
 
         // Debit the budget on any evidence of settlement, not only when the
         // payments-list lookup succeeds: with a preimage in hand the payment
@@ -2242,7 +2242,8 @@ export default class NostrWalletConnectStore {
         // The melt succeeded (failure returned above), so debit the budget
         // unconditionally: gating on the payments-list lookup would let the
         // spend escape the budget when the list misses the fresh melt.
-        const feeSats = Number(cashuInvoice.getFee || payment?.getFee || 0);
+        const feeSats =
+            Number(cashuInvoice.getFee) || Number(payment?.getFee) || 0;
         await this.finalizePayment({
             id: request.invoice,
             decoded:
@@ -2252,7 +2253,7 @@ export default class NostrWalletConnectStore {
                     payment_source: 'cashu',
                     amountSats,
                     preimage: cashuInvoice.getPreimage,
-                    feeSats: cashuInvoice.fee
+                    feeSats
                 }),
             type: 'pay_invoice',
             payment_source: 'cashu',
@@ -2728,6 +2729,8 @@ export default class NostrWalletConnectStore {
                 status: 'success',
                 payment_source,
                 satAmount: amountSats,
+                // Stored internally in sats (may be fractional). NIP-47 `fees_paid` is
+                // msats; convert to msats only when mapping to the NIP-47 response.
                 fees_paid: feeSats
             });
             this.findAndUpdateConnection(connection);
