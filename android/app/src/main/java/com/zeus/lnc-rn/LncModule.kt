@@ -118,9 +118,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
   @ReactMethod
   fun connectServer(namespace: String, mailboxServerAddr: String, isDevServer: Boolean = false, connectPhrase: String, localStatic: String, remoteStatic: String, promise: Promise) {
-     Log.d("connectMailbox", "called with connectPhrase: " + connectPhrase
-     + " and mailboxServerAddr: " + mailboxServerAddr);
-
      try {
          Lndmobile.connectServer(namespace, mailboxServerAddr, isDevServer, connectPhrase, localStatic ?: "", remoteStatic ?: "")
          promise.resolve(null)
@@ -137,9 +134,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
   @ReactMethod
   fun invokeRPC(namespace: String, route: String, requestData: String, rnCallback: Callback) {
-     Log.d("request", "called with route: " + route
-     + " and requestData: " + requestData);
-
      val gocb = AndroidCallback()
      gocb.setCallback(rnCallback)
      Lndmobile.invokeRPC(namespace, route, requestData, gocb)

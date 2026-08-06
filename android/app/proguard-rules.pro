@@ -40,3 +40,13 @@
 -keep class com.sun.jna.** { *; }
 -keep class * implements com.sun.jna.** { *; }
 -dontwarn com.sun.jna.**
+
+# Strip verbose/debug/info logging from release builds. Log output is readable
+# via adb logcat and captured in bug reports; native modules have leaked
+# credentials through it. Requires optimization to be enabled (see
+# proguard-android-optimize.txt in build.gradle) or R8 ignores this rule.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

@@ -711,7 +711,9 @@ export default class SwapStore {
             // Save the updated swaps back to encrypted storage
             await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
 
-            console.log('Swap updated in storage:', swaps[swapIndex]);
+            console.log(
+                `Swap ${swapId} updated in storage: status=${swaps[swapIndex].status}`
+            );
         } catch (error) {
             console.error('Error updating swap in storage:', error);
             throw error;
