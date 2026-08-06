@@ -444,6 +444,18 @@ export default class NWCConnection extends BaseModel {
             );
         }
     }
+    /**
+     * Validates spendable budget against the invoice amount only.
+     *
+     * Routing fees are unknown until the payment settles and are intentionally
+     * excluded here. Worst-case overshoot is bounded by PAYMENT_FEE_LIMIT_SATS
+     * (the fee cap passed to the backend). Debit happens on finalize/reconcile
+     * for the settled amount; subsequent pays see the reduced remaining budget.
+     *
+     * Reserving amount + fee_limit up front would reject legitimate payments
+     * when remaining budget is in (amount, amount + fee_limit], which is a
+     * worse failure mode for tight budgets.
+     */
     @action
     public validateBudgetBeforePayment(amountSats: number): {
         success: boolean;
