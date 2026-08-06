@@ -2806,6 +2806,8 @@ public protocol NodeProtocol : AnyObject {
     
     func forceCloseChannel(userChannelId: UserChannelId, counterpartyNodeId: PublicKey, reason: String?) throws 
     
+    func importWatchonlyAccount(accountId: AccountId, externalDescriptor: String, internalDescriptor: String) throws 
+    
     func listBalances()  -> BalanceDetails
     
     func listChannels()  -> [ChannelDetails]
@@ -2815,6 +2817,8 @@ public protocol NodeProtocol : AnyObject {
     func listPayments()  -> [PaymentDetails]
     
     func listPeers()  -> [PeerDetails]
+    
+    func listWatchonlyAccounts()  -> [AccountId]
     
     func listeningAddresses()  -> [SocketAddress]?
     
@@ -2848,6 +2852,8 @@ public protocol NodeProtocol : AnyObject {
     
     func payment(paymentId: PaymentId)  -> PaymentDetails?
     
+    func previewWatchonlyAccount(externalDescriptor: String, internalDescriptor: String, count: UInt8) throws  -> WatchonlyAccountPreview
+    
     func removePayment(paymentId: PaymentId) throws 
     
     func resetNetworkGraph() throws 
@@ -2870,6 +2876,8 @@ public protocol NodeProtocol : AnyObject {
     
     func syncWallets() throws 
     
+    func syncWatchonlyAccounts() throws 
+    
     func unifiedQrPayment()  -> UnifiedQrPayment
     
     func updateChannelConfig(userChannelId: UserChannelId, counterpartyNodeId: PublicKey, channelConfig: ChannelConfig) throws 
@@ -2879,6 +2887,16 @@ public protocol NodeProtocol : AnyObject {
     func verifySignature(msg: [UInt8], sig: String, pkey: PublicKey)  -> Bool
     
     func waitNextEvent()  -> Event
+    
+    func watchonlyBalance(accountId: AccountId) throws  -> UInt64
+    
+    func watchonlyCreatePsbt(accountId: AccountId, recipients: [PsbtRecipient], utxos: [OutPoint], feeRate: FeeRate) throws  -> String
+    
+    func watchonlyListAddresses(accountId: AccountId) throws  -> [Address]
+    
+    func watchonlyListUtxos(accountId: AccountId) throws  -> [WalletUtxo]
+    
+    func watchonlyNewAddress(accountId: AccountId) throws  -> Address
     
 }
 
@@ -3006,6 +3024,15 @@ open func forceCloseChannel(userChannelId: UserChannelId, counterpartyNodeId: Pu
 }
 }
     
+open func importWatchonlyAccount(accountId: AccountId, externalDescriptor: String, internalDescriptor: String)throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_import_watchonly_account(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),
+        FfiConverterString.lower(externalDescriptor),
+        FfiConverterString.lower(internalDescriptor),$0
+    )
+}
+}
+    
 open func listBalances() -> BalanceDetails {
     return try!  FfiConverterTypeBalanceDetails.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_list_balances(self.uniffiClonePointer(),$0
@@ -3037,6 +3064,13 @@ open func listPayments() -> [PaymentDetails] {
 open func listPeers() -> [PeerDetails] {
     return try!  FfiConverterSequenceTypePeerDetails.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_list_peers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func listWatchonlyAccounts() -> [AccountId] {
+    return try!  FfiConverterSequenceTypeAccountId.lift(try! rustCall() {
+    uniffi_ldk_node_fn_method_node_list_watchonly_accounts(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -3197,6 +3231,16 @@ open func payment(paymentId: PaymentId) -> PaymentDetails? {
 })
 }
     
+open func previewWatchonlyAccount(externalDescriptor: String, internalDescriptor: String, count: UInt8)throws  -> WatchonlyAccountPreview {
+    return try  FfiConverterTypeWatchonlyAccountPreview.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_preview_watchonly_account(self.uniffiClonePointer(),
+        FfiConverterString.lower(externalDescriptor),
+        FfiConverterString.lower(internalDescriptor),
+        FfiConverterUInt8.lower(count),$0
+    )
+})
+}
+    
 open func removePayment(paymentId: PaymentId)throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_remove_payment(self.uniffiClonePointer(),
         FfiConverterTypePaymentId.lower(paymentId),$0
@@ -3279,6 +3323,12 @@ open func syncWallets()throws  {try rustCallWithError(FfiConverterTypeNodeError.
 }
 }
     
+open func syncWatchonlyAccounts()throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_sync_watchonly_accounts(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func unifiedQrPayment() -> UnifiedQrPayment {
     return try!  FfiConverterTypeUnifiedQrPayment.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_unified_qr_payment(self.uniffiClonePointer(),$0
@@ -3315,6 +3365,49 @@ open func verifySignature(msg: [UInt8], sig: String, pkey: PublicKey) -> Bool {
 open func waitNextEvent() -> Event {
     return try!  FfiConverterTypeEvent.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_wait_next_event(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func watchonlyBalance(accountId: AccountId)throws  -> UInt64 {
+    return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_balance(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),$0
+    )
+})
+}
+    
+open func watchonlyCreatePsbt(accountId: AccountId, recipients: [PsbtRecipient], utxos: [OutPoint], feeRate: FeeRate)throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_create_psbt(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),
+        FfiConverterSequenceTypePsbtRecipient.lower(recipients),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),
+        FfiConverterTypeFeeRate.lower(feeRate),$0
+    )
+})
+}
+    
+open func watchonlyListAddresses(accountId: AccountId)throws  -> [Address] {
+    return try  FfiConverterSequenceTypeAddress.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_list_addresses(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),$0
+    )
+})
+}
+    
+open func watchonlyListUtxos(accountId: AccountId)throws  -> [WalletUtxo] {
+    return try  FfiConverterSequenceTypeWalletUtxo.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_list_utxos(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),$0
+    )
+})
+}
+    
+open func watchonlyNewAddress(accountId: AccountId)throws  -> Address {
+    return try  FfiConverterTypeAddress.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_watchonly_new_address(self.uniffiClonePointer(),
+        FfiConverterTypeAccountId.lower(accountId),$0
     )
 })
 }
@@ -7369,6 +7462,72 @@ public func FfiConverterTypePeerDetails_lower(_ value: PeerDetails) -> RustBuffe
 }
 
 
+public struct PsbtRecipient {
+    public var address: Address
+    public var amountSats: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(address: Address, amountSats: UInt64) {
+        self.address = address
+        self.amountSats = amountSats
+    }
+}
+
+
+
+extension PsbtRecipient: Equatable, Hashable {
+    public static func ==(lhs: PsbtRecipient, rhs: PsbtRecipient) -> Bool {
+        if lhs.address != rhs.address {
+            return false
+        }
+        if lhs.amountSats != rhs.amountSats {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(address)
+        hasher.combine(amountSats)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePsbtRecipient: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PsbtRecipient {
+        return
+            try PsbtRecipient(
+                address: FfiConverterTypeAddress.read(from: &buf), 
+                amountSats: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PsbtRecipient, into buf: inout [UInt8]) {
+        FfiConverterTypeAddress.write(value.address, into: &buf)
+        FfiConverterUInt64.write(value.amountSats, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePsbtRecipient_lift(_ buf: RustBuffer) throws -> PsbtRecipient {
+    return try FfiConverterTypePsbtRecipient.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePsbtRecipient_lower(_ value: PsbtRecipient) -> RustBuffer {
+    return FfiConverterTypePsbtRecipient.lower(value)
+}
+
+
 public struct RouteHintHop {
     public var srcNodeId: PublicKey
     public var shortChannelId: UInt64
@@ -7702,6 +7861,72 @@ public func FfiConverterTypeWalletUtxo_lift(_ buf: RustBuffer) throws -> WalletU
 #endif
 public func FfiConverterTypeWalletUtxo_lower(_ value: WalletUtxo) -> RustBuffer {
     return FfiConverterTypeWalletUtxo.lower(value)
+}
+
+
+public struct WatchonlyAccountPreview {
+    public var externalAddresses: [Address]
+    public var internalAddresses: [Address]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(externalAddresses: [Address], internalAddresses: [Address]) {
+        self.externalAddresses = externalAddresses
+        self.internalAddresses = internalAddresses
+    }
+}
+
+
+
+extension WatchonlyAccountPreview: Equatable, Hashable {
+    public static func ==(lhs: WatchonlyAccountPreview, rhs: WatchonlyAccountPreview) -> Bool {
+        if lhs.externalAddresses != rhs.externalAddresses {
+            return false
+        }
+        if lhs.internalAddresses != rhs.internalAddresses {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(externalAddresses)
+        hasher.combine(internalAddresses)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWatchonlyAccountPreview: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WatchonlyAccountPreview {
+        return
+            try WatchonlyAccountPreview(
+                externalAddresses: FfiConverterSequenceTypeAddress.read(from: &buf), 
+                internalAddresses: FfiConverterSequenceTypeAddress.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WatchonlyAccountPreview, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeAddress.write(value.externalAddresses, into: &buf)
+        FfiConverterSequenceTypeAddress.write(value.internalAddresses, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWatchonlyAccountPreview_lift(_ buf: RustBuffer) throws -> WatchonlyAccountPreview {
+    return try FfiConverterTypeWatchonlyAccountPreview.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWatchonlyAccountPreview_lower(_ value: WatchonlyAccountPreview) -> RustBuffer {
+    return FfiConverterTypeWatchonlyAccountPreview.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -11811,6 +12036,31 @@ fileprivate struct FfiConverterSequenceTypePeerDetails: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePsbtRecipient: FfiConverterRustBuffer {
+    typealias SwiftType = [PsbtRecipient]
+
+    public static func write(_ value: [PsbtRecipient], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePsbtRecipient.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PsbtRecipient] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PsbtRecipient]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePsbtRecipient.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer {
     typealias SwiftType = [RouteHintHop]
 
@@ -11986,6 +12236,31 @@ fileprivate struct FfiConverterSequenceSequenceTypeRouteHintHop: FfiConverterRus
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeAccountId: FfiConverterRustBuffer {
+    typealias SwiftType = [AccountId]
+
+    public static func write(_ value: [AccountId], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAccountId.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AccountId] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AccountId]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAccountId.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeAddress: FfiConverterRustBuffer {
     typealias SwiftType = [Address]
 
@@ -12108,6 +12383,50 @@ fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
         return dict
     }
 }
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias AccountId = String
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAccountId: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AccountId {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: AccountId, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> AccountId {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: AccountId) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAccountId_lift(_ value: RustBuffer) throws -> AccountId {
+    return try FfiConverterTypeAccountId.lift(value)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAccountId_lower(_ value: AccountId) -> RustBuffer {
+    return FfiConverterTypeAccountId.lower(value)
+}
+
 
 
 /**
@@ -13393,6 +13712,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_force_close_channel() != 48831) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_node_import_watchonly_account() != 56121) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_node_list_balances() != 57528) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -13406,6 +13728,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_list_peers() != 14889) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_list_watchonly_accounts() != 26665) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_listening_addresses() != 2665) {
@@ -13456,6 +13781,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_payment() != 60296) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_node_preview_watchonly_account() != 12122) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_node_remove_payment() != 47952) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -13489,6 +13817,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_sync_wallets() != 32474) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_node_sync_watchonly_accounts() != 20455) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_node_unified_qr_payment() != 9837) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -13502,6 +13833,21 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_wait_next_event() != 55101) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_balance() != 39708) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_create_psbt() != 19695) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_list_addresses() != 48800) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_list_utxos() != 7922) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_watchonly_new_address() != 12204) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds() != 22836) {

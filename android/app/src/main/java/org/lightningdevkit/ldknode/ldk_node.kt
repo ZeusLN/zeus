@@ -1684,6 +1684,14 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): Unit
 
+    fun uniffi_ldk_node_fn_method_node_import_watchonly_account(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        `externalDescriptor`: RustBuffer.ByValue,
+        `internalDescriptor`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
     fun uniffi_ldk_node_fn_method_node_list_balances(
         `ptr`: Pointer,
         uniffi_out_err: UniffiRustCallStatus,
@@ -1705,6 +1713,11 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
 
     fun uniffi_ldk_node_fn_method_node_list_peers(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_list_watchonly_accounts(
         `ptr`: Pointer,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
@@ -1819,6 +1832,14 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
+    fun uniffi_ldk_node_fn_method_node_preview_watchonly_account(
+        `ptr`: Pointer,
+        `externalDescriptor`: RustBuffer.ByValue,
+        `internalDescriptor`: RustBuffer.ByValue,
+        `count`: Byte,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
     fun uniffi_ldk_node_fn_method_node_remove_payment(
         `ptr`: Pointer,
         `paymentId`: RustBuffer.ByValue,
@@ -1886,6 +1907,11 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): Unit
 
+    fun uniffi_ldk_node_fn_method_node_sync_watchonly_accounts(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
     fun uniffi_ldk_node_fn_method_node_unified_qr_payment(
         `ptr`: Pointer,
         uniffi_out_err: UniffiRustCallStatus,
@@ -1914,6 +1940,39 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_fn_method_node_wait_next_event(
         `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_watchonly_balance(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Long
+
+    fun uniffi_ldk_node_fn_method_node_watchonly_create_psbt(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        `recipients`: RustBuffer.ByValue,
+        `utxos`: RustBuffer.ByValue,
+        `feeRate`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_watchonly_list_addresses(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_watchonly_list_utxos(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_watchonly_new_address(
+        `ptr`: Pointer,
+        `accountId`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -2724,6 +2783,8 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_checksum_method_node_force_close_channel(): Short
 
+    fun uniffi_ldk_node_checksum_method_node_import_watchonly_account(): Short
+
     fun uniffi_ldk_node_checksum_method_node_list_balances(): Short
 
     fun uniffi_ldk_node_checksum_method_node_list_channels(): Short
@@ -2733,6 +2794,8 @@ internal interface UniffiLib : Library {
     fun uniffi_ldk_node_checksum_method_node_list_payments(): Short
 
     fun uniffi_ldk_node_checksum_method_node_list_peers(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_list_watchonly_accounts(): Short
 
     fun uniffi_ldk_node_checksum_method_node_listening_addresses(): Short
 
@@ -2766,6 +2829,8 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_checksum_method_node_payment(): Short
 
+    fun uniffi_ldk_node_checksum_method_node_preview_watchonly_account(): Short
+
     fun uniffi_ldk_node_checksum_method_node_remove_payment(): Short
 
     fun uniffi_ldk_node_checksum_method_node_reset_network_graph(): Short
@@ -2788,6 +2853,8 @@ internal interface UniffiLib : Library {
 
     fun uniffi_ldk_node_checksum_method_node_sync_wallets(): Short
 
+    fun uniffi_ldk_node_checksum_method_node_sync_watchonly_accounts(): Short
+
     fun uniffi_ldk_node_checksum_method_node_unified_qr_payment(): Short
 
     fun uniffi_ldk_node_checksum_method_node_update_channel_config(): Short
@@ -2797,6 +2864,16 @@ internal interface UniffiLib : Library {
     fun uniffi_ldk_node_checksum_method_node_verify_signature(): Short
 
     fun uniffi_ldk_node_checksum_method_node_wait_next_event(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_watchonly_balance(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_watchonly_create_psbt(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_watchonly_list_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_watchonly_list_utxos(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_watchonly_new_address(): Short
 
     fun uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds(): Short
 
@@ -3237,6 +3314,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_force_close_channel() != 48831.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_import_watchonly_account() != 56121.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_list_balances() != 57528.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3250,6 +3330,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_list_peers() != 14889.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_list_watchonly_accounts() != 26665.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_listening_addresses() != 2665.toShort()) {
@@ -3300,6 +3383,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_payment() != 60296.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_preview_watchonly_account() != 12122.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 47952.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3333,6 +3419,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_sync_wallets() != 32474.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_sync_watchonly_accounts() != 20455.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_unified_qr_payment() != 9837.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3346,6 +3435,21 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_wait_next_event() != 55101.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_balance() != 39708.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_create_psbt() != 19695.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_list_addresses() != 48800.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_list_utxos() != 7922.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_watchonly_new_address() != 12204.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds() != 22836.toShort()) {
@@ -7905,6 +8009,12 @@ public interface NodeInterface {
         `reason`: kotlin.String?,
     )
 
+    fun `importWatchonlyAccount`(
+        `accountId`: AccountId,
+        `externalDescriptor`: kotlin.String,
+        `internalDescriptor`: kotlin.String,
+    )
+
     fun `listBalances`(): BalanceDetails
 
     fun `listChannels`(): List<ChannelDetails>
@@ -7914,6 +8024,8 @@ public interface NodeInterface {
     fun `listPayments`(): List<PaymentDetails>
 
     fun `listPeers`(): List<PeerDetails>
+
+    fun `listWatchonlyAccounts`(): List<AccountId>
 
     fun `listeningAddresses`(): List<SocketAddress>?
 
@@ -7985,6 +8097,12 @@ public interface NodeInterface {
 
     fun `payment`(`paymentId`: PaymentId): PaymentDetails?
 
+    fun `previewWatchonlyAccount`(
+        `externalDescriptor`: kotlin.String,
+        `internalDescriptor`: kotlin.String,
+        `count`: kotlin.UByte,
+    ): WatchonlyAccountPreview
+
     fun `removePayment`(`paymentId`: PaymentId)
 
     fun `resetNetworkGraph`()
@@ -8020,6 +8138,8 @@ public interface NodeInterface {
 
     fun `syncWallets`()
 
+    fun `syncWatchonlyAccounts`()
+
     fun `unifiedQrPayment`(): UnifiedQrPayment
 
     fun `updateChannelConfig`(
@@ -8037,6 +8157,21 @@ public interface NodeInterface {
     ): kotlin.Boolean
 
     fun `waitNextEvent`(): Event
+
+    fun `watchonlyBalance`(`accountId`: AccountId): kotlin.ULong
+
+    fun `watchonlyCreatePsbt`(
+        `accountId`: AccountId,
+        `recipients`: List<PsbtRecipient>,
+        `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate,
+    ): kotlin.String
+
+    fun `watchonlyListAddresses`(`accountId`: AccountId): List<Address>
+
+    fun `watchonlyListUtxos`(`accountId`: AccountId): List<WalletUtxo>
+
+    fun `watchonlyNewAddress`(`accountId`: AccountId): Address
 
     companion object
 }
@@ -8236,6 +8371,23 @@ open class Node :
         }
     }
 
+    @Throws(NodeException::class)
+    override fun `importWatchonlyAccount`(
+        `accountId`: AccountId,
+        `externalDescriptor`: kotlin.String,
+        `internalDescriptor`: kotlin.String,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_import_watchonly_account(
+                it,
+                FfiConverterTypeAccountId.lower(`accountId`),
+                FfiConverterString.lower(`externalDescriptor`),
+                FfiConverterString.lower(`internalDescriptor`),
+                _status,
+            )
+        }
+    }
+
     override fun `listBalances`(): BalanceDetails =
         FfiConverterTypeBalanceDetails.lift(
             callWithPointer {
@@ -8277,6 +8429,15 @@ open class Node :
             callWithPointer {
                 uniffiRustCall { _status ->
                     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_peers(it, _status)
+                }
+            },
+        )
+
+    override fun `listWatchonlyAccounts`(): List<AccountId> =
+        FfiConverterSequenceTypeAccountId.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_watchonly_accounts(it, _status)
                 }
             },
         )
@@ -8534,6 +8695,26 @@ open class Node :
         )
 
     @Throws(NodeException::class)
+    override fun `previewWatchonlyAccount`(
+        `externalDescriptor`: kotlin.String,
+        `internalDescriptor`: kotlin.String,
+        `count`: kotlin.UByte,
+    ): WatchonlyAccountPreview =
+        FfiConverterTypeWatchonlyAccountPreview.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_preview_watchonly_account(
+                        it,
+                        FfiConverterString.lower(`externalDescriptor`),
+                        FfiConverterString.lower(`internalDescriptor`),
+                        FfiConverterUByte.lower(`count`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
     override fun `removePayment`(`paymentId`: PaymentId) =
         callWithPointer {
             uniffiRustCallWithError(NodeException) { _status ->
@@ -8656,6 +8837,14 @@ open class Node :
             }
         }
 
+    @Throws(NodeException::class)
+    override fun `syncWatchonlyAccounts`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_sync_watchonly_accounts(it, _status)
+            }
+        }
+
     override fun `unifiedQrPayment`(): UnifiedQrPayment =
         FfiConverterTypeUnifiedQrPayment.lift(
             callWithPointer {
@@ -8716,6 +8905,84 @@ open class Node :
             callWithPointer {
                 uniffiRustCall { _status ->
                     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_wait_next_event(it, _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyBalance`(`accountId`: AccountId): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_balance(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyCreatePsbt`(
+        `accountId`: AccountId,
+        `recipients`: List<PsbtRecipient>,
+        `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate,
+    ): kotlin.String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_create_psbt(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        FfiConverterSequenceTypePsbtRecipient.lower(`recipients`),
+                        FfiConverterSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterTypeFeeRate.lower(`feeRate`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyListAddresses`(`accountId`: AccountId): List<Address> =
+        FfiConverterSequenceTypeAddress.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_list_addresses(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyListUtxos`(`accountId`: AccountId): List<WalletUtxo> =
+        FfiConverterSequenceTypeWalletUtxo.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_list_utxos(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `watchonlyNewAddress`(`accountId`: AccountId): Address =
+        FfiConverterTypeAddress.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_watchonly_new_address(
+                        it,
+                        FfiConverterTypeAccountId.lower(`accountId`),
+                        _status,
+                    )
                 }
             },
         )
@@ -12429,6 +12696,38 @@ public object FfiConverterTypePeerDetails : FfiConverterRustBuffer<PeerDetails> 
     }
 }
 
+data class PsbtRecipient(
+    var `address`: Address,
+    var `amountSats`: kotlin.ULong,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePsbtRecipient : FfiConverterRustBuffer<PsbtRecipient> {
+    override fun read(buf: ByteBuffer): PsbtRecipient =
+        PsbtRecipient(
+            FfiConverterTypeAddress.read(buf),
+            FfiConverterULong.read(buf),
+        )
+
+    override fun allocationSize(value: PsbtRecipient) =
+        (
+            FfiConverterTypeAddress.allocationSize(value.`address`) +
+                FfiConverterULong.allocationSize(value.`amountSats`)
+        )
+
+    override fun write(
+        value: PsbtRecipient,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeAddress.write(value.`address`, buf)
+        FfiConverterULong.write(value.`amountSats`, buf)
+    }
+}
+
 data class RouteHintHop(
     var `srcNodeId`: PublicKey,
     var `shortChannelId`: kotlin.ULong,
@@ -12590,6 +12889,38 @@ public object FfiConverterTypeWalletUtxo : FfiConverterRustBuffer<WalletUtxo> {
         FfiConverterULong.write(value.`valueSats`, buf)
         FfiConverterString.write(value.`address`, buf)
         FfiConverterBoolean.write(value.`isSpent`, buf)
+    }
+}
+
+data class WatchonlyAccountPreview(
+    var `externalAddresses`: List<Address>,
+    var `internalAddresses`: List<Address>,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWatchonlyAccountPreview : FfiConverterRustBuffer<WatchonlyAccountPreview> {
+    override fun read(buf: ByteBuffer): WatchonlyAccountPreview =
+        WatchonlyAccountPreview(
+            FfiConverterSequenceTypeAddress.read(buf),
+            FfiConverterSequenceTypeAddress.read(buf),
+        )
+
+    override fun allocationSize(value: WatchonlyAccountPreview) =
+        (
+            FfiConverterSequenceTypeAddress.allocationSize(value.`externalAddresses`) +
+                FfiConverterSequenceTypeAddress.allocationSize(value.`internalAddresses`)
+        )
+
+    override fun write(
+        value: WatchonlyAccountPreview,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterSequenceTypeAddress.write(value.`externalAddresses`, buf)
+        FfiConverterSequenceTypeAddress.write(value.`internalAddresses`, buf)
     }
 }
 
@@ -17451,6 +17782,34 @@ public object FfiConverterSequenceTypePeerDetails : FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypePsbtRecipient : FfiConverterRustBuffer<List<PsbtRecipient>> {
+    override fun read(buf: ByteBuffer): List<PsbtRecipient> {
+        val len = buf.getInt()
+        return List<PsbtRecipient>(len) {
+            FfiConverterTypePsbtRecipient.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PsbtRecipient>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePsbtRecipient.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(
+        value: List<PsbtRecipient>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePsbtRecipient.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeRouteHintHop : FfiConverterRustBuffer<List<RouteHintHop>> {
     override fun read(buf: ByteBuffer): List<RouteHintHop> {
         val len = buf.getInt()
@@ -17647,6 +18006,34 @@ public object FfiConverterSequenceSequenceTypeRouteHintHop : FfiConverterRustBuf
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeAccountId : FfiConverterRustBuffer<List<AccountId>> {
+    override fun read(buf: ByteBuffer): List<AccountId> {
+        val len = buf.getInt()
+        return List<AccountId>(len) {
+            FfiConverterTypeAccountId.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AccountId>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAccountId.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(
+        value: List<AccountId>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAccountId.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeAddress : FfiConverterRustBuffer<List<Address>> {
     override fun read(buf: ByteBuffer): List<Address> {
         val len = buf.getInt()
@@ -17796,6 +18183,14 @@ public object FfiConverterMapStringString : FfiConverterRustBuffer<Map<kotlin.St
         }
     }
 }
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ * It's also what we have an external type that references a custom type.
+ */
+public typealias AccountId = kotlin.String
+public typealias FfiConverterTypeAccountId = FfiConverterString
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
