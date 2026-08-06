@@ -71,11 +71,41 @@ export default class LndHub extends LND {
         Promise.resolve().then(() =>
             Bolt11Utils.decode((urlParams && urlParams[0]) || '')
         );
-    payLightningInvoice = (data: any) =>
-        this.postRequest('/payinvoice', {
-            invoice: data.payment_request,
-            amount: data.amt
-        });
+    // LndHub servers (LNbits included) block on /payinvoice until the
+    // payment resolves, which on slow routes exceeds the inherited 30s
+    // restReq default; that surfaced as premature "Request timeout"
+    // failures for payments that later settled (#2761). Unlike LND
+    // (timeout_seconds) and CLN (retry_for), the LndHub protocol has no
+    // server-side payment deadline at all, so this window is purely
+    // client-imposed: the server may well still be paying after we stop
+    // listening, which is exactly why the raced payment-timed-out shape
+    // (rather than a retryable-looking transport error) matters here.
+    // Zeus's payment timeout setting is neither plumbed to this backend
+    // nor exposed in the UI for it, so the window is a fixed 60s.
+    payLightningInvoice = (data: any) => {
+        const timeoutSeconds = 60;
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        return Promise.race([
+            forcedTimeout((timeoutSeconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            this.postRequest(
+                '/payinvoice',
+                {
+                    invoice: data.payment_request,
+                    amount: data.amt
+                },
+                (timeoutSeconds + 5) * 1000
+            )
+        ]);
+    };
     lnurlAuth = (message: string) => {
         const messageHash = new sha256Hash()
             .update(Base64Utils.stringToUint8Array(message))

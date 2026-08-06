@@ -81,7 +81,10 @@ export default class CLNRest {
                     // self-signed certs can't match anyway).
                     // Clearnet-over-Tor: keep strict TLS because exit
                     // nodes can MITM.
-                    isOnionHttpsUrl(url)
+                    isOnionHttpsUrl(url),
+                    // undefined keeps doTorRequest's own default; only
+                    // request-scoped deadlines (payments) override it
+                    timeout
                 ).then((response: any) => {
                     calls.delete(id);
                     return response;
@@ -96,7 +99,11 @@ export default class CLNRest {
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
+                trusty: !certVerification,
+                // RNBlobUtil's native default is 60s; without this a
+                // payment request holding the connection open longer than
+                // that dies natively no matter what the race below allows
+                timeout: timeout || this.defaultTimeout
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
                 .then((response: any) => {
@@ -407,8 +414,32 @@ export default class CLNRest {
             string: urlParams && urlParams[0]
         });
 
+    // cln blocks on /v1/pay and /v1/keysend for up to retry_for seconds,
+    // so the request timeout needs headroom past that deadline or the
+    // definitive response is discarded as a generic transport timeout.
+    // Mirror LND's payLightningInvoice: race the call against the
+    // payment-timed-out shape so a slow payment surfaces as "may be in
+    // transit, check Activity" instead of a retryable-looking error
+    // (dangerous on keysend, where a retry double-sends).
+    private payWithTimeout = (route: string, request: any, data: any) => {
+        const timeoutSeconds = Number(data.timeout_seconds) || 60;
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        return Promise.race([
+            forcedTimeout((timeoutSeconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            this.postRequest(route, request, (timeoutSeconds + 5) * 1000)
+        ]);
+    };
     payLightningInvoice = (data: any) =>
-        this.postRequest(
+        this.payWithTimeout(
             '/v1/pay',
             {
                 bolt11: data.payment_request,
@@ -416,10 +447,10 @@ export default class CLNRest {
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },
-            data.timeout_seconds * 1000
+            data
         );
     sendKeysend = (data: any) => {
-        return this.postRequest(
+        return this.payWithTimeout(
             '/v1/keysend',
             {
                 destination: data.pubkey,
@@ -427,7 +458,7 @@ export default class CLNRest {
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },
-            data.timeout_seconds * 1000
+            data
         );
     };
     closeChannel = (urlParams?: Array<string>) => {
