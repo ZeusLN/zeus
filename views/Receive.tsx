@@ -1042,7 +1042,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (implementation === 'lnd') {
+        if (implementation === 'lnd' || implementation === 'ldk-server') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
                     // Look the invoice up directly by payment hash instead of
