@@ -2538,7 +2538,10 @@ export default class NostrWalletConnectStore {
             });
         }
 
-        if (changed) this.lookupPaymentsCache = null;
+        if (changed) {
+            this.lookupPaymentsCache = null;
+            this.findAndUpdateConnection(connection);
+        }
         return changed;
     }
 
