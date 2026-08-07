@@ -2484,29 +2484,25 @@ export default class NostrWalletConnectStore {
         return true;
     }
 
-    /**
-     * Promotes pending pay_invoice activities that have since settled or failed.
-     * Used by the activity screen and by list_transactions — without the latter,
-     * an NWC client sees a settled payment as pending until someone opens the
-     * screen. Node fetches are rate limited by the helper below.
-     */
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
     ): Promise<boolean> {
-        const lightningPending = connection.activity.filter(
-            (activity) =>
-                activity.type === 'pay_invoice' &&
-                activity.status === 'pending' &&
-                activity.payment_source !== 'cashu'
+        const pending = connection.activity.filter(
+            (a) =>
+                a.type === 'pay_invoice' &&
+                a.status === 'pending' &&
+                a.payment_source !== 'cashu'
         );
-        if (lightningPending.length === 0) return false;
+        if (pending.length === 0) return false;
 
         const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
             connection.id,
-            lightningPending
+            pending
         );
+
         let changed = false;
-        for (const activity of lightningPending) {
+
+        for (const activity of pending) {
             const payment = payments.find(
                 (p) =>
                     p.getPaymentRequest === activity.id ||
@@ -2515,37 +2511,35 @@ export default class NostrWalletConnectStore {
             );
             if (!payment) continue;
 
-            let reconciled = false;
             runInAction(() => {
                 if (activity.status !== 'pending') return;
-                reconciled = true;
+
                 activity.payment = new Payment(payment);
-                if (!payment.isIncomplete) {
-                    activity.status = 'success';
-                    const amountSats =
-                        Math.floor(Number(activity.satAmount)) ||
-                        Math.floor(Number(payment.getAmount) || 0);
-                    const feeSats = Number(payment.getFee) || 0;
-                    activity.fees_paid = feeSats;
-                    const spendSats =
-                        amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                    if (spendSats > 0) {
-                        connection.trackSpending(
-                            spendSats,
-                            this.maxBudgetLimit
-                        );
-                    }
-                } else if (payment.isFailed) {
+                changed = true;
+
+                if (payment.isFailed) {
                     activity.status = 'failed';
+                    return;
+                }
+                if (payment.isIncomplete) return;
+
+                activity.status = 'success';
+                const amountSats =
+                    Math.floor(Number(activity.satAmount)) ||
+                    Math.floor(Number(payment.getAmount) || 0);
+                const feeSats = Number(payment.getFee) || 0;
+                activity.fees_paid = feeSats;
+
+                const spendSats =
+                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+                if (spendSats > 0 && !activity.is_budget_debited) {
+                    connection.trackSpending(spendSats, this.maxBudgetLimit);
+                    activity.is_budget_debited = true;
                 }
             });
-            if (reconciled) {
-                changed = true;
-            }
         }
-        if (changed) {
-            this.lookupPaymentsCache = null;
-        }
+
+        if (changed) this.lookupPaymentsCache = null;
         return changed;
     }
 
@@ -2845,7 +2839,8 @@ export default class NostrWalletConnectStore {
                 satAmount: amountSats,
                 // Stored internally in sats (may be fractional). NIP-47 `fees_paid` is
                 // msats; convert to msats only when mapping to the NIP-47 response.
-                fees_paid: feeSats
+                fees_paid: feeSats,
+                is_budget_debited: true // flag to indicate that the budget was debited for this payment
             });
             this.findAndUpdateConnection(connection);
         });
