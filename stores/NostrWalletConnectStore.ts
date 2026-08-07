@@ -1195,6 +1195,9 @@ export default class NostrWalletConnectStore {
         if (index !== -1) {
             this.connections[index] = connection;
         }
+        runInAction(() => {
+            connection.syncWarnings(this.maxBudgetLimit);
+        });
         if (save) {
             this.scheduleSave();
         }
@@ -2422,7 +2425,10 @@ export default class NostrWalletConnectStore {
                     const spendSats =
                         amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
                     if (spendSats > 0) {
-                        connection.trackSpending(spendSats);
+                        connection.trackSpending(
+                            spendSats,
+                            this.maxBudgetLimit
+                        );
                     }
                 } else if (payment.isFailed) {
                     activity.status = 'failed';
@@ -2718,7 +2724,10 @@ export default class NostrWalletConnectStore {
         // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
         runInAction(() => {
-            connection.trackSpending(amountSats + budgetFeeSats);
+            connection.trackSpending(
+                amountSats + budgetFeeSats,
+                this.maxBudgetLimit
+            );
             connection.activity.push({
                 id,
                 type,
