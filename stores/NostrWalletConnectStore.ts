@@ -1722,7 +1722,7 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async pushMakeInvoiceActivityToConnection({
+    private async recordMakeInvoiceActivity({
         connection,
         request,
         status,
@@ -1807,15 +1807,14 @@ export default class NostrWalletConnectStore {
                         );
                     }
 
-                    const result =
-                        await this.pushMakeInvoiceActivityToConnection({
-                            connection,
-                            request,
-                            status: 'pending',
-                            type: 'make_invoice',
-                            paymentRequest: cashuInvoice.paymentRequest,
-                            payment_source: 'cashu'
-                        });
+                    const result = await this.recordMakeInvoiceActivity({
+                        connection,
+                        request,
+                        status: 'pending',
+                        type: 'make_invoice',
+                        paymentRequest: cashuInvoice.paymentRequest,
+                        payment_source: 'cashu'
+                    });
                     return result;
                 } catch (cashuError) {
                     return NostrConnectUtils.createNip47Error(
@@ -1859,7 +1858,7 @@ export default class NostrWalletConnectStore {
 
             await this.invoicesStore.getInvoices();
 
-            const result = await this.pushMakeInvoiceActivityToConnection({
+            const result = await this.recordMakeInvoiceActivity({
                 connection,
                 request,
                 status: 'pending',
@@ -2822,28 +2821,34 @@ export default class NostrWalletConnectStore {
     }): Promise<void> {
         // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
+
         runInAction(() => {
-            connection.trackSpending(
-                amountSats + budgetFeeSats,
-                this.maxBudgetLimit
-            );
-            connection.activity.push({
+            const existing = connection.activity.find((a) => a.id === id);
+            const alreadyDebited =
+                !!existing?.is_budget_debited || existing?.status === 'success';
+
+            if (!alreadyDebited) {
+                connection.trackSpending(
+                    amountSats + budgetFeeSats,
+                    this.maxBudgetLimit
+                );
+            }
+
+            this.upsertPayInvoiceActivity(connection, {
                 id,
                 type,
-                payment:
-                    payment_source == 'cashu'
-                        ? new CashuPayment(decoded)
-                        : new Payment(decoded),
+                payment: this.toConnectionActivityPayment(
+                    payment_source,
+                    decoded
+                ),
                 status: 'success',
                 payment_source,
                 satAmount: amountSats,
-                // Stored internally in sats (may be fractional). NIP-47 `fees_paid` is
-                // msats; convert to msats only when mapping to the NIP-47 response.
                 fees_paid: feeSats,
-                is_budget_debited: true // flag to indicate that the budget was debited for this payment
+                is_budget_debited: true
             });
-            this.findAndUpdateConnection(connection);
         });
+
         this.lookupPaymentsCache = null;
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
@@ -2866,12 +2871,6 @@ export default class NostrWalletConnectStore {
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex(
-            (activity) => activity.id === id
-        );
-        const activity = index !== -1 ? connection.activity[index] : undefined;
-        if (activity?.status === 'success') return;
-
         const paymentHash =
             passedPaymentHash ||
             decodedPaymentHash ||
@@ -2879,36 +2878,27 @@ export default class NostrWalletConnectStore {
             undefined;
 
         runInAction(() => {
-            const record: ConnectionActivity = {
+            this.upsertPayInvoiceActivity(connection, {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
                 status: 'pending',
                 payment_source,
                 createdAt: new Date(),
-                ...(paymentHash ? { paymentHash } : {})
-            };
-
-            if (payment) {
-                record.payment =
-                    payment_source === 'cashu'
-                        ? new CashuPayment(payment)
-                        : new Payment(payment);
-            }
-
-            if (index !== -1) {
-                connection.activity[index] = {
-                    ...connection.activity[index],
-                    ...record
-                };
-            } else {
-                connection.activity.push(record);
-            }
-
-            this.findAndUpdateConnection(connection);
+                ...(paymentHash ? { paymentHash } : {}),
+                ...(payment
+                    ? {
+                          payment: this.toConnectionActivityPayment(
+                              payment_source,
+                              payment
+                          )
+                      }
+                    : {})
+                // is_budget_debited intentionally unset — held via pendingSpendSats
+            });
         });
+
         this.lookupPaymentsCache = null;
-        this.scheduleSave();
     }
 
     private async recordFailedPayment({
@@ -2927,20 +2917,15 @@ export default class NostrWalletConnectStore {
         paymentHash?: string;
     }): Promise<void> {
         if (NostrConnectUtils.isIgnorableError(errorMessage || '')) return;
+
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex(
-            (activity) => activity.id === id
-        );
-        const activity = index !== -1 ? connection.activity[index] : undefined;
-        if (activity?.status === 'success') return;
-
         const paymentHash =
             passedPaymentHash || decodedPaymentHash || undefined;
 
         runInAction(() => {
-            const record: ConnectionActivity = {
+            this.upsertPayInvoiceActivity(connection, {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
@@ -2949,25 +2934,63 @@ export default class NostrWalletConnectStore {
                 error: errorMessage,
                 createdAt: new Date(),
                 ...(paymentHash ? { paymentHash } : {})
-            };
-            if (index !== -1) {
-                connection.activity[index] = {
-                    ...connection.activity[index],
-                    ...record
-                };
-            } else {
-                // ➕ add new element
-                connection.activity.push(record);
-            }
-
-            this.findAndUpdateConnection(connection);
+            });
         });
+
         NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
             amountSats,
             connection.name,
             connection.id,
             id
         );
+    }
+    /**
+     * Insert or merge a pay_invoice activity by id.
+     * Never demotes status === 'success'.
+     */
+    @action
+    private upsertPayInvoiceActivity(
+        connection: NWCConnection,
+        record: ConnectionActivity
+    ): void {
+        const index = connection.activity.findIndex((a) => a.id === record.id);
+        const existing = index !== -1 ? connection.activity[index] : undefined;
+
+        if (existing?.status === 'success' && record.status !== 'success') {
+            return;
+        }
+
+        if (index !== -1) {
+            connection.activity[index] = {
+                ...existing,
+                ...record,
+                // Keep original createdAt unless this is a brand-new write
+                createdAt:
+                    existing?.createdAt ?? record.createdAt ?? new Date(),
+                // Don't clear is_budget_debited if already true
+                is_budget_debited:
+                    existing?.is_budget_debited || record.is_budget_debited
+            };
+        } else {
+            connection.activity.push({
+                ...record,
+                createdAt: record.createdAt ?? new Date()
+            });
+        }
+
+        this.findAndUpdateConnection(connection);
+    }
+    private toConnectionActivityPayment(
+        source: ConnectionPaymentSourceType,
+        decoded: Payment | CashuPayment | null | undefined
+    ): Payment | CashuPayment | undefined {
+        if (decoded == null) return undefined;
+        if (source === 'cashu') {
+            return decoded instanceof CashuPayment
+                ? decoded
+                : new CashuPayment(decoded);
+        }
+        return decoded instanceof Payment ? decoded : new Payment(decoded);
     }
 
     // STORAGE OPERATIONS
