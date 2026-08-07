@@ -41,6 +41,7 @@ export interface ConnectionActivity {
     isExpired?: boolean;
     expiryLabel?: string;
     fees_paid?: number;
+    is_budget_debited?: boolean;
 }
 
 export enum BudgetRenewalType {
