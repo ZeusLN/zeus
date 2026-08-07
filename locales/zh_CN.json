@@ -882,7 +882,7 @@
     "views.Receive.lspExplainer": "闪电网络服务提供方（LSP）将收取以下金额作为设置费用：",
     "views.Receive.lspExplainerRoutingUnified": "如果通过闪电网络支付，闪电网络服务提供方（LSP）将收取以下金额作为手续费用：",
     "views.Receive.lspExplainerRouting": "闪电网络服务提供方（LSP）将收取以下金额作为手续费用：",
-    "views.Receive.lspFeeOnTop": "Since the invoice amount doesn't cover the setup fee, the fee will be added on top.",
+    "views.Receive.lspFeeOnTop": "由于发票金额未涵盖设置费，因此将额外加收该费用。",
     "views.Receive.lspExplainerZeroFeeWrapper": "零手续费包装发票",
     "views.Receive.goToLspSettings": "前往闪电网络服务提供方（LSP）设置",
     "views.Receive.lspSwitchExplainer1": "闪电网络服务提供方（LSP）将为您提供零确认通道，使您能够在闪电网络上发送和接收付款。",
