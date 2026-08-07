@@ -1201,6 +1201,16 @@ export default class NostrConnectUtils {
         );
     }
 
+    /**
+     * Whole-sat budget debit for a fee that may be fractional (msat / 1000).
+     * Round to nearest sat; do not use for NIP-47 fees_paid.
+     */
+    static resolveFeeSats(fee: string | number | null | undefined): number {
+        const raw = Number(fee);
+        if (!Number.isFinite(raw) || raw <= 0) return 0;
+        return Math.round(raw);
+    }
+
     static resolveLightningPaymentInTransit({
         invoice,
         payments,
