@@ -1306,7 +1306,7 @@ export const DEFAULT_LSPS1_PUBKEY_MAINNET =
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
 export const DEFAULT_LSPS1_PUBKEY_TESTNET =
     '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df';
-export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
+export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.207.158:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
 export const DEFAULT_LSP_MUTINYNET = 'https://mutinynet-flow.lnolymp.us';
@@ -1930,6 +1930,7 @@ export default class SettingsStore {
                 await MigrationsUtils.migrateInvoiceExpiryDisplay(
                     parsedSettings
                 );
+                await MigrationsUtils.migrateLsps1MainnetHost(parsedSettings);
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');

@@ -208,7 +208,7 @@ Per-network TRIPLETS (mainnet/testnet/mutinynet). The canonical resolver is `get
 | `requestSimpleTaproot` | `true` |
 | `lsps1RestMainnet` / `...Testnet` / `...Mutinynet` | `https://lsps1.lnolymp.us` / `https://testnet-lsps1.lnolymp.us` / `https://mutinynet-lsps1.lnolymp.us` |
 | `lsps1PubkeyMainnet` / `...Testnet` / `...Mutinynet` | Olympus node pubkeys (see `DEFAULT_LSPS1_PUBKEY_*` consts) |
-| `lsps1HostMainnet` / `...Testnet` / `...Mutinynet` | `45.79.192.236:9735` / `139.144.22.237:9735` / `45.79.201.241:9735` |
+| `lsps1HostMainnet` / `...Testnet` / `...Mutinynet` | `45.79.207.158:9735` / `139.144.22.237:9735` / `45.79.201.241:9735` |
 | `lsps1Token` | `''` |
 | `lsps1ShowPurchaseButton` | unset — DEPRECATED |
 

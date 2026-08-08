@@ -42,7 +42,7 @@ jest.mock('../stores/SettingsStore', () => ({
         'btcd-testnet.lightning.computer',
         'testnet.blixtwallet.com'
     ],
-    DEFAULT_LSPS1_HOST_MAINNET: '45.79.192.236:9735',
+    DEFAULT_LSPS1_HOST_MAINNET: '45.79.207.158:9735',
     DEFAULT_LSPS1_HOST_TESTNET: '139.144.22.237:9735',
     DEFAULT_LSPS1_PUBKEY_MAINNET:
         '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
@@ -112,7 +112,7 @@ describe('MigrationUtils', () => {
         },
         lspMainnet: 'https://0conf.lnolymp.us',
         lspTestnet: 'https://testnet-0conf.lnolymp.us',
-        lsps1HostMainnet: '45.79.192.236:9735',
+        lsps1HostMainnet: '45.79.207.158:9735',
         lsps1HostTestnet: '139.144.22.237:9735',
         lsps1PubkeyMainnet:
             '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
@@ -227,6 +227,29 @@ describe('MigrationUtils', () => {
                 )
             ).resolves.toEqual({
                 ...defaultSettings
+            });
+        });
+        it('migrates old Olympus LSPS1 mainnet host on the legacy path', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        lsps1HostMainnet: '45.79.192.236:9735'
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings
+            });
+        });
+        it('keeps a custom LSPS1 mainnet host on the legacy path', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        lsps1HostMainnet: 'mynode.example.com:9735'
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                lsps1HostMainnet: 'mynode.example.com:9735'
             });
         });
         it('migrates old POS squareEnabled setting to posEnabled', async () => {
@@ -467,6 +490,80 @@ describe('MigrationUtils', () => {
                 timePeriod: 'Hours',
                 expirySeconds: '3600'
             });
+        });
+    });
+
+    describe('migrateLsps1MainnetHost', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('rewrites the old default host on v2 settings and persists', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lsps1HostMainnet: '45.79.192.236:9735'
+            };
+
+            await MigrationUtils.migrateLsps1MainnetHost(settings);
+
+            expect(settings.lsps1HostMainnet).toBe('45.79.207.158:9735');
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            const persistedSettings =
+                settingsStore.setSettings.mock.calls[0][0];
+            expect(typeof persistedSettings).not.toBe('string');
+            expect(persistedSettings).toBe(settings);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'olympus-host-2026',
+                'true'
+            );
+        });
+
+        it('leaves a custom host untouched and does not rewrite storage', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lsps1HostMainnet: 'mynode.example.com:9735'
+            };
+
+            await MigrationUtils.migrateLsps1MainnetHost(settings);
+
+            expect(settings.lsps1HostMainnet).toBe('mynode.example.com:9735');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'olympus-host-2026',
+                'true'
+            );
+        });
+
+        it('only sets the flag when no host is persisted', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {};
+
+            await MigrationUtils.migrateLsps1MainnetHost(settings);
+
+            expect(settings).toEqual({});
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'olympus-host-2026',
+                'true'
+            );
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                lsps1HostMainnet: '45.79.192.236:9735'
+            };
+
+            await MigrationUtils.migrateLsps1MainnetHost(settings);
+
+            expect(settings.lsps1HostMainnet).toBe('45.79.192.236:9735');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 

@@ -457,7 +457,32 @@ class MigrationsUtils {
         // migrate old default RGS server to new ZEUS RGS server
         await this.migrateRgsDefaultToZeus(newSettings);
 
+        // migrate old Olympus LSPS1 mainnet host to new host
+        await this.migrateLsps1MainnetHost(newSettings);
+
         return newSettings;
+    }
+
+    // The Olympus mainnet node moved hosts. The 'lsps1-hosts1' migration
+    // persisted the old default into every existing user's settings, so
+    // changing DEFAULT_LSPS1_HOST_MAINNET alone only fixes fresh installs.
+    // Rewrite the host for users still on the old default; users who set
+    // a custom host keep it. Must run on both the legacy and modern
+    // (zeus-settings-v2) paths.
+    public async migrateLsps1MainnetHost(settings: any) {
+        const MOD_KEY_OLYMPUS_HOST = 'olympus-host-2026';
+        const modOlympusHost = await EncryptedStorage.getItem(
+            MOD_KEY_OLYMPUS_HOST
+        );
+        if (modOlympusHost) return settings;
+
+        const OLD_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
+        if (settings?.lsps1HostMainnet === OLD_LSPS1_HOST_MAINNET) {
+            settings.lsps1HostMainnet = DEFAULT_LSPS1_HOST_MAINNET;
+            await settingsStore.setSettings(settings);
+        }
+        await EncryptedStorage.setItem(MOD_KEY_OLYMPUS_HOST, 'true');
+        return settings;
     }
 
     public async migrateRgsDefaultToZeus(settings: any) {
