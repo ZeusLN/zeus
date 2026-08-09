@@ -443,6 +443,25 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('resolveFeeSats', () => {
+        it('rounds fractional sats from msat division', () => {
+            expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(1);
+            expect(NostrConnectUtils.resolveFeeSats(1.999)).toBe(2);
+            expect(NostrConnectUtils.resolveFeeSats('0.5')).toBe(1);
+            expect(NostrConnectUtils.resolveFeeSats(0.026)).toBe(0);
+        });
+
+        it('returns whole sats unchanged and zeros non-positive or invalid values', () => {
+            expect(NostrConnectUtils.resolveFeeSats(3)).toBe(3);
+            expect(NostrConnectUtils.resolveFeeSats(0)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(-1)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(undefined)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(null)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats('')).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(NaN)).toBe(0);
+        });
+    });
+
     describe('lightning payment in-transit detection', () => {
         describe('isInFlightPaymentStatus', () => {
             it.each([

@@ -398,41 +398,81 @@ export default class NWCConnection extends BaseModel {
         this.lastBudgetReset = new Date();
     }
 
+    /**
+     * Align warning flags with current budget state.
+     *
+     * - Always syncs BudgetLimitReached (from effectiveSpendSats).
+     * - Syncs WalletBalanceLowerThanBudget only when availableBalance is passed
+     *   (trackSpending has no wallet balance — leave that to store/init paths).
+     *
+     * @returns true if the warning set changed
+     */
     @action
-    public checkAndResetBudgetIfNeeded(availableBalance?: number): boolean {
+    public syncWarnings(availableBalance?: number): boolean {
         let changed = false;
-        if (availableBalance !== undefined && this.maxAmountSats) {
+
+        if (this.budgetLimitReached) {
+            if (
+                !this._warningTypes.includes(
+                    ConnectionWarningType.BudgetLimitReached
+                )
+            ) {
+                this.addWarning(ConnectionWarningType.BudgetLimitReached);
+                changed = true;
+            }
+        } else if (
+            this._warningTypes.includes(
+                ConnectionWarningType.BudgetLimitReached
+            )
+        ) {
+            this.removeWarning(ConnectionWarningType.BudgetLimitReached);
+            changed = true;
+        }
+
+        if (availableBalance !== undefined && this.hasBudgetLimit) {
             const normalizedAvailable = Math.max(
                 0,
                 Math.floor(Number(availableBalance))
             );
-            if (this.maxAmountSats >= normalizedAvailable) {
-                this.addWarning(
+            const shouldWarn = this.maxAmountSats! >= normalizedAvailable;
+
+            if (shouldWarn) {
+                if (
+                    !this._warningTypes.includes(
+                        ConnectionWarningType.WalletBalanceLowerThanBudget
+                    )
+                ) {
+                    this.addWarning(
+                        ConnectionWarningType.WalletBalanceLowerThanBudget
+                    );
+                    changed = true;
+                }
+            } else if (
+                this._warningTypes.includes(
                     ConnectionWarningType.WalletBalanceLowerThanBudget
-                );
-                changed = true;
-            } else if (this.maxAmountSats <= normalizedAvailable) {
+                )
+            ) {
                 this.removeWarning(
                     ConnectionWarningType.WalletBalanceLowerThanBudget
                 );
                 changed = true;
             }
-            if (this.budgetLimitReached) {
-                this.addWarning(ConnectionWarningType.BudgetLimitReached);
-                changed = true;
-            } else {
-                // Pending payments count toward the limit but can fail and
-                // free budget back up; clear the warning when that happens
-                this.removeWarning(ConnectionWarningType.BudgetLimitReached);
-                changed = true;
-            }
-        }
-        if (!this.needsBudgetReset) {
-            return changed;
         }
 
-        this.resetBudget();
-        return true;
+        return changed;
+    }
+
+    @action
+    public checkAndResetBudgetIfNeeded(availableBalance?: number): boolean {
+        let changed = false;
+        if (this.needsBudgetReset) {
+            this.resetBudget();
+            changed = true;
+        }
+        if (this.syncWarnings(availableBalance)) {
+            changed = true;
+        }
+        return changed;
     }
 
     private validateAmount(amountSats: number): void {
@@ -444,6 +484,18 @@ export default class NWCConnection extends BaseModel {
             );
         }
     }
+    /**
+     * Validates spendable budget against the invoice amount only.
+     *
+     * Routing fees are unknown until the payment settles and are intentionally
+     * excluded here. Worst-case overshoot is bounded by PAYMENT_FEE_LIMIT_SATS
+     * (the fee cap passed to the backend). Debit happens on finalize/reconcile
+     * for the settled amount; subsequent pays see the reduced remaining budget.
+     *
+     * Reserving amount + fee_limit up front would reject legitimate payments
+     * when remaining budget is in (amount, amount + fee_limit], which is a
+     * worse failure mode for tight budgets.
+     */
     @action
     public validateBudgetBeforePayment(amountSats: number): {
         success: boolean;
@@ -480,9 +532,10 @@ export default class NWCConnection extends BaseModel {
     }
 
     @action
-    public trackSpending(amountSats: number): void {
+    public trackSpending(amountSats: number, maxBudgetLimit?: number): void {
         this.validateAmount(amountSats);
         this.totalSpendSats += amountSats;
+        this.syncWarnings(maxBudgetLimit);
     }
 
     public hasPermission(permission: Nip47SingleMethod): boolean {
