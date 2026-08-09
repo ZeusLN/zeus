@@ -102,15 +102,17 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.clearStorage.confirm'),
                     style: 'destructive',
                     onPress: async () => {
+                        // clearAllData() latches Storage writes as its first
+                        // step and nothing releases the latch, so restart
+                        // unconditionally (matching Lockscreen's duress paths).
+                        // Bailing out on error would leave a session where
+                        // every Storage.setItem is a silent no-op.
                         try {
                             await clearAllData();
-                            RNRestart.Restart();
                         } catch (error) {
                             console.error('Failed to clear storage:', error);
-                            Alert.alert(
-                                localeString('general.error'),
-                                localeString('views.Tools.clearStorage.error')
-                            );
+                        } finally {
+                            RNRestart.Restart();
                         }
                     }
                 }
