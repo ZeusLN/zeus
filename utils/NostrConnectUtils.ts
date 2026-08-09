@@ -128,7 +128,8 @@ export enum Nip47ErrorCode {
 
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
-        return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
+        // Only types we actually publish
+        return ['payment_received', 'payment_sent'];
     }
 
     static get TIME_UNITS(): TimeUnit[] {
