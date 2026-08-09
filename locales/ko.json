@@ -2013,7 +2013,7 @@
     "views.Settings.NostrWalletConnect.regenerateConnection": "연결 재생성",
     "views.Settings.NostrWalletConnect.regeneratingConnection": "연결 재생성 중…",
     "views.Settings.NostrWalletConnect.regenerateConnection.confirm": "현재 연결을 제거하고 새 연결 시크릿으로 새 연결을 생성합니다. 기존 시크릿으로 연결된 앱은 새 QR 코드나 페어링 링크로 다시 연결하기 전까지 작동을 멈춥니다. 연결을 재생성하시겠습니까?",
-    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ 릴레이 URL을 변경하면 연결을 재생성해야 하며 새로운 연결 시크릿이 필요합니다",
+    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Changing the relay URL rotates the connection secret. Linked apps must reconnect with the new QR code or pairing link.",
     "views.Settings.NostrWalletConnect.createFirstConnection": "+ 버튼을 눌러 첫 번째 연결을 생성하세요",
     "views.Settings.NostrWalletConnect.chooseWalletPermissions": "월렛 권한 선택",
     "views.Settings.NostrWalletConnect.fullAccess": "전체 접근",

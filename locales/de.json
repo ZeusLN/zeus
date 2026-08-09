@@ -2013,7 +2013,7 @@
     "views.Settings.NostrWalletConnect.regenerateConnection": "Verbindung neu erstellen",
     "views.Settings.NostrWalletConnect.regeneratingConnection": "Regenerating connection…",
     "views.Settings.NostrWalletConnect.regenerateConnection.confirm": "This removes the current connection and creates a new one with a new connection secret. Any app that was linked with the old secret will stop working until you connect it again using the new QR code or pairing link. Are you sure you want to regenerate the connection?",
-    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Das Ändern der Relay-URL erfordert eine Neuerstellung der Verbindung mit einem neuen Connection-Secret.",
+    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Changing the relay URL rotates the connection secret. Linked apps must reconnect with the new QR code or pairing link.",
     "views.Settings.NostrWalletConnect.createFirstConnection": "Tippe auf +, um deine erste Verbindung zu erstellen",
     "views.Settings.NostrWalletConnect.chooseWalletPermissions": "Konfiguration der Wallet-Berechtigungen",
     "views.Settings.NostrWalletConnect.fullAccess": "Vollzugriff",

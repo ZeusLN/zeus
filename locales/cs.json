@@ -2013,7 +2013,7 @@
     "views.Settings.NostrWalletConnect.regenerateConnection": "Obnovit připojení",
     "views.Settings.NostrWalletConnect.regeneratingConnection": "Obnovuje se spojení...",
     "views.Settings.NostrWalletConnect.regenerateConnection.confirm": "Tímto odeberete současné připojení a vytvoříte nové s novým secret pro připojení. Jakákoliv aplikace, která byla propojena pomocí starého secret přestane fungovat, dokud ji nepřipojíte znovu pomocí nového QR kódu nebo odkazu pro párování. Opravdu chcete připojení regenerovat?",
-    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Změna URL relé vyžaduje obnovení připojení a bude zapotřebí použití nového tajemství k připojení.",
+    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Changing the relay URL rotates the connection secret. Linked apps must reconnect with the new QR code or pairing link.",
     "views.Settings.NostrWalletConnect.createFirstConnection": "Klepněte na tlačítko + pro vytvoření vašeho prvního připojení",
     "views.Settings.NostrWalletConnect.chooseWalletPermissions": "Zvolte oprávnění peněženky",
     "views.Settings.NostrWalletConnect.fullAccess": "Plný přístup",
