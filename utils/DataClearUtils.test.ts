@@ -173,6 +173,19 @@ const removedKeys = () =>
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'warn').mockImplementation(() => {});
 
+// Platform.OS overrides restore through a tracked handle rather than
+// jest.restoreAllMocks(): restoreAllMocks would also tear down the console
+// spies above for every subsequent test, and an in-test restore leaks the
+// replacement when an assertion throws before reaching it.
+let replacedPlatformOS: { restore: () => void } | undefined;
+const setPlatformOS = (os: typeof Platform.OS) => {
+    replacedPlatformOS = jest.replaceProperty(Platform, 'OS', os);
+};
+afterEach(() => {
+    replacedPlatformOS?.restore();
+    replacedPlatformOS = undefined;
+});
+
 const settingsWithNodes = (nodes: any[]) => ({
     getItem: (key: string) =>
         key === 'zeus-settings-v2'
@@ -582,7 +595,7 @@ describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
     });
 
     it('skips the scrypt-heavy derivation on an Android full wipe (backing store deletion covers it)', async () => {
-        jest.replaceProperty(Platform, 'OS', 'android');
+        setPlatformOS('android');
         mockedStorageGetItem.mockImplementation(
             settingsWithNodes([
                 {
@@ -597,7 +610,6 @@ describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
         await clearAllData();
 
         expect(mockedDerive).not.toHaveBeenCalled();
-        jest.restoreAllMocks();
     });
 });
 
@@ -612,12 +624,8 @@ describe('clearAllData keychain backing store deletion (Android)', () => {
         mockedUnlink.mockResolvedValue(undefined);
     });
 
-    afterEach(() => {
-        jest.restoreAllMocks();
-    });
-
     it('deletes the DataStore file and legacy prefs as the final clearing step on Android', async () => {
-        jest.replaceProperty(Platform, 'OS', 'android');
+        setPlatformOS('android');
 
         await clearAllData();
 
@@ -865,6 +873,66 @@ describe('CDK database deletion', () => {
             expect(paths.some((p) => p.endsWith(expected))).toBe(true);
             expect(paths.some((p) => p.endsWith(`${expected}-wal`))).toBe(true);
             expect(paths.some((p) => p.endsWith(`${expected}-shm`))).toBe(true);
+        });
+
+        // Like the CASHU_KEY_SUFFIXES guard above: clearCDKDatabaseForNode
+        // reconstructs filenames the native modules created, so the hashing
+        // convention (first 8 bytes of sha256(mnemonic) as hex) must stay in
+        // lockstep with CashuDevKitModule.kt/.swift. Scan both sources so a
+        // convention change fails here instead of silently orphaning dbs.
+        it('matches the Android CDK filename hashing convention', () => {
+            const source = fs.readFileSync(
+                path.join(
+                    __dirname,
+                    '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+                ),
+                'utf8'
+            );
+            expect(source).toContain('MessageDigest.getInstance("SHA-256")');
+            expect(source).toContain('hashBytes.take(8)');
+            expect(source).toContain('"cashu_wallet_$hashHex.db"');
+        });
+
+        it('matches the iOS CDK filename hashing convention', () => {
+            const source = fs.readFileSync(
+                path.join(
+                    __dirname,
+                    '../ios/CashuDevKit/CashuDevKitModule.swift'
+                ),
+                'utf8'
+            );
+            expect(source).toContain('CC_SHA256(');
+            expect(source).toContain('hash.prefix(8)');
+            expect(source).toContain('cashu_wallet_\\(hashHex).db');
+        });
+
+        it('reconstructs the filename from a fixed vector, independent of hash.js', async () => {
+            // sha256('abandon ability able about') =
+            // 2364a17ff3507501df1e6385392fce14825bc0cf6e096543633d9df08c13bf8c
+            mockedStorageGetItem.mockImplementation((key: string) =>
+                key === 'lnd-abc-cashu-seed-phrase'
+                    ? Promise.resolve(
+                          JSON.stringify([
+                              'abandon',
+                              'ability',
+                              'able',
+                              'about'
+                          ])
+                      )
+                    : Promise.resolve(null)
+            );
+            mockedExists.mockResolvedValue(true);
+
+            await clearCDKDatabaseForNode({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc'
+            });
+
+            expect(
+                unlinkedPaths().some((p) =>
+                    p.endsWith('cashu_wallet_2364a17ff3507501.db')
+                )
+            ).toBe(true);
         });
 
         it('uses the ldk default namespace for a legacy ldk-node config', async () => {
