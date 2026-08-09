@@ -109,6 +109,7 @@ export const DEFAULT_NOSTR_RELAYS = [
 ];
 
 type AppStateSubscription = ReturnType<typeof AppState.addEventListener>;
+type Nip47NotifyType = 'payment_sent' | 'payment_received';
 
 type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 
@@ -1239,7 +1240,7 @@ export default class NostrWalletConnectStore {
                                 (inv) =>
                                     inv.getPaymentRequest === pr && inv.isPaid
                             );
-                            runInAction(() => {
+                            this.settleMakeInvoice(connection, activity, () => {
                                 activity.status = 'success';
                                 if (paidInvoice) {
                                     activity.invoice = paidInvoice;
@@ -1270,7 +1271,10 @@ export default class NostrWalletConnectStore {
         if (pendingLightningInvoiceActivities.length > 0) {
             await Promise.all(
                 pendingLightningInvoiceActivities.map((activity) =>
-                    this.reconcilePendingLightningMakeInvoice(activity)
+                    this.reconcilePendingLightningMakeInvoice(
+                        connection,
+                        activity
+                    )
                 )
             );
         }
@@ -1308,7 +1312,7 @@ export default class NostrWalletConnectStore {
         ) {
             await Promise.all(
                 pendingCashuInvoiceActivities.map((activity) =>
-                    this.reconcilePendingCashuMakeInvoice(activity)
+                    this.reconcilePendingCashuMakeInvoice(connection, activity)
                 )
             );
             this.lastPendingInvoiceStatusFetchByConnection.set(
@@ -1352,10 +1356,14 @@ export default class NostrWalletConnectStore {
             );
             if (!paid) return invoice;
 
-            runInAction(() => {
-                activity.invoice = paid;
-                activity.status = 'success';
-            });
+            this.settleMakeInvoice(
+                this.connectionOfActivity(activity),
+                activity,
+                () => {
+                    activity.invoice = paid;
+                    activity.status = 'success';
+                }
+            );
             this.scheduleSave();
             return paid;
         }
@@ -1369,12 +1377,20 @@ export default class NostrWalletConnectStore {
             );
             if (!refreshed) return invoice;
 
-            runInAction(() => {
-                activity.invoice = refreshed;
-                if (refreshed.isPaid) {
-                    activity.status = 'success';
-                }
-            });
+            if (refreshed.isPaid) {
+                this.settleMakeInvoice(
+                    this.connectionOfActivity(activity),
+                    activity,
+                    () => {
+                        activity.invoice = refreshed;
+                        activity.status = 'success';
+                    }
+                );
+            } else {
+                runInAction(() => {
+                    activity.invoice = refreshed;
+                });
+            }
             this.scheduleSave();
             return refreshed;
         }
@@ -1887,6 +1903,93 @@ export default class NostrWalletConnectStore {
         ) as T;
     }
 
+    private async publishNip47Notification(
+        connection: NWCConnection,
+        notificationType: Nip47NotifyType,
+        tx: Nip47Transaction
+    ): Promise<void> {
+        const service = this.nwcWalletServices.get(connection.relayUrl);
+        const walletSecret = this.walletServiceKeys?.privateKey;
+
+        if (!service || !walletSecret) {
+            console.warn(
+                `NWC: skipping ${notificationType} notification - service not ready for connection ${connection.name}`
+            );
+            return;
+        }
+        try {
+            await service.publishNotification(
+                new NWCWalletServiceKeyPair(walletSecret, connection.pubkey),
+                { notification_type: notificationType, notification: tx }
+            );
+        } catch (error) {
+            console.error(
+                `NWC: failed to publish ${notificationType} notification for connection ${connection.name}:`,
+                error
+            );
+        }
+    }
+
+    /**
+     * Marks a make_invoice activity settled and sends payment_received once.
+     * Overlapping refreshes of the same activity find it already settled and
+     * skip, so only the call that makes the change notifies.
+     */
+    private settleMakeInvoice(
+        connection: NWCConnection | undefined,
+        activity: ConnectionActivity,
+        apply: () => void
+    ): boolean {
+        if (activity.status === 'success') return false;
+        runInAction(apply);
+        if (connection) {
+            void this.notifyConnection(
+                connection,
+                'payment_received',
+                activity
+            );
+        }
+        return true;
+    }
+
+    private connectionOfActivity(
+        activity: ConnectionActivity
+    ): NWCConnection | undefined {
+        return this.connections.find((c) => c.activity.includes(activity));
+    }
+
+    /**
+     * Best-effort push of a NIP-47 notification event to a connection's relay.
+     * MUST NEVER throw - callers fire this from inside payment/invoice success
+     * paths and a notification failure must never affect that state.
+     */
+    private async notifyConnection(
+        connection: NWCConnection,
+        notificationType: Nip47NotifyType,
+        activity: ConnectionActivity
+    ): Promise<void> {
+        try {
+            const tx =
+                NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                    activity
+                );
+            // Guard against notifying on degenerate/zero-amount activities
+            // (mirrors the amount > 0 filter used for list_transactions).
+            if (!tx || tx.amount <= 0) return;
+
+            await this.publishNip47Notification(
+                connection,
+                notificationType,
+                tx
+            );
+        } catch (error) {
+            console.error(
+                `NWC: failed to send ${notificationType} notification for connection ${connection.name}:`,
+                error
+            );
+        }
+    }
+
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
      * the subscription) when the connection is missing or has expired.
@@ -2394,7 +2497,10 @@ export default class NostrWalletConnectStore {
 
         if (activity.type === 'make_invoice' && activity.status === 'pending') {
             const statusBefore = activity.status;
-            await this.reconcilePendingMakeInvoiceActivity(activity);
+            await this.reconcilePendingMakeInvoiceActivity(
+                activity,
+                connection
+            );
             return activity.status !== statusBefore;
         }
 
@@ -2402,17 +2508,19 @@ export default class NostrWalletConnectStore {
     }
 
     private async reconcilePendingMakeInvoiceActivity(
-        activity: ConnectionActivity
+        activity: ConnectionActivity,
+        connection: NWCConnection
     ): Promise<void> {
         if (activity.payment_source === 'cashu') {
-            await this.reconcilePendingCashuMakeInvoice(activity);
+            await this.reconcilePendingCashuMakeInvoice(connection, activity);
             return;
         }
 
-        await this.reconcilePendingLightningMakeInvoice(activity);
+        await this.reconcilePendingLightningMakeInvoice(connection, activity);
     }
 
     private async reconcilePendingCashuMakeInvoice(
+        connection: NWCConnection,
         activity: ConnectionActivity
     ): Promise<void> {
         const cashuInv = activity.invoice as CashuInvoice | undefined;
@@ -2426,8 +2534,8 @@ export default class NostrWalletConnectStore {
                 undefined,
                 true
             );
-            runInAction(() => {
-                if (result.isPaid) {
+            if (result.isPaid) {
+                this.settleMakeInvoice(connection, activity, () => {
                     activity.status = 'success';
                     const updated =
                         result.updatedInvoice ||
@@ -2444,10 +2552,14 @@ export default class NostrWalletConnectStore {
                     ) {
                         activity.satAmount = paidSats;
                     }
-                } else if (cashuInv.isExpired) {
-                    activity.status = 'expired';
-                }
-            });
+                });
+            } else if (cashuInv.isExpired) {
+                runInAction(() => {
+                    if (activity.status === 'pending') {
+                        activity.status = 'expired';
+                    }
+                });
+            }
         } catch (err) {
             console.error(
                 'NWC: failed to refresh cashu make_invoice status:',
@@ -3147,13 +3259,26 @@ export default class NostrWalletConnectStore {
                 continue;
             }
 
+            let transitionedToSuccess = false;
+
             runInAction(() => {
+                const statusBefore = activity.status;
                 if (
                     this.applyPayInvoiceReconcile(activity, connection, payment)
                 ) {
                     changed = true;
                 }
+                transitionedToSuccess =
+                    statusBefore !== 'success' && activity.status === 'success';
             });
+
+            if (transitionedToSuccess) {
+                void this.notifyConnection(
+                    connection,
+                    'payment_sent',
+                    activity
+                );
+            }
         }
 
         if (changed) {
@@ -3310,6 +3435,7 @@ export default class NostrWalletConnectStore {
     }
 
     private async reconcilePendingLightningMakeInvoice(
+        connection: NWCConnection,
         activity: ConnectionActivity
     ): Promise<void> {
         const invoice = NostrConnectUtils.coerceLightningInvoice(
@@ -3327,7 +3453,7 @@ export default class NostrWalletConnectStore {
             const refreshed = await this.refreshLightningInvoiceFromNode(
                 invoice
             );
-            runInAction(() => {
+            this.settleMakeInvoice(connection, activity, () => {
                 activity.status = 'success';
                 const paidInvoice = refreshed || invoice;
                 if (refreshed) {
@@ -3343,7 +3469,9 @@ export default class NostrWalletConnectStore {
 
         if (invoice.isExpired) {
             runInAction(() => {
-                activity.status = 'expired';
+                if (activity.status === 'pending') {
+                    activity.status = 'expired';
+                }
             });
         }
     }
@@ -3523,6 +3651,7 @@ export default class NostrWalletConnectStore {
 
         // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
+        let notifyActivity: ConnectionActivity | undefined;
 
         runInAction(() => {
             const existing = connection.findPayInvoiceActivity(id, paymentHash);
@@ -3552,9 +3681,21 @@ export default class NostrWalletConnectStore {
                 isBudgetDebited: true,
                 ...(paymentHash ? { paymentHash } : {})
             });
+            // A settled payment that a reconcile already recorded has been
+            // notified then
+            if (!alreadyDebited) {
+                notifyActivity = connection.activity.find((a) => a.id === id);
+            }
         });
         this.scheduleMaxBudgetRefresh();
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
+        if (notifyActivity) {
+            void this.notifyConnection(
+                connection,
+                'payment_sent',
+                notifyActivity
+            );
+        }
     }
 
     private async recordPendingPayment({
