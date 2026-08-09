@@ -632,6 +632,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+            const relayUrl = connection.relayUrl;
             await this.deleteClientKeys(connection.pubkey);
             this.unsubscribeFromConnection(connectionId);
             this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
@@ -639,6 +640,7 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.connections.splice(index, 1);
             });
+            this.releaseUnusedRelayService(relayUrl);
             await this.saveConnections();
         } catch (error: any) {
             runInAction(() => {
@@ -700,14 +702,67 @@ export default class NostrWalletConnectStore {
                 }
                 updates.name = newName;
             }
+            const oldPubkey = connection.pubkey;
             const oldRelayUrl = connection.relayUrl;
             const newRelayUrl = updates.relayUrl;
-            const relayUrlChanged = newRelayUrl && newRelayUrl !== oldRelayUrl;
+            const relayUrlChanged = !!(
+                newRelayUrl && newRelayUrl !== oldRelayUrl
+            );
+
+            // Fallible rotation work must finish before any connection mutation
+            // so a failed attempt leaves relayUrl unchanged and retries still
+            // detect the change and return a new pairing URL.
+            let rotatedSecret:
+                | {
+                      connectionUrl: string;
+                      connectionPrivateKey: string;
+                      connectionPublicKey: string;
+                  }
+                | undefined;
 
             if (relayUrlChanged) {
+                if (!this.walletServiceKeys?.privateKey) {
+                    await this.loadWalletServiceKeys();
+                }
+
+                rotatedSecret = this.generateConnectionSecret(newRelayUrl!);
+                await this.storeClientKeys(
+                    rotatedSecret.connectionPublicKey,
+                    rotatedSecret.connectionPrivateKey
+                );
+
                 this.unsubscribeFromConnection(connectionId);
-                if (!this.nwcWalletServices.has(newRelayUrl)) {
-                    await this.initializeNWCWalletServices();
+                if (!this.nwcWalletServices.has(newRelayUrl!)) {
+                    this.nwcWalletServices.set(
+                        newRelayUrl!,
+                        new NWCWalletService({
+                            relayUrls: [newRelayUrl!]
+                        })
+                    );
+                }
+                if (!this.publishedRelays.has(newRelayUrl!)) {
+                    const nwcWalletService = this.nwcWalletServices.get(
+                        newRelayUrl!
+                    );
+                    if (
+                        nwcWalletService &&
+                        this.walletServiceKeys?.privateKey
+                    ) {
+                        try {
+                            await this.publishWalletServiceInfoWithRetry(
+                                nwcWalletService,
+                                newRelayUrl!
+                            );
+                            await new Promise((resolve) =>
+                                setTimeout(resolve, 500)
+                            );
+                        } catch (error) {
+                            console.warn(
+                                `NWC: Failed to publish wallet service info to relay ${newRelayUrl} before connection update:`,
+                                error
+                            );
+                        }
+                    }
                 }
             }
 
@@ -717,6 +772,9 @@ export default class NostrWalletConnectStore {
                 const newMaxAmountSats = updates.maxAmountSats;
 
                 Object.assign(connection, updates);
+                if (rotatedSecret) {
+                    connection.pubkey = rotatedSecret.connectionPublicKey;
+                }
 
                 const hadBudget = connection.hasBudgetLimit;
                 const hasBudget =
@@ -735,15 +793,33 @@ export default class NostrWalletConnectStore {
                 }
                 this.findAndUpdateConnection(connection);
             });
-            await this.subscribeToConnection(connection);
+
             if (relayUrlChanged) {
+                this.releaseUnusedRelayService(oldRelayUrl);
+            }
+
+            if (relayUrlChanged && rotatedSecret) {
+                // Rotation (new key stored + pubkey rebound) is already durable.
+                // If subscribe/save fails here, still return the pairing URL so
+                // the UI can show the QR; subscription recovers on restart.
+                try {
+                    await this.subscribeToConnection(connection);
+                    await this.saveConnections();
+                } catch (error) {
+                    console.warn(
+                        'NWC: Relay change rotation persisted but subscribe/save failed; returning pairing URL anyway:',
+                        error
+                    );
+                }
+                await this.deleteClientKeys(oldPubkey);
+
                 return {
-                    nostrUrl:
-                        this.generateConnectionSecret(newRelayUrl)
-                            .connectionUrl,
+                    nostrUrl: rotatedSecret.connectionUrl,
                     success: true
                 };
             }
+
+            await this.subscribeToConnection(connection);
             return { success: true };
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
@@ -1434,6 +1510,35 @@ export default class NostrWalletConnectStore {
                 error
             );
         }
+    }
+
+    /**
+     * Close and drop a relay's NWCWalletService when no remaining connection
+     * references it, so unused websockets and publishedRelays entries do not
+     * linger after delete or relay change.
+     */
+    private releaseUnusedRelayService(relayUrl: string): void {
+        if (!relayUrl) return;
+        if (this.connections.some((c) => c.relayUrl === relayUrl)) {
+            return;
+        }
+
+        const service = this.nwcWalletServices.get(relayUrl);
+        if (service) {
+            try {
+                service.close();
+            } catch (error) {
+                console.warn(
+                    `NWC: Failed to close unused relay service ${relayUrl}:`,
+                    error
+                );
+            }
+        }
+
+        runInAction(() => {
+            this.nwcWalletServices.delete(relayUrl);
+            this.publishedRelays.delete(relayUrl);
+        });
     }
 
     private async unsubscribeFromAllConnections(): Promise<void> {
