@@ -1069,8 +1069,16 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(sendToOnchainAddress:amountSats:resolver:rejecter:)
-    func sendToOnchainAddress(_ address: String, amountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    /// Builds the optional FeeRate for an on-chain send. The JS layer passes -1
+    /// when the user set no usable rate, in which case we hand ldk-node nil so
+    /// it applies its own fee estimation.
+    private func parseFeeRate(_ satPerVbyte: NSNumber) -> FeeRate? {
+        if satPerVbyte.doubleValue < 1 { return nil }
+        return FeeRate.fromSatPerVbUnchecked(satVb: satPerVbyte.uint64Value)
+    }
+
+    @objc(sendToOnchainAddress:amountSats:satPerVbyte:resolver:rejecter:)
+    func sendToOnchainAddress(_ address: String, amountSats: NSNumber, satPerVbyte: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1083,15 +1091,15 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendToAddress(address: address, amountSats: amount, feeRate: nil)
+            let txid = try onchain.sendToAddress(address: address, amountSats: amount, feeRate: self.parseFeeRate(satPerVbyte))
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
         }
     }
 
-    @objc(sendAllToOnchainAddress:retainReserve:resolver:rejecter:)
-    func sendAllToOnchainAddress(_ address: String, retainReserve: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendAllToOnchainAddress:retainReserve:satPerVbyte:resolver:rejecter:)
+    func sendAllToOnchainAddress(_ address: String, retainReserve: Bool, satPerVbyte: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1099,7 +1107,7 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendAllToAddress(address: address, retainReserve: retainReserve, feeRate: nil)
+            let txid = try onchain.sendAllToAddress(address: address, retainReserve: retainReserve, feeRate: self.parseFeeRate(satPerVbyte))
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1131,8 +1139,8 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(sendToOnchainAddressWithUtxos:amountSats:utxos:resolver:rejecter:)
-    func sendToOnchainAddressWithUtxos(_ address: String, amountSats: NSNumber, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendToOnchainAddressWithUtxos:amountSats:utxos:satPerVbyte:resolver:rejecter:)
+    func sendToOnchainAddressWithUtxos(_ address: String, amountSats: NSNumber, utxos: NSArray, satPerVbyte: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1150,15 +1158,15 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amount, utxos: outpoints, feeRate: nil)
+            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amount, utxos: outpoints, feeRate: self.parseFeeRate(satPerVbyte))
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
         }
     }
 
-    @objc(sendAllToOnchainAddressWithUtxos:retainReserve:utxos:resolver:rejecter:)
-    func sendAllToOnchainAddressWithUtxos(_ address: String, retainReserve: Bool, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendAllToOnchainAddressWithUtxos:retainReserve:utxos:satPerVbyte:resolver:rejecter:)
+    func sendAllToOnchainAddressWithUtxos(_ address: String, retainReserve: Bool, utxos: NSArray, satPerVbyte: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1171,7 +1179,7 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendAllToAddressWithUtxos(address: address, retainReserves: retainReserve, utxos: outpoints, feeRate: nil)
+            let txid = try onchain.sendAllToAddressWithUtxos(address: address, retainReserves: retainReserve, utxos: outpoints, feeRate: self.parseFeeRate(satPerVbyte))
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)

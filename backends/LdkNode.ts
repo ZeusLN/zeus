@@ -15,6 +15,7 @@ import {
     defaultMaxRoutingFeeMsat,
     feeLimitSatsToMaxRoutingFeeMsat
 } from '../utils/AmountUtils';
+import { sanitizeSatPerVbyte } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -1224,6 +1225,11 @@ export default class LdkNode {
     sendCoins = async (data: any): Promise<any> => {
         let txid: string;
 
+        // The fee rate the user set in the UI. Anything unusable becomes the
+        // "no rate" sentinel so ldk-node falls back to its own estimation
+        // rather than being handed a nonsense FeeRate.
+        const satPerVbyte = sanitizeSatPerVbyte(data.sat_per_vbyte);
+
         if (data.utxos?.length > 0) {
             const outpoints = data.utxos.map((s: string) => {
                 const [utxoTxid, vout] = s.split(':');
@@ -1235,7 +1241,8 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             retainReserve: false,
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerVbyte
                         }
                     );
             } else {
@@ -1244,18 +1251,22 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             amountSats: Number(data.amount),
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerVbyte
                         }
                     );
             }
         } else if (data.send_all) {
             txid = await LdkNodeInjection.onchain.sendAllToOnchainAddress(
-                data.addr
+                data.addr,
+                false,
+                satPerVbyte
             );
         } else {
             txid = await LdkNodeInjection.onchain.sendToOnchainAddress({
                 address: data.addr,
-                amountSats: Number(data.amount)
+                amountSats: Number(data.amount),
+                satPerVbyte
             });
         }
 
