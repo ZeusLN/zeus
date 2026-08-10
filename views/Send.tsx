@@ -383,7 +383,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        const { satAmount, bolt12, timeoutSeconds } = this.state;
+        const { satAmount, bolt12, timeoutSeconds, feeLimitSat } = this.state;
         if (!bolt12) {
             this.setState({
                 loading: false,
@@ -411,7 +411,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
                 split[1] || bolt12,
                 satAmount,
-                timeoutSeconds
+                timeoutSeconds,
+                feeLimitSat
             );
             if (res.payment_hash) {
                 // LDK Node: payment already completed directly
@@ -1261,6 +1262,29 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         });
                                     }}
                                 />
+                                {/* Only shown where the fee limit applies to
+                                    this screen's offer call (ldk-node pays
+                                    inside it). On CLN only the invoice is
+                                    fetched here; its fee limit is set on
+                                    PaymentRequest, where the payment happens */}
+                                {BackendUtils.supportsCustomFeeLimit() && (
+                                    <FeeLimit
+                                        satAmount={satAmount}
+                                        onFeeLimitSatChange={(value: string) =>
+                                            this.setState({
+                                                feeLimitSat: value
+                                            })
+                                        }
+                                        onMaxFeePercentChange={(
+                                            value: string
+                                        ) =>
+                                            this.setState({
+                                                maxFeePercent: value
+                                            })
+                                        }
+                                        SettingsStore={SettingsStore}
+                                    />
+                                )}
                                 <Text
                                     style={{
                                         ...styles.label,
