@@ -11,6 +11,7 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -1272,9 +1273,9 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1320,9 +1321,9 @@ export default class LdkNode {
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
         const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1715,15 +1716,23 @@ export default class LdkNode {
     fetchInvoiceFromOffer = async (
         bolt12: string,
         amountSatoshis: string,
-        timeoutSeconds?: number | string
+        timeoutSeconds?: number | string,
+        feeLimitSat?: number | string
     ): Promise<any> => {
         const paymentTimeoutSecs = timeoutSeconds
             ? Number(timeoutSeconds)
             : undefined;
 
+        // Unlike the BOLT 11 and keysend paths, this method pays inside the
+        // fetch, so the user's routing fee limit has to be applied here -
+        // there is no later confirmation screen to apply it for us.
+        const maxTotalRoutingFeeMsat =
+            feeLimitSatsToMaxRoutingFeeMsat(feeLimitSat);
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: bolt12,
             amountMsat: Number(amountSatoshis) * 1000,
+            maxTotalRoutingFeeMsat,
             paymentTimeoutSecs
         });
 
