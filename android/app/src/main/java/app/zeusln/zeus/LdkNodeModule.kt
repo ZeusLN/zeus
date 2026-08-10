@@ -1132,12 +1132,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendToOnchainAddress(address: String, amountSats: Double, promise: Promise) {
+    fun sendToOnchainAddress(address: String, amountSats: Double, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
-                val txid = onchain.sendToAddress(address, toULongExact(amountSats, "amount"), null)
+                val txid = onchain.sendToAddress(address, toULongExact(amountSats, "amount"), parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1153,12 +1153,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendAllToOnchainAddress(address: String, retainReserve: Boolean, promise: Promise) {
+    fun sendAllToOnchainAddress(address: String, retainReserve: Boolean, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
-                val txid = onchain.sendAllToAddress(address, retainReserve, null)
+                val txid = onchain.sendAllToAddress(address, retainReserve, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1218,14 +1218,24 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         return outpoints
     }
 
+    /**
+     * Builds the optional FeeRate for an on-chain send. The JS layer passes -1
+     * when the user set no usable rate, in which case we hand ldk-node null so
+     * it applies its own fee estimation.
+     */
+    private fun parseFeeRate(satPerVbyte: Double): FeeRate? {
+        if (satPerVbyte < 1) return null
+        return FeeRate.fromSatPerVbUnchecked(satPerVbyte.toLong().toULong())
+    }
+
     @ReactMethod
-    fun sendToOnchainAddressWithUtxos(address: String, amountSats: Double, utxos: ReadableArray, promise: Promise) {
+    fun sendToOnchainAddressWithUtxos(address: String, amountSats: Double, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
                 val outpoints = parseOutPoints(utxos)
-                val txid = onchain.sendToAddressWithUtxos(address, toULongExact(amountSats, "amount"), outpoints, null)
+                val txid = onchain.sendToAddressWithUtxos(address, toULongExact(amountSats, "amount"), outpoints, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1241,13 +1251,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendAllToOnchainAddressWithUtxos(address: String, retainReserve: Boolean, utxos: ReadableArray, promise: Promise) {
+    fun sendAllToOnchainAddressWithUtxos(address: String, retainReserve: Boolean, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
                 val outpoints = parseOutPoints(utxos)
-                val txid = onchain.sendAllToAddressWithUtxos(address, retainReserve, outpoints, null)
+                val txid = onchain.sendAllToAddressWithUtxos(address, retainReserve, outpoints, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
