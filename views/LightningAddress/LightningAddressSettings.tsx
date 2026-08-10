@@ -414,6 +414,15 @@ export default class LightningAddressSettings extends React.Component<
                                                 notifications: value
                                             }
                                         });
+                                        if (value === 1) {
+                                            LightningAddressStore.updatePushCredentials().catch(
+                                                (e) =>
+                                                    console.log(
+                                                        'Failed to update push credentials',
+                                                        e
+                                                    )
+                                            );
+                                        }
                                     } catch (e) {
                                         this.setState({ notifications: prev });
                                     }
