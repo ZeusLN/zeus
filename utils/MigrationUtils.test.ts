@@ -21,8 +21,9 @@ jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
     DEFAULT_FIAT: 'USD',
-    DEFAULT_LSP_MAINNET: 'https://0conf.lnolymp.us',
-    DEFAULT_LSP_TESTNET: 'https://testnet-0conf.lnolymp.us',
+    DEFAULT_LSP_MAINNET: 'https://flow.zeuslsp.com',
+    DEFAULT_LSP_TESTNET: 'https://flow.testnet.zeuslsp.com',
+    DEFAULT_LSP_MUTINYNET: 'https://flow.mutinynet.zeuslsp.com',
     DEFAULT_NOSTR_RELAYS: [
         'wss://relay.damus.io',
         'wss://nostr.land',
@@ -48,8 +49,9 @@ jest.mock('../stores/SettingsStore', () => ({
         '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
     DEFAULT_LSPS1_PUBKEY_TESTNET:
         '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-    DEFAULT_LSPS1_REST_MAINNET: 'https://lsps1.lnolymp.us',
-    DEFAULT_LSPS1_REST_TESTNET: 'https://testnet-lsps1.lnolymp.us',
+    DEFAULT_LSPS1_REST_MAINNET: 'https://lsps1.zeuslsp.com',
+    DEFAULT_LSPS1_REST_TESTNET: 'https://lsps1.testnet.zeuslsp.com',
+    DEFAULT_LSPS1_REST_MUTINYNET: 'https://lsps1.mutinynet.zeuslsp.com',
     DEFAULT_SPEEDLOADER: 'https://egs.lnze.us/',
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
@@ -110,16 +112,16 @@ describe('MigrationUtils', () => {
             routeHints: false,
             zapReceiptsEnabled: true
         },
-        lspMainnet: 'https://0conf.lnolymp.us',
-        lspTestnet: 'https://testnet-0conf.lnolymp.us',
+        lspMainnet: 'https://flow.zeuslsp.com',
+        lspTestnet: 'https://flow.testnet.zeuslsp.com',
         lsps1HostMainnet: '45.79.192.236:9735',
         lsps1HostTestnet: '139.144.22.237:9735',
         lsps1PubkeyMainnet:
             '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
         lsps1PubkeyTestnet:
             '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-        lsps1RestMainnet: 'https://lsps1.lnolymp.us',
-        lsps1RestTestnet: 'https://testnet-lsps1.lnolymp.us',
+        lsps1RestMainnet: 'https://lsps1.zeuslsp.com',
+        lsps1RestTestnet: 'https://lsps1.testnet.zeuslsp.com',
         lsps1Token: '',
         neutrinoPeersMainnet: [
             'btcd1.lnolymp.us',
@@ -171,6 +173,38 @@ describe('MigrationUtils', () => {
                 )
             ).resolves.toEqual({
                 ...defaultSettings
+            });
+        });
+        it('migrates old default Olympus LSP hosts to zeuslsp.com hosts', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        lspMainnet: 'https://0conf.lnolymp.us',
+                        lspTestnet: 'https://testnet-0conf.lnolymp.us',
+                        lspMutinynet: 'https://mutinynet-flow.lnolymp.us',
+                        lsps1RestMainnet: 'https://lsps1.lnolymp.us',
+                        lsps1RestTestnet: 'https://testnet-lsps1.lnolymp.us',
+                        lsps1RestMutinynet: 'https://mutinynet-lsps1.lnolymp.us'
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                lspMutinynet: 'https://flow.mutinynet.zeuslsp.com',
+                lsps1RestMutinynet: 'https://lsps1.mutinynet.zeuslsp.com'
+            });
+        });
+        it('leaves custom LSP hosts untouched', async () => {
+            await expect(
+                MigrationUtils.legacySettingsMigrations(
+                    JSON.stringify({
+                        lspMainnet: 'https://my-custom-lsp.com',
+                        lsps1RestMainnet: 'https://my-custom-lsps1.com'
+                    })
+                )
+            ).resolves.toEqual({
+                ...defaultSettings,
+                lspMainnet: 'https://my-custom-lsp.com',
+                lsps1RestMainnet: 'https://my-custom-lsps1.com'
             });
         });
         it('handles mod3', async () => {
@@ -467,6 +501,119 @@ describe('MigrationUtils', () => {
                 timePeriod: 'Hours',
                 expirySeconds: '3600'
             });
+        });
+    });
+
+    describe('migrateOlympusHostsToZeusLsp', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('rewrites all six old default hosts on v2 settings', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lspMainnet: 'https://0conf.lnolymp.us',
+                lspTestnet: 'https://testnet-0conf.lnolymp.us',
+                lspMutinynet: 'https://mutinynet-flow.lnolymp.us',
+                lsps1RestMainnet: 'https://lsps1.lnolymp.us',
+                lsps1RestTestnet: 'https://testnet-lsps1.lnolymp.us',
+                lsps1RestMutinynet: 'https://mutinynet-lsps1.lnolymp.us'
+            };
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            expect(settings).toEqual({
+                lspMainnet: 'https://flow.zeuslsp.com',
+                lspTestnet: 'https://flow.testnet.zeuslsp.com',
+                lspMutinynet: 'https://flow.mutinynet.zeuslsp.com',
+                lsps1RestMainnet: 'https://lsps1.zeuslsp.com',
+                lsps1RestTestnet: 'https://lsps1.testnet.zeuslsp.com',
+                lsps1RestMutinynet: 'https://lsps1.mutinynet.zeuslsp.com'
+            });
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'zeuslsp-hosts-2026',
+                'true'
+            );
+        });
+
+        it('persists the settings object rather than a JSON string', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lspMainnet: 'https://0conf.lnolymp.us'
+            };
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            const persistedSettings =
+                settingsStore.setSettings.mock.calls[0][0];
+            expect(typeof persistedSettings).not.toBe('string');
+            expect(persistedSettings).toBe(settings);
+        });
+
+        it('leaves custom hosts untouched and does not rewrite storage', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lspMainnet: 'https://my-custom-lsp.com',
+                lsps1RestMainnet: 'https://my-custom-lsps1.com'
+            };
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            expect(settings).toEqual({
+                lspMainnet: 'https://my-custom-lsp.com',
+                lsps1RestMainnet: 'https://my-custom-lsps1.com'
+            });
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'zeuslsp-hosts-2026',
+                'true'
+            );
+        });
+
+        it('leaves unset hosts unset so runtime falls back to new defaults', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {};
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            expect(settings).toEqual({});
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'zeuslsp-hosts-2026',
+                'true'
+            );
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                lspMainnet: 'https://0conf.lnolymp.us'
+            };
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            expect(settings.lspMainnet).toBe('https://0conf.lnolymp.us');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is idempotent when run twice without the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                lspMainnet: 'https://0conf.lnolymp.us'
+            };
+
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+            await MigrationUtils.migrateOlympusHostsToZeusLsp(settings);
+
+            expect(settings.lspMainnet).toBe('https://flow.zeuslsp.com');
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
     });
 
