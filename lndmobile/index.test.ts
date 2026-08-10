@@ -16,7 +16,7 @@ jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
 
-import { listPayments, sendPaymentV2Sync } from './index';
+import { listPayments, sendKeysendPaymentV2, sendPaymentV2Sync } from './index';
 import { sendCommand, sendStreamCommand } from './utils';
 
 describe('sendPaymentV2Sync', () => {
@@ -54,6 +54,48 @@ describe('sendPaymentV2Sync', () => {
             payment_request: 'lnbc1fake',
             timeout_seconds: 60
         }).then(() => (settled = true));
+
+        await jest.advanceTimersByTimeAsync(60_999);
+        expect(settled).toBe(false);
+    });
+});
+
+describe('sendKeysendPaymentV2', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        // the node never answers on the stream
+        (sendStreamCommand as jest.Mock).mockResolvedValue('');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const keysend = () =>
+        sendKeysendPaymentV2({
+            dest: '02'.repeat(33),
+            amt: 1000,
+            payment_hash: Buffer.from('ab'.repeat(32), 'hex').toString('base64')
+        });
+
+    it('returns an outcome-unknown result when the forced timeout fires', async () => {
+        jest.setSystemTime(1_700_000_000_000);
+        const result = keysend();
+
+        await jest.advanceTimersByTimeAsync(61_000);
+
+        // a keysend retry uses a fresh preimage, so a failure here could
+        // double-pay if the original HTLC later settles
+        await expect(result).resolves.toEqual({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true,
+            dispatch_deadline_ms: 1_700_000_000_000
+        });
+    });
+
+    it('does not time out before 61 seconds', async () => {
+        let settled = false;
+        keysend().then(() => (settled = true));
 
         await jest.advanceTimersByTimeAsync(60_999);
         expect(settled).toBe(false);
