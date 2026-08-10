@@ -1973,28 +1973,60 @@ export default class SettingsStore {
         return settings;
     }
 
-    public updateSettings = async (newSetting: any) => {
+    // Serializes updateSettings calls. Each update is a read-merge-write
+    // against the persisted blob; without ordering, a caller that read
+    // before another's write can commit a stale snapshot over it, e.g. a
+    // background update straddling a wallet deletion writes the old nodes
+    // array back, resurrecting the deleted node's seed and password.
+    private updateSettingsQueue: Promise<unknown> = Promise.resolve();
+
+    public updateSettings = (
+        newSetting: any | ((currentSettings: Settings) => any)
+    ): Promise<Settings> => {
+        const task = this.updateSettingsQueue.then(() =>
+            this.applySettingsUpdate(newSetting)
+        );
+        // Keep the queue alive after a rejected update; the caller still
+        // sees the rejection through `task`.
+        this.updateSettingsQueue = task.catch(() => undefined);
+        return task;
+    };
+
+    private applySettingsUpdate = async (
+        newSetting: any | ((currentSettings: Settings) => any)
+    ) => {
         this.settingsUpdateInProgress = true;
-        const existingSettings = await this.getSettings();
-        const newSettings = {
-            ...existingSettings,
-            ...newSetting
-        };
+        try {
+            const existingSettings = await this.getSettings();
+            // Functional updates read the settings inside the critical
+            // section, so callers whose new value depends on the current
+            // one (delete node X from the array) cannot act on a snapshot
+            // taken before earlier queued writes landed.
+            const resolvedSetting =
+                typeof newSetting === 'function'
+                    ? newSetting(existingSettings)
+                    : newSetting;
+            const newSettings = {
+                ...existingSettings,
+                ...resolvedSetting
+            };
 
-        if (
-            newSetting.pos?.posEnabled &&
-            newSetting.pos.posEnabled !== PosEnabled.Disabled
-        ) {
-            this.posWasEnabled = true;
+            if (
+                resolvedSetting.pos?.posEnabled &&
+                resolvedSetting.pos.posEnabled !== PosEnabled.Disabled
+            ) {
+                this.posWasEnabled = true;
+            }
+
+            await this.setSettings(newSettings);
+            this.triggerSettingsRefresh = true;
+
+            // Update store's node properties from latest settings
+            this.updateNodeProperties(newSettings);
+            return newSettings;
+        } finally {
+            this.settingsUpdateInProgress = false;
         }
-
-        await this.setSettings(newSettings);
-        this.triggerSettingsRefresh = true;
-
-        // Update store's node properties from latest settings
-        this.updateNodeProperties(newSettings);
-        this.settingsUpdateInProgress = false;
-        return newSettings;
     };
 
     // LNDHub

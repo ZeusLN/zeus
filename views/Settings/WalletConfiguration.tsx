@@ -765,13 +765,6 @@ export default class WalletConfiguration extends React.Component<
         const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
-            const newNodes: any = [];
-            for (let i = 0; nodes && i < nodes.length; i++) {
-                if (index !== i) {
-                    newNodes.push(nodes[i]);
-                }
-            }
-
             // If deleting active embedded LND wallet, stop it first
             if (
                 active &&
@@ -811,17 +804,25 @@ export default class WalletConfiguration extends React.Component<
 
             // Update settings first to clear node references before
             // deleting files — prevents stale references if navigation
-            // triggers a reconnect
-            const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
-                index,
-                settings
+            // triggers a reconnect. The nodes array is computed inside the
+            // serialized update from the freshest persisted settings: the
+            // stops above take seconds, and a functional update is what
+            // keeps a concurrent settings write from either resurrecting
+            // the deleted node or being clobbered by a snapshot taken
+            // before it.
+            const newSettings = await updateSettings(
+                (currentSettings: Settings) => ({
+                    nodes: (currentSettings.nodes || []).filter(
+                        (_: any, i: number) => i !== index
+                    ),
+                    selectedNode: this.getNewSelectedNodeIndex(
+                        index,
+                        currentSettings
+                    ),
+                    justDeletedWallet: active
+                })
             );
-
-            await updateSettings({
-                nodes: newNodes,
-                selectedNode: newSelectedNodeIndex,
-                justDeletedWallet: active
-            });
+            const remainingNodes = newSettings?.nodes || [];
 
             // Delete wallet data after settings are updated. Retried: the
             // node may still hold file handles while shutting down, which
@@ -842,7 +843,7 @@ export default class WalletConfiguration extends React.Component<
                 );
             }
 
-            if (newNodes.length === 0) {
+            if (remainingNodes.length === 0) {
                 // Last wallet gone: sweep every remaining CDK database file
                 // (legacy shared db, any per-wallet dbs whose seeds are no
                 // longer recoverable, and WAL/SHM sidecars).
