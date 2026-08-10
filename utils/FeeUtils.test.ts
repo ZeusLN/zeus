@@ -2,7 +2,9 @@ import FeeUtils, {
     hasUsableClaimFee,
     isPlausibleSatPerVbyte,
     sanitizeRecommendedFees,
-    MAX_SAT_PER_VBYTE
+    sanitizeSatPerVbyte,
+    MAX_SAT_PER_VBYTE,
+    NO_SAT_PER_VBYTE
 } from './FeeUtils';
 
 const satoshisPerBTC = 100_000_000;
@@ -229,6 +231,42 @@ describe('FeeUtils', () => {
             expect(hasUsableClaimFee(0, String(MAX_SAT_PER_VBYTE + 1))).toBe(
                 false
             );
+        });
+    });
+
+    describe('sanitizeSatPerVbyte', () => {
+        it('passes through a usable rate', () => {
+            expect(sanitizeSatPerVbyte('5')).toEqual(5);
+            expect(sanitizeSatPerVbyte(5)).toEqual(5);
+            expect(sanitizeSatPerVbyte('1')).toEqual(1);
+        });
+
+        it('returns the sentinel when no rate is supplied', () => {
+            expect(sanitizeSatPerVbyte(undefined)).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte(null)).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte('')).toEqual(NO_SAT_PER_VBYTE);
+        });
+
+        it('rejects rates below one sat/vB', () => {
+            expect(sanitizeSatPerVbyte(0)).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte('0')).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte(-1)).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte('0.5')).toEqual(NO_SAT_PER_VBYTE);
+        });
+
+        it('rejects values that are not finite numbers', () => {
+            expect(sanitizeSatPerVbyte('abc')).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte(NaN)).toEqual(NO_SAT_PER_VBYTE);
+            expect(sanitizeSatPerVbyte(Infinity)).toEqual(NO_SAT_PER_VBYTE);
+        });
+
+        it('floors fractional rates to whole sat/vB', () => {
+            expect(sanitizeSatPerVbyte('2.9')).toEqual(2);
+            expect(sanitizeSatPerVbyte(10.01)).toEqual(10);
+        });
+
+        it('does not impose an upper bound on an explicit rate', () => {
+            expect(sanitizeSatPerVbyte('5000')).toEqual(5000);
         });
     });
 });
