@@ -27,6 +27,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
 import { confirmAction } from '../../utils/ActionUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 
 import Storage from '../../storage';
 
@@ -882,7 +883,9 @@ export default class WalletConfiguration extends React.Component<
                         onPress: () =>
                             // Active embedded-LND only reaches this branch;
                             // SettingsStore already has this wallet's seed.
-                            navigation.navigate('Seed', { skipWarning: true }),
+                            reAuthNavigation(navigation, 'Seed', {
+                                skipWarning: true
+                            }),
                         isPreferred: true
                     },
                     {
@@ -3028,7 +3031,8 @@ export default class WalletConfiguration extends React.Component<
                                         // viewing an inactive wallet so active
                                         // backup/export paths stay unchanged.
                                         if (active) {
-                                            navigation.navigate(
+                                            reAuthNavigation(
+                                                navigation,
                                                 'Seed',
                                                 implementation === 'ldk-node'
                                                     ? {
@@ -3053,7 +3057,7 @@ export default class WalletConfiguration extends React.Component<
                                             (
                                                 walletNetwork || 'mainnet'
                                             ).toLowerCase() !== 'mainnet';
-                                        navigation.navigate('Seed', {
+                                        reAuthNavigation(navigation, 'Seed', {
                                             walletSeedPhrase,
                                             implementation,
                                             isTestNet

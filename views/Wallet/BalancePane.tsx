@@ -24,6 +24,7 @@ import RescanStatus from '../../components/RescanStatus';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
@@ -418,7 +419,8 @@ export default class BalancePane extends React.PureComponent<
                                             !BalanceStore.loadingLightningBalance && (
                                                 <TouchableOpacity
                                                     onPress={() =>
-                                                        navigation.navigate(
+                                                        reAuthNavigation(
+                                                            navigation,
                                                             'Seed'
                                                         )
                                                     }
