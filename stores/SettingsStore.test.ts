@@ -52,6 +52,7 @@ jest.mock('../utils/MigrationUtils', () => ({
     restampKeychainAccessibility: jest
         .fn()
         .mockImplementation(async (settings: any) => settings),
+    migrateScbBackupFormat: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
