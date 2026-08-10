@@ -2531,9 +2531,9 @@ export default class NostrWalletConnectStore {
 
                 const spendSats =
                     amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                if (spendSats > 0 && !activity.is_budget_debited) {
+                if (spendSats > 0 && !activity.isBudgetDebited) {
                     connection.trackSpending(spendSats, this.maxBudgetLimit);
-                    activity.is_budget_debited = true;
+                    activity.isBudgetDebited = true;
                 }
             });
         }
@@ -2828,7 +2828,7 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             const existing = connection.activity.find((a) => a.id === id);
             const alreadyDebited =
-                !!existing?.is_budget_debited || existing?.status === 'success';
+                !!existing?.isBudgetDebited || existing?.status === 'success';
 
             if (!alreadyDebited) {
                 connection.trackSpending(
@@ -2848,7 +2848,7 @@ export default class NostrWalletConnectStore {
                 payment_source,
                 satAmount: amountSats,
                 fees_paid: feeSats,
-                is_budget_debited: true
+                isBudgetDebited: true
             });
         });
 
@@ -2971,8 +2971,8 @@ export default class NostrWalletConnectStore {
                 createdAt:
                     existing?.createdAt ?? record.createdAt ?? new Date(),
                 // Don't clear is_budget_debited if already true
-                is_budget_debited:
-                    existing?.is_budget_debited || record.is_budget_debited
+                isBudgetDebited:
+                    existing?.isBudgetDebited || record.isBudgetDebited
             };
         } else {
             connection.activity.push({
