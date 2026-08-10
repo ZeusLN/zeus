@@ -1742,6 +1742,8 @@
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
     "utils.handleAnything.addressError": "Error fetching address",
     "utils.handleAnything.invalidNoffer": "Could not decode CLINK noffer",
+    "stores.ChannelBackupStore.seedUnavailable": "Cannot encrypt channel backup: wallet seed is unavailable",
+    "stores.ChannelBackupStore.unrecognizedBackupFormat": "Unrecognized channel backup format. It may have been created by a newer version of ZEUS.",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
