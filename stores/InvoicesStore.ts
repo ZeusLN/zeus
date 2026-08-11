@@ -703,7 +703,10 @@ export default class InvoicesStore {
         return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
                 runInAction(() => {
-                    this.pay_req = new Invoice(data);
+                    // thread the original bolt11 string through: several
+                    // backends' decode responses omit it, leaving the
+                    // Invoice unable to compute its expiry
+                    this.pay_req = new Invoice({ ...data, paymentRequest });
                     this.getPayReqError = null;
                     this.loading = false;
                 });

@@ -1,5 +1,7 @@
 jest.mock('../stores/Stores', () => ({}));
 
+import { autorun } from 'mobx';
+
 import Invoice from './Invoice';
 
 // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
@@ -35,6 +37,85 @@ describe('Invoice.originalTimeUntilExpiryInSeconds', () => {
             destination: '02758997f184be06f4350b136db0bed6f8'
         });
         expect(invoice.originalTimeUntilExpiryInSeconds).toBeUndefined();
+    });
+});
+
+describe('Invoice.isExpired / isExpiredNow', () => {
+    const timestamp = 1700074718;
+    const expiry = 3600;
+    const expiryMs = (timestamp + expiry) * 1000;
+
+    // lnd-style decodepayreq response: expiry fields present,
+    // but no bolt11 string to re-decode
+    const lndDecodeResponse = {
+        destination: '02758997f184be06f4350b136db0bed6f8',
+        timestamp: timestamp.toString(),
+        expiry: expiry.toString(),
+        cltv_expiry: '80'
+    };
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('is true for an invoice whose bolt11 expiry has passed', () => {
+        const invoice = new Invoice({ payment_request: paymentRequest });
+
+        expect(invoice.isExpired).toBe(true);
+        expect(invoice.isExpiredNow()).toBe(true);
+    });
+
+    it('is true for a decode response without a bolt11 string when the original payment request is threaded through', () => {
+        const invoice = new Invoice({
+            ...lndDecodeResponse,
+            paymentRequest
+        });
+
+        expect(invoice.isExpired).toBe(true);
+        expect(invoice.isExpiredNow()).toBe(true);
+    });
+
+    it('fails open (false) for a decode response without any bolt11 string, which is why InvoicesStore.getPayReq must thread it through', () => {
+        const invoice = new Invoice(lndDecodeResponse);
+
+        expect(invoice.isExpired).toBe(false);
+        expect(invoice.isExpiredNow()).toBe(false);
+    });
+
+    it('is false before the expiry timestamp and true after it', () => {
+        const invoice = new Invoice({ payment_request: paymentRequest });
+
+        jest.useFakeTimers();
+
+        jest.setSystemTime(expiryMs - 1000);
+        expect(invoice.isExpiredNow()).toBe(false);
+
+        jest.setSystemTime(expiryMs + 1000);
+        expect(invoice.isExpiredNow()).toBe(true);
+    });
+
+    it('isExpiredNow stays fresh while the isExpired computed is observed', () => {
+        const invoice = new Invoice({ payment_request: paymentRequest });
+
+        jest.useFakeTimers();
+        jest.setSystemTime(expiryMs - 1000);
+
+        // keep the computed observed so MobX caches it, as an
+        // @observer screen rendering the invoice would
+        let observed: boolean | undefined;
+        const dispose = autorun(() => {
+            observed = invoice.isExpired;
+        });
+
+        expect(observed).toBe(false);
+
+        jest.setSystemTime(expiryMs + 1000);
+
+        // Date.now() is not observable, so the cached computed may
+        // still report false; the plain method must not
+        expect(invoice.isExpiredNow()).toBe(true);
+
+        dispose();
     });
 });
 

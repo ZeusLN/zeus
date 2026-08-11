@@ -30,7 +30,10 @@ import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 import { Row } from '../components/layout/Row';
-import { WarningMessage } from '../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../components/SuccessErrorMessage';
 
 import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
@@ -433,6 +436,16 @@ export default class PaymentRequest extends React.Component<
         const { paymentRequest, pay_req } = InvoicesStore;
         const { implementation } = SettingsStore;
 
+        // Fail closed if the invoice has expired since it was reviewed:
+        // the invoice can lapse while this screen is open, and expiry is
+        // otherwise only enforced by the recipient
+        if (pay_req?.isExpiredNow()) {
+            // re-render so the expired notice appears and the pay
+            // controls are removed
+            this.forceUpdate();
+            return;
+        }
+
         const isCLightning: boolean = implementation === 'cln-rest';
 
         // Zaplocker
@@ -520,6 +533,8 @@ export default class PaymentRequest extends React.Component<
 
         const locale = SettingsStore.settings.locale;
         if (pay_req) pay_req.determineFormattedOriginalTimeUntilExpiry(locale);
+
+        const isPayReqExpired = !!pay_req && pay_req.isExpiredNow();
 
         // variables cannot be destructured traditionally here
         // due to how we clear the pay_req from the store upon
@@ -725,6 +740,20 @@ export default class PaymentRequest extends React.Component<
                         {!loading && !loadingFeeEstimate && !!pay_req && (
                             <View style={styles.content}>
                                 <>
+                                    {isPayReqExpired && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <ErrorMessage
+                                                message={localeString(
+                                                    'views.PaymentRequest.invoiceExpired'
+                                                )}
+                                            />
+                                        </View>
+                                    )}
                                     {showZaplockerWarning &&
                                         implementation === 'embedded-lnd' && (
                                             <View
@@ -1559,6 +1588,7 @@ export default class PaymentRequest extends React.Component<
                 </View>
 
                 {!!pay_req &&
+                    !isPayReqExpired &&
                     !loading &&
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (

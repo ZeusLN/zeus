@@ -377,6 +377,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
+        return this.isExpiredNow();
+    }
+
+    // plain method, not @computed: Date.now() is not observable, so a
+    // cached computed can report a stale "not expired" when re-checked
+    // later (e.g. at payment dispatch time)
+    public isExpiredNow(): boolean {
         const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 
         if (getExpiryTimestamp == null) {
