@@ -1730,7 +1730,9 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        if (configRoute.includes('.onion')) {
+        // Route over Tor for onion services and whenever Tor is enabled, so the
+        // config fetch does not leak the user's IP on a clearnet connection.
+        if (configRoute.includes('.onion') || this.enableTor) {
             return doTorRequest(configRoute, RequestMethod.GET)
                 .then((response: any) => this.parseBTCPayConfig(response))
                 .catch((err: any) => {
@@ -1832,6 +1834,16 @@ export default class SettingsStore {
         if (type !== 'lnd-rest') {
             this.btcPayError = localeString(
                 'stores.SettingsStore.btcPayImplementationSupport'
+            );
+        } else if (
+            typeof uri !== 'string' ||
+            !/^https?:\/\/.+/i.test(uri.trim())
+        ) {
+            // The uri becomes the node host verbatim; reject anything that is
+            // not a well-formed http(s) URL so a crafted config cannot inject
+            // an unexpected scheme.
+            this.btcPayError = localeString(
+                'stores.SettingsStore.btcPayInvalidConfigUrl'
             );
         } else {
             const config = {

@@ -7,12 +7,31 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     clear: jest.fn()
 }));
 
+import { Alert } from 'react-native';
+
 import { invoicesStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
     isMerchantQR
 } from './handleAnything';
+
+// The BTCPay pairing path now gates its network fetch behind a confirmation
+// dialog. Drive that dialog by auto-pressing the proceed or cancel button
+// (matched by button style, which is stable across platforms).
+const answerBtcPayConfirm = (choice: 'proceed' | 'cancel') =>
+    jest
+        .spyOn(Alert, 'alert')
+        .mockImplementation(
+            (_title?: string, _message?: string, buttons?: any) => {
+                const button = (buttons as any[])?.find((b) =>
+                    choice === 'proceed'
+                        ? b.style === 'destructive'
+                        : b.style === 'cancel'
+                );
+                button?.onPress?.();
+            }
+        );
 
 let mockProcessBIP21Uri = jest.fn();
 let mockIsValidBitcoinAddress = false;
@@ -1215,7 +1234,9 @@ describe('handleAnything', () => {
             });
             settingsStore.btcPayError = null;
 
+            const alertSpy = answerBtcPayConfirm('proceed');
             const result = await handleAnything(btcPayUrl);
+            alertSpy.mockRestore();
 
             // Verify processBIP21Uri was called with the ORIGINAL URL
             expect(mockProcessBIP21Uri).toHaveBeenCalledWith(btcPayUrl);
@@ -1224,6 +1245,48 @@ describe('handleAnything', () => {
             expect(settingsStore.fetchBTCPayConfig).toHaveBeenCalledWith(
                 btcPayUrl
             );
+        });
+
+        it('should NOT fetch the BTCPay config when the user cancels the confirmation', async () => {
+            const btcPayUrl =
+                'config=https://btcpay.example.com:8080/lnd.config';
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+
+            const { settingsStore } = require('../stores/Stores');
+            settingsStore.fetchBTCPayConfig = jest.fn();
+            settingsStore.btcPayError = null;
+
+            const alertSpy = answerBtcPayConfirm('cancel');
+            const result = await handleAnything(btcPayUrl);
+            alertSpy.mockRestore();
+
+            // No network request when the user declines the probe.
+            expect(settingsStore.fetchBTCPayConfig).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+        });
+
+        it('should reject a BTCPay config QR with a malformed URL without fetching', async () => {
+            const btcPayUrl = 'config=not-a-valid-url/lnd.config';
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+
+            const { settingsStore } = require('../stores/Stores');
+            settingsStore.fetchBTCPayConfig = jest.fn();
+            settingsStore.btcPayError = null;
+
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            const result = await handleAnything(btcPayUrl);
+
+            // Invalid URL surfaces an error alert and never contacts the network.
+            expect(alertSpy).toHaveBeenCalled();
+            expect(settingsStore.fetchBTCPayConfig).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+            alertSpy.mockRestore();
         });
 
         it('should handle clnrest URL with 20+ digit rune (matches \\d{20} pattern)', async () => {

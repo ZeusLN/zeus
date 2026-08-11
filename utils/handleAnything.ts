@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -23,6 +23,90 @@ import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
+
+// Classifies the URL embedded in a scanned BTCPay pairing QR before ZEUS
+// contacts it. `valid` is true only for a well-formed http(s) URL with a host;
+// `isCleartext` flags an http:// host that is neither a Tor onion service nor
+// loopback, i.e. one that would carry the fetch over the network unencrypted.
+const classifyBtcPayConfigUrl = (
+    urlString?: string
+): { valid: boolean; host: string; isOnion: boolean; isCleartext: boolean } => {
+    const invalid = {
+        valid: false,
+        host: '',
+        isOnion: false,
+        isCleartext: false
+    };
+    if (!urlString) return invalid;
+
+    const trimmed = urlString.trim();
+    const lower = trimmed.toLowerCase();
+    const isHttp = lower.startsWith('http://');
+    const isHttps = lower.startsWith('https://');
+    if (!isHttp && !isHttps) return invalid;
+
+    // Isolate the host: strip scheme, then any path/query, then a trailing
+    // :port (handling IPv6 bracket notation).
+    const scheme = isHttp ? 'http://' : 'https://';
+    let host = lower.slice(scheme.length).split('/')[0].split('?')[0];
+    if (host.startsWith('[')) {
+        host = host.slice(1).split(']')[0];
+    } else {
+        host = host.split(':')[0];
+    }
+    if (!host) return invalid;
+
+    const isOnion = host.endsWith('.onion');
+    const isLoopback =
+        host === 'localhost' || host === '::1' || host.startsWith('127.');
+
+    return {
+        valid: true,
+        host,
+        isOnion,
+        isCleartext: isHttp && !isOnion && !isLoopback
+    };
+};
+
+// Promise-wrapped confirmation so the scan-time BTCPay fetch can be gated on
+// explicit user consent (the QR content controls the endpoint). Resolves true
+// when the user proceeds, false when they cancel.
+const confirmBtcPayFetch = (
+    host: string,
+    isCleartext: boolean
+): Promise<boolean> =>
+    new Promise((resolve) => {
+        const message = isCleartext
+            ? `${localeString(
+                  'stores.SettingsStore.btcPayFetchConfirmMessage'
+              ).replace('{host}', host)}\n\n${localeString(
+                  'stores.SettingsStore.btcPayFetchCleartextWarning'
+              )}`
+            : localeString(
+                  'stores.SettingsStore.btcPayFetchConfirmMessage'
+              ).replace('{host}', host);
+
+        const proceedButton = {
+            text: localeString('general.proceed'),
+            style: 'destructive' as const,
+            onPress: () => resolve(true)
+        };
+        const cancelButton = {
+            text: localeString('general.cancel'),
+            style: 'cancel' as const,
+            onPress: () => resolve(false)
+        };
+
+        Alert.alert(
+            localeString('general.warning'),
+            message,
+            // iOS honors button style; Android orders by index (cancel left).
+            Platform.OS === 'ios'
+                ? [proceedButton, cancelButton]
+                : [cancelButton, proceedButton],
+            { cancelable: false, onDismiss: () => resolve(false) }
+        );
+    });
 
 const attemptNip05Lookup = async (data: string) => {
     try {
@@ -711,6 +795,31 @@ const handleAnything = async (
     } else if (value.includes('config=') && value.includes('lnd.config')) {
         // BTCPay pairing QR
         if (isClipboardValue) return true;
+
+        // The QR content controls the endpoint ZEUS is about to contact, so
+        // validate it locally and require explicit consent BEFORE any network
+        // request (prevents a scan-time IP/timing beacon to an attacker URL).
+        const configRoute = value.split('config=')[1];
+        const { valid, host, isCleartext } =
+            classifyBtcPayConfigUrl(configRoute);
+        if (!valid) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('stores.SettingsStore.btcPayInvalidConfigUrl'),
+                [
+                    {
+                        text: localeString('general.ok'),
+                        onPress: () => void 0
+                    }
+                ],
+                { cancelable: false }
+            );
+            return false;
+        }
+
+        const confirmed = await confirmBtcPayFetch(host, isCleartext);
+        if (!confirmed) return false;
+
         return settingsStore
             .fetchBTCPayConfig(value)
             .then((node: any) => {
