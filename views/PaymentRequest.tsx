@@ -9,6 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { reaction } from 'mobx';
 import Slider from '@react-native-community/slider';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -102,6 +103,7 @@ interface InvoiceState {
     donationAmount: any;
     selectedIndex: number | null;
     swipeButtonKey: number;
+    reviewedPaymentRequest: string;
 }
 
 @inject(
@@ -121,6 +123,7 @@ export default class PaymentRequest extends React.Component<
 > {
     listener: any;
     focusListener: any;
+    payReqDisposer: any;
     isComponentMounted: boolean = false;
     private scrollViewRef = React.createRef<ScrollView>();
     state = {
@@ -143,7 +146,8 @@ export default class PaymentRequest extends React.Component<
         donationPercentage: 0,
         donationAmount: 0,
         selectedIndex: null,
-        swipeButtonKey: 0
+        swipeButtonKey: 0,
+        reviewedPaymentRequest: ''
     };
 
     async componentDidMount() {
@@ -204,11 +208,40 @@ export default class PaymentRequest extends React.Component<
             });
         }
 
-        // Reset slide to pay slider position when screen comes into focus
+        // Pin the invoice the user is reviewing. The view otherwise reads the
+        // invoice straight off the shared InvoicesStore singleton, so if a
+        // second payment string is injected while this screen is open (deep
+        // link, NFC tap, clipboard handler, etc.) the store's pay_req /
+        // paymentRequest get swapped out from under the review. We record what
+        // was reviewed so triggerPayment can refuse to pay a different invoice
+        // than the one on screen when the confirmation began ("review A, pay B").
+        this.setState({
+            reviewedPaymentRequest: InvoicesStore.paymentRequest
+        });
+
+        // If the invoice under review changes without a real focus change (the
+        // injection case above), invalidate any in-progress slide-to-pay
+        // gesture so it cannot complete against the swapped-in invoice.
+        this.payReqDisposer = reaction(
+            () => InvoicesStore.paymentRequest,
+            () => {
+                if (!this.isComponentMounted) return;
+                this.setState({
+                    swipeButtonKey: this.state.swipeButtonKey + 1
+                });
+            }
+        );
+
+        // Reset slide to pay slider position when screen comes into focus, and
+        // re-pin to the current invoice: a genuine re-navigation into this
+        // screen (blur then focus) re-reviews whatever is now loaded, whereas a
+        // background injection never fires focus and stays pinned to the
+        // originally reviewed invoice.
         const { navigation } = this.props;
         this.focusListener = navigation.addListener('focus', () => {
             this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
+                swipeButtonKey: this.state.swipeButtonKey + 1,
+                reviewedPaymentRequest: InvoicesStore.paymentRequest
             });
         });
     }
@@ -217,6 +250,9 @@ export default class PaymentRequest extends React.Component<
         this.isComponentMounted = false;
         if (this.focusListener) {
             this.focusListener();
+        }
+        if (this.payReqDisposer) {
+            this.payReqDisposer();
         }
     }
 
@@ -374,6 +410,18 @@ export default class PaymentRequest extends React.Component<
         } = this.state;
 
         const { paymentRequest, pay_req } = InvoicesStore;
+
+        // Fail closed: if the invoice in the store no longer matches the one
+        // the user reviewed, it was swapped out from under the review screen.
+        // Refuse to pay rather than paying a different invoice than the one
+        // that was on screen when this confirmation began.
+        if (
+            this.state.reviewedPaymentRequest !== '' &&
+            paymentRequest !== this.state.reviewedPaymentRequest
+        ) {
+            return;
+        }
+
         const { implementation } = SettingsStore;
 
         // Fail closed if the invoice has expired since it was reviewed:
