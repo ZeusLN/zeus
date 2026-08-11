@@ -400,6 +400,7 @@ export default class NostrWalletConnectStore {
                 }
                 console.log('NWC: resetting service');
                 this.cancelScheduledMaxBudgetRefresh();
+                this.maxBudgetRefreshNeeded = false;
                 await this.flushScheduledSave();
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
@@ -3250,6 +3251,11 @@ export default class NostrWalletConnectStore {
     }
 
     public async loadMaxBudget(): Promise<void> {
+        // A concurrent caller joins the in-flight promise and sets
+        // maxBudgetRefreshNeeded so we re-fetch once it settles. That
+        // second fetch is intentional: the first load may have started
+        // before a payment settled, and joiners need a fresh post-spend
+        // balance rather than the stale in-flight result.
         if (this.maxBudgetLoadInFlight) {
             this.maxBudgetRefreshNeeded = true;
             return this.maxBudgetLoadInFlight;

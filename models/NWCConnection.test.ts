@@ -287,19 +287,26 @@ describe('NWCConnection pay_invoice activity lookup', () => {
         ).toBe(0);
     });
 
-    it('findPayInvoiceActivity returns the matching activity', () => {
+    it('findPayInvoiceActivity ignores make_invoice rows with the same id/hash', () => {
         const connection = baseConnection();
+        const paymentHash = 'abc123paymenthash';
         connection.activity.push({
             id: 'lnbc1normalized',
-            type: 'pay_invoice',
+            type: 'make_invoice',
             payment_source: 'lightning',
-            status: 'success',
-            satAmount: 100
+            status: 'pending',
+            satAmount: 100,
+            paymentHash
         });
 
-        expect(connection.findPayInvoiceActivity('lnbc1normalized')).toEqual(
-            connection.activity[0]
-        );
-        expect(connection.findPayInvoiceActivity('missing')).toBeUndefined();
+        expect(
+            connection.findPayInvoiceActivityIndex(
+                'lnbc1normalized',
+                paymentHash
+            )
+        ).toBe(-1);
+        expect(
+            connection.findPayInvoiceActivity('lnbc1normalized', paymentHash)
+        ).toBeUndefined();
     });
 });

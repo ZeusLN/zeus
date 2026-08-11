@@ -248,10 +248,11 @@ export default class NWCConnection extends BaseModel {
     ): number {
         return (this.activity ?? []).findIndex(
             (a) =>
-                a.id === id ||
-                (!!paymentHash &&
-                    !!a.paymentHash &&
-                    a.paymentHash === paymentHash)
+                a.type === 'pay_invoice' &&
+                (a.id === id ||
+                    (!!paymentHash &&
+                        !!a.paymentHash &&
+                        a.paymentHash === paymentHash))
         );
     }
 
