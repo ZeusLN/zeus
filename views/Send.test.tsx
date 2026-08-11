@@ -46,12 +46,18 @@ jest.mock('../components/Header', () => 'Header');
 jest.mock('../components/OnchainFeeInput', () => 'OnchainFeeInput');
 jest.mock('../components/Screen', () => 'Screen');
 jest.mock('../components/Switch', () => 'Switch');
+jest.mock('../components/SwipeButton', () => 'SwipeButton');
 jest.mock('../components/TextInput', () => 'TextInput');
 jest.mock('../components/UTXOPicker', () => 'UTXOPicker');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NFC');
 jest.mock('../assets/images/SVG/PeersContact.svg', () => 'ContactIcon');
 jest.mock('../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../models/Contact', () => class Contact {});
+jest.mock('../stores/SettingsStore', () => ({
+    __esModule: true,
+    default: class SettingsStore {},
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000
+}));
 
 import * as React from 'react';
 import Send from './Send';

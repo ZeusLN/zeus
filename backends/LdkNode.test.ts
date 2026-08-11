@@ -61,12 +61,12 @@ describe('LdkNode payment results', () => {
     const payBolt11 = () =>
         ldk.payLightningInvoice({ payment_request: 'lnbcrt1...' });
     const payKeysend = () => ldk.sendKeysend({ pubkey: '02abc', amt: '5000' });
-    const payOffer = () => ldk.fetchInvoiceFromOffer('lno1...', '5000');
+    const payOffer = () => ldk.payOffer({ offer: 'lno1...', amt: '5000' });
 
     describe.each([
         ['payLightningInvoice', payBolt11],
         ['sendKeysend', payKeysend],
-        ['fetchInvoiceFromOffer', payOffer]
+        ['payOffer', payOffer]
     ])('%s', (_name, pay) => {
         it('returns the fee LDK paid', async () => {
             mockListPayments.mockResolvedValue([succeededPayment(25_000)]);
