@@ -89,7 +89,7 @@
   "resolutions": {
     "protobufjs": "7.5.8",
     "fast-xml-parser": "5.7.0",
-    "mocha/js-yaml": "4.3.0",
+    "mocha/js-yaml": "4.3.1",
     "serialize-javascript": "7.0.5",
     "minimatch": "9.0.7"
   },
