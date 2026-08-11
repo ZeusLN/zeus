@@ -30,6 +30,11 @@ import {
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
+import {
+    verifySecret,
+    hasVerifier,
+    VerifierRecord
+} from '../utils/LockVerifierUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
@@ -50,12 +55,13 @@ interface LockscreenProps {
 }
 
 interface LockscreenState {
-    passphrase: string;
+    authMethod: 'pin' | 'passphrase' | null;
+    passphraseVerifier?: VerifierRecord;
     passphraseAttempt: string;
-    duressPassphrase: string;
-    pin: string;
+    duressPassphraseVerifier?: VerifierRecord;
+    pinVerifier?: VerifierRecord;
     pinAttempt: string;
-    duressPin: string;
+    duressPinVerifier?: VerifierRecord;
     hidden: boolean;
     error: boolean;
     modifySecurityScreen: string;
@@ -81,12 +87,13 @@ export default class Lockscreen extends React.Component<
     constructor(props: any) {
         super(props);
         this.state = {
+            authMethod: null,
             passphraseAttempt: '',
-            passphrase: '',
-            duressPassphrase: '',
-            pin: '',
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
+            pinVerifier: undefined,
             pinAttempt: '',
-            duressPin: '',
+            duressPinVerifier: undefined,
             hidden: true,
             error: false,
             modifySecurityScreen: '',
@@ -233,20 +240,18 @@ export default class Lockscreen extends React.Component<
             });
         }
 
-        if (settings && settings.passphrase) {
-            this.setState({ passphrase: settings.passphrase });
-            if (settings.duressPassphrase) {
-                this.setState({
-                    duressPassphrase: settings.duressPassphrase
-                });
-            }
-        } else if (settings && settings.pin) {
-            this.setState({ pin: settings.pin });
-            if (settings.duressPin) {
-                this.setState({
-                    duressPin: settings.duressPin
-                });
-            }
+        if (settings && hasVerifier(settings.passphraseVerifier)) {
+            this.setState({
+                authMethod: 'passphrase',
+                passphraseVerifier: settings.passphraseVerifier,
+                duressPassphraseVerifier: settings.duressPassphraseVerifier
+            });
+        } else if (settings && hasVerifier(settings.pinVerifier)) {
+            this.setState({
+                authMethod: 'pin',
+                pinVerifier: settings.pinVerifier,
+                duressPinVerifier: settings.duressPinVerifier
+            });
         } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed(pendingNavigation?.screen, pendingNavigation?.params);
         } else {
@@ -277,12 +282,13 @@ export default class Lockscreen extends React.Component<
     onAttemptLogIn = async () => {
         const { SettingsStore, navigation, route } = this.props;
         const {
-            passphrase,
-            duressPassphrase,
+            authMethod,
+            passphraseVerifier,
+            duressPassphraseVerifier,
             passphraseAttempt,
-            pin,
+            pinVerifier,
             pinAttempt,
-            duressPin,
+            duressPinVerifier,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
@@ -299,10 +305,25 @@ export default class Lockscreen extends React.Component<
             error: false
         });
 
-        if (
-            (passphraseAttempt && passphraseAttempt === passphrase) ||
-            (pinAttempt && pinAttempt === pin)
-        ) {
+        // Verify against the salted verifier for the active method. The normal
+        // and duress checks are both computed (equal cost) before branching so
+        // response time never reveals which credential matched - keeping the
+        // duress credential indistinguishable from a normal login attempt.
+        const attempt =
+            authMethod === 'passphrase' ? passphraseAttempt : pinAttempt;
+        const primaryVerifier =
+            authMethod === 'passphrase' ? passphraseVerifier : pinVerifier;
+        const duressVerifier =
+            authMethod === 'passphrase'
+                ? duressPassphraseVerifier
+                : duressPinVerifier;
+
+        const [primaryMatch, duressMatch] = await Promise.all([
+            verifySecret(attempt, primaryVerifier),
+            verifySecret(attempt, duressVerifier)
+        ]);
+
+        if (primaryMatch) {
             SettingsStore.setLoginStatus(true);
 
             // Check if we're modifying security settings first
@@ -369,8 +390,7 @@ export default class Lockscreen extends React.Component<
             // duress creds only trigger the wipe on a genuine login attempt -
             // in security management flows they count as an incorrect entry
             !this.isSecurityManagementFlow &&
-            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
-                (duressPin && pinAttempt === duressPin))
+            duressMatch
         ) {
             // never mark the session logged in here: the wipe takes long
             // enough that an unlocked app would expose the wallet UI (and
@@ -421,8 +441,8 @@ export default class Lockscreen extends React.Component<
         // duress passphrase is also deleted when passphrase is deleted
         // biometry is also disabled when passphrase is deleted
         updateSettings({
-            passphrase: '',
-            duressPassphrase: '',
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -435,7 +455,7 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         updateSettings({
-            duressPassphrase: '',
+            duressPassphraseVerifier: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');
@@ -449,8 +469,8 @@ export default class Lockscreen extends React.Component<
         // duress pin is also deleted when pin is deleted
         // biometry is also disabled when pin is deleted
         updateSettings({
-            pin: '',
-            duressPin: '',
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -463,7 +483,7 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         updateSettings({
-            duressPin: '',
+            duressPinVerifier: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');
@@ -522,10 +542,10 @@ export default class Lockscreen extends React.Component<
     };
 
     generateErrorMessage = (): string => {
-        const { passphrase, authenticationAttempts } = this.state;
+        const { authMethod, authenticationAttempts } = this.state;
         let incorrect = '';
 
-        if (passphrase) {
+        if (authMethod === 'passphrase') {
             incorrect = localeString('views.Lockscreen.incorrectPassword');
         } else {
             incorrect = localeString('views.Lockscreen.incorrectPin');
@@ -545,9 +565,8 @@ export default class Lockscreen extends React.Component<
         const pendingNavigation = this.props.route.params?.pendingNavigation;
         const { settings } = SettingsStore;
         const {
-            passphrase,
+            authMethod,
             passphraseAttempt,
-            pin,
             hidden,
             error,
             modifySecurityScreen,
@@ -583,7 +602,7 @@ export default class Lockscreen extends React.Component<
                 {(this.isSecurityManagementFlow || pendingNavigation) && (
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
-                {!!passphrase && (
+                {authMethod === 'passphrase' && (
                     <View
                         style={{
                             ...styles.content,
@@ -665,7 +684,7 @@ export default class Lockscreen extends React.Component<
                         </View>
                     </View>
                 )}
-                {!!pin && (
+                {authMethod === 'pin' && (
                     <View style={styles.container}>
                         <View style={{ flex: 1 }}>
                             <>
@@ -733,7 +752,6 @@ export default class Lockscreen extends React.Component<
                                             this.setState({ error: false })
                                         }
                                         hidePinLength={true}
-                                        pinLength={pin.length}
                                         shuffle={settings.scramblePin}
                                     />
                                 </View>

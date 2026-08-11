@@ -10,6 +10,11 @@ jest.mock('react-native-fs', () => ({
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
+// The native randombytes module cannot init under jest; back it with node crypto
+// so the lock-verifier migration can derive real salts.
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (length: number) => require('crypto').randomBytes(length)
+}));
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
@@ -92,6 +97,7 @@ jest.mock('../storage', () => ({
 }));
 
 import MigrationUtils from './MigrationUtils';
+import { verifySecret } from './LockVerifierUtils';
 
 // Mock console logs to keep test output clean
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -1209,6 +1215,86 @@ describe('MigrationUtils', () => {
                 'Error saving migrated Cashu seed version:',
                 expect.any(Error)
             );
+        });
+    });
+
+    describe('migrateLockCredentialsToVerifiers', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('hashes plaintext pin + duress pin into verifiers and strips the plaintext', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { pin: '1234', duressPin: '9999' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            expect(settings.pin).toBeUndefined();
+            expect(settings.duressPin).toBeUndefined();
+            expect(await verifySecret('1234', settings.pinVerifier)).toBe(true);
+            expect(await verifySecret('9999', settings.duressPinVerifier)).toBe(
+                true
+            );
+            // the duress record is structurally identical to the normal one
+            expect(Object.keys(settings.duressPinVerifier).sort()).toEqual(
+                Object.keys(settings.pinVerifier).sort()
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('hashes a passphrase and its duress variant', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                passphrase: 'open sesame',
+                duressPassphrase: 'burn it'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            expect(settings.passphrase).toBeUndefined();
+            expect(settings.duressPassphrase).toBeUndefined();
+            expect(
+                await verifySecret('open sesame', settings.passphraseVerifier)
+            ).toBe(true);
+            expect(
+                await verifySecret('burn it', settings.duressPassphraseVerifier)
+            ).toBe(true);
+        });
+
+        it('is a no-op with no lock configured but still sets the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { nodes: [] };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            expect(settings).toEqual({ nodes: [] });
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('is idempotent once the flag is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = { pin: '1234' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            // untouched: plaintext left as-is, nothing persisted
+            expect(settings.pin).toBe('1234');
+            expect(settings.pinVerifier).toBeUndefined();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 });
