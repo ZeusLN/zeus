@@ -68,6 +68,8 @@ import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import { purgeLegacyActivityCsvExports } from './ActivityCsvUtils';
+import { purgeLegacyNodeConfigExports } from './NodeConfigUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
 
@@ -678,6 +680,13 @@ export async function clearAllData(): Promise<void> {
     // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
+
+    // 2e. Delete legacy export artifacts older builds wrote to shared
+    // storage (activity CSVs and credential-bearing wallet config backups).
+    // These live outside the app-private keys cleared below, so they must
+    // be unlinked explicitly.
+    await purgeLegacyActivityCsvExports();
+    await purgeLegacyNodeConfigExports();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
