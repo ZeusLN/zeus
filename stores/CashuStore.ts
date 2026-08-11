@@ -2702,7 +2702,9 @@ export default class CashuStore {
             }
 
             // Backup mint list to Nostr (fire and forget)
-            this.nostrBackupMints();
+            this.nostrBackupMints().catch((e) =>
+                console.warn('Nostr mint backup failed (background):', e)
+            );
 
             runInAction(() => {
                 this.loading = false;
@@ -2802,7 +2804,9 @@ export default class CashuStore {
         await this.calculateTotalBalance();
 
         // Backup updated mint list to Nostr (fire and forget)
-        this.nostrBackupMints();
+        this.nostrBackupMints().catch((e) =>
+            console.warn('Nostr mint backup failed (background):', e)
+        );
 
         runInAction(() => {
             this.loading = false;
@@ -2837,7 +2841,7 @@ export default class CashuStore {
     @action
     public nostrBackupMints = async () => {
         const seed = this.getNostrBackupSeed();
-        if (!seed || this.mintUrls.length === 0) return;
+        if (!seed) return;
 
         try {
             const { privateKeyHex, publicKeyHex } =
@@ -2876,12 +2880,23 @@ export default class CashuStore {
             const result = await restoreMintsFromNostr(
                 privateKeyHex,
                 publicKeyHex,
-                DEFAULT_NOSTR_RELAYS
+                DEFAULT_NOSTR_RELAYS,
+                this.nostrMintBackupTimestamp ?? 0
             );
-            if (result && result.mints.length > 0) {
-                return result.mints;
-            }
-            return null;
+            if (!result) return null;
+
+            // Ratchet the freshness floor to the accepted backup so
+            // older replays can never be restored later, even if the
+            // backup turns out to be empty
+            runInAction(() => {
+                this.nostrMintBackupTimestamp = result.timestamp;
+            });
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-nostrMintBackupTimestamp`,
+                String(result.timestamp)
+            );
+
+            return result.mints.length > 0 ? result.mints : null;
         } catch (e) {
             console.warn('Nostr mint restore failed:', e);
             return null;
@@ -3330,8 +3345,8 @@ export default class CashuStore {
                 // or recovery), try to restore the mint list from Nostr
                 // backup. A stored empty list means the user removed every
                 // mint; treating it as fresh would resurrect the removed
-                // mints from the stale relay backup, since empty lists are
-                // deliberately never published
+                // mints from a relay that never received the empty backup
+                // that removeMint publishes
                 if (!storedMintUrls) {
                     try {
                         const nostrMints = await this.nostrRestoreMints();
@@ -5643,10 +5658,10 @@ export default class CashuStore {
             // Persist an empty mint list instead of removing the key.
             // Boot treats a missing key as a fresh install or recovery and
             // restores the mint list from the Nostr backup (and re-adds the
-            // onboarding mints); since nostrBackupMints never publishes an
-            // empty list, the stale backup would resurrect every deleted
-            // mint on the next launch. An empty list records that the user
-            // deliberately deleted their mints, matching removeMint
+            // onboarding mints); deleting Cashu data does not publish a
+            // backup, so the stale non-empty one would resurrect every
+            // deleted mint on the next launch. An empty list records that
+            // the user deliberately deleted their mints, matching removeMint
             await Storage.setItem(
                 `${lndDir}-cashu-mintUrls`,
                 JSON.stringify([])
