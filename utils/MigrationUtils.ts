@@ -105,7 +105,7 @@ import Storage, {
     setRawLocalItem
 } from '../storage';
 
-const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
+export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 
 class MigrationsUtils {
     /**

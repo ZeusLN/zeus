@@ -304,6 +304,7 @@ import CashuTools from './views/Tools/CashuTools';
 import NostrKeysTools from './views/Tools/NostrKeys';
 import NostrMintSync from './views/Tools/NostrKeys/NostrMintSync';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
+import KeychainCleanup from './views/Tools/KeychainCleanup';
 import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
@@ -1756,6 +1757,12 @@ export default class App extends React.PureComponent {
                                                                 name="NodeConfigExportImport" // @ts-ignore:next-line
                                                                 component={
                                                                     NodeConfigExportImport
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="KeychainCleanup" // @ts-ignore:next-line
+                                                                component={
+                                                                    KeychainCleanup
                                                                 }
                                                             />
                                                             <Stack.Screen
