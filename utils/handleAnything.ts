@@ -787,6 +787,12 @@ const handleAnything = async (
         !!lnurl ||
         (value && /\/lnurl|lnurlp|lnurlw|lnurlc|lnurlauth/i.test(value))
     ) {
+        // The input is already recognized as LNURL-shaped locally (bech32
+        // decode, findlnurl, or an lnurl* URL path). That is enough to show
+        // the paste badge, so never fetch during a clipboard probe: defer
+        // getlnurlParams (a live HTTP GET of an attacker-controllable target)
+        // to when the user actually acts on the value.
+        if (isClipboardValue) return true;
         const raw: string = findlnurl(value) || lnurl || value || '';
         return getlnurlParams(raw)
             .then((params: any) => {
@@ -886,6 +892,10 @@ const handleAnything = async (
                 );
             });
     } else if (AddressUtils.isValidNpub(data)) {
+        // A valid npub is fully classified locally; do not open Nostr relay
+        // connections (nostrProfileLookup) during a clipboard probe. Defer the
+        // lookup to when the user acts on the value.
+        if (isClipboardValue) return true;
         try {
             const decoded = nip19.decode(data);
             const pubkey = decoded.data.toString();

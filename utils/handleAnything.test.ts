@@ -22,10 +22,13 @@ let mockIsValidLightningAddress = false;
 let mockIsValidLightningOffer = false;
 let mockIsValidNoffer = false;
 let mockIsValidLNDHubAddress = false;
+let mockIsValidNpub = false;
 let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
+const mockRelayInit = jest.fn();
+const mockNip19Decode = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 jest.mock('./AddressUtils', () => ({
@@ -38,7 +41,7 @@ jest.mock('./AddressUtils', () => ({
     isValidNoffer: () => mockIsValidNoffer,
     isValidLNDHubAddress: () => mockIsValidLNDHubAddress,
     processLNDHubAddress: (...args: any[]) => mockProcessLNDHubAddress(...args),
-    isValidNpub: () => false,
+    isValidNpub: () => mockIsValidNpub,
     isPsbt: () => false,
     isValidTxHex: () => false,
     ZEUS_ECASH_GIFT_URL
@@ -107,6 +110,14 @@ jest.mock('js-lnurl', () => ({
     findlnurl: (...args: any[]) => mockFindLnurl(...args),
     decodelnurl: () => null
 }));
+jest.mock('nostr-tools', () => ({
+    relayInit: (...args: any[]) => mockRelayInit(...args),
+    nip05: { queryProfile: jest.fn() },
+    nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
+}));
+jest.mock('../stores/SettingsStore', () => ({
+    DEFAULT_NOSTR_RELAYS: ['wss://relay.example.com']
+}));
 
 describe('handleAnything', () => {
     beforeEach(() => {
@@ -119,6 +130,9 @@ describe('handleAnything', () => {
         mockProcessNodeUri.mockReset();
         mockGetLnurlParamsFn.mockReset();
         mockFindLnurl.mockReset();
+        mockRelayInit.mockReset();
+        mockNip19Decode.mockReset();
+        mockIsValidNpub = false;
         mockIsValidBitcoinAddress = false;
         mockIsValidLightningPubKey = false;
         mockIsValidLightningPaymentRequest = false;
@@ -467,6 +481,63 @@ describe('handleAnything', () => {
             const result = await handleAnything(data, undefined, true);
 
             expect(result).toEqual(true);
+        });
+    });
+
+    // Regression tests for the clipboard-probe network-egress bug: a clipboard
+    // probe (isClipboardValue === true) must classify the value LOCALLY and must
+    // NOT perform any network egress. Previously, LNURL-shaped and npub inputs
+    // fell through to getlnurlParams (a live HTTP GET of an attacker-controllable
+    // target, including RFC1918/link-local literals) and nostrProfileLookup
+    // (outbound Nostr relay connections) on every app foreground.
+    describe('clipboard probe must not touch the network', () => {
+        it('does not fetch lnurl params for a bech32 LNURL clipboard value', async () => {
+            const data =
+                'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF';
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+            // findlnurl matches the bech32 payload and decodes to an internal URL
+            mockFindLnurl.mockReturnValue('http://192.168.0.1/probe');
+
+            const result = await handleAnything(data, undefined, true);
+
+            expect(result).toBe(true);
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        it('does not fetch lnurl params for a URL-shaped LNURL clipboard value', async () => {
+            const data = 'http://attacker.example/lnurlp/beacon';
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+
+            const result = await handleAnything(data, undefined, true);
+
+            expect(result).toBe(true);
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        it('still fetches lnurl params when NOT a clipboard probe (control)', async () => {
+            const data = 'http://attacker.example/lnurlp/beacon';
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'payRequest',
+                domain: 'attacker.example'
+            });
+
+            await handleAnything(data);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(data);
+        });
+
+        it('does not open Nostr relay connections for an npub clipboard value', async () => {
+            const data =
+                'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m';
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+            mockIsValidNpub = true;
+
+            const result = await handleAnything(data, undefined, true);
+
+            expect(result).toBe(true);
+            expect(mockNip19Decode).not.toHaveBeenCalled();
+            expect(mockRelayInit).not.toHaveBeenCalled();
         });
     });
 
