@@ -1615,10 +1615,32 @@ export default class NostrWalletConnectStore {
         return successfulPublishes;
     }
 
+    /**
+     * Runs every subscribed NWC request through one gate: reject (and drop
+     * the subscription) when the connection has expired.
+     */
     private async withGlobalHandler<T>(
         connectionId: string,
         handler: () => Promise<T>
     ): Promise<T> {
+        const { connection } = this.getConnection({ connectionId });
+        if (!connection) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                ),
+                Nip47ErrorCode.NOT_FOUND
+            ) as T;
+        }
+        if (connection.isExpired) {
+            this.unsubscribeFromConnection(connectionId);
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.connectionExpired'
+                ),
+                Nip47ErrorCode.RESTRICTED
+            ) as T;
+        }
         await this.markConnectionUsed(connectionId);
         return await handler();
     }

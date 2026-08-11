@@ -124,7 +124,9 @@ export enum Nip47ErrorCode {
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
-    INVOICE_EXPIRED = 'INVOICE_EXPIRED'
+    INVOICE_EXPIRED = 'INVOICE_EXPIRED',
+    /** NIP-47: pubkey not allowed for this operation (e.g. connection expired). */
+    RESTRICTED = 'RESTRICTED'
 }
 
 export default class NostrConnectUtils {

@@ -641,3 +641,120 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
         expect(connection.activity[0].status).toBe('success');
     });
 });
+
+describe('NostrWalletConnectStore connection expiry enforcement', () => {
+    function buildStore() {
+        const settingsStore: any = {
+            connecting: false,
+            implementation: 'lnd',
+            settings: {
+                locale: 'en',
+                ecash: { enableCashu: false },
+                lightningAddress: { enabled: false }
+            }
+        };
+        const store = new NostrWalletConnectStore(
+            settingsStore,
+            {} as any,
+            {
+                nodeInfo: { nodeId: NODE_PUBKEY },
+                getNodeInfo: jest.fn()
+            } as any,
+            {} as any,
+            { invoices: [] } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+
+        (store as any).walletServiceKeys = {
+            privateKey: SERVICE_PRIV,
+            publicKey: SERVICE_PUB
+        };
+        jest.spyOn(store as any, 'scheduleSave').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(store as any, 'saveConnections').mockResolvedValue(
+            undefined
+        );
+
+        return store;
+    }
+
+    function seedConnection(
+        store: NostrWalletConnectStore,
+        overrides: Record<string, unknown> = {}
+    ) {
+        const connection = new NWCConnection({
+            id: 'conn-expiry',
+            name: 'Expired App',
+            pubkey: OLD_PUBKEY,
+            relayUrl: OLD_RELAY,
+            permissions: ['get_info', 'get_balance', 'make_invoice'],
+            createdAt: new Date('2024-01-01T00:00:00Z'),
+            totalSpendSats: 0,
+            nodePubkey: NODE_PUBKEY,
+            implementation: 'lnd',
+            activity: [],
+            ...overrides
+        } as any);
+        store.connections = [connection];
+        return connection;
+    }
+
+    it('rejects every NWC method once the connection has expired', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date('2020-01-01T00:00:00Z')
+        });
+        expect(connection.isExpired).toBe(true);
+
+        const unsub = jest.fn();
+        (store as any).activeSubscriptions.set(connection.id, unsub);
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'RESTRICTED',
+                message:
+                    'views.Settings.NostrWalletConnect.error.connectionExpired'
+            }
+        });
+        expect(unsub).toHaveBeenCalled();
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            false
+        );
+        expect(connection.lastUsed).toBeUndefined();
+    });
+
+    it('allows non-expired connections through withGlobalHandler', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { ok: true },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: { ok: true },
+            error: undefined
+        });
+        expect(connection.lastUsed).toBeInstanceOf(Date);
+    });
+});
