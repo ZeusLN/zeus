@@ -1,5 +1,4 @@
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
@@ -10,6 +9,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { sanitizeRecommendedFees } from '../utils/FeeUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
@@ -61,7 +61,11 @@ export default class FeeStore {
 
         const token = ++this.getOnchainFeesToken;
 
-        return ReactNativeBlobUtil.fetch('get', url)
+        return networkFetch({
+            method: 'get',
+            url,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response: any) => {
                 const status = response.info().status;
 
