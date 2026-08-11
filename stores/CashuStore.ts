@@ -1229,7 +1229,21 @@ export default class CashuStore {
         const skipped: { mintUrl: string; reason: MultimintSkipReason }[] = [];
         const candidates: Candidate[] = [];
 
-        for (const mintUrl of supportedMints) {
+        // Probe in descending balance order and stop once probed usable
+        // capacity covers the payment. A melt quote request contains the
+        // full invoice (payee, amount, payment hash), so every probe
+        // discloses the payment's destination to that mint. Don't send
+        // it to mints that can't end up participating. If coverage is
+        // never reached, every mint still gets probed, so skip
+        // diagnostics on failure are unchanged.
+        const probeOrder = [...supportedMints].sort(
+            (a, b) =>
+                (normalizedBalances[b] || 0) - (normalizedBalances[a] || 0)
+        );
+        let probedUsable = 0;
+
+        for (const mintUrl of probeOrder) {
+            if (probedUsable >= amountToPay) break;
             const balance = normalizedBalances[mintUrl] || 0;
             if (balance <= 0) {
                 skipped.push({ mintUrl, reason: 'noBalance' });
@@ -1259,6 +1273,7 @@ export default class CashuStore {
                 skipped.push({ mintUrl, reason: 'feeOverBalance' });
                 continue;
             }
+            probedUsable += usable;
             candidates.push({
                 mintUrl,
                 normalizedMintUrl,
