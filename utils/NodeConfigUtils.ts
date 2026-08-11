@@ -1,7 +1,15 @@
 import RNFS from 'react-native-fs';
-import { Platform } from 'react-native';
+import Share from 'react-native-share';
 import * as CryptoJS from 'crypto-js';
+import moment from 'moment';
+
 import SettingsStore, { Node } from '../stores/SettingsStore';
+import { encryptFile, decryptFile } from './ZipUtils';
+
+// Bump when the on-disk export format changes. v1 = legacy CryptoJS
+// passphrase-mode blob (import-only, permanent). v2 = native AES-256-GCM
+// (PBKDF2-HMAC-SHA256) blob, base64-wrapped in the JSON envelope below.
+export const EXPORT_FORMAT_VERSION = 2;
 
 interface NodeConfigExport {
     version: number;
@@ -12,6 +20,16 @@ interface NodeConfigExport {
           }
         | string;
 }
+
+const safeUnlink = async (path: string): Promise<void> => {
+    try {
+        if (await RNFS.exists(path)) {
+            await RNFS.unlink(path);
+        }
+    } catch (e) {
+        console.warn('Failed to remove temp node-config file:', e);
+    }
+};
 
 export const saveNodeConfigs = async (
     nodes: Node[],
@@ -25,55 +43,120 @@ export const saveNodeConfigs = async (
     });
 };
 
-export const createExportFileContent = (
+// Encrypts the selected node configs with the user's password using the native
+// AES-256-GCM primitive (ZipUtils, PBKDF2-HMAC-SHA256), then hands the file to
+// the system share sheet from app-private cache. Nothing is written to shared
+// storage, and the export is never produced in plaintext.
+export const exportNodeConfigs = async (
     nodes: Node[],
-    useEncryption: boolean,
-    password?: string
-): string => {
-    const nodeConfigExport: NodeConfigExport = {
-        version: 1,
-        encrypted: useEncryption && !!password,
-        data: {
-            nodes
-        }
-    };
-
-    if (useEncryption && password) {
-        const encryptedData = CryptoJS.AES.encrypt(
-            JSON.stringify(nodeConfigExport.data),
-            password
-        ).toString();
-
-        return JSON.stringify({
-            version: 1,
-            encrypted: true,
-            data: encryptedData
-        });
+    password: string,
+    shareTitle: string
+): Promise<void> => {
+    // The UI enforces a confirmed password, but guard here too so this API
+    // can never produce an unencrypted export.
+    if (!password) {
+        throw new Error('A password is required to export node configs');
     }
 
-    return JSON.stringify(nodeConfigExport);
-};
+    const timestamp = moment().format('YYYYMMDD-HHmmss');
+    const filename = `${timestamp}.zeus-wallet-config-backup`;
 
-export const saveNodeConfigExportFile = async (
-    fileName: string,
-    fileContent: string
-): Promise<string> => {
+    const cacheDir = RNFS.CachesDirectoryPath;
+    const stagingDir = `${cacheDir}/nodeconfig-exports`;
+    const plainPath = `${cacheDir}/zeus-nodeconfig-plain.tmp`;
+    const encPath = `${cacheDir}/zeus-nodeconfig-enc.tmp`;
+    const stagingPath = `${stagingDir}/${filename}`;
+
     try {
-        const filePath =
-            Platform.OS === 'android'
-                ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-                : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+        await safeUnlink(plainPath);
+        await safeUnlink(encPath);
 
-        console.log(`Saving node config to: ${filePath}`);
-        await RNFS.writeFile(filePath, fileContent, 'utf8');
+        // Sweep envelopes staged by previous exports. The current export's
+        // envelope is deliberately left in place after sharing (see step 4),
+        // so clean-up happens here, at the start of the next export.
+        await safeUnlink(stagingDir);
+        await RNFS.mkdir(stagingDir);
 
-        return filePath;
-    } catch (err) {
-        console.error('Failed to save node config file:', err);
-        throw err;
+        // 1. Stage the plaintext payload (the native crypto API is file-based).
+        const payload = JSON.stringify({ nodes });
+        await RNFS.writeFile(plainPath, payload, 'utf8');
+
+        // 2. Native PBKDF2-HMAC-SHA256 + AES-256-GCM. Output wire format is
+        //    [version=0x01][salt(16)][iv(12)][ciphertext+GCM tag].
+        await encryptFile(plainPath, encPath, password);
+
+        // Plaintext is no longer needed - remove it as early as possible.
+        await safeUnlink(plainPath);
+
+        // 3. Wrap the GCM blob (base64) in a UTF-8 JSON envelope so the import
+        //    side stays JSON.parse-based and the file is valid text.
+        const encryptedBase64 = await RNFS.readFile(encPath, 'base64');
+        await safeUnlink(encPath);
+
+        const envelope: NodeConfigExport = {
+            version: EXPORT_FORMAT_VERSION,
+            encrypted: true,
+            data: encryptedBase64
+        };
+        await RNFS.writeFile(stagingPath, JSON.stringify(envelope), 'utf8');
+
+        // 4. Present the system share sheet from app-private cache. Share
+        //    targets may read the content URI lazily, after this promise
+        //    resolves, so the envelope is NOT unlinked afterwards. It is
+        //    ciphertext in app-private cache; the next export sweeps it.
+        await Share.open({
+            title: shareTitle,
+            url: `file://${stagingPath}`,
+            type: 'application/json',
+            filename,
+            failOnCancel: false
+        });
+    } finally {
+        await safeUnlink(plainPath);
+        await safeUnlink(encPath);
     }
 };
 
+// Decrypts a v2 (native AES-256-GCM) export blob. Throws on a wrong password
+// (the native layer rejects on GCM tag mismatch).
+export const decryptExportDataV2 = async (
+    encryptedBase64: string,
+    password: string
+): Promise<Node[]> => {
+    const cacheDir = RNFS.CachesDirectoryPath;
+    const encPath = `${cacheDir}/zeus-nodeconfig-import-enc.tmp`;
+    const plainPath = `${cacheDir}/zeus-nodeconfig-import-plain.tmp`;
+
+    try {
+        await safeUnlink(encPath);
+        await safeUnlink(plainPath);
+
+        await RNFS.writeFile(encPath, encryptedBase64, 'base64');
+        await decryptFile(encPath, plainPath, password);
+        await safeUnlink(encPath);
+
+        const decryptedString = await RNFS.readFile(plainPath, 'utf8');
+        const decryptedData: NodeConfigExport['data'] =
+            JSON.parse(decryptedString);
+
+        if (
+            typeof decryptedData === 'string' ||
+            !decryptedData ||
+            !Array.isArray(decryptedData.nodes)
+        ) {
+            throw new Error('Invalid data structure');
+        }
+
+        return decryptedData.nodes;
+    } finally {
+        await safeUnlink(encPath);
+        await safeUnlink(plainPath);
+    }
+};
+
+// Legacy v1 decrypt: CryptoJS passphrase mode (EVP_BytesToKey, MD5, 1
+// iteration). Kept permanently so previously-exported backups remain
+// importable. No longer used for new exports.
 export const decryptExportData = (
     encryptedData: string,
     password: string
