@@ -1,5 +1,11 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -65,6 +71,12 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 
+// The native randombytes module cannot init under jest; back it with node
+// crypto so a real PIN verifier can be derived
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (length: number) => require('crypto').randomBytes(length)
+}));
+
 import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     clearAllData,
@@ -72,9 +84,15 @@ import {
     markWipePending
 } from '../utils/DataClearUtils';
 import { restartApp } from '../utils/RestartUtils';
+import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
+let pinVerifier: VerifierRecord;
+
+beforeAll(async () => {
+    pinVerifier = await deriveVerifier(PIN);
+});
 
 const deferred = () => {
     let resolve!: () => void;
@@ -108,7 +126,7 @@ const renderLockscreen = async (
         biometry = false,
         posStatus = 'inactive',
         params = {},
-        settings = { pin: PIN }
+        settings = { pinVerifier }
     }: {
         biometry?: boolean;
         posStatus?: string;
@@ -148,6 +166,11 @@ const submitPin = () =>
 const submitWrongPin = () =>
     fireEvent.press(screen.getByRole('button', { name: 'Submit wrong PIN' }));
 
+// PIN verification is an async scrypt derivation, so a login reaches the
+// attempt reset some time after the PIN is submitted
+const untilCalled = (mock: jest.Mock) =>
+    waitFor(() => expect(mock).toHaveBeenCalled(), { timeout: 5000 });
+
 let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
@@ -172,6 +195,7 @@ describe('Lockscreen login', () => {
         );
         const { navigation } = await renderLockscreen(updateSettings);
         await submitPin();
+        await untilCalled(updateSettings);
 
         expect(updateSettings).toHaveBeenCalledWith({
             authenticationAttempts: 0
@@ -192,6 +216,7 @@ describe('Lockscreen login', () => {
             updateSettings
         );
         await submitPin();
+        await untilCalled(navigation.pop);
 
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         expect(navigation.pop).toHaveBeenCalledTimes(1);
@@ -208,8 +233,10 @@ describe('Lockscreen login', () => {
         );
         const { navigation } = await renderLockscreen(updateSettings);
         await submitPin();
+        await untilCalled(updateSettings);
         await submitPin();
         await act(async () => reset.resolve());
+        await untilCalled(navigation.pop);
 
         // the first entry's attempt and its reset; the second entry is
         // dropped
