@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
 import { io } from 'socket.io-client';
@@ -11,6 +10,7 @@ import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 
 import Storage from '../storage';
 
@@ -102,14 +102,15 @@ export default class LightningAddressStore {
         if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const authResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/auth`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const authData = authResponse.json();
             if (authResponse.info().status !== 200) throw authData.error;
@@ -147,19 +148,20 @@ export default class LightningAddressStore {
                 await this.cashuStore.initializeWallet(mint_url);
             }
 
-            const createResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/create`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const createResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/create`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     cashu_pubkey: this.cashuStore.cashuWallets[mint_url].pubkey,
                     message: verification,
                     signature,
                     mint_url,
                     address_type: 'cashu'
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const createData = createResponse.json();
             if (createResponse.info().status !== 200 || !createData.success) {
@@ -211,18 +213,19 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            const createResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/create`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const createResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/create`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
                     nwc_string,
                     address_type: 'nwc'
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const createData = createResponse.json();
             if (createResponse.info().status !== 200 || !createData.success) {
@@ -271,14 +274,15 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const createResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/nwc/test`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const createResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/nwc/test`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     nwc_string
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const createData = createResponse.json();
             if (createResponse.info().status !== 200 || !createData.success) {
@@ -316,17 +320,18 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            const updateResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/update`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const updateResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/update`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
                     updates
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const updateData = updateResponse.json();
             if (updateResponse.info().status !== 200 || !updateData.success) {
@@ -367,16 +372,17 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            const statusResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/status`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const statusResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/status`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const statusData = statusResponse.json();
             if (statusResponse.info().status !== 200 || !statusData.success) {
@@ -438,17 +444,18 @@ export default class LightningAddressStore {
     private callRedeemEndpoint = async (quote_id: string) => {
         const { verification, signature } = await this.getAuthData();
 
-        const redeemResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${LNURL_HOST}/api/lnurl/nuts/redeem`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const redeemResponse = await networkFetch({
+            method: 'POST',
+            url: `${LNURL_HOST}/api/lnurl/nuts/redeem`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                 message: verification,
                 signature,
                 quoteId: quote_id
-            })
-        );
+            }),
+            enableTor: this.settingsStore.enableTor
+        });
 
         const redeemData = redeemResponse.json();
 
@@ -723,16 +730,17 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            const deleteResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/delete`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const deleteResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/delete`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const deleteData = deleteResponse.json();
             if (deleteResponse.info().status !== 200) throw deleteData.error;
@@ -767,16 +775,17 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            const orderResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/plus/order`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const orderResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/plus/order`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const orderData = orderResponse.json();
             if (orderResponse.info().status !== 200) throw orderData.error;
