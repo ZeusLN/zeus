@@ -25,7 +25,9 @@ import ContactStore from '../stores/ContactStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD
+} from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
@@ -40,6 +42,7 @@ import {
 import Header from '../components/Header';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import Screen from '../components/Screen';
+import SwipeButton from '../components/SwipeButton';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
@@ -117,6 +120,7 @@ interface SendState {
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
     nfcSupported: boolean;
+    swipeButtonKey: number;
 }
 
 @inject(
@@ -131,6 +135,7 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
+    private focusListener: any;
     private backPressSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
@@ -186,7 +191,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account: 'default',
             additionalOutputs: [],
             fundMax: false,
-            nfcSupported: false
+            nfcSupported: false,
+            swipeButtonKey: 0
         };
     }
 
@@ -279,11 +285,20 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const nfcSupported = await NfcManager.isSupported();
         this.setState({ nfcSupported });
+
+        // Reset the slide-to-pay slider position when the screen regains
+        // focus, e.g. after backing out of a failed payment to retry
+        this.focusListener = this.props.navigation.addListener('focus', () => {
+            this.setState({
+                swipeButtonKey: this.state.swipeButtonKey + 1
+            });
+        });
     }
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
+        if (this.focusListener) this.focusListener();
     }
 
     readClipboard = async () => {
@@ -414,9 +429,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     payBolt12 = async () => {
         const { satAmount, bolt12, timeoutSeconds, feeLimitSat } = this.state;
-        // Bail if another payment is already in flight: this path resets
-        // TransactionsStore, which would clear that payment's guard and
-        // overwrite the outcome SendingLightning is waiting on.
+        // Bail if another payment is already in flight, matching every
+        // other send path.
         if (this.props.TransactionsStore.paymentInFlight) return;
         if (!bolt12) {
             this.setState({
@@ -454,26 +468,30 @@ export default class Send extends React.Component<SendProps, SendState> {
                 loading: true,
                 error_msg: ''
             });
+            if (BackendUtils.supportsOffersDirectPay()) {
+                // Paying an offer on this backend dispatches the payment
+                // directly, so nothing may be sent from here: decode the
+                // offer and hand it to the review screen, which owns the
+                // payment dispatch (with the slide-to-pay gate applied)
+                const decodedOffer = await BackendUtils.decodeOffer({
+                    offer
+                });
+                this.setState({ loading: false, error_msg: '' });
+                this.props.navigation.navigate('Bolt12OfferReview', {
+                    offer,
+                    decodedOffer,
+                    satAmount: satAmount.toString(),
+                    timeoutSeconds,
+                    feeLimitSat
+                });
+                return;
+            }
             const res = await BackendUtils.fetchInvoiceFromOffer(
                 offer,
                 satAmount,
                 timeoutSeconds,
                 feeLimitSat
             );
-            if (res.payment_hash) {
-                // LDK Node: payment already completed directly. Feed the
-                // result through TransactionsStore so SendingLightning
-                // renders THIS payment's outcome; without it the screen
-                // shows whatever the previous payment left in the store
-                // (stale error, or the prior payment's preimage/fee/note).
-                // reset() first because handlePayment doesn't clear
-                // error/error_msg/payment_error on success.
-                this.props.TransactionsStore.reset();
-                this.props.TransactionsStore.handlePayment(res);
-                this.setState({ loading: false, error_msg: '' });
-                this.props.navigation.navigate('SendingLightning');
-                return;
-            }
             if (!res.invoice) {
                 this.setState({
                     loading: false,
@@ -726,6 +744,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             BackendUtils.supportsOnchainSendFeeRate();
         const isInvalidFee =
             supportsOnchainSendFeeRate && (fee === '0' || !fee);
+
+        const slideToPayThreshold =
+            SettingsStore.settings?.payments?.slideToPayThreshold ??
+            DEFAULT_SLIDE_TO_PAY_THRESHOLD;
 
         return (
             <Screen>
@@ -1602,20 +1624,48 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </React.Fragment>
                                     )}
                                 <View style={styles.button}>
-                                    <Button
-                                        title={localeString('general.send')}
-                                        icon={{
-                                            name: 'send',
-                                            size: 25,
-                                            color: isSendDisabled
-                                                ? themeColor('secondaryText')
-                                                : themeColor('background')
-                                        }}
-                                        onPress={() =>
-                                            this.sendKeySendPayment(satAmount)
-                                        }
-                                        disabled={isSendDisabled}
-                                    />
+                                    {Number(satAmount) >=
+                                    slideToPayThreshold ? (
+                                        <SwipeButton
+                                            key={this.state.swipeButtonKey}
+                                            onSwipeSuccess={() =>
+                                                this.sendKeySendPayment(
+                                                    satAmount
+                                                )
+                                            }
+                                            disabled={isSendDisabled}
+                                            instructionText={localeString(
+                                                'views.PaymentRequest.slideToPay'
+                                            )}
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('secondaryText')
+                                            }}
+                                            swipeButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('text')
+                                            }}
+                                        />
+                                    ) : (
+                                        <Button
+                                            title={localeString('general.send')}
+                                            icon={{
+                                                name: 'send',
+                                                size: 25,
+                                                color: isSendDisabled
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('background')
+                                            }}
+                                            onPress={() =>
+                                                this.sendKeySendPayment(
+                                                    satAmount
+                                                )
+                                            }
+                                            disabled={isSendDisabled}
+                                        />
+                                    )}
                                 </View>
                             </React.Fragment>
                         )}
@@ -1660,14 +1710,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
-                                // loading: the offer payment executes
-                                // synchronously in payBolt12, so a second
-                                // tap mid-flight would fetch a fresh
-                                // invoice (new payment hash) and pay twice.
+                                // loading: block a second tap while the
+                                // offer is decoded or the invoice fetched.
                                 // paymentInFlight: match every other send
-                                // button; payBolt12 resets the store, which
-                                // would drop another payment's in-flight
-                                // state on the floor
+                                // button
                                 disabled={
                                     !NodeInfoStore.supportsOffers ||
                                     loading ||
