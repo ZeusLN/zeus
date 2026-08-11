@@ -545,8 +545,23 @@ const handleAnything = async (
                 }
             });
             const json = await res.json();
-            if (json.Answer && json.Answer[0]) {
-                bolt12 = json.Answer[0].data;
+
+            // BIP 353 requires the payment instructions to be secured by
+            // DNSSEC. Cloudflare performs the validation and reports the
+            // outcome via the AD (Authenticated Data) bit; Status 0 is
+            // NOERROR. If the answer is not proven-signed we MUST ignore it,
+            // otherwise a forged, poisoned, or hijacked DNS response could
+            // silently redirect the payment to an attacker's offer.
+            const dnssecValidated = json?.Status === 0 && json?.AD === true;
+
+            // BIP 353 mandates exactly one TXT (type 16) record. Reject
+            // zero, multiples, or non-TXT answers (e.g. a spoofed CNAME).
+            const txtAnswers = Array.isArray(json?.Answer)
+                ? json.Answer.filter((a: any) => a?.type === 16)
+                : [];
+
+            if (dnssecValidated && txtAnswers.length === 1) {
+                bolt12 = txtAnswers[0].data;
                 bolt12 = bolt12!.replace(/("|\\|\s+)/g, '');
                 bolt12 = bolt12!.replace(/bitcoin:b12=/, '');
 
