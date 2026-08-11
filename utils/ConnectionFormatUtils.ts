@@ -1,6 +1,44 @@
 import Base64Utils from './Base64Utils';
 import { Implementations } from '../stores/SettingsStore';
 
+// Extract the base64-DER body of every CERTIFICATE block in a PEM bundle
+const pemBundleToPinnedCerts = (bundle: string): string[] | undefined => {
+    const blocks = bundle.match(
+        /-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g
+    );
+    if (!blocks || blocks.length === 0) return undefined;
+    return blocks.map((block) =>
+        block
+            .replace(/-----BEGIN CERTIFICATE-----/, '')
+            .replace(/-----END CERTIFICATE-----/, '')
+            .replace(/\s+/g, '')
+    );
+};
+
+// Normalize connection-string certificate material (lndconnect cert=,
+// clnrest certs=) into base64-DER pins. Inputs are base64(url) and may
+// carry either raw DER or PEM-armored certificates.
+const certsParamToPinnedCerts = (
+    param: string,
+    isBase64Url: boolean
+): string[] | undefined => {
+    let b64: string;
+    try {
+        b64 = isBase64Url ? Base64Utils.base64UrlToBase64(param) : param;
+    } catch (e) {
+        // malformed cert material: no pins — the strict-verification
+        // default makes the failure loud at connect time
+        return undefined;
+    }
+    const decoded = Base64Utils.base64ToUtf8(b64);
+    if (decoded.includes('-----BEGIN CERTIFICATE-----')) {
+        return pemBundleToPinnedCerts(decoded);
+    }
+    // PEM bundles without a certificate block carry nothing pinnable;
+    // otherwise assume raw DER (lndconnect)
+    return isBase64Url ? [b64] : undefined;
+};
+
 class ConnectionFormatUtils {
     processLndConnectUrl = (input: string) => {
         let host, port;
@@ -32,12 +70,18 @@ class ConnectionFormatUtils {
         const macaroonHex =
             result.macaroon && Base64Utils.base64UrlToHex(result.macaroon);
 
+        // cert= carries the node's TLS certificate — retain it for
+        // certificate pinning instead of silently dropping it
+        const pinnedCerts = result.cert
+            ? certsParamToPinnedCerts(result.cert, true)
+            : undefined;
+
         // prepend https by default
         host = 'https://' + host;
 
         const enableTor: boolean = host.includes('.onion');
 
-        return { host, port, macaroonHex, enableTor };
+        return { host, port, macaroonHex, enableTor, pinnedCerts };
     };
 
     processLncUrl = (input: string) => {
@@ -117,8 +161,11 @@ class ConnectionFormatUtils {
         }
 
         const rune = result.rune;
-        // certs parameter is available in result.certs but not currently used
-        // It contains Base64-encoded client key, client cert, and CA cert
+        // certs= carries a Base64-encoded PEM bundle (client key, client
+        // cert, CA cert) — extract the certificates for TLS pinning
+        const pinnedCerts = result.certs
+            ? certsParamToPinnedCerts(result.certs, false)
+            : undefined;
 
         // Build host with protocol
         if (host) {
@@ -134,7 +181,8 @@ class ConnectionFormatUtils {
             port,
             rune,
             enableTor,
-            implementation
+            implementation,
+            pinnedCerts
         };
     };
 }
