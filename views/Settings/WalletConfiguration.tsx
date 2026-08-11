@@ -335,7 +335,7 @@ export default class WalletConfiguration extends React.Component<
         const { suggestImport } = this.state;
 
         if (suggestImport.includes('lndconnect://')) {
-            const { host, port, macaroonHex } =
+            const { host, port, macaroonHex, pinnedCerts } =
                 ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
             // An lndconnect string describes an LND REST node. A Core
@@ -348,6 +348,7 @@ export default class WalletConfiguration extends React.Component<
                 host,
                 port,
                 macaroonHex: macaroonHex || '',
+                pinnedCerts,
                 suggestImport: '',
                 importError: '',
                 enableTor: host.includes('.onion')
@@ -399,13 +400,15 @@ export default class WalletConfiguration extends React.Component<
                 rune,
                 port,
                 enableTor,
-                implementation
+                implementation,
+                pinnedCerts
             }: {
                 host: string;
                 rune: string;
                 port: string;
                 enableTor: boolean;
                 implementation: Implementations;
+                pinnedCerts?: string[];
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
             this.setState({
@@ -416,6 +419,7 @@ export default class WalletConfiguration extends React.Component<
                 rune,
                 port,
                 enableTor,
+                pinnedCerts,
                 suggestImport: '',
                 importError: ''
             });
@@ -3173,18 +3177,24 @@ export default class WalletConfiguration extends React.Component<
                                     <Switch
                                         value={certVerification}
                                         onValueChange={() => {
-                                            if (certVerification) {
+                                            if (
+                                                certVerification &&
+                                                (pinnedCerts?.length ?? 0) === 0
+                                            ) {
                                                 // Turning verification off
                                                 // exposes the connection to
                                                 // MITM — require the warning
                                                 // modal before applying
+                                                // (pinned configs stay
+                                                // authenticated regardless)
                                                 this.setState({
                                                     showCertModal: true,
                                                     certModalSavesConfig: false
                                                 });
                                             } else {
                                                 this.setState({
-                                                    certVerification: true,
+                                                    certVerification:
+                                                        !certVerification,
                                                     saved: false
                                                 });
                                             }
@@ -3538,6 +3548,8 @@ export default class WalletConfiguration extends React.Component<
                                             if (
                                                 !saved &&
                                                 !certVerification &&
+                                                (pinnedCerts?.length ?? 0) ===
+                                                    0 &&
                                                 !enableTor &&
                                                 !isLocalImpl &&
                                                 implementation !==
