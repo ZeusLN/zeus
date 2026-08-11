@@ -801,6 +801,23 @@ export default class LightningAddressStore {
         }
     };
 
+    // Normalize a mint URL for equality comparison: strip surrounding
+    // whitespace and any trailing slash, and lower-case the scheme and
+    // host, which are the only case-insensitive parts of a URL (RFC 3986).
+    // The path is kept byte-exact: two mints on one host may differ only
+    // by path case. Matched with a regex rather than the URL polyfill,
+    // which does not case-fold hosts. Kept local so the security check
+    // below does not depend on another store's private helper.
+    private normalizeMintUrl = (url?: string): string => {
+        if (!url) return '';
+        return url
+            .trim()
+            .replace(/\/+$/, '')
+            .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, (schemeAndHost) =>
+                schemeAndHost.toLowerCase()
+            );
+    };
+
     @action
     public redeemCashu = async (
         quote_id: string,
@@ -812,6 +829,53 @@ export default class LightningAddressStore {
     ) => {
         this.error = false;
         this.error_msg = '';
+
+        // Security: the ZEUS Pay socket is a hint channel, not a command
+        // channel. A `paid` event (and the server-supplied open-payments
+        // list) names the mint URL to redeem from, but the wallet must only
+        // ever mint from a mint the user has approved: the mint this
+        // lightning address was created with (settings.lightningAddress.
+        // mintUrl, set in createCashu) or a mint the user added locally
+        // (cashuStore.mintUrls). The locally added mints keep quotes
+        // redeemable when the configured mint changes or is overwritten by
+        // an unrelated lightningAddress settings write. Binding here, at
+        // the single chokepoint every caller passes through, stops a
+        // malicious or compromised backend from steering the wallet to an
+        // arbitrary mint (fake-deposit injection, unapproved mint trust,
+        // raw-HTTP fetch of an attacker URL). On a match, the locally
+        // stored URL is forwarded downstream instead of the server-supplied
+        // spelling, so the server cannot influence how the mint is keyed in
+        // CDK either.
+        const configuredMintUrl =
+            this.settingsStore?.settings?.lightningAddress?.mintUrl;
+        const trustedMintUrls: string[] = configuredMintUrl
+            ? [configuredMintUrl, ...(this.cashuStore?.mintUrls || [])]
+            : this.cashuStore?.mintUrls || [];
+        const normalizedEventMintUrl = this.normalizeMintUrl(mint_url);
+        const trustedMintUrl = normalizedEventMintUrl
+            ? trustedMintUrls.find(
+                  (url) => this.normalizeMintUrl(url) === normalizedEventMintUrl
+              )
+            : undefined;
+        if (!trustedMintUrl) {
+            console.warn(
+                'LightningAddressStore.redeemCashu: refusing to redeem against a mint that is neither the configured lightning address mint nor a locally added mint'
+            );
+            runInAction(() => {
+                this.redeeming = false;
+                // Automatic paths (socket events, redeem-all on startup)
+                // drop the payment silently, but a user tapping Redeem
+                // needs to see why nothing happened.
+                if (!localNotification) {
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'stores.LightningAddressStore.Cashu.mintMismatch'
+                    );
+                }
+            });
+            return false;
+        }
+
         this.redeeming = true;
 
         const fireLocalNotification = () => {
@@ -848,7 +912,7 @@ export default class LightningAddressStore {
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
-                mint_url,
+                trustedMintUrl,
                 true, // lockedQuote
                 skipMintCheck
             );
