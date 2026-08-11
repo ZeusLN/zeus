@@ -4,6 +4,18 @@ jest.mock('../utils/UrlUtils', () => ({
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
 jest.mock('../utils/LocaleUtils');
+// The direct networkFetch path needs react-native-blob-util's native module,
+// so adapt the global fetch mocks below to its response shape instead
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: async ({ url }: { url: string }) => {
+        const res = await (global as any).fetch(url);
+        return {
+            info: () => ({ status: res.ok ? 200 : 500 }),
+            json: () => res.json(),
+            text: () => res.text()
+        };
+    }
+}));
 
 import * as bitcoin from 'bitcoinjs-lib';
 
@@ -26,6 +38,8 @@ const MAINNET_UNCOMPRESSED_WIF =
     '5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf';
 const UNCOMPRESSED_WIF = '91avARGdfge8E4tZfYLoxeJ5sGBdNJQH4kvjJoQFacbgwmaKkrx';
 
+const settingsStore = { enableTor: false } as any;
+
 const queriedAddresses = (fetchMock: jest.Mock) =>
     fetchMock.mock.calls.map(
         ([url]: [string]) =>
@@ -37,7 +51,7 @@ const prepare = async (nodeInfo: any, wif = WIF) => {
         Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
     );
     (global as any).fetch = fetchMock;
-    const store = new SweepStore({ nodeInfo } as any);
+    const store = new SweepStore({ nodeInfo } as any, settingsStore);
     await store.prepareSweepInputs(wif);
     return { store, addresses: queriedAddresses(fetchMock) };
 };
@@ -199,9 +213,12 @@ describe('SweepStore end-to-end sweep', () => {
     cases.forEach(({ type, payment }) => {
         it(`sweeps a ${type} UTXO to a regtest destination`, async () => {
             mockMempool(payment.address!, fundingTx(payment.output!));
-            const store = new SweepStore({
-                nodeInfo: { isRegTest: true }
-            } as any);
+            const store = new SweepStore(
+                {
+                    nodeInfo: { isRegTest: true }
+                } as any,
+                settingsStore
+            );
 
             await store.prepareSweepInputs(WIF);
             expect(store.sweepError).toBe(false);
@@ -231,7 +248,10 @@ describe('SweepStore end-to-end sweep', () => {
         // so an understated one would turn the difference into miner fees
         const payment = cases[0].payment;
         mockMempool(payment.address!, fundingTx(payment.output!), 1_000);
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
         expect(store.onChainBalance).toBe(UTXO_VALUE);
 
@@ -262,7 +282,10 @@ describe('SweepStore end-to-end sweep', () => {
                     )
             };
         });
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
@@ -286,7 +309,10 @@ describe('SweepStore end-to-end sweep', () => {
                 ? { ok: true, text: () => Promise.resolve(forged.toHex()) }
                 : lookup(url)
         );
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
@@ -324,7 +350,10 @@ describe('SweepStore end-to-end sweep', () => {
             }
             return second(url);
         });
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         const firstCall = store.prepareSweepInputs(WIF);
         await store.prepareSweepInputs(WIF);
@@ -346,7 +375,10 @@ describe('SweepStore end-to-end sweep', () => {
         });
         const funding = fundingTx(payment.output!);
         mockMempool(payment.address!, funding);
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(UNCOMPRESSED_WIF);
         expect(store.sweepError).toBe(false);
@@ -370,7 +402,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('does not sweep the compressed key addresses of an uncompressed WIF', async () => {
         const payment = cases[0].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(UNCOMPRESSED_WIF);
 
@@ -379,7 +414,10 @@ describe('SweepStore end-to-end sweep', () => {
     });
 
     it('signs with the compressed key again after an uncompressed one', async () => {
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         mockMempool('', fundingTx(cases[0].payment.output!));
         await store.prepareSweepInputs(UNCOMPRESSED_WIF);
         store.resetSweepError();
@@ -400,7 +438,10 @@ describe('SweepStore end-to-end sweep', () => {
             network
         });
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
@@ -412,7 +453,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('fails when fees exceed the swept amount', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
 
         store.destination = DESTINATION;
@@ -428,7 +472,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('drops the previous transaction when a later attempt fails', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
         store.destination = DESTINATION;
         await store.finalizeSweepTransaction('2');
@@ -446,7 +493,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('signs again after the destination and fee rate change', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
         store.destination = DESTINATION;
         await store.finalizeSweepTransaction('2');
@@ -474,7 +524,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('fails when the destination is for another network', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
 
         store.destination = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
@@ -486,7 +539,7 @@ describe('SweepStore end-to-end sweep', () => {
 
     it('reports a failed UTXO lookup', async () => {
         (global as any).fetch = jest.fn(() => Promise.resolve({ ok: false }));
-        const store = new SweepStore({ nodeInfo: {} } as any);
+        const store = new SweepStore({ nodeInfo: {} } as any, settingsStore);
 
         await store.prepareSweepInputs(MAINNET_WIF);
 
@@ -506,7 +559,10 @@ describe('SweepStore end-to-end sweep', () => {
                 ? Promise.resolve({ ok: false })
                 : utxoLookup(url)
         );
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
