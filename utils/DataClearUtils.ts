@@ -79,6 +79,8 @@ import {
     stopLdkNode
 } from './LdkNodeUtils';
 import { isValidNodeDir } from './NodeDirUtils';
+import { purgeLegacyActivityCsvExports } from './ActivityCsvUtils';
+import { purgeLegacyNodeConfigExports } from './NodeConfigUtils';
 import { sleep } from './SleepUtils';
 import { forgetCredentials } from '../backends/LNC/credentialStore';
 import { sha256StringToHex } from './HashingUtils';
@@ -1086,7 +1088,14 @@ export async function clearAllData(): Promise<void> {
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
 
-    // 2f. Delete channel database copies that the channel import, export and
+    // 2f. Delete legacy export artifacts older builds wrote to shared
+    // storage (activity CSVs and credential-bearing wallet config backups).
+    // These live outside the app-private keys cleared below, so they must
+    // be unlinked explicitly.
+    await purgeLegacyActivityCsvExports();
+    await purgeLegacyNodeConfigExports();
+
+    // 2g. Delete channel database copies that the channel import, export and
     // Olympus flows staged in app cache, outside the node directories
     // deleted in 2c.
     await purgeChannelDbStagingFiles();
