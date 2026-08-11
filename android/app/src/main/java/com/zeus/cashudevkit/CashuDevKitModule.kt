@@ -1770,6 +1770,41 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     // ========================================================================
+    // Database Deletion
+    // ========================================================================
+
+    /**
+     * Closes the repository/database handles and deletes the proof db (and its
+     * WAL/SHM sidecars) from disk. Used by "Delete Cashu data" so plaintext
+     * bearer proofs do not survive the user's deletion. Nulling the repository
+     * and db references (and dropping the per-mint wallet handles) releases the
+     * underlying SQLite connection before the files are unlinked. Resolves
+     * false if no database was opened this session.
+     */
+    @ReactMethod
+    fun deleteWalletDatabase(promise: Promise) {
+        val path = currentDbPath
+        repo = null
+        db = null
+        wallets.clear()
+        preparedSends.clear()
+        isInitialized = false
+        if (path == null) {
+            promise.resolve(false)
+            return
+        }
+        for (p in listOf(path, "$path-wal", "$path-shm")) {
+            try {
+                File(p).takeIf { it.exists() }?.delete()
+            } catch (e: Exception) {
+                Log.w(TAG, "deleteWalletDatabase: failed to delete $p", e)
+            }
+        }
+        currentDbPath = null
+        promise.resolve(true)
+    }
+
+    // ========================================================================
     // Cleanup
     // ========================================================================
 
