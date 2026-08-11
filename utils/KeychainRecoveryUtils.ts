@@ -410,6 +410,18 @@ class KeychainRecoveryUtils {
         locations: string[];
         error?: string;
     }> {
+        // Development seeding helper only. Guarded internally (not just at
+        // the UI) because it is the last remaining writer of unprefixed
+        // keychain entries: in a release build it could resurrect exactly
+        // the data the keychain cleanup purge deletes.
+        if (!__DEV__) {
+            return {
+                success: false,
+                locations: [],
+                error: 'copyToLegacyLocations is only available in dev builds'
+            };
+        }
+
         console.log(
             '[Recovery DEV] Copying current settings to legacy locations...'
         );
