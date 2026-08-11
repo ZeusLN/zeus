@@ -806,7 +806,6 @@ const handleAnything = async (
 
                 switch (params.tag) {
                     case 'withdrawRequest':
-                        if (isClipboardValue) return true;
                         if (ecash) {
                             return [
                                 'ChoosePaymentMethod',
@@ -823,7 +822,6 @@ const handleAnything = async (
                             }
                         ];
                     case 'payRequest':
-                        if (isClipboardValue) return true;
                         params.lnurlText = raw;
                         return [
                             'LnurlPay',
@@ -834,7 +832,6 @@ const handleAnything = async (
                             }
                         ];
                     case 'channelRequest':
-                        if (isClipboardValue) return true;
                         return [
                             'LnurlChannel',
                             {
@@ -843,7 +840,6 @@ const handleAnything = async (
                         ];
                     case 'login':
                         if (BackendUtils.supportsLnurlAuth()) {
-                            if (isClipboardValue) return true;
                             return [
                                 'LnurlAuth',
                                 {
@@ -851,7 +847,6 @@ const handleAnything = async (
                                 }
                             ];
                         } else {
-                            if (isClipboardValue) return false;
                             Alert.alert(
                                 localeString('general.error'),
                                 localeString(
@@ -868,7 +863,6 @@ const handleAnything = async (
                         }
                         break;
                     default:
-                        if (isClipboardValue) return false;
                         Alert.alert(
                             localeString('general.error'),
                             params.status === 'ERROR'
