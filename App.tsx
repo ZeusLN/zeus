@@ -74,6 +74,7 @@ import LnurlChannel from './views/LnurlChannel';
 import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
+import Bolt12OfferReview from './views/Bolt12OfferReview';
 import HandleAnythingQRScanner from './views/HandleAnythingQRScanner';
 import SwapsQRScanner from './views/SwapsQRScanner';
 import RefundSwapQRScanner from './views/RefundSwapQRScanner';
@@ -845,6 +846,16 @@ export default class App extends React.PureComponent {
                                                                 name="PaymentRequest" // @ts-ignore:next-line
                                                                 component={
                                                                     PaymentRequest
+                                                                }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Bolt12OfferReview" // @ts-ignore:next-line
+                                                                component={
+                                                                    Bolt12OfferReview
                                                                 }
                                                                 options={{
                                                                     gestureEnabled:

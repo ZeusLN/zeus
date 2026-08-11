@@ -850,6 +850,9 @@ export default class CLNRest {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => true;
+    // fetchinvoice hands back the invoice for the PaymentRequest screen to
+    // review and pay; the offer itself is never paid directly
+    supportsOffersDirectPay = () => false;
     supportsListingOffers = () => true;
     supportsBolt12Address = () => true;
     supportsCustomFeeLimit = () => true;

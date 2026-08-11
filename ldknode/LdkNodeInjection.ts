@@ -661,6 +661,28 @@ const bolt12RequestRefundPayment = async (
     return result.invoice;
 };
 
+export interface DecodedOffer {
+    offerId: string;
+    description?: string;
+    issuer?: string;
+    issuerSigningPubkey?: string;
+    absoluteExpirySeconds?: number;
+    isExpired: boolean;
+    expectsQuantity: boolean;
+    amountType?: 'bitcoin' | 'currency';
+    amountMsats?: number;
+    iso4217Code?: string;
+    currencyAmount?: number;
+}
+
+const bolt12DecodeOffer = async ({
+    offer
+}: {
+    offer: string;
+}): Promise<DecodedOffer> => {
+    return await LdkNodeModule.bolt12DecodeOffer(offer);
+};
+
 // ============================================================================
 // Payment Functions
 // ============================================================================
@@ -1210,6 +1232,7 @@ export interface ILdkNodeInjections {
             paymentTimeoutSecs?: number;
         }) => Promise<string>;
         bolt12RequestRefundPayment: (refundStr: string) => Promise<string>;
+        bolt12DecodeOffer: (params: { offer: string }) => Promise<DecodedOffer>;
     };
     payments: {
         listPayments: () => Promise<PaymentDetails[]>;
@@ -1364,7 +1387,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         bolt12Send,
         bolt12SendUsingAmount,
         bolt12InitiateRefund,
-        bolt12RequestRefundPayment
+        bolt12RequestRefundPayment,
+        bolt12DecodeOffer
     },
     payments: {
         listPayments

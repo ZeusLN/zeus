@@ -1808,25 +1808,26 @@ export default class LdkNode {
         return { offer_id, active: false };
     };
 
-    fetchInvoiceFromOffer = async (
-        bolt12: string,
-        amountSatoshis: string,
-        timeoutSeconds?: number | string,
-        feeLimitSat?: number | string
-    ): Promise<any> => {
-        const paymentTimeoutSecs = timeoutSeconds
-            ? Number(timeoutSeconds)
+    decodeOffer = async ({ offer }: { offer: string }): Promise<any> =>
+        LdkNodeInjection.bolt12.bolt12DecodeOffer({ offer });
+
+    // ldk-node has no fetch-invoice-only API for offers: send/sendUsingAmount
+    // dispatch the invoice_request and pay the returned invoice internally.
+    // This method therefore executes the payment, and must only be reached
+    // from the offer review screen (via TransactionsStore), never from a
+    // "fetch" call site.
+    payOffer = async (data: any): Promise<any> => {
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
             : undefined;
 
-        // Unlike the BOLT 11 and keysend paths, this method pays inside the
-        // fetch, so the user's routing fee limit has to be applied here -
-        // there is no later confirmation screen to apply it for us.
-        const maxTotalRoutingFeeMsat =
-            feeLimitSatsToMaxRoutingFeeMsat(feeLimitSat);
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
 
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
-            offer: bolt12,
-            amountMsat: Number(amountSatoshis) * 1000,
+            offer: data.offer,
+            amountMsat: Number(data.amt) * 1000,
             maxTotalRoutingFeeMsat,
             paymentTimeoutSecs
         });
@@ -2220,6 +2221,9 @@ export default class LdkNode {
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages
     supportsLSPS7native = () => true;
     supportsOffers = () => true;
+    // Paying an offer dispatches the payment directly (no invoice is handed
+    // back), so the UI must route it through the offer review screen
+    supportsOffersDirectPay = () => true;
     supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
