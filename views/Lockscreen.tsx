@@ -69,6 +69,7 @@ interface LockscreenState {
     duressPinVerifier?: VerifierRecord;
     hidden: boolean;
     error: boolean;
+    verifying: boolean;
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
@@ -107,6 +108,7 @@ export default class Lockscreen extends React.Component<
             duressPinVerifier: undefined,
             hidden: true,
             error: false,
+            verifying: false,
             modifySecurityScreen: '',
             deletePin: false,
             deleteDuressPin: false,
@@ -344,8 +346,15 @@ export default class Lockscreen extends React.Component<
         // is still completing, a second submit would navigate twice.
         if (this.state.wiping || this.unlocking) return;
 
+        // Guard against re-entrancy: scrypt verification is asynchronous
+        // (~1s), so a double tap on the login button or a second submit could
+        // otherwise start a second attempt and double-count the failure
+        // counter. The `verifying` flag also drives the spinner overlay.
+        if (this.state.verifying) return;
+
         this.setState({
-            error: false
+            error: false,
+            verifying: true
         });
 
         // Verify against the salted verifier for the active method. The normal
@@ -476,7 +485,8 @@ export default class Lockscreen extends React.Component<
                 await updateSettings({ authenticationAttempts }).then(() => {
                     this.setState({
                         error: true,
-                        pinAttempt: ''
+                        pinAttempt: '',
+                        verifying: false
                     });
                 });
             }
@@ -634,6 +644,7 @@ export default class Lockscreen extends React.Component<
             passphraseAttempt,
             hidden,
             error,
+            verifying,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
@@ -831,12 +842,28 @@ export default class Lockscreen extends React.Component<
                         </View>
                     </View>
                 )}
+                {verifying && (
+                    <View style={styles.verifyingOverlay}>
+                        <LoadingIndicator />
+                    </View>
+                )}
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    verifyingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // dim + swallow taps so a second submit can't land while scrypt runs
+        backgroundColor: 'rgba(0, 0, 0, 0.4)'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20,
