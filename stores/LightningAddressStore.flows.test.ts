@@ -59,6 +59,7 @@ const bodyOf = (path: string, index = 0) => JSON.parse(callsTo(path)[index][3]);
 
 const newCashuStore = () => ({
     cashuWallets: { [MINT]: { pubkey: '02ab' } } as any,
+    mintUrls: [MINT],
     initializeWallet: jest.fn(),
     checkInvoicePaid: jest.fn(),
     deriveCashuSecretKey: jest.fn(),
