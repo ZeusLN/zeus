@@ -75,7 +75,8 @@ Each wallet is a `Node` object (interface in `stores/SettingsStore.ts`). `select
 | `macaroonHex` | lnd | LND REST credential |
 | `rune` | cln-rest | CLN credential |
 | `accessKey` | lndhub | LNDHub access key |
-| `certVerification` | remote REST | **Default `false`** (UI initial state and `updateNodeProperties` fallback). SECURITY: `false` → `trusty: !certVerification` in `backends/LND.ts`, i.e. TLS certificate validation is DISABLED by default for remote node connections (accepted because self-signed node certs are the norm). Turning it on requires installing the node's cert (`views/Settings/CertInstallInstructions.tsx`). The separate Tor `.onion` TLS rule is owned by zeus-backends-and-capabilities |
+| `certVerification` | remote REST | **Default `true`** for new configs (UI initial state and `updateNodeProperties` fallback `?? true`); nodes saved before the flip keep their explicit stored value (typically `false`). `false` → `trusty: !certVerification` in `backends/LND.ts`, i.e. TLS certificate validation disabled — now an explicit per-node opt-in: turning the switch off requires confirming the MITM warning modal. Turning verification on for self-signed certs requires installing the node's cert (`views/Settings/CertInstallInstructions.tsx`) or importing via a connection string that carries cert material (see `pinnedCerts`). The separate Tor `.onion` TLS rule is owned by zeus-backends-and-capabilities |
+| `pinnedCerts` | remote REST | Optional per-node array of base64-DER TLS certs parsed from the lndconnect `cert=` / clnrest `certs=` params (`utils/ConnectionFormatUtils.ts`). When present, the REST backends pass them as `pinnedCerts` to a patched react-native-blob-util (`patches/patch-react-native-blob-util.mjs`) which enforces byte-exact cert pinning — taking precedence over both CA validation and the trust-all opt-out |
 | `enableTor` | remote | Route requests through Tor |
 | `pairingPhrase`, `mailboxServer`, `customMailboxServer` | lightning-node-connect | Mailbox options in `LNC_MAILBOX_KEYS` (`mailbox.terminal.lightning.today:443` \| `lnc.zeusln.app:443` \| custom) |
 | `nostrWalletConnectUrl` | nostr-wallet-connect | The NWC pairing URL (note the field name — it is NOT `nwcUrl`) |
@@ -339,7 +340,7 @@ Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading 
 | Blob key / out-of-blob keys | `grep -rn "STORAGE_KEY\|UNIT_KEY\|FAVORITE_CURRENCIES_KEY\|CURRENCY_CODES_KEY\|ACTIVITY_FILTERS_KEY = " stores/` |
 | AsyncStorage flag names | `grep -rn "persistentServicesEnabled\|persistentLdkNodeServicesEnabled\|persistentNWCServicesEnabled" stores views` |
 | 7 implementations + picker labels | `grep -n "Implementations =" -A 8 stores/SettingsStore.ts && grep -n "INTERFACE_KEYS" -A 12 stores/SettingsStore.ts` |
-| certVerification default + TLS implication | `grep -n "certVerification: false" views/Settings/WalletConfiguration.tsx && grep -n "trusty" backends/LND.ts` |
+| certVerification default + TLS implication | `grep -n "certVerification ?? true" stores/SettingsStore.ts && grep -n "trusty" backends/LND.ts` |
 | Theme count + default | `sed -n '/THEME_KEYS/,/^];/p' stores/SettingsStore.ts \| grep -c "key:"` and `grep -n "DEFAULT_THEME" stores/SettingsStore.ts` |
 | Locale count | `sed -n '/LOCALE_KEYS = /,/^];/p' stores/SettingsStore.ts \| grep -c "key:"` and `ls locales/*.json \| wc -l` |
 | Routing-fee default + ≤1000-sat rule | `grep -n "defaultFeePercentage\|DEFAULT_ROUTING_FEE_PERCENT" stores/SettingsStore.ts utils/FeeUtils.ts` |
