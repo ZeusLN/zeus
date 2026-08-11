@@ -732,6 +732,44 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         </View>
                     )}
 
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('KeychainCleanup')
+                            }
+                        >
+                            <View style={styles.icon}>
+                                <Feather
+                                    name="trash-2"
+                                    size={24}
+                                    color={themeColor('text')}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Tools.keychainCleanup.title'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
                     {implementation === 'embedded-lnd' &&
                         !isChannelMigrating &&
                         hasChannels && (
