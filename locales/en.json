@@ -751,6 +751,8 @@
     "views.MintDiscovery.subtitle": "Choose how to discover Cashu mints",
     "views.MintDiscovery.topMints": "Top recommended mints",
     "views.MintDiscovery.tapToReadReviews": "Tap a mint to read reviews",
+    "views.MintDiscovery.tapToToggleSelection": "Tap a mint to add or remove it. Tap the review icon to read its reviews.",
+    "views.MintDiscovery.custodyWarning": "Ecash mints hold your funds in custody and can freeze or lose them. These mints are recommended by nostr users, not vetted by ZEUS. Only keep a mint selected if you trust it.",
     "views.MintDiscovery.fetchMints": "Find mints",
     "views.MintDiscovery.chooseLater": "Choose later",
     "views.MintDiscovery.chooseLater.description": "Skip mint selection for now and choose mints later in settings",
