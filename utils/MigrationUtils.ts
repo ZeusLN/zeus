@@ -89,7 +89,14 @@ const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Storage from '../storage';
+import Storage, {
+    KEY_PREFIX,
+    getInternetPasswordServers,
+    getRawItem,
+    setRawLocalItem
+} from '../storage';
+
+const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 
 class MigrationsUtils {
     /**
@@ -1077,6 +1084,70 @@ class MigrationsUtils {
                 await Storage.setItem(nodeKey, legacyValue);
             }
         }
+    }
+
+    /**
+     * One-shot iOS repair for the react-native-keychain cloudSync bug: every
+     * Storage write passed { cloudSync: false }, which the unpatched library
+     * treated as true, so all zeus:-prefixed data (including the settings
+     * blob with wallet seeds) lived in the SYNCHRONIZABLE keychain partition
+     * and synced to iCloud Keychain. With the patched library, Storage reads
+     * the device-local partition, which is empty for existing users; this
+     * migration copies every zeus:* item from the synchronizable partition
+     * into the local one. It never deletes anything (the multi-device wipe
+     * of issue #3625 is why); removal of the synchronizable copies is the
+     * separate, user-consented purge in KeychainPurgeUtils.
+     *
+     * Only zeus:* servers are copied: unprefixed synchronizable entries are
+     * stale pre-2026 legacy data, and copying them would resurrect old state
+     * into partitions the Keychain Recovery tool treats as meaningful.
+     *
+     * Copy-if-missing on purpose: if a crash interrupts the run and the user
+     * then writes settings (patched build writes locally), a retry must not
+     * clobber that fresh local data with the older synchronizable copy.
+     *
+     * No 500ms pacing sleeps here, unlike migrateKey: those mitigate iCloud
+     * latency around cross-device deletes (35aaf8897), and this migration
+     * performs local-only reads and writes.
+     */
+    public async keychainDesyncMigration() {
+        if (Platform.OS !== 'ios') return;
+
+        const hasRun = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
+        if (hasRun === 'true') return;
+
+        console.log('Attempting keychain desync migration...');
+
+        const syncServers = (await getInternetPasswordServers(true)).filter(
+            (server) => server.startsWith(KEY_PREFIX)
+        );
+
+        for (const server of syncServers) {
+            const localValue = await getRawItem(server, false);
+            if (localValue !== null) continue;
+
+            const syncValue = await getRawItem(server, true);
+            // Empty means deleted under Storage semantics; nothing to copy
+            if (!syncValue) continue;
+
+            if (!settingsStore.isMigrating) settingsStore.isMigrating = true;
+
+            await setRawLocalItem(server, syncValue);
+
+            const verify = await getRawItem(server, false);
+            if (verify !== syncValue) {
+                // Rethrow so the flag stays unset and the migration retries
+                // on next boot instead of silently skipping this key forever
+                throw new Error(
+                    `Keychain desync migration verify failed for ${server}`
+                );
+            }
+        }
+
+        await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');
+        console.log(
+            `Keychain desync migration completed (${syncServers.length} synchronizable zeus: entries)`
+        );
     }
 
     public async keychainCloudSyncMigration() {
