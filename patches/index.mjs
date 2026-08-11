@@ -8,6 +8,7 @@ import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchReanimatedBoundaryAndroid } from './patch-reanimated-boundary-android.mjs';
 import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
 import { patchKeychainCloudSync } from './patch-keychain-cloudsync.mjs';
+import { patchReactNativeBlobUtil } from './patch-react-native-blob-util.mjs';
 
 console.log('Running postinstall patches...\n');
 
@@ -19,6 +20,7 @@ console.log('Running postinstall patches...\n');
     patchReanimatedBoundaryAndroid();
     patchReanimatedSetFixes();
     patchKeychainCloudSync();
+    patchReactNativeBlobUtil();
 
     console.log('\nAll patches applied successfully.');
 })();
