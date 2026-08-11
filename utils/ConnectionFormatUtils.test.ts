@@ -50,7 +50,8 @@ describe('ConnectionFormatUtils', () => {
                 host: 'https://8.8.8.8',
                 macaroonHex: 'd36d356f',
                 port: '2059',
-                enableTor: false
+                enableTor: false,
+                pinnedCerts: ['asfdaa==']
             });
         });
 
@@ -63,8 +64,54 @@ describe('ConnectionFormatUtils', () => {
                 host: 'https://fasm2nfsakmn2dd.onion',
                 macaroonHex: 'd36d356f',
                 port: '2059',
-                enableTor: true
+                enableTor: true,
+                pinnedCerts: ['asfdaa==']
             });
+        });
+
+        it('normalizes base64url DER certs into base64 pins', () => {
+            // 'my-der-cert' as unpadded base64url
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    'lndconnect://mynode.local:10009?cert=bXktZGVyLWNlcnQ&macaroon=0201b6'
+                )
+            ).toEqual({
+                host: 'https://mynode.local',
+                macaroonHex: 'd36d356f',
+                port: '10009',
+                enableTor: false,
+                pinnedCerts: ['bXktZGVyLWNlcnQ=']
+            });
+        });
+
+        it('extracts the certificate from PEM-armored cert params', () => {
+            const pem =
+                '-----BEGIN CERTIFICATE-----\nbXktZGVyLWNlcnQ=\n-----END CERTIFICATE-----\n';
+            const cert = Buffer.from(pem, 'utf8')
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    `lndconnect://mynode.local:10009?cert=${cert}&macaroon=0201b6`
+                )
+            ).toEqual({
+                host: 'https://mynode.local',
+                macaroonHex: 'd36d356f',
+                port: '10009',
+                enableTor: false,
+                pinnedCerts: ['bXktZGVyLWNlcnQ=']
+            });
+        });
+
+        it('does not throw on malformed cert params', () => {
+            // 'a' has an illegal base64url length — no pins, no throw
+            const result: any = ConnectionFormatUtils.processLndConnectUrl(
+                'lndconnect://mynode.local:10009?cert=a&macaroon=0201b6'
+            );
+            expect(result.pinnedCerts).toBeUndefined();
+            expect(result.host).toEqual('https://mynode.local');
         });
     });
 
@@ -206,6 +253,34 @@ describe('ConnectionFormatUtils', () => {
                 enableTor: true,
                 implementation: 'cln-rest'
             });
+        });
+
+        it('pins every certificate in the certs PEM bundle, skipping keys', () => {
+            const bundle = [
+                '-----BEGIN PRIVATE KEY-----\nUFJJVkFURUtFWQ==\n-----END PRIVATE KEY-----',
+                '-----BEGIN CERTIFICATE-----\nQ0xJRU5ULUNFUlQ=\n-----END CERTIFICATE-----',
+                '-----BEGIN CERTIFICATE-----\nQ0EtQ0VSVA==\n-----END CERTIFICATE-----'
+            ].join('\n');
+            const certs = Buffer.from(bundle, 'utf8').toString('base64');
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    `clnrest+https://cln.local:3010?rune=8hJ6ZKFvRune&certs=${certs}`
+                )
+            ).toEqual({
+                host: 'https://cln.local',
+                rune: '8hJ6ZKFvRune',
+                port: '3010',
+                enableTor: false,
+                implementation: 'cln-rest',
+                pinnedCerts: ['Q0xJRU5ULUNFUlQ=', 'Q0EtQ0VSVA==']
+            });
+        });
+
+        it('sets no pins when the certs bundle has no certificate block', () => {
+            const result: any = ConnectionFormatUtils.processCLNRestConnectUrl(
+                'clnrest+https://cln.local:3010?rune=8hJ6ZKFvRune&certs=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0t'
+            );
+            expect(result.pinnedCerts).toBeUndefined();
         });
     });
 });
