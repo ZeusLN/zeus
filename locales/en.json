@@ -2257,6 +2257,7 @@
     "views.Cashu.AddMint.enableAndAdd": "Enable Cashu + Add mint",
     "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.errorInvalidUrl": "Mint URL is invalid",
+    "views.Cashu.AddMint.cleartextHttpWarning": "This mint uses unencrypted HTTP. Your invoices, ecash proofs, and mint traffic will be sent in cleartext and can be read or tampered with by anyone on the network path. Only proceed if you trust the entire connection, such as a local or VPN-only link.",
     "views.Cashu.AddMint.discover": "Discover mints",
     "views.Cashu.AddMint.discover.explainer": "These mints were recommended by other Nostr users. Read reviews at bitcoinmints.com. Be careful and do your own research before using a mint.",
     "views.Cashu.AddMint.discover.explainerZeus": "These mints were recommended by Nostr users that ZEUS follows. Be careful and do your own research before using a mint.",
