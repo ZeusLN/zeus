@@ -45,6 +45,10 @@ jest.mock('../utils/MigrationUtils', () => ({
     runSettingsMigrations: jest
         .fn()
         .mockImplementation(async (settings: any) => settings),
+    // adopted the same way as runSettingsMigrations
+    migrateLockCredentialsToVerifiers: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -1409,7 +1413,9 @@ describe('getLspConfigForNetwork', () => {
 describe('SettingsStore.externalInputAuthRequired', () => {
     const withPin = () => {
         const store = new SettingsStore();
-        store.settings = { pin: '1234' } as any;
+        store.settings = {
+            pinVerifier: { kdf: 'scrypt', salt: 'aa', hash: 'bb' }
+        } as any;
         return store;
     };
 

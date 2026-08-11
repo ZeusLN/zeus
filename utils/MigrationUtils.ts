@@ -110,8 +110,16 @@ import Storage, {
     getRawItem,
     setRawLocalItem
 } from '../storage';
+import { deriveVerifier, hasVerifier } from './LockVerifierUtils';
 
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
+const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
+const LOCK_CREDENTIAL_FIELDS: Array<{ plain: string; verifier: string }> = [
+    { plain: 'pin', verifier: 'pinVerifier' },
+    { plain: 'duressPin', verifier: 'duressPinVerifier' },
+    { plain: 'passphrase', verifier: 'passphraseVerifier' },
+    { plain: 'duressPassphrase', verifier: 'duressPassphraseVerifier' }
+];
 
 class MigrationsUtils {
     // One-shot migration flags that have read 'true' in this process.
@@ -484,6 +492,12 @@ class MigrationsUtils {
         // legacy values.
         this.applyMissingSettingsGroups(newSettings);
 
+        // hash any plaintext PIN/passphrase (and duress) into salted
+        // verifiers, in memory only: storageMigrationV2 persists the result
+        // in its single write. The flag is left to the modern load path,
+        // which sees no plaintext left and stamps it.
+        await this.applyLockCredentialVerifiers(newSettings);
+
         return newSettings;
     }
 
@@ -675,6 +689,65 @@ class MigrationsUtils {
         }
 
         settings.settingsVersion = SETTINGS_VERSION;
+        return changed;
+    }
+
+    // Replace plaintext app-lock credentials with salted scrypt verifiers and
+    // strip the plaintext fields. Historically the PIN, passphrase and their
+    // duress variants were stored verbatim in the settings blob alongside every
+    // wallet secret, and login was a direct string compare - so anyone who
+    // could read the blob (root/jailbreak dump, or an iOS backup migration)
+    // recovered the credentials and could tell which one was the duress
+    // trigger. Runs once (MOD-gated) on the modern (zeus-settings-v2) load
+    // path; the legacy path hashes in memory via applyLockCredentialVerifiers.
+    //
+    // Like runSettingsMigrations, the blob is only ever persisted from inside
+    // the updateSettings queue: outside it `settings` is a snapshot that a
+    // concurrent update could have superseded, so the work is routed through
+    // a no-op update whose critical section re-enters here with inQueue set.
+    public async migrateLockCredentialsToVerifiers(
+        settings: any,
+        inQueue: boolean = false
+    ) {
+        if (await this.readFlag(MOD_KEY_LOCK_VERIFIER)) return settings;
+        if (!settings) return settings;
+
+        if (this.hasLegacyLockCredentials(settings)) {
+            if (!inQueue) return await settingsStore.updateSettings({});
+            await this.applyLockCredentialVerifiers(settings);
+            await settingsStore.setSettings(settings);
+        }
+
+        await this.writeFlag(MOD_KEY_LOCK_VERIFIER);
+        return settings;
+    }
+
+    private hasLegacyLockCredentials(settings: any): boolean {
+        return LOCK_CREDENTIAL_FIELDS.some(
+            ({ plain }) => settings?.[plain] !== undefined
+        );
+    }
+
+    // Hashes each plaintext credential into its verifier field (unless one
+    // already exists) and deletes the plaintext. In memory only; returns
+    // whether anything changed.
+    public async applyLockCredentialVerifiers(settings: any): Promise<boolean> {
+        if (!settings) return false;
+        let changed = false;
+        for (const { plain, verifier } of LOCK_CREDENTIAL_FIELDS) {
+            const value = settings[plain];
+            if (typeof value === 'string' && value.length > 0) {
+                // don't clobber a verifier that already exists
+                if (!hasVerifier(settings[verifier])) {
+                    settings[verifier] = await deriveVerifier(value);
+                }
+                changed = true;
+            }
+            if (settings[plain] !== undefined) {
+                delete settings[plain];
+                changed = true;
+            }
+        }
         return changed;
     }
 
