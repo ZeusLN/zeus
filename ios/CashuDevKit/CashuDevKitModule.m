@@ -14,6 +14,10 @@
 RCT_EXTERN_METHOD(getDatabasePath:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Database Deletion (close handles + unlink db/wal/shm)
+RCT_EXTERN_METHOD(deleteWalletDatabase:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Wallet Management
 RCT_EXTERN_METHOD(initializeWallet:(NSString *)mnemonic
                   unit:(NSString *)unit
