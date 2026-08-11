@@ -2706,7 +2706,9 @@ export default class CashuStore {
             }
 
             // Backup mint list to Nostr (fire and forget)
-            this.nostrBackupMints();
+            this.nostrBackupMints().catch((e) =>
+                console.warn('Nostr mint backup failed (background):', e)
+            );
 
             runInAction(() => {
                 this.loading = false;
@@ -2806,7 +2808,9 @@ export default class CashuStore {
         await this.calculateTotalBalance();
 
         // Backup updated mint list to Nostr (fire and forget)
-        this.nostrBackupMints();
+        this.nostrBackupMints().catch((e) =>
+            console.warn('Nostr mint backup failed (background):', e)
+        );
 
         runInAction(() => {
             this.loading = false;
@@ -2841,7 +2845,7 @@ export default class CashuStore {
     @action
     public nostrBackupMints = async () => {
         const seed = this.getNostrBackupSeed();
-        if (!seed || this.mintUrls.length === 0) return;
+        if (!seed) return;
 
         try {
             const { privateKeyHex, publicKeyHex } =
@@ -2880,12 +2884,23 @@ export default class CashuStore {
             const result = await restoreMintsFromNostr(
                 privateKeyHex,
                 publicKeyHex,
-                DEFAULT_NOSTR_RELAYS
+                DEFAULT_NOSTR_RELAYS,
+                this.nostrMintBackupTimestamp ?? 0
             );
-            if (result && result.mints.length > 0) {
-                return result.mints;
-            }
-            return null;
+            if (!result) return null;
+
+            // Ratchet the freshness floor to the accepted backup so
+            // older replays can never be restored later, even if the
+            // backup turns out to be empty
+            runInAction(() => {
+                this.nostrMintBackupTimestamp = result.timestamp;
+            });
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-nostrMintBackupTimestamp`,
+                String(result.timestamp)
+            );
+
+            return result.mints.length > 0 ? result.mints : null;
         } catch (e) {
             console.warn('Nostr mint restore failed:', e);
             return null;
