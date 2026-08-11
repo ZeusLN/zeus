@@ -896,6 +896,55 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('applyCertVerificationDefault', () => {
+        it('normalizes nodes missing certVerification to explicit false, leaving set values untouched', () => {
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd', host: 'a' },
+                    { implementation: 'lnd', certVerification: true },
+                    { implementation: 'cln-rest', certVerification: false },
+                    { implementation: 'embedded-lnd' }
+                ]
+            };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                true
+            );
+            expect(settings.nodes[0].certVerification).toBe(false);
+            expect(settings.nodes[1].certVerification).toBe(true);
+            expect(settings.nodes[2].certVerification).toBe(false);
+            expect(settings.nodes[3].certVerification).toBe(false);
+        });
+
+        it('is idempotent: a repeat run mutates nothing further', () => {
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd' },
+                    { implementation: 'lnd', certVerification: true }
+                ]
+            };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                true
+            );
+            const afterFirst = JSON.parse(JSON.stringify(settings));
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                false
+            );
+
+            expect(settings).toEqual(afterFirst);
+        });
+
+        it('handles settings without nodes', () => {
+            const settings: any = { fiat: 'USD' };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                false
+            );
+            expect(settings).toEqual({ fiat: 'USD' });
+        });
+    });
+
     describe('applyRgsDefaultsToV2', () => {
         it('rewrites both v1 default endpoints on mainnet nodes', () => {
             const settings: any = {
@@ -1639,7 +1688,7 @@ describe('MigrationUtils', () => {
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
         });
 
-        it('skips every block for a blob already stamped at 3', async () => {
+        it('skips the theme retirement for a blob already stamped at 3', async () => {
             const settings: any = {
                 settingsVersion: 3,
                 display: { theme: 'mint' }
@@ -1652,6 +1701,49 @@ describe('MigrationUtils', () => {
             // the theme retirement is exactly-once, not merely idempotent
             expect(changed).toBe(false);
             expect(settings.display.theme).toBe('mint');
+        });
+
+        it('applies the v4 cert default to a blob already stamped at 3', async () => {
+            // the earlier blocks already ran for these installs, so the
+            // cert normalization is the only thing the pass changes
+            const settings: any = {
+                settingsVersion: 3,
+                display: { theme: 'mint' },
+                swaps: { hostMainnet: 'https://satsrouting.exchange/v2' },
+                nodes: [{ implementation: 'lnd' }]
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(true);
+            expect(settings.nodes[0].certVerification).toBe(false);
+            expect(settings.display.theme).toBe('mint');
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(4);
+        });
+
+        it('skips every block for a blob already stamped at 4', async () => {
+            const settings: any = {
+                settingsVersion: 4,
+                display: { theme: 'watermelon' },
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' },
+                nodes: [{ implementation: 'lnd' }]
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(false);
+            expect(settings.display.theme).toBe('watermelon');
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+            // and a node they explicitly left key-less is not normalized
+            // a second time
+            expect(settings.nodes[0].certVerification).toBeUndefined();
         });
     });
 
