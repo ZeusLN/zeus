@@ -7,6 +7,7 @@ import { patchReactNativeNotifications } from './patch-react-native-notification
 import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchReanimatedBoundaryAndroid } from './patch-reanimated-boundary-android.mjs';
 import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
+import { patchReactNativeBlobUtil } from './patch-react-native-blob-util.mjs';
 
 console.log('Running postinstall patches...\n');
 
@@ -17,6 +18,7 @@ console.log('Running postinstall patches...\n');
     patchNobleHashes();
     patchReanimatedBoundaryAndroid();
     patchReanimatedSetFixes();
+    patchReactNativeBlobUtil();
 
     console.log('\nAll patches applied successfully.');
 })();

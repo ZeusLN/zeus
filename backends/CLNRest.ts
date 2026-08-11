@@ -58,9 +58,10 @@ export default class CLNRest {
         url: string,
         method: any,
         data?: any,
-        certVerification: boolean = false,
+        certVerification: boolean = true,
         useTor?: boolean,
-        timeout?: number
+        timeout?: number,
+        pinnedCerts?: string[]
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
@@ -100,13 +101,20 @@ export default class CLNRest {
                 );
             });
 
-            const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification,
+            // Pinned certs (from connection-string cert material)
+            // authenticate the endpoint directly, so they take precedence
+            // over both CA validation and the trust-all opt-out
+            const hasPinnedCerts = !!pinnedCerts && pinnedCerts.length > 0;
+            const config: any = {
+                trusty: !certVerification && !hasPinnedCerts,
                 // RNBlobUtil's native default is 60s; without this a
                 // payment request holding the connection open longer than
                 // that dies natively no matter what the race below allows
                 timeout: timeout || this.defaultTimeout
-            })
+            };
+            if (hasPinnedCerts) config.pinnedCerts = pinnedCerts;
+
+            const fetchPromise = ReactNativeBlobUtil.config(config)
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
                 .then((response: any) => {
                     calls.delete(id);
@@ -165,7 +173,8 @@ export default class CLNRest {
         params?: any,
         timeout?: number
     ) => {
-        const { host, port, rune, certVerification, enableTor } = settingsStore;
+        const { host, port, rune, certVerification, enableTor, pinnedCerts } =
+            settingsStore;
 
         if (params) {
             route = `${route}?${Object.keys(params)
@@ -185,7 +194,8 @@ export default class CLNRest {
             data,
             certVerification,
             enableTor,
-            timeout
+            timeout,
+            pinnedCerts
         );
     };
 
