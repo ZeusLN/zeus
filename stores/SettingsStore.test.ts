@@ -33,6 +33,7 @@ jest.mock('../utils/MigrationUtils', () => ({
     keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    purgeLegacyExportFiles: jest.fn().mockResolvedValue(undefined),
     // getSettings adopts the return value (the queue's authoritative
     // object when consolidation routes through updateSettings), so the
     // stub must hand the settings back rather than resolve undefined
