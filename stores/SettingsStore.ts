@@ -7,6 +7,7 @@ import isEqual from 'lodash/isEqual';
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { VerifierRecord, hasVerifier } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
@@ -191,10 +192,19 @@ export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
     justDeletedWallet?: boolean;
+    // Legacy plaintext lock credentials. Retained only so the
+    // lock-verifier-hash migration can read and clear them; new code must use
+    // the salted verifier records below and never write these.
     passphrase?: string;
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    // Salted scrypt verifiers for the app lock (see utils/LockVerifierUtils).
+    // Presence of pinVerifier vs passphraseVerifier also selects the lock UI.
+    passphraseVerifier?: VerifierRecord;
+    duressPassphraseVerifier?: VerifierRecord;
+    pinVerifier?: VerifierRecord;
+    duressPinVerifier?: VerifierRecord;
     scramblePin?: boolean;
     loginBackground?: boolean;
     authenticationAttempts?: number;
@@ -1957,6 +1967,9 @@ export default class SettingsStore {
                 await MigrationsUtils.migrateOlympusHostsToZeusLsp(
                     parsedSettings
                 );
+                await MigrationsUtils.migrateLockCredentialsToVerifiers(
+                    parsedSettings
+                );
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
@@ -2264,8 +2277,8 @@ export default class SettingsStore {
 
     public loginMethodConfigured = () =>
         this.settings &&
-        (this.settings.passphrase ||
-            this.settings.pin ||
+        (hasVerifier(this.settings.passphraseVerifier) ||
+            hasVerifier(this.settings.pinVerifier) ||
             this.isBiometryConfigured());
 
     public checkBiometricsStatus = async () => {
