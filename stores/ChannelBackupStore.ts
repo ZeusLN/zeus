@@ -1,5 +1,4 @@
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil, { FetchBlobResponse } from 'react-native-blob-util';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -16,6 +15,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { networkFetch, NetworkResponse } from '../utils/NetworkUtils';
 
 import Storage from '../storage';
 
@@ -30,7 +30,7 @@ export const LAST_CHANNEL_BACKUP_TIME = 'zeus-last-channel-backup-time';
 // Returns the body of a successful backups server response. Failures throw
 // the server's error message when the body is JSON, or the HTTP status when
 // it isn't (e.g. an HTML error page from the proxy in front of the server).
-const parseBackupsResponse = (response: FetchBlobResponse, route: string) => {
+const parseBackupsResponse = (response: NetworkResponse, route: string) => {
     const status = response.info().status;
     let data: any;
     try {
@@ -86,14 +86,15 @@ export default class ChannelBackupStore {
         ).toString();
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${BACKUPS_HOST}/api/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const authResponse = await networkFetch({
+                method: 'POST',
+                url: `${BACKUPS_HOST}/api/auth`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             if (authResponse.info().status !== 200) {
                 this.logBackupStatus('ERROR');
@@ -107,17 +108,18 @@ export default class ChannelBackupStore {
             );
             const signature =
                 messageSignData.zbase || messageSignData.signature;
-            const backupResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${BACKUPS_HOST}/api/backup`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const backupResponse = await networkFetch({
+                method: 'POST',
+                url: `${BACKUPS_HOST}/api/backup`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
                     backup: encryptedBackup
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
             if (
                 backupResponse.info().status === 200 &&
                 backupResponse.json().success
@@ -136,14 +138,15 @@ export default class ChannelBackupStore {
     };
 
     public recoverStaticChannelBackup = async () => {
-        const authResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/auth`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const authResponse = await networkFetch({
+            method: 'POST',
+            url: `${BACKUPS_HOST}/api/auth`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-            })
-        );
+            }),
+            enableTor: this.settingsStore.enableTor
+        });
         const { verification } = parseBackupsResponse(authResponse, 'Auth');
         if (!verification) {
             throw new Error('Auth response has no verification');
@@ -151,16 +154,17 @@ export default class ChannelBackupStore {
 
         const messageSignData = await BackendUtils.signMessage(verification);
         const signature = messageSignData.zbase || messageSignData.signature;
-        const recoverResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/recover`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const recoverResponse = await networkFetch({
+            method: 'POST',
+            url: `${BACKUPS_HOST}/api/recover`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                 message: verification,
                 signature
-            })
-        );
+            }),
+            enableTor: this.settingsStore.enableTor
+        });
         const { backup, created_at } = parseBackupsResponse(
             recoverResponse,
             'Recover'
@@ -207,14 +211,15 @@ export default class ChannelBackupStore {
         this.error = false;
         this.backups = [];
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${BACKUPS_HOST}/api/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const authResponse = await networkFetch({
+                method: 'POST',
+                url: `${BACKUPS_HOST}/api/auth`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
             const { verification } = parseBackupsResponse(authResponse, 'Auth');
             if (!verification) {
                 throw new Error('Auth response has no verification');
@@ -225,16 +230,17 @@ export default class ChannelBackupStore {
             );
             const signature =
                 messageSignData.zbase || messageSignData.signature;
-            const recoverResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${BACKUPS_HOST}/api/recoverAdvanced`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const recoverResponse = await networkFetch({
+                method: 'POST',
+                url: `${BACKUPS_HOST}/api/recoverAdvanced`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
             const { backups } = parseBackupsResponse(
                 recoverResponse,
                 'Recover advanced'
