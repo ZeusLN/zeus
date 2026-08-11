@@ -66,33 +66,71 @@ export const convertActivityToCsv = async (
     }
 };
 
-//Saves CSV file to the device.
-export const saveCsvFile = async (fileName: string, csvData: string) => {
+// Stages CSV files in app-private cache and hands them to the system share
+// sheet so the user explicitly picks a destination. Never writes to shared
+// storage directly: files dropped in Downloads/Documents are readable by
+// other tooling and outlive the app. Staging files are unlinked after every
+// share attempt.
+export const shareCsvFiles = async (
+    files: Array<{ fileName: string; csvData: string }>
+): Promise<void> => {
+    // Loaded lazily: react-native-share touches native modules at import
+    // time, and this util sits in the SettingsStore module graph via the
+    // legacy-export purge below
+    const Share = require('react-native-share').default;
+    const stagedPaths: string[] = [];
     try {
-        const directory =
-            Platform.OS === 'android'
-                ? RNFS.DownloadDirectoryPath
-                : RNFS.DocumentDirectoryPath;
-
-        let uniqueFileName = fileName;
-
-        if (await RNFS.exists(`${directory}/${uniqueFileName}`)) {
-            const baseName = (
-                fileName.substring(0, fileName.lastIndexOf('.')) || fileName
-            ).replace(/ \(\d+\)$/, '');
-            const match = fileName.match(/ \((\d+)\)\.csv$/i);
-            let counter = match ? parseInt(match[1], 10) + 1 : 1;
-
-            do {
-                uniqueFileName = `${baseName} (${counter++}).csv`;
-            } while (await RNFS.exists(`${directory}/${uniqueFileName}`));
+        for (const file of files) {
+            const path = `${RNFS.CachesDirectoryPath}/${file.fileName}`;
+            if (await RNFS.exists(path)) await RNFS.unlink(path);
+            await RNFS.writeFile(path, file.csvData, 'utf8');
+            stagedPaths.push(path);
         }
 
-        const filePath = `${directory}/${uniqueFileName}`;
-        console.log(`Saving file to: ${filePath}`);
-        await RNFS.writeFile(filePath, csvData, 'utf8');
+        await Share.open({
+            urls: stagedPaths.map((path) => `file://${path}`),
+            type: 'text/csv',
+            failOnCancel: false
+        });
     } catch (err) {
-        console.error('Failed to save CSV file:', err);
+        console.error('Failed to share CSV file(s):', err);
         throw err;
+    } finally {
+        for (const path of stagedPaths) {
+            try {
+                if (await RNFS.exists(path)) await RNFS.unlink(path);
+            } catch (e) {
+                console.warn('Error deleting CSV staging file:', e);
+            }
+        }
+    }
+};
+
+// Both CSV export flows name their files zeus_<YYYYMMDD>_<HHMMSS>_<type>.csv
+// (getFormattedDateTime above); older builds also appended " (n)" suffixes
+// to avoid collisions.
+export const LEGACY_CSV_EXPORT_REGEX = /^zeus_\d{8}_\d{6}.*\.csv$/i;
+
+// Best-effort removal of CSVs that older builds wrote to the Files-visible
+// iOS Documents directory: invisible to the user once file sharing is
+// disabled, yet still swept into iCloud/iTunes backups. Android Downloads
+// CSVs are intentionally left in place; they hold no credentials and remain
+// user-accessible there.
+export const purgeLegacyActivityCsvExports = async (): Promise<void> => {
+    if (Platform.OS !== 'ios') return;
+    try {
+        const entries = await RNFS.readDir(RNFS.DocumentDirectoryPath);
+        for (const entry of entries) {
+            if (entry.isFile() && LEGACY_CSV_EXPORT_REGEX.test(entry.name)) {
+                try {
+                    await RNFS.unlink(entry.path);
+                    console.log('Legacy CSV export deleted:', entry.path);
+                } catch (e) {
+                    console.warn('Error deleting legacy CSV export:', e);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Error purging legacy CSV exports:', e);
     }
 };
