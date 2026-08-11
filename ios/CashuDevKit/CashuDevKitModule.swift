@@ -712,6 +712,33 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    /// Reject loopback, private (RFC1918), link-local and other internal hosts
+    /// for server-supplied mint URLs. Matches on the literal host only (no DNS
+    /// resolution) to avoid a rebinding/latency side channel; this is
+    /// defense-in-depth on top of the JS-side configured-mint binding.
+    private static func isDisallowedMintHost(_ host: String) -> Bool {
+        let h = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+            .lowercased()
+        if h.isEmpty { return true }
+        if h == "localhost" || h.hasSuffix(".localhost") { return true }
+        // IPv6 loopback / unique-local / link-local
+        if h == "::1" || h.hasPrefix("fc") || h.hasPrefix("fd") ||
+            h.hasPrefix("fe80:") {
+            return true
+        }
+        // IPv4 ranges: 127/8, 10/8, 169.254/16, 172.16/12, 192.168/16, 0/8
+        if h.hasPrefix("127.") || h.hasPrefix("10.") ||
+            h.hasPrefix("169.254.") || h.hasPrefix("192.168.") ||
+            h.hasPrefix("0.") {
+            return true
+        }
+        if h.range(of: "^172\\.(1[6-9]|2[0-9]|3[0-1])\\.",
+                   options: .regularExpression) != nil {
+            return true
+        }
+        return false
+    }
+
     /// Check mint quote status directly from the mint's HTTP API.
     /// This bypasses the local database check and works for external quotes
     /// (e.g., quotes created by ZeusPay server).
@@ -723,7 +750,24 @@ class CashuDevKitModule: RCTEventEmitter {
             do {
                 // Normalize mint URL and construct the quote endpoint
                 let normalizedUrl = mintUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                let quoteUrlStr = "\(normalizedUrl)/v1/mint/quote/bolt11/\(quoteId)"
+
+                // Security: this issues a raw HTTP GET against a mint URL that
+                // originates from a ZEUS Pay socket event. Refuse cleartext and
+                // internal/loopback/link-local targets so a forged event cannot
+                // downgrade the fetch or drive the device into an SSRF against
+                // the local network. quoteId is percent-encoded so it cannot
+                // alter the request path.
+                guard let baseUrl = URL(string: normalizedUrl),
+                      baseUrl.scheme?.lowercased() == "https",
+                      let host = baseUrl.host,
+                      !CashuDevKitModule.isDisallowedMintHost(host)
+                else {
+                    reject("UNSAFE_MINT_URL", "Refusing to contact non-HTTPS or internal mint host: \(mintUrl)", nil)
+                    return
+                }
+
+                let encodedQuoteId = quoteId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? quoteId
+                let quoteUrlStr = "\(normalizedUrl)/v1/mint/quote/bolt11/\(encodedQuoteId)"
 
                 guard let quoteUrl = URL(string: quoteUrlStr) else {
                     reject("INVALID_URL", "Invalid mint URL: \(mintUrl)", nil)
@@ -807,7 +851,9 @@ class CashuDevKitModule: RCTEventEmitter {
                 case "ISSUED":
                     quoteState = .issued
                 default:
-                    quoteState = .paid // Default to PAID for external quotes
+                    // Fail closed: never assume PAID for an unrecognized state.
+                    reject("INVALID_QUOTE_STATE", "Unrecognized mint quote state: \(state)", nil)
+                    return
                 }
 
                 // Storing a key equal to cdk's seed prefix on the quote
