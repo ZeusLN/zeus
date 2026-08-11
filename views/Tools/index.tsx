@@ -55,6 +55,7 @@ interface ToolsProps {
 interface ToolsState {
     isChannelExporting: boolean;
     channelExportMessage: string;
+    isClearingData: boolean;
 }
 
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
@@ -66,7 +67,8 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         super(props);
         this.state = {
             isChannelExporting: false,
-            channelExportMessage: ''
+            channelExportMessage: '',
+            isClearingData: false
         };
     }
 
@@ -107,6 +109,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         // unconditionally (matching Lockscreen's duress paths).
                         // Bailing out on error would leave a session where
                         // every Storage.setItem is a silent no-op.
+                        this.setState({ isClearingData: true });
                         try {
                             await clearAllData();
                         } catch (error) {
@@ -176,8 +179,15 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     navigation={navigation}
                 />
                 <ChannelBackupLoadingModal
-                    isOpen={this.state.isChannelExporting}
-                    message={this.state.channelExportMessage}
+                    isOpen={
+                        this.state.isChannelExporting ||
+                        this.state.isClearingData
+                    }
+                    message={
+                        this.state.isClearingData
+                            ? localeString('views.Tools.clearStorage.clearing')
+                            : this.state.channelExportMessage
+                    }
                 />
                 <ScrollView
                     style={{
