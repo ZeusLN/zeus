@@ -469,6 +469,10 @@ class MigrationsUtils {
         // migrate retired ZEUS swap server hosts to Boltz
         await this.migrateSwapHostsToBoltz(newSettings);
 
+        // normalize nodes saved without a certVerification key to the
+        // explicit pre-flip default (trust-all)
+        await this.migrateCertVerificationDefault(newSettings);
+
         return newSettings;
     }
 
@@ -631,6 +635,34 @@ class MigrationsUtils {
             }
         }
         await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
+        return settings;
+    }
+
+    // Normalize nodes saved without a `certVerification` key to an explicit
+    // `false`. Those connections were established under trust-all (the old
+    // default), and `JSON.stringify` drops undefined values, so QR/clipboard
+    // imports of that era carry no key at all. Without this normalization
+    // the new secure-by-default fallback (`?? true`) would flip them to
+    // strict CA validation on upgrade and break self-signed remotes that
+    // predate pinnedCerts. Trust-all for existing nodes stays an explicit
+    // stored value; the strict default only governs new configs. Runs on
+    // both the legacy and modern (zeus-settings-v2) load paths.
+    public async migrateCertVerificationDefault(settings: any) {
+        const MOD_KEY_CERT_VERIFICATION = 'cert-verification-default-v1';
+        const modCertVerification = await EncryptedStorage.getItem(
+            MOD_KEY_CERT_VERIFICATION
+        );
+        if (modCertVerification) return settings;
+
+        if (settings?.nodes && Array.isArray(settings.nodes)) {
+            for (const node of settings.nodes) {
+                if (node && node.certVerification === undefined) {
+                    node.certVerification = false;
+                }
+            }
+        }
+        await settingsStore.setSettings(settings);
+        await EncryptedStorage.setItem(MOD_KEY_CERT_VERIFICATION, 'true');
         return settings;
     }
 

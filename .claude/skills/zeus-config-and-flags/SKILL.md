@@ -76,7 +76,7 @@ Each wallet is a `Node` object (interface in `stores/SettingsStore.ts`). `select
 | `rune` | cln-rest | CLN credential |
 | `accessKey` | lndhub | LNDHub access key |
 | `certVerification` | remote REST | **Default `true`** for new configs (UI initial state and `updateNodeProperties` fallback `?? true`); nodes saved before the flip keep their explicit stored value (typically `false`). `false` → `trusty: !certVerification` in `backends/LND.ts`, i.e. TLS certificate validation disabled — now an explicit per-node opt-in: turning the switch off requires confirming the MITM warning modal. Turning verification on for self-signed certs requires installing the node's cert (`views/Settings/CertInstallInstructions.tsx`) or importing via a connection string that carries cert material (see `pinnedCerts`). The separate Tor `.onion` TLS rule is owned by zeus-backends-and-capabilities |
-| `pinnedCerts` | remote REST | Optional per-node array of base64-DER TLS certs parsed from the lndconnect `cert=` / clnrest `certs=` params (`utils/ConnectionFormatUtils.ts`). When present, the REST backends pass them as `pinnedCerts` to a patched react-native-blob-util (`patches/patch-react-native-blob-util.mjs`) which enforces byte-exact cert pinning — taking precedence over both CA validation and the trust-all opt-out |
+| `pinnedCerts` | remote REST | Optional per-node array of base64-DER TLS certs parsed from the lndconnect `cert=` / clnrest `certs=` params (`utils/ConnectionFormatUtils.ts`). When present, the REST backends pass them as `pinnedCerts` to a patched react-native-blob-util (`patches/patch-react-native-blob-util.mjs`) which uses them as the ONLY trust anchors (PKIX on Android, SecTrust anchor evaluation on iOS) — taking precedence over both CA validation and the trust-all opt-out |
 | `enableTor` | remote | Route requests through Tor |
 | `pairingPhrase`, `mailboxServer`, `customMailboxServer` | lightning-node-connect | Mailbox options in `LNC_MAILBOX_KEYS` (`mailbox.terminal.lightning.today:443` \| `lnc.zeusln.app:443` \| custom) |
 | `nostrWalletConnectUrl` | nostr-wallet-connect | The NWC pairing URL (note the field name — it is NOT `nwcUrl`) |
@@ -299,6 +299,7 @@ Because MOD_KEY migrations in `MigrationUtils.legacySettingsMigrations` run only
 |---|---|---|---|
 | `bimodalPathfinding` | `true` (inline default) | `false` | MOD_KEY `bimodal-bug-9085` disables it for existing users while lnd issue #9085 stands |
 | `display.showMillisatoshiAmounts` | `false` (inline default) | `true` | MOD_KEY `millisat_amounts` opted existing users in |
+| `certVerification` (per-node) | `true` for new configs (inline default + UI) | missing key normalized to explicit `false` | MOD_KEY `cert-verification-default-v1` preserves pre-flip trust-all behavior for nodes saved before the default flipped (PR #4366) |
 
 If your change creates such a divergence, it must be stated in the PR description and added to this table.
 

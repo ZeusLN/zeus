@@ -162,7 +162,11 @@ class ConnectionFormatUtils {
 
         const rune = result.rune;
         // certs= carries a Base64-encoded PEM bundle (client key, client
-        // cert, CA cert) — extract the certificates for TLS pinning
+        // cert, CA cert) — extract the certificates for TLS pinning. The
+        // bundle's client certificate is mTLS identity material the server
+        // never presents, so as a trust anchor it is simply inert; we keep
+        // all certificate blocks rather than guess which is the CA from JS
+        // (Basic Constraints parsing is not worth the fragility).
         const pinnedCerts = result.certs
             ? certsParamToPinnedCerts(result.certs, false)
             : undefined;
