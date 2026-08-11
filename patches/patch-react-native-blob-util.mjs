@@ -170,6 +170,15 @@ const REPLACEMENTS = [
         if ([zeusAnchors count] > 0 && zeusServerTrust != NULL) {
             SecTrustSetAnchorCertificates(zeusServerTrust, (__bridge CFArrayRef)zeusAnchors);
             SecTrustSetAnchorCertificatesOnly(zeusServerTrust, true);
+            // Mirror the Android side: the trust object for a server-trust
+            // challenge carries an SSL policy that enforces hostname
+            // matching even with custom anchors, but self-signed node
+            // certs routinely lack SANs matching the dialed address.
+            // The anchors authenticate the endpoint, so evaluate against
+            // a plain X509 policy instead.
+            SecPolicyRef zeusPolicy = SecPolicyCreateBasicX509();
+            SecTrustSetPolicies(zeusServerTrust, (__bridge CFArrayRef)@[ (__bridge id)zeusPolicy ]);
+            CFRelease(zeusPolicy);
             CFErrorRef zeusError = NULL;
             zeusTrusted = SecTrustEvaluateWithError(zeusServerTrust, &zeusError);
             if (zeusError != NULL) CFRelease(zeusError);
