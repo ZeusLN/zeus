@@ -149,6 +149,9 @@ export default class NostrWalletConnectStore {
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
+    private maxBudgetLoadInFlight: Promise<void> | null = null;
+    private scheduledMaxBudgetRefresh: ReturnType<typeof setTimeout> | null =
+        null;
     @observable public iosAudioKeepAliveActive: boolean = false;
     @observable public iosAudioKeepAliveUptime: number = 0;
     @observable public iosAudioKeepAliveDisconnects: number = 0;
@@ -2540,6 +2543,7 @@ export default class NostrWalletConnectStore {
 
         if (changed) {
             this.lookupPaymentsCache = null;
+            this.scheduleMaxBudgetRefresh();
             this.findAndUpdateConnection(connection);
         }
         return changed;
@@ -2851,7 +2855,7 @@ export default class NostrWalletConnectStore {
                 isBudgetDebited: true
             });
         });
-
+        this.scheduleMaxBudgetRefresh();
         this.lookupPaymentsCache = null;
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
@@ -3213,27 +3217,51 @@ export default class NostrWalletConnectStore {
         return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
     }
 
-    public async loadMaxBudget() {
-        try {
-            if (this.isCashuConfigured) {
-                runInAction(() => {
-                    this.maxBudgetLimit = this.cashuStore.totalBalanceSats || 0;
-                });
-            } else {
-                const balance = await this.balanceStore.getLightningBalance(
-                    true
-                );
-                runInAction(() => {
-                    this.maxBudgetLimit =
-                        Number(balance?.lightningBalance) || 0;
-                });
-            }
-        } catch (error) {
-            runInAction(() => {
-                this.maxBudgetLimit = 0;
-            });
-            console.error('Failed to get max budget:', error);
+    public async loadMaxBudget(): Promise<void> {
+        if (this.maxBudgetLoadInFlight) {
+            return this.maxBudgetLoadInFlight;
         }
+        const load = (async () => {
+            try {
+                if (this.isCashuConfigured) {
+                    runInAction(() => {
+                        this.maxBudgetLimit =
+                            this.cashuStore.totalBalanceSats || 0;
+                    });
+                } else {
+                    const balance = await this.balanceStore.getLightningBalance(
+                        true
+                    );
+                    runInAction(() => {
+                        this.maxBudgetLimit =
+                            Number(balance?.lightningBalance) || 0;
+                    });
+                }
+            } catch (error) {
+                runInAction(() => {
+                    this.maxBudgetLimit = 0;
+                });
+                console.error('Failed to get max budget:', error);
+            }
+        })();
+
+        this.maxBudgetLoadInFlight = load;
+        try {
+            await load;
+        } finally {
+            if (this.maxBudgetLoadInFlight === load) {
+                this.maxBudgetLoadInFlight = null;
+            }
+        }
+    }
+    private scheduleMaxBudgetRefresh(): void {
+        if (this.scheduledMaxBudgetRefresh) return;
+        this.scheduledMaxBudgetRefresh = setTimeout(() => {
+            this.scheduledMaxBudgetRefresh = null;
+            this.loadMaxBudget().catch((err) =>
+                console.error('NWC: scheduled loadMaxBudget failed:', err)
+            );
+        }, 500);
     }
     @computed
     public get activeConnections(): NWCConnection[] {
