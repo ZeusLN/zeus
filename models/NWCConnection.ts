@@ -41,6 +41,7 @@ export interface ConnectionActivity {
     isExpired?: boolean;
     expiryLabel?: string;
     fees_paid?: number;
+    isBudgetDebited?: boolean;
 }
 
 export enum BudgetRenewalType {
@@ -239,6 +240,28 @@ export default class NWCConnection extends BaseModel {
      */
     @computed public get effectiveSpendSats(): number {
         return this.totalSpendSats + this.pendingSpendSats;
+    }
+
+    public findPayInvoiceActivityIndex(
+        id: string,
+        paymentHash?: string
+    ): number {
+        return (this.activity ?? []).findIndex(
+            (a) =>
+                a.type === 'pay_invoice' &&
+                (a.id === id ||
+                    (!!paymentHash &&
+                        !!a.paymentHash &&
+                        a.paymentHash === paymentHash))
+        );
+    }
+
+    public findPayInvoiceActivity(
+        id: string,
+        paymentHash?: string
+    ): ConnectionActivity | undefined {
+        const index = this.findPayInvoiceActivityIndex(id, paymentHash);
+        return index !== -1 ? this.activity[index] : undefined;
     }
 
     @computed public get remainingBudget(): number {

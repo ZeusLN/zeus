@@ -57,6 +57,7 @@ jest.mock('../storage', () => ({
 
 import Storage from '../storage';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
+import NostrConnectUtils from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS
 } from './NostrWalletConnectStore';
@@ -349,5 +350,294 @@ describe('NostrWalletConnectStore relay rotation', () => {
         } finally {
             consoleWarn.mockRestore();
         }
+    });
+});
+
+function buildPayInvoiceTestStore() {
+    const settingsStore: any = {
+        connecting: false,
+        implementation: 'lnd',
+        settings: {
+            locale: 'en',
+            ecash: { enableCashu: false },
+            lightningAddress: { enabled: false }
+        }
+    };
+    const store = new NostrWalletConnectStore(
+        settingsStore,
+        {} as any,
+        {
+            nodeInfo: { nodeId: NODE_PUBKEY },
+            getNodeInfo: jest.fn()
+        } as any,
+        {} as any,
+        { invoices: [] } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+    );
+
+    jest.spyOn(store as any, 'findAndUpdateConnection').mockImplementation(
+        () => undefined
+    );
+    jest.spyOn(store as any, 'scheduleMaxBudgetRefresh').mockImplementation(
+        () => undefined
+    );
+
+    return store;
+}
+
+function seedPayInvoiceConnection(
+    store: NostrWalletConnectStore,
+    overrides: Record<string, unknown> = {}
+) {
+    const connection = new NWCConnection({
+        id: 'conn-pay',
+        name: 'Pay Test App',
+        pubkey: OLD_PUBKEY,
+        relayUrl: OLD_RELAY,
+        permissions: [],
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        totalSpendSats: 0,
+        nodePubkey: NODE_PUBKEY,
+        implementation: 'lnd',
+        activity: [],
+        ...overrides
+    } as any);
+    store.connections = [connection];
+    return connection;
+}
+
+describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
+    const normalizedInvoice = 'lnbc1normalized';
+    const uppercaseInvoice = 'LNBC1NORMALIZED';
+    const paymentHash = 'abc123paymenthash';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: normalizedInvoice,
+            paymentHash,
+            descriptionHash: '',
+            description: '',
+            amount: 100,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'notifyOutgoingNwcPaymentFailed'
+        ).mockImplementation(() => undefined);
+        jest.spyOn(
+            NostrConnectUtils,
+            'notifyOutgoingNwcPayment'
+        ).mockImplementation(() => undefined);
+    });
+
+    it('upsertPayInvoiceActivity never demotes success to failed', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 100,
+                    isBudgetDebited: true
+                }
+            ]
+        });
+
+        const applied = (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'failed',
+            satAmount: 100,
+            error: 'payment timed out'
+        });
+
+        expect(applied).toBe(false);
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('success');
+    });
+
+    it('upsertPayInvoiceActivity keeps isBudgetDebited sticky across merges', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 100,
+                    isBudgetDebited: true
+                }
+            ]
+        });
+
+        (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100
+        });
+
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+    });
+
+    it('upsertPayInvoiceActivity preserves createdAt on merge', () => {
+        const store = buildPayInvoiceTestStore();
+        const createdAt = new Date('2024-06-01T12:00:00Z');
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 100,
+                    createdAt
+                }
+            ]
+        });
+
+        (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100,
+            createdAt: new Date('2024-06-02T00:00:00Z')
+        });
+
+        expect(connection.activity[0].createdAt).toEqual(createdAt);
+    });
+
+    it('upsertPayInvoiceActivity clears error when promoting to success', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 100,
+                    error: 'first attempt failed'
+                }
+            ]
+        });
+
+        (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100
+        });
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].error).toBeUndefined();
+    });
+
+    it('upsertPayInvoiceActivity merges by paymentHash when ids differ', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 100,
+                    paymentHash
+                }
+            ]
+        });
+
+        (store as any).upsertPayInvoiceActivity(connection, {
+            id: uppercaseInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100,
+            paymentHash
+        });
+
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].id).toBe(uppercaseInvoice);
+    });
+
+    it('finalizePayment normalizes invoice id and does not double-debit', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            totalSpendSats: 100,
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 100,
+                    isBudgetDebited: true,
+                    paymentHash
+                }
+            ]
+        });
+
+        await (store as any).finalizePayment({
+            rawInvoice: uppercaseInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            decoded: null,
+            connection,
+            amountSats: 100,
+            feeSats: 0,
+            paymentHash
+        });
+
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.totalSpendSats).toBe(100);
+        expect(NostrConnectUtils.decodeInvoiceTags).toHaveBeenCalledWith(
+            uppercaseInvoice
+        );
+    });
+
+    it('recordFailedPayment skips notification when success blocks demote', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 100,
+                    isBudgetDebited: true
+                }
+            ]
+        });
+
+        await (store as any).recordFailedPayment({
+            rawInvoice: normalizedInvoice,
+            connection,
+            amountSats: 100,
+            payment_source: 'lightning',
+            errorMessage: 'payment timed out'
+        });
+
+        expect(
+            NostrConnectUtils.notifyOutgoingNwcPaymentFailed
+        ).not.toHaveBeenCalled();
+        expect(connection.activity[0].status).toBe('success');
     });
 });

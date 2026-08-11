@@ -149,6 +149,10 @@ export default class NostrWalletConnectStore {
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
+    private maxBudgetLoadInFlight: Promise<void> | null = null;
+    private maxBudgetRefreshNeeded: boolean = false;
+    private scheduledMaxBudgetRefresh: ReturnType<typeof setTimeout> | null =
+        null;
     @observable public iosAudioKeepAliveActive: boolean = false;
     @observable public iosAudioKeepAliveUptime: number = 0;
     @observable public iosAudioKeepAliveDisconnects: number = 0;
@@ -395,6 +399,8 @@ export default class NostrWalletConnectStore {
                     await previousReset;
                 }
                 console.log('NWC: resetting service');
+                this.cancelScheduledMaxBudgetRefresh();
+                this.maxBudgetRefreshNeeded = false;
                 await this.flushScheduledSave();
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
@@ -1722,7 +1728,7 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async pushMakeInvoiceActivityToConnection({
+    private async recordMakeInvoiceActivity({
         connection,
         request,
         status,
@@ -1807,15 +1813,14 @@ export default class NostrWalletConnectStore {
                         );
                     }
 
-                    const result =
-                        await this.pushMakeInvoiceActivityToConnection({
-                            connection,
-                            request,
-                            status: 'pending',
-                            type: 'make_invoice',
-                            paymentRequest: cashuInvoice.paymentRequest,
-                            payment_source: 'cashu'
-                        });
+                    const result = await this.recordMakeInvoiceActivity({
+                        connection,
+                        request,
+                        status: 'pending',
+                        type: 'make_invoice',
+                        paymentRequest: cashuInvoice.paymentRequest,
+                        payment_source: 'cashu'
+                    });
                     return result;
                 } catch (cashuError) {
                     return NostrConnectUtils.createNip47Error(
@@ -1859,7 +1864,7 @@ export default class NostrWalletConnectStore {
 
             await this.invoicesStore.getInvoices();
 
-            const result = await this.pushMakeInvoiceActivityToConnection({
+            const result = await this.recordMakeInvoiceActivity({
                 connection,
                 request,
                 status: 'pending',
@@ -2185,7 +2190,7 @@ export default class NostrWalletConnectStore {
         // activity, so pendingSpendSats never sees it either).
         if (payment || preimage) {
             await this.finalizePayment({
-                id: request.invoice,
+                rawInvoice: request.invoice,
                 type: 'pay_invoice',
                 decoded:
                     payment ||
@@ -2200,7 +2205,8 @@ export default class NostrWalletConnectStore {
                 payment_source: 'lightning',
                 connection,
                 amountSats,
-                feeSats
+                feeSats,
+                paymentHash: paymentHash || payment?.paymentHash
             });
         }
 
@@ -2353,7 +2359,7 @@ export default class NostrWalletConnectStore {
         const feeSats =
             Number(cashuInvoice.getFee) || Number(payment?.getFee) || 0;
         await this.finalizePayment({
-            id: request.invoice,
+            rawInvoice: request.invoice,
             decoded:
                 payment ||
                 NostrConnectUtils.buildSettledPaymentFallback({
@@ -2367,7 +2373,8 @@ export default class NostrWalletConnectStore {
             payment_source: 'cashu',
             amountSats,
             feeSats,
-            connection
+            connection,
+            paymentHash: payment?.paymentHash
         });
 
         return {
@@ -2493,20 +2500,22 @@ export default class NostrWalletConnectStore {
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
     ): Promise<boolean> {
-        const lightningPending = connection.activity.filter(
-            (activity) =>
-                activity.type === 'pay_invoice' &&
-                activity.status === 'pending' &&
-                activity.payment_source !== 'cashu'
+        const pending = connection.activity.filter(
+            (a) =>
+                a.type === 'pay_invoice' &&
+                a.status === 'pending' &&
+                a.payment_source !== 'cashu'
         );
-        if (lightningPending.length === 0) return false;
+        if (pending.length === 0) return false;
 
         const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
             connection.id,
-            lightningPending
+            pending
         );
+
         let changed = false;
-        for (const activity of lightningPending) {
+
+        for (const activity of pending) {
             const payment = payments.find(
                 (p) =>
                     p.getPaymentRequest === activity.id ||
@@ -2515,36 +2524,38 @@ export default class NostrWalletConnectStore {
             );
             if (!payment) continue;
 
-            let reconciled = false;
             runInAction(() => {
                 if (activity.status !== 'pending') return;
-                reconciled = true;
+
                 activity.payment = new Payment(payment);
-                if (!payment.isIncomplete) {
-                    activity.status = 'success';
-                    const amountSats =
-                        Math.floor(Number(activity.satAmount)) ||
-                        Math.floor(Number(payment.getAmount) || 0);
-                    const feeSats = Number(payment.getFee) || 0;
-                    activity.fees_paid = feeSats;
-                    const spendSats =
-                        amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                    if (spendSats > 0) {
-                        connection.trackSpending(
-                            spendSats,
-                            this.maxBudgetLimit
-                        );
-                    }
-                } else if (payment.isFailed) {
+                changed = true;
+
+                if (payment.isFailed) {
                     activity.status = 'failed';
+                    return;
+                }
+                if (payment.isIncomplete) return;
+
+                activity.status = 'success';
+                const amountSats =
+                    Math.floor(Number(activity.satAmount)) ||
+                    Math.floor(Number(payment.getAmount) || 0);
+                const feeSats = Number(payment.getFee) || 0;
+                activity.fees_paid = feeSats;
+
+                const spendSats =
+                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+                if (spendSats > 0 && !activity.isBudgetDebited) {
+                    connection.trackSpending(spendSats, this.maxBudgetLimit);
+                    activity.isBudgetDebited = true;
                 }
             });
-            if (reconciled) {
-                changed = true;
-            }
         }
+
         if (changed) {
             this.lookupPaymentsCache = null;
+            this.scheduleMaxBudgetRefresh();
+            this.findAndUpdateConnection(connection);
         }
         return changed;
     }
@@ -2810,45 +2821,66 @@ export default class NostrWalletConnectStore {
      * Processes payment completion: tracks spending, saves, and shows notification
      */
     private async finalizePayment({
-        id,
+        rawInvoice,
         type,
         payment_source,
         decoded,
         connection,
         amountSats,
-        feeSats = 0
+        feeSats = 0,
+        paymentHash: paymentHashParam
     }: {
-        id: string;
+        rawInvoice: string;
         type: ConnectionActivityType;
         payment_source: ConnectionPaymentSourceType;
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
         amountSats: number;
         feeSats?: number;
+        paymentHash?: string;
     }): Promise<void> {
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        const id = paymentRequest || rawInvoice;
+        const paymentHash =
+            paymentHashParam ||
+            decodedPaymentHash ||
+            decoded?.paymentHash ||
+            undefined;
+
         // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
+
         runInAction(() => {
-            connection.trackSpending(
-                amountSats + budgetFeeSats,
-                this.maxBudgetLimit
-            );
-            connection.activity.push({
+            const existing = connection.findPayInvoiceActivity(id, paymentHash);
+            const alreadyDebited =
+                !!existing?.isBudgetDebited || existing?.status === 'success';
+
+            if (!alreadyDebited) {
+                connection.trackSpending(
+                    amountSats + budgetFeeSats,
+                    this.maxBudgetLimit
+                );
+            }
+
+            this.upsertPayInvoiceActivity(connection, {
                 id,
                 type,
-                payment:
-                    payment_source == 'cashu'
-                        ? new CashuPayment(decoded)
-                        : new Payment(decoded),
+                payment: this.toConnectionActivityPayment(
+                    payment_source,
+                    decoded
+                ),
                 status: 'success',
                 payment_source,
                 satAmount: amountSats,
                 // Stored internally in sats (may be fractional). NIP-47 `fees_paid` is
                 // msats; convert to msats only when mapping to the NIP-47 response.
-                fees_paid: feeSats
+                fees_paid: feeSats,
+                isBudgetDebited: true,
+                ...(paymentHash ? { paymentHash } : {})
             });
-            this.findAndUpdateConnection(connection);
         });
+        this.scheduleMaxBudgetRefresh();
         this.lookupPaymentsCache = null;
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
@@ -2871,12 +2903,6 @@ export default class NostrWalletConnectStore {
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex(
-            (activity) => activity.id === id
-        );
-        const activity = index !== -1 ? connection.activity[index] : undefined;
-        if (activity?.status === 'success') return;
-
         const paymentHash =
             passedPaymentHash ||
             decodedPaymentHash ||
@@ -2884,36 +2910,27 @@ export default class NostrWalletConnectStore {
             undefined;
 
         runInAction(() => {
-            const record: ConnectionActivity = {
+            this.upsertPayInvoiceActivity(connection, {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
                 status: 'pending',
                 payment_source,
                 createdAt: new Date(),
-                ...(paymentHash ? { paymentHash } : {})
-            };
-
-            if (payment) {
-                record.payment =
-                    payment_source === 'cashu'
-                        ? new CashuPayment(payment)
-                        : new Payment(payment);
-            }
-
-            if (index !== -1) {
-                connection.activity[index] = {
-                    ...connection.activity[index],
-                    ...record
-                };
-            } else {
-                connection.activity.push(record);
-            }
-
-            this.findAndUpdateConnection(connection);
+                ...(paymentHash ? { paymentHash } : {}),
+                ...(payment
+                    ? {
+                          payment: this.toConnectionActivityPayment(
+                              payment_source,
+                              payment
+                          )
+                      }
+                    : {})
+                // isBudgetDebited intentionally unset — held via pendingSpendSats
+            });
         });
+
         this.lookupPaymentsCache = null;
-        this.scheduleSave();
     }
 
     private async recordFailedPayment({
@@ -2932,20 +2949,16 @@ export default class NostrWalletConnectStore {
         paymentHash?: string;
     }): Promise<void> {
         if (NostrConnectUtils.isIgnorableError(errorMessage || '')) return;
+
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
         const id = paymentRequest || rawInvoice;
-        const index = connection.activity.findIndex(
-            (activity) => activity.id === id
-        );
-        const activity = index !== -1 ? connection.activity[index] : undefined;
-        if (activity?.status === 'success') return;
-
         const paymentHash =
             passedPaymentHash || decodedPaymentHash || undefined;
 
+        let applied = false;
         runInAction(() => {
-            const record: ConnectionActivity = {
+            applied = this.upsertPayInvoiceActivity(connection, {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
@@ -2954,25 +2967,70 @@ export default class NostrWalletConnectStore {
                 error: errorMessage,
                 createdAt: new Date(),
                 ...(paymentHash ? { paymentHash } : {})
-            };
-            if (index !== -1) {
-                connection.activity[index] = {
-                    ...connection.activity[index],
-                    ...record
-                };
-            } else {
-                // ➕ add new element
-                connection.activity.push(record);
-            }
-
-            this.findAndUpdateConnection(connection);
+            });
         });
-        NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
-            amountSats,
-            connection.name,
-            connection.id,
-            id
+
+        if (applied) {
+            NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
+                amountSats,
+                connection.name,
+                connection.id,
+                id
+            );
+        }
+    }
+    /**
+     * Insert or merge a pay_invoice activity by id (or paymentHash fallback).
+     * Never demotes status === 'success'. Returns whether the write was applied.
+     */
+    @action
+    private upsertPayInvoiceActivity(
+        connection: NWCConnection,
+        record: ConnectionActivity
+    ): boolean {
+        const index = connection.findPayInvoiceActivityIndex(
+            record.id,
+            record.paymentHash
         );
+        const existing = index !== -1 ? connection.activity[index] : undefined;
+
+        if (existing?.status === 'success' && record.status !== 'success') {
+            return false;
+        }
+
+        if (index !== -1) {
+            connection.activity[index] = {
+                ...existing,
+                ...record,
+                // Keep original createdAt unless this is a brand-new write
+                createdAt:
+                    existing?.createdAt ?? record.createdAt ?? new Date(),
+                // Don't clear isBudgetDebited if already true
+                isBudgetDebited:
+                    existing?.isBudgetDebited || record.isBudgetDebited,
+                error: record.status === 'failed' ? record.error : undefined
+            };
+        } else {
+            connection.activity.push({
+                ...record,
+                createdAt: record.createdAt ?? new Date()
+            });
+        }
+
+        this.findAndUpdateConnection(connection);
+        return true;
+    }
+    private toConnectionActivityPayment(
+        source: ConnectionPaymentSourceType,
+        decoded: Payment | CashuPayment | null | undefined
+    ): Payment | CashuPayment | undefined {
+        if (decoded == null) return undefined;
+        if (source === 'cashu') {
+            return decoded instanceof CashuPayment
+                ? decoded
+                : new CashuPayment(decoded);
+        }
+        return decoded instanceof Payment ? decoded : new Payment(decoded);
     }
 
     // STORAGE OPERATIONS
@@ -3192,27 +3250,67 @@ export default class NostrWalletConnectStore {
         return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
     }
 
-    public async loadMaxBudget() {
-        try {
-            if (this.isCashuConfigured) {
-                runInAction(() => {
-                    this.maxBudgetLimit = this.cashuStore.totalBalanceSats || 0;
-                });
-            } else {
-                const balance = await this.balanceStore.getLightningBalance(
-                    true
-                );
-                runInAction(() => {
-                    this.maxBudgetLimit =
-                        Number(balance?.lightningBalance) || 0;
-                });
-            }
-        } catch (error) {
-            runInAction(() => {
-                this.maxBudgetLimit = 0;
-            });
-            console.error('Failed to get max budget:', error);
+    public async loadMaxBudget(): Promise<void> {
+        // A concurrent caller joins the in-flight promise and sets
+        // maxBudgetRefreshNeeded so we re-fetch once it settles. That
+        // second fetch is intentional: the first load may have started
+        // before a payment settled, and joiners need a fresh post-spend
+        // balance rather than the stale in-flight result.
+        if (this.maxBudgetLoadInFlight) {
+            this.maxBudgetRefreshNeeded = true;
+            return this.maxBudgetLoadInFlight;
         }
+        const load = (async () => {
+            try {
+                if (this.isCashuConfigured) {
+                    runInAction(() => {
+                        this.maxBudgetLimit =
+                            this.cashuStore.totalBalanceSats || 0;
+                    });
+                } else {
+                    const balance = await this.balanceStore.getLightningBalance(
+                        true
+                    );
+                    runInAction(() => {
+                        this.maxBudgetLimit =
+                            Number(balance?.lightningBalance) || 0;
+                    });
+                }
+            } catch (error) {
+                runInAction(() => {
+                    this.maxBudgetLimit = 0;
+                });
+                console.error('Failed to get max budget:', error);
+            }
+        })();
+
+        this.maxBudgetLoadInFlight = load;
+        try {
+            await load;
+        } finally {
+            if (this.maxBudgetLoadInFlight === load) {
+                this.maxBudgetLoadInFlight = null;
+            }
+            if (this.maxBudgetRefreshNeeded) {
+                this.maxBudgetRefreshNeeded = false;
+                await this.loadMaxBudget();
+            }
+        }
+    }
+    private cancelScheduledMaxBudgetRefresh(): void {
+        if (this.scheduledMaxBudgetRefresh !== null) {
+            clearTimeout(this.scheduledMaxBudgetRefresh);
+            this.scheduledMaxBudgetRefresh = null;
+        }
+    }
+    private scheduleMaxBudgetRefresh(): void {
+        if (this.scheduledMaxBudgetRefresh) return;
+        this.scheduledMaxBudgetRefresh = setTimeout(() => {
+            this.scheduledMaxBudgetRefresh = null;
+            this.loadMaxBudget().catch((err) =>
+                console.error('NWC: scheduled loadMaxBudget failed:', err)
+            );
+        }, 500);
     }
     @computed
     public get activeConnections(): NWCConnection[] {
