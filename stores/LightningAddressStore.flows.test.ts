@@ -59,10 +59,12 @@ const bodyOf = (path: string, index = 0) => JSON.parse(callsTo(path)[index][3]);
 
 const newCashuStore = () => ({
     cashuWallets: { [MINT]: { pubkey: '02ab' } } as any,
+    mintUrls: [MINT],
     initializeWallet: jest.fn(),
     checkInvoicePaid: jest.fn(),
     deriveCashuSecretKey: jest.fn(),
-    receiveTokenCDK: jest.fn()
+    receiveTokenCDK: jest.fn(),
+    decodeTokenCDK: jest.fn()
 });
 
 let cashuStore: ReturnType<typeof newCashuStore>;
@@ -103,6 +105,7 @@ describe('LightningAddressStore flows', () => {
         cashuStore.initializeWallet.mockResolvedValue(undefined);
         cashuStore.deriveCashuSecretKey.mockReturnValue('cashu-key');
         cashuStore.receiveTokenCDK.mockResolvedValue(undefined);
+        cashuStore.decodeTokenCDK.mockResolvedValue({ mint_url: MINT });
         settingsStore = {
             settings: {},
             updateSettings: jest.fn().mockResolvedValue(undefined)

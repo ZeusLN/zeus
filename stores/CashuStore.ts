@@ -456,6 +456,28 @@ export default class CashuStore {
     };
 
     /**
+     * CDK's wallet list (getMintUrls) also holds mints that flows such as
+     * sweeping a token or checking proofs added on demand through
+     * ensureMintAdded. mintUrls is the list of mints the user approved
+     * (Add Mint, onboarding, Nostr restore), and ZEUS Pay redeems trust it,
+     * so take only CDK's spelling of the approved mints instead of the
+     * whole wallet list. CDK canonicalizes scheme and host casing, so
+     * those are folded for the comparison; the path stays case-sensitive.
+     */
+    private approvedCdkMintUrls = async (
+        approvedMintUrls: string[]
+    ): Promise<string[]> => {
+        const key = (url: string) =>
+            this.normalizeMintUrl(url).replace(
+                /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i,
+                (schemeAndHost) => schemeAndHost.toLowerCase()
+            );
+        const approved = new Set(approvedMintUrls.map(key));
+        const cdkMintUrls: string[] = (await CashuDevKit.getMintUrls()) || [];
+        return cdkMintUrls.filter((url) => approved.has(key(url)));
+    };
+
+    /**
      * Ensure a mint is added to CDK, using cache to avoid redundant calls.
      * This is an optimization since addMint is called frequently before operations.
      */
@@ -2920,7 +2942,10 @@ export default class CashuStore {
             await this.syncCDKBalances();
 
             // Update local mintUrls from CDK (source of truth)
-            const updatedMintUrls = await CashuDevKit.getMintUrls();
+            const updatedMintUrls = await this.approvedCdkMintUrls([
+                ...this.mintUrls,
+                mintUrl
+            ]);
             runInAction(() => {
                 this.mintUrls = updatedMintUrls;
             });
@@ -2977,7 +3002,13 @@ export default class CashuStore {
         // Evict from the ensureMintAdded cache so later flows cannot treat
         // the removed mint as still present
         this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
-        const updatedMintUrls = await CashuDevKit.getMintUrls();
+        const updatedMintUrls = await this.approvedCdkMintUrls(
+            this.mintUrls.filter(
+                (url) =>
+                    this.normalizeMintUrl(url) !==
+                    this.normalizeMintUrl(mintUrl)
+            )
+        );
         runInAction(() => {
             this.mintUrls = updatedMintUrls;
         });
@@ -3994,8 +4025,10 @@ export default class CashuStore {
                     }
                 }
 
-                // Get mint URLs from CDK (source of truth) and populate cache
-                const cdkMints = await CashuDevKit.getMintUrls();
+                // Get mint URLs from CDK (source of truth) and populate
+                // cache. A wallet the orphan cleanup above failed to remove
+                // stays out of the list and is retried on the next boot
+                const cdkMints = await this.approvedCdkMintUrls(localMintUrls);
                 runInAction(() => {
                     this.mintUrls = cdkMints;
                 });

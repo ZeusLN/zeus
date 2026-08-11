@@ -1,5 +1,7 @@
 jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
-jest.mock('react-native-notifications', () => ({ Notifications: {} }));
+jest.mock('react-native-notifications', () => ({
+    Notifications: { postLocalNotification: jest.fn() }
+}));
 jest.mock('socket.io-client', () => ({ io: jest.fn() }));
 jest.mock('nostr-tools', () => ({
     getPublicKey: jest.fn(),
@@ -271,6 +273,343 @@ describe('LightningAddressStore', () => {
                 'Failed to update push credentials',
                 expect.any(Error)
             );
+        });
+    });
+});
+
+const CONFIGURED_MINT = 'https://mint.zeusnuts.com';
+const LOCAL_MINT = 'https://mint.minibits.cash/Bitcoin';
+const ATTACKER_MINT = 'http://attacker-mint.example:3338';
+
+const makeStore = (configuredMintUrl?: string, localMintUrls?: string[]) => {
+    const checkInvoicePaid = jest.fn().mockResolvedValue({ isPaid: false });
+    const cashuStore: any = {
+        checkInvoicePaid,
+        deriveCashuSecretKey: jest.fn(),
+        receiveTokenCDK: jest.fn(),
+        decodeTokenCDK: jest.fn(),
+        mintUrls: localMintUrls
+    };
+    const settingsStore: any = {
+        settings: {
+            lightningAddress: configuredMintUrl
+                ? { mintUrl: configuredMintUrl }
+                : {}
+        }
+    };
+    const nodeInfoStore: any = { nodeInfo: {} };
+    const store = new LightningAddressStore(
+        cashuStore,
+        nodeInfoStore,
+        settingsStore
+    );
+    return { store, checkInvoicePaid, cashuStore };
+};
+
+describe('LightningAddressStore.redeemCashu mint binding', () => {
+    it('refuses to redeem against a mint that is not approved', async () => {
+        const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT, [
+            LOCAL_MINT
+        ]);
+
+        const result = await store.redeemCashu(
+            'attacker-quote-id',
+            ATTACKER_MINT,
+            21000,
+            false,
+            true
+        );
+
+        expect(result).toBe(false);
+        expect(checkInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('proceeds when the event mint matches the configured mint', async () => {
+        const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT);
+
+        await store.redeemCashu(
+            'quote-id',
+            CONFIGURED_MINT,
+            21000,
+            false,
+            true
+        );
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(checkInvoicePaid.mock.calls[0][1]).toBe(CONFIGURED_MINT);
+    });
+
+    it('matches on trailing slash or scheme/host case differences and forwards the configured spelling', async () => {
+        const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT);
+
+        await store.redeemCashu(
+            'quote-id',
+            `${CONFIGURED_MINT.toUpperCase()}/`,
+            21000,
+            false,
+            true
+        );
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(checkInvoicePaid.mock.calls[0][1]).toBe(CONFIGURED_MINT);
+    });
+
+    it('treats the URL path as case-sensitive', async () => {
+        const { store, checkInvoicePaid } = makeStore(LOCAL_MINT);
+
+        const result = await store.redeemCashu(
+            'quote-id',
+            'https://mint.minibits.cash/bitcoin',
+            21000,
+            false,
+            true
+        );
+
+        expect(result).toBe(false);
+        expect(checkInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('accepts a locally added mint that differs from the configured mint and forwards the local spelling', async () => {
+        const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT, [
+            LOCAL_MINT
+        ]);
+
+        await store.redeemCashu(
+            'quote-id',
+            `${LOCAL_MINT}/`,
+            21000,
+            false,
+            true
+        );
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(checkInvoicePaid.mock.calls[0][1]).toBe(LOCAL_MINT);
+    });
+
+    it('accepts a locally added mint when no mint is configured', async () => {
+        const { store, checkInvoicePaid } = makeStore(undefined, [LOCAL_MINT]);
+
+        await store.redeemCashu('quote-id', LOCAL_MINT, 21000, false, true);
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(checkInvoicePaid.mock.calls[0][1]).toBe(LOCAL_MINT);
+    });
+
+    it('refuses to redeem when no mint is configured or locally added', async () => {
+        const { store, checkInvoicePaid } = makeStore(undefined);
+
+        const result = await store.redeemCashu(
+            'quote-id',
+            CONFIGURED_MINT,
+            21000,
+            false,
+            true
+        );
+
+        expect(result).toBe(false);
+        expect(checkInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('surfaces an error message on a manual redeem of an unapproved mint', async () => {
+        const { store } = makeStore(CONFIGURED_MINT);
+
+        const result = await store.redeemCashu(
+            'quote-id',
+            ATTACKER_MINT,
+            21000
+        );
+
+        expect(result).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.LightningAddressStore.Cashu.mintMismatch'
+        );
+    });
+
+    it('stays silent on an automatic redeem of an unapproved mint', async () => {
+        const { store } = makeStore(CONFIGURED_MINT);
+
+        const result = await store.redeemCashu(
+            'quote-id',
+            ATTACKER_MINT,
+            21000,
+            false,
+            true // localNotification: automatic socket path
+        );
+
+        expect(result).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+    });
+
+    it.each([12345, { url: CONFIGURED_MINT }, [CONFIGURED_MINT], true, null])(
+        'refuses a non-string mint_url (%p) without throwing',
+        async (mintUrl) => {
+            const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT);
+
+            const result = await store.redeemCashu(
+                'quote-id',
+                mintUrl as any,
+                21000,
+                false,
+                true
+            );
+
+            expect(result).toBe(false);
+            expect(checkInvoicePaid).not.toHaveBeenCalled();
+        }
+    );
+
+    it('does not clear the redeeming flag of a redeem in progress when refusing', async () => {
+        const { store } = makeStore(CONFIGURED_MINT);
+        store.redeeming = true;
+
+        await store.redeemCashu('quote-id', ATTACKER_MINT, 21000, false, true);
+
+        expect(store.redeeming).toBe(true);
+    });
+
+    it('keeps redeeming the open payments list after a non-string mint_url', async () => {
+        const { store, checkInvoicePaid } = makeStore(CONFIGURED_MINT);
+        jest.spyOn(store, 'status').mockResolvedValue(undefined as any);
+        // Processed in reverse, so the bad item goes first.
+        store.paid = [
+            { quote_id: 'legit', mint_url: CONFIGURED_MINT, amount_msat: 1000 },
+            { quote_id: 'bad', mint_url: 12345 as any, amount_msat: 1000 }
+        ];
+
+        await store.redeemAllOpenPaymentsCashu(true);
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(checkInvoicePaid.mock.calls[0][0]).toBe('legit');
+        expect(store.redeemingAll).toBe(false);
+    });
+
+    describe('Redeem All with an unapproved mint', () => {
+        // Processed in reverse, so the rejected item goes first and the
+        // legit redeem after it clears the error again.
+        const redeemAllStore = () => {
+            const ctx = makeStore(CONFIGURED_MINT);
+            ctx.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            jest.spyOn(
+                ctx.store as any,
+                'callRedeemEndpoint'
+            ).mockResolvedValue({ success: true });
+            jest.spyOn(ctx.store, 'status').mockResolvedValue(undefined as any);
+            ctx.store.paid = [
+                {
+                    quote_id: 'legit',
+                    mint_url: CONFIGURED_MINT,
+                    amount_msat: 1000
+                },
+                {
+                    quote_id: 'forged',
+                    mint_url: ATTACKER_MINT,
+                    amount_msat: 1000
+                }
+            ];
+            return ctx;
+        };
+
+        it('keeps the mint mismatch error on a manual Redeem All', async () => {
+            const { store, checkInvoicePaid } = redeemAllStore();
+
+            await store.redeemAllOpenPaymentsCashu();
+
+            expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(checkInvoicePaid.mock.calls[0][0]).toBe('legit');
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+            expect(store.redeemingAll).toBe(false);
+        });
+
+        it('stays silent on the automatic startup redeem', async () => {
+            const { store } = redeemAllStore();
+
+            await store.redeemAllOpenPaymentsCashu(true);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+
+        it('sets no error when every payment is from an approved mint', async () => {
+            const { store } = redeemAllStore();
+            store.paid = [store.paid[0]];
+
+            await store.redeemAllOpenPaymentsCashu();
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+    });
+
+    describe('server redeem token', () => {
+        const paidStore = (tokenMintUrl?: string) => {
+            const ctx = makeStore(CONFIGURED_MINT);
+            ctx.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            jest.spyOn(
+                ctx.store as any,
+                'callRedeemEndpoint'
+            ).mockResolvedValue({ success: true, token: 'cashuBtoken' });
+            if (tokenMintUrl) {
+                ctx.cashuStore.decodeTokenCDK.mockResolvedValue({
+                    mint_url: tokenMintUrl
+                });
+            }
+            return ctx;
+        };
+
+        it('refuses a token from a mint other than the approved mint', async () => {
+            const { store, cashuStore } = paidStore(ATTACKER_MINT);
+
+            const result = await store.redeemCashu(
+                'quote-id',
+                CONFIGURED_MINT,
+                21000,
+                true
+            );
+
+            expect(result).toBe(false);
+            expect(cashuStore.decodeTokenCDK).toHaveBeenCalledWith(
+                'cashuBtoken'
+            );
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+            expect(store.redeeming).toBe(false);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+
+        it('receives a token from the approved mint', async () => {
+            const { store, cashuStore } = paidStore(`${CONFIGURED_MINT}/`);
+
+            const result = await store.redeemCashu(
+                'quote-id',
+                CONFIGURED_MINT,
+                21000,
+                true
+            );
+
+            expect(result).toBe(true);
+            expect(cashuStore.receiveTokenCDK).toHaveBeenCalledTimes(1);
+            expect(cashuStore.receiveTokenCDK.mock.calls[0][0]).toBe(
+                'cashuBtoken'
+            );
+        });
+
+        it('does not receive a token that fails to decode', async () => {
+            const { store, cashuStore } = paidStore();
+            cashuStore.decodeTokenCDK.mockRejectedValue(
+                new Error('invalid token')
+            );
+
+            await store.redeemCashu('quote-id', CONFIGURED_MINT, 21000, true);
+
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+            expect(store.redeeming).toBe(false);
+            expect(store.error).toBe(true);
         });
     });
 });
