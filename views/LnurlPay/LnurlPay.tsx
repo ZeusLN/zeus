@@ -1,5 +1,6 @@
 import url from 'url';
 import * as React from 'react';
+import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
@@ -29,6 +30,10 @@ import LnurlPayMetadata from './Metadata';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
+import {
+    verifyLnurlPayInvoice,
+    isLnurlCallbackAllowed
+} from '../../utils/LnurlPayUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
@@ -212,11 +217,28 @@ export default class LnurlPay extends React.Component<
         const { domain, comment, lightningAddress } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
+
+        // Never fetch a callback that would leak the amount/comment in
+        // cleartext or reach internal infrastructure (SSRF-by-callback).
+        const callbackCheck = isLnurlCallbackAllowed(lnurl.callback);
+        if (!callbackCheck.ok) {
+            this.setState({ loading: false });
+            Alert.alert(
+                localeString('views.LnurlPay.LnurlPay.invalidInvoice'),
+                localeString('views.LnurlPay.LnurlPay.unsafeCallback'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+            return;
+        }
+
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.amount = Number(
             (parseFloat(satAmount.toString()) * 1000).toString()
         );
+        // The exact msat we asked for; the returned invoice must match it.
+        const requestedAmountMsat = qs.amount;
         qs.comment = comment;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
@@ -253,6 +275,35 @@ export default class LnurlPay extends React.Component<
                 }
 
                 const pr = data.pr;
+
+                // Bind the invoice we are about to pay to the identity and
+                // amount the user reviewed: the description_hash must commit to
+                // the displayed metadata and the amount must match the request
+                // (LUD-06). Without this a malicious service can show one payee
+                // and invoice for something else entirely.
+                const invoiceCheck = verifyLnurlPayInvoice(
+                    pr,
+                    lnurl.metadata,
+                    new BigNumber(requestedAmountMsat)
+                );
+                if (!invoiceCheck.ok) {
+                    this.setState({ loading: false });
+                    Alert.alert(
+                        localeString('views.LnurlPay.LnurlPay.invalidInvoice'),
+                        localeString(
+                            'views.LnurlPay.LnurlPay.invoiceBindingFailed'
+                        ),
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                    return;
+                }
+
                 const successAction = data.successAction || {
                     tag: 'noop'
                 };

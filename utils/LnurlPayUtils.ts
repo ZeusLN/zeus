@@ -1,0 +1,152 @@
+// LnurlPayUtils.ts
+import url from 'url';
+import BigNumber from 'bignumber.js';
+import { sha256 } from '@noble/hashes/sha256';
+
+import Base64Utils from './Base64Utils';
+import Bolt11Utils from './Bolt11Utils';
+
+export interface LnurlCheckResult {
+    ok: boolean;
+    reason?: string;
+}
+
+/**
+ * Enforce the LUD-06 binding between a served payRequest and the invoice the
+ * wallet is about to pay: the invoice amount MUST equal the amount the user
+ * requested, and the invoice's BOLT11 description_hash (h tag) MUST commit to
+ * the exact metadata string the user was shown. Without this, a compromised or
+ * malicious LNURL service can display one payee identity while the paid invoice
+ * commits to something unrelated (LUD-06 bait-and-switch), or invoice any
+ * amount it likes.
+ *
+ * The invoice is decoded locally rather than trusting a backend's decode
+ * response, so the check is identical across every backend (several omit
+ * description_hash / num_msat from their decode output).
+ */
+export const verifyLnurlPayInvoice = (
+    pr: string,
+    metadata: string | undefined,
+    expectedAmountMsat: BigNumber.Value
+): LnurlCheckResult => {
+    let decoded;
+    try {
+        decoded = Bolt11Utils.decode(pr);
+    } catch (err: any) {
+        return { ok: false, reason: `undecodable invoice: ${err?.message}` };
+    }
+
+    const expected = new BigNumber(expectedAmountMsat);
+    if (
+        !expected.isFinite() ||
+        !new BigNumber(decoded.num_msat).isEqualTo(expected)
+    ) {
+        return {
+            ok: false,
+            reason: `invoice amount mismatch: ${
+                decoded.num_msat
+            } msat !== ${expected.toString()} msat`
+        };
+    }
+
+    const expectedDescriptionHash =
+        typeof metadata === 'string'
+            ? Base64Utils.bytesToHex(
+                  Array.from(sha256(Base64Utils.utf8ToBytes(metadata)))
+              )
+            : null;
+    if (
+        !expectedDescriptionHash ||
+        decoded.description_hash !== expectedDescriptionHash
+    ) {
+        return { ok: false, reason: 'description hash mismatch' };
+    }
+
+    return { ok: true };
+};
+
+const isPrivateIPv4 = (host: string): boolean => {
+    const match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!match) return false;
+    const octets = match.slice(1).map(Number);
+    if (octets.some((n) => n > 255)) return false;
+    const [a, b] = octets;
+    if (a === 0) return true; // "this network"
+    if (a === 10) return true; // RFC1918
+    if (a === 127) return true; // loopback
+    if (a === 169 && b === 254) return true; // link-local + cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
+    if (a === 192 && b === 168) return true; // RFC1918
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT (RFC6598)
+    return false;
+};
+
+const isPrivateIPv6 = (host: string): boolean => {
+    let h = host;
+    if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1);
+    if (h.indexOf(':') === -1) return false;
+    const lower = h.toLowerCase();
+    if (lower === '::1' || lower === '::') return true; // loopback / unspecified
+    const mapped = lower.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+    if (mapped) return isPrivateIPv4(mapped[1]);
+    const first = lower.split(':')[0];
+    if (first.startsWith('fc') || first.startsWith('fd')) return true; // fc00::/7 unique-local
+    if (['fe8', 'fe9', 'fea', 'feb'].some((p) => first.startsWith(p))) {
+        return true; // fe80::/10 link-local
+    }
+    return false;
+};
+
+const isPrivateOrReservedHost = (hostname: string): boolean => {
+    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+        return true;
+    }
+    return isPrivateIPv4(hostname) || isPrivateIPv6(hostname);
+};
+
+/**
+ * Reject a service-supplied LNURL callback that the wallet must not fetch:
+ *  - cleartext http to a non-onion host (leaks the amount/comment and lets a
+ *    network attacker substitute the invoice), and
+ *  - any request aimed at loopback / private / link-local infrastructure
+ *    (SSRF-by-callback, e.g. the 169.254.169.254 cloud-metadata endpoint).
+ *
+ * A cross-domain https host is permitted (some services front the callback on a
+ * separate CDN host). This blocks IP-literal SSRF targets only; a hostname that
+ * resolves to an internal address (DNS rebinding) is out of scope here.
+ */
+export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
+    if (typeof callback !== 'string' || callback.length === 0) {
+        return { ok: false, reason: 'missing callback URL' };
+    }
+
+    let parsed;
+    try {
+        parsed = url.parse(callback);
+    } catch (err: any) {
+        return { ok: false, reason: 'unparseable callback URL' };
+    }
+
+    const protocol = (parsed.protocol || '').toLowerCase();
+    const hostname = (parsed.hostname || '').toLowerCase();
+    if (!hostname) {
+        return { ok: false, reason: 'callback URL has no host' };
+    }
+
+    const isOnion = hostname.endsWith('.onion');
+    if (protocol !== 'https:' && !(protocol === 'http:' && isOnion)) {
+        return {
+            ok: false,
+            reason: 'callback must use https (http allowed only for .onion)'
+        };
+    }
+
+    if (isPrivateOrReservedHost(hostname)) {
+        return {
+            ok: false,
+            reason: 'callback targets a private or reserved address'
+        };
+    }
+
+    return { ok: true };
+};

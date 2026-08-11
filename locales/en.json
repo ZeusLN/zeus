@@ -313,6 +313,8 @@
     "views.LnurlPay.LnurlPay.confirm": "Confirm",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",
+    "views.LnurlPay.LnurlPay.invoiceBindingFailed": "This invoice does not match the amount or recipient you approved. Payment cancelled.",
+    "views.LnurlPay.LnurlPay.unsafeCallback": "This Lightning service asked the wallet to contact an unsafe address. Payment cancelled to protect your privacy.",
     "views.LnurlPay.Success.servicedBy": "Serviced by",
     "views.LnurlPay.Success.uriAlert": "Don't know how to open URI",
     "views.LnurlChannel.title": "Incoming Channel",
