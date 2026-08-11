@@ -407,28 +407,117 @@ export default class CLNRest {
             string: urlParams && urlParams[0]
         });
 
-    payLightningInvoice = (data: any) =>
-        this.postRequest(
-            '/v1/pay',
-            {
-                bolt11: data.payment_request,
-                amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
-            data.timeout_seconds * 1000
-        );
-    sendKeysend = (data: any) => {
+    // xpay and xkeysend only accept an absolute fee cap (maxfee), not
+    // maxfeepercent: derive one from the user's max fee percent, decoding
+    // the invoice server-side when the caller didn't supply the amount,
+    // and fall back to fee_limit_sat (silent sends). Returning undefined
+    // leaves the cap to xpay's default of max(5000msat, 1%).
+    private getMaxFeeMsat = async (data: any, invstring?: string) => {
+        if (data.max_fee_percent) {
+            let amountMsat = data.amt ? Number(data.amt) * 1000 : undefined;
+            if (!amountMsat && invstring) {
+                const decoded = await this.postRequest('/v1/decode', {
+                    string: invstring
+                });
+                // bolt11 decodes carry amount_msat, bolt12 invoices
+                // carry invoice_amount_msat
+                const msat =
+                    decoded?.amount_msat ?? decoded?.invoice_amount_msat;
+                if (msat != null) {
+                    amountMsat = Number(msat.toString().replace('msat', ''));
+                }
+            }
+            if (amountMsat) {
+                return new BigNumber(amountMsat)
+                    .times(data.max_fee_percent)
+                    .dividedBy(100)
+                    .integerValue(BigNumber.ROUND_CEIL)
+                    .toNumber();
+            }
+        }
+        if (data.fee_limit_sat) return Number(data.fee_limit_sat) * 1000;
+        return undefined;
+    };
+
+    // xpay and xkeysend results omit status and payment_hash: synthesize
+    // both so handlePayment success detection and payment note keys
+    // (note-<payment_hash>) keep working. hash = SHA256(preimage), and
+    // xpay only resolves on success (failures reject via the HTTP error
+    // path), so status is always complete here.
+    private formatXpayResult = (result: any) => {
+        const formatted: any = { ...result, status: 'complete' };
+        if (result?.payment_preimage) {
+            formatted.payment_hash = Base64Utils.bytesToHex(
+                Array.from(
+                    new sha256Hash()
+                        .update(Base64Utils.hexToBytes(result.payment_preimage))
+                        .digest()
+                )
+            );
+        }
+        return formatted;
+    };
+
+    payLightningInvoice = async (data: any) => {
+        // pay is deprecated in CLN v26.06 and removed in v27.03; use xpay
+        // (available since v24.11) when the node has it
+        if (!this.supports('v24.11')) {
+            return this.postRequest(
+                '/v1/pay',
+                {
+                    bolt11: data.payment_request,
+                    amount_msat: Number(data.amt && data.amt * 1000),
+                    maxfeepercent: data.max_fee_percent,
+                    retry_for: data.timeout_seconds
+                },
+                data.timeout_seconds * 1000
+            );
+        }
+
+        const request: any = {
+            invstring: data.payment_request,
+            retry_for: data.timeout_seconds
+        };
+        if (data.amt) request.amount_msat = Number(data.amt) * 1000;
+        const maxfee = await this.getMaxFeeMsat(data, data.payment_request);
+        if (maxfee !== undefined) request.maxfee = maxfee;
+
         return this.postRequest(
-            '/v1/keysend',
-            {
-                destination: data.pubkey,
-                amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
-                retry_for: data.timeout_seconds
-            },
+            '/v1/xpay',
+            request,
             data.timeout_seconds * 1000
-        );
+        ).then(this.formatXpayResult);
+    };
+    sendKeysend = async (data: any) => {
+        // keysend is deprecated in CLN v26.06 and removed in v27.03; use
+        // xkeysend (introduced alongside the deprecation in v26.06) when
+        // the node has it
+        if (!this.supports('v26.06')) {
+            return this.postRequest(
+                '/v1/keysend',
+                {
+                    destination: data.pubkey,
+                    amount_msat: Number(data.amt && data.amt * 1000),
+                    maxfeepercent: data.max_fee_percent,
+                    retry_for: data.timeout_seconds
+                },
+                data.timeout_seconds * 1000
+            );
+        }
+
+        const request: any = {
+            destination: data.pubkey,
+            amount_msat: Number(data.amt && data.amt * 1000),
+            retry_for: data.timeout_seconds
+        };
+        const maxfee = await this.getMaxFeeMsat(data);
+        if (maxfee !== undefined) request.maxfee = maxfee;
+
+        return this.postRequest(
+            '/v1/xkeysend',
+            request,
+            data.timeout_seconds * 1000
+        ).then(this.formatXpayResult);
     };
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
