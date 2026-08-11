@@ -27,7 +27,7 @@ let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
-const mockRelayInit = jest.fn();
+const mockSimplePool = jest.fn();
 const mockNip19Decode = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
@@ -111,7 +111,13 @@ jest.mock('js-lnurl', () => ({
     decodelnurl: () => null
 }));
 jest.mock('nostr-tools', () => ({
-    relayInit: (...args: any[]) => mockRelayInit(...args),
+    SimplePool: class {
+        constructor(...args: any[]) {
+            mockSimplePool(...args);
+        }
+        querySync = jest.fn().mockResolvedValue([]);
+        close = jest.fn();
+    },
     nip05: { queryProfile: jest.fn() },
     nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
 }));
@@ -130,7 +136,7 @@ describe('handleAnything', () => {
         mockProcessNodeUri.mockReset();
         mockGetLnurlParamsFn.mockReset();
         mockFindLnurl.mockReset();
-        mockRelayInit.mockReset();
+        mockSimplePool.mockReset();
         mockNip19Decode.mockReset();
         mockIsValidNpub = false;
         mockIsValidBitcoinAddress = false;
@@ -537,7 +543,7 @@ describe('handleAnything', () => {
 
             expect(result).toBe(true);
             expect(mockNip19Decode).not.toHaveBeenCalled();
-            expect(mockRelayInit).not.toHaveBeenCalled();
+            expect(mockSimplePool).not.toHaveBeenCalled();
         });
     });
 
