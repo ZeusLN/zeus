@@ -1,4 +1,6 @@
 import BigNumber from 'bignumber.js';
+import { Platform } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { validateMnemonic } from '@scure/bip39';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
@@ -58,6 +60,32 @@ export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
 
 export const RESCUE_KEY_WORD_COUNT = 12;
+
+export const RESCUE_KEY_FILENAME = 'rescue_key.json';
+
+// Older builds' rescue-key download wrote the mnemonic as plaintext JSON to
+// shared storage: the public Downloads dir on Android and the Files-app
+// visible Documents dir on iOS. Those files outlive the app, so they must be
+// purged wherever the rescue key itself is deleted. Best-effort only: under
+// Android scoped storage the file can only be removed by the install that
+// created it, and a failed unlink can never succeed on a later retry.
+export const purgeLegacyRescueKeyFiles = async (): Promise<void> => {
+    const { fs } = ReactNativeBlobUtil;
+    const dir =
+        Platform.OS === 'android' ? fs.dirs.DownloadDir : fs.dirs.DocumentDir;
+    const path = `${dir}/${RESCUE_KEY_FILENAME}`;
+    try {
+        if (await fs.exists(path)) {
+            await fs.unlink(path);
+            console.log('[SwapUtils] Legacy rescue key file deleted:', path);
+        }
+    } catch (e) {
+        console.warn(
+            `[SwapUtils] Error deleting legacy rescue key file ${path}:`,
+            e
+        );
+    }
+};
 
 // Swap rescue keys are 12-word BIP39 mnemonics; the checksum must be
 // enforced before persisting, since refund keys derived from a corrupted

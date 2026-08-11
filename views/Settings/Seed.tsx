@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
     Alert,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,6 +9,7 @@ import {
     View
 } from 'react-native';
 import RNFS from 'react-native-fs';
+import Share from 'react-native-share';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -34,7 +34,9 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_LAST_USED_KEY,
-    SWAPS_RESCUE_KEY
+    SWAPS_RESCUE_KEY,
+    RESCUE_KEY_FILENAME,
+    purgeLegacyRescueKeyFiles
 } from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -75,6 +77,20 @@ interface SeedState {
     isChannelExporting: boolean;
     channelExportMessage: string;
 }
+
+// Share-sheet staging file. App-private cache on both platforms; unlinked
+// after every share attempt so no plaintext copy lingers.
+const rescueKeyStagingPath = `${RNFS.CachesDirectoryPath}/${RESCUE_KEY_FILENAME}`;
+
+const unlinkRescueKeyStagingFile = async () => {
+    try {
+        if (await RNFS.exists(rescueKeyStagingPath)) {
+            await RNFS.unlink(rescueKeyStagingPath);
+        }
+    } catch (e) {
+        console.warn('Error deleting rescue key staging file:', e);
+    }
+};
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     const [isRevealed, setRevealed] = useState(false);
@@ -189,6 +205,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 await Storage.removeItem(SWAPS_KEY);
                                 await Storage.removeItem(REVERSE_SWAPS_KEY);
                                 await Storage.removeItem(SWAPS_LAST_USED_KEY);
+                                await purgeLegacyRescueKeyFiles();
+                                await unlinkRescueKeyStagingFile();
                                 this.setState({ isDeleteModalVisible: false });
                                 navigation.popTo('Swaps');
                             }}
@@ -300,42 +318,59 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             </TouchableOpacity>
         );
 
-        const DownloadRescueKey = ({
-            seedPhrase
-        }: {
-            seedPhrase: string[];
-        }) => {
-            const handleDownload = async () => {
+        const ShareRescueKey = ({ seedPhrase }: { seedPhrase: string[] }) => {
+            // Stage the rescue file in app-private cache and hand it to the
+            // system share sheet so the user explicitly picks the
+            // destination. Never write it to shared storage directly: files
+            // dropped in Downloads/Documents are readable by other tooling
+            // and outlive the app.
+            const shareRescueKeyFile = async () => {
                 try {
                     const mnemonic = seedPhrase.join(' ');
                     const jsonData = JSON.stringify({ mnemonic }, null, 2);
 
-                    const path =
-                        Platform.OS === 'android'
-                            ? `${RNFS.DownloadDirectoryPath}/rescue_key.json`
-                            : `${RNFS.DocumentDirectoryPath}/rescue_key.json`;
-
-                    await RNFS.writeFile(path, jsonData, 'utf8');
-
-                    Alert.alert(
-                        localeString('general.success'),
-                        `${localeString('views.Swaps.rescueKey.download')}\n\n${
-                            Platform.OS === 'android'
-                                ? localeString('views.Swaps.rescueKey.android')
-                                : localeString('views.Swaps.rescueKey.ios')
-                        }`
+                    await unlinkRescueKeyStagingFile();
+                    await RNFS.writeFile(
+                        rescueKeyStagingPath,
+                        jsonData,
+                        'utf8'
                     );
 
-                    console.log('File written to:', path);
+                    await Share.open({
+                        title: localeString('views.Swaps.rescueKey.share'),
+                        url: `file://${rescueKeyStagingPath}`,
+                        type: 'application/json',
+                        filename: RESCUE_KEY_FILENAME,
+                        failOnCancel: false
+                    });
                 } catch (error) {
-                    console.error('Download failed:', error);
+                    console.error('Rescue key share failed:', error);
+                } finally {
+                    await unlinkRescueKeyStagingFile();
                 }
             };
 
+            const handleShare = () => {
+                Alert.alert(
+                    localeString('general.warning'),
+                    localeString('views.Swaps.rescueKey.shareWarning'),
+                    [
+                        {
+                            text: localeString('general.cancel'),
+                            style: 'cancel'
+                        },
+                        {
+                            text: localeString('general.proceed'),
+                            onPress: () => shareRescueKeyFile()
+                        }
+                    ]
+                );
+            };
+
             return (
-                <TouchableOpacity onPress={handleDownload}>
+                <TouchableOpacity onPress={handleShare}>
                     <Icon
-                        name="download"
+                        name="share"
                         type="feather"
                         color={themeColor('text')}
                         underlayColor="transparent"
@@ -367,9 +402,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         understood && seedPhrase ? (
                             <Row>
                                 {isRefundRescueKey ? (
-                                    <DownloadRescueKey
-                                        seedPhrase={seedPhrase}
-                                    />
+                                    <ShareRescueKey seedPhrase={seedPhrase} />
                                 ) : (
                                     <></>
                                 )}

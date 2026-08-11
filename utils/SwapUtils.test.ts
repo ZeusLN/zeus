@@ -1,4 +1,14 @@
 import BigNumber from 'bignumber.js';
+
+jest.mock('react-native-blob-util', () => ({
+    fs: {
+        dirs: { DownloadDir: '/downloads', DocumentDir: '/docs' },
+        exists: jest.fn().mockResolvedValue(false),
+        unlink: jest.fn().mockResolvedValue(undefined)
+    }
+}));
+
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     bigCeil,
     bigFloor,
@@ -7,7 +17,9 @@ import {
     calculateSendAmount,
     calculateLimit,
     isValidRescueKey,
-    verifyReverseSwapInvoice
+    verifyReverseSwapInvoice,
+    purgeLegacyRescueKeyFiles,
+    RESCUE_KEY_FILENAME
 } from './SwapUtils';
 
 // regtest BOLT11 vector: 123 sats,
@@ -240,6 +252,37 @@ describe('SwapUtils', () => {
             );
             expect(result.valid).toBe(false);
             expect(result.reason).toBe('undecodable');
+        });
+    });
+
+    describe('purgeLegacyRescueKeyFiles', () => {
+        const fs = (ReactNativeBlobUtil as any).fs;
+
+        beforeEach(() => {
+            fs.exists.mockReset().mockResolvedValue(false);
+            fs.unlink.mockReset().mockResolvedValue(undefined);
+        });
+
+        it('does nothing when no legacy file exists', async () => {
+            await purgeLegacyRescueKeyFiles();
+            expect(fs.exists).toHaveBeenCalledWith(
+                `/docs/${RESCUE_KEY_FILENAME}`
+            );
+            expect(fs.unlink).not.toHaveBeenCalled();
+        });
+
+        it('unlinks the legacy file when present', async () => {
+            fs.exists.mockResolvedValue(true);
+            await purgeLegacyRescueKeyFiles();
+            expect(fs.unlink).toHaveBeenCalledWith(
+                `/docs/${RESCUE_KEY_FILENAME}`
+            );
+        });
+
+        it('swallows unlink errors (scoped storage may deny deletion)', async () => {
+            fs.exists.mockResolvedValue(true);
+            fs.unlink.mockRejectedValue(new Error('EACCES'));
+            await expect(purgeLegacyRescueKeyFiles()).resolves.toBeUndefined();
         });
     });
 });
