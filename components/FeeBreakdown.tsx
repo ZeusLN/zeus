@@ -7,6 +7,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -20,6 +21,7 @@ import KeyValue from './KeyValue';
 interface FeeBreakdownProps {
     ChannelsStore?: ChannelsStore;
     NodeInfoStore?: NodeInfoStore;
+    SettingsStore?: SettingsStore;
     channelId: string | any;
     channelPoint: string;
     peerDisplay?: string | any;
@@ -34,7 +36,7 @@ interface FeeBreakdownProps {
     label?: string;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore')
+@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class FeeBreakdown extends React.Component<
     FeeBreakdownProps,
@@ -48,6 +50,7 @@ export default class FeeBreakdown extends React.Component<
             initiator,
             ChannelsStore,
             NodeInfoStore,
+            SettingsStore,
             isActive,
             isClosed,
             total_satoshis_received,
@@ -59,6 +62,8 @@ export default class FeeBreakdown extends React.Component<
         } = this.props;
         const { loading, chanInfo } = ChannelsStore!;
         const { nodeInfo, testnet } = NodeInfoStore!;
+        const feeRateDisplayMode =
+            SettingsStore!.implementation === 'cln-rest' ? 'ppm' : 'percent';
         const { nodeId } = nodeInfo;
 
         let localPolicy, remotePolicy;
@@ -124,9 +129,17 @@ export default class FeeBreakdown extends React.Component<
                             keyValue={localeString(
                                 'views.Channel.localFeeRate'
                             )}
-                            value={`${
-                                Number(localPolicy.fee_rate_milli_msat) / 10000
-                            }%`}
+                            value={
+                                feeRateDisplayMode === 'ppm'
+                                    ? `${Number(
+                                          localPolicy.fee_rate_milli_msat
+                                      )} PPM`
+                                    : `${
+                                          Number(
+                                              localPolicy.fee_rate_milli_msat
+                                          ) / 10000
+                                      }%`
+                            }
                             sensitive
                         />
                         <KeyValue
@@ -148,9 +161,17 @@ export default class FeeBreakdown extends React.Component<
                             keyValue={localeString(
                                 'views.Channel.remoteFeeRate'
                             )}
-                            value={`${
-                                Number(remotePolicy.fee_rate_milli_msat) / 10000
-                            }%`}
+                            value={
+                                feeRateDisplayMode === 'ppm'
+                                    ? `${Number(
+                                          remotePolicy.fee_rate_milli_msat
+                                      )} PPM`
+                                    : `${
+                                          Number(
+                                              remotePolicy.fee_rate_milli_msat
+                                          ) / 10000
+                                      }%`
+                            }
                             sensitive
                         />
                         {BackendUtils.supportInboundFees() && (
@@ -178,11 +199,17 @@ export default class FeeBreakdown extends React.Component<
                                         keyValue={localeString(
                                             'views.Channel.localInboundFeeRate'
                                         )}
-                                        value={`${
-                                            Number(
-                                                localPolicy.inbound_fee_rate_milli_msat
-                                            ) / 10000
-                                        }%`}
+                                        value={
+                                            feeRateDisplayMode === 'ppm'
+                                                ? `${Number(
+                                                      localPolicy.inbound_fee_rate_milli_msat
+                                                  )} PPM`
+                                                : `${
+                                                      Number(
+                                                          localPolicy.inbound_fee_rate_milli_msat
+                                                      ) / 10000
+                                                  }%`
+                                        }
                                         sensitive
                                     />
                                 )}
@@ -209,11 +236,17 @@ export default class FeeBreakdown extends React.Component<
                                         keyValue={localeString(
                                             'views.Channel.remoteInboundFeeRate'
                                         )}
-                                        value={`${
-                                            Number(
-                                                remotePolicy.inbound_fee_rate_milli_msat
-                                            ) / 10000
-                                        }%`}
+                                        value={
+                                            feeRateDisplayMode === 'ppm'
+                                                ? `${Number(
+                                                      remotePolicy.inbound_fee_rate_milli_msat
+                                                  )} PPM`
+                                                : `${
+                                                      Number(
+                                                          remotePolicy.inbound_fee_rate_milli_msat
+                                                      ) / 10000
+                                                  }%`
+                                        }
                                         sensitive
                                     />
                                 )}
