@@ -3,10 +3,15 @@
 // Zeus imports node credentials from connection strings that carry TLS
 // certificate material (lndconnect `cert=`, clnrest `certs=`). This patch
 // teaches the library a `pinnedCerts` config option (string[] of base64-DER
-// certificates): when present, the connection is accepted only if a
-// certificate in the presented chain byte-matches one of the pins, on both
-// Android (OkHttp trust manager) and iOS (URLSession challenge handler).
-// Pins take precedence over both CA validation and the `trusty` opt-out.
+// certificates). When present, the pinned certificates act as the ONLY
+// trust anchors: the connection is accepted iff the presented chain
+// validates against them (PKIX on Android OkHttp, SecTrust anchor
+// evaluation on iOS). A self-signed node cert validates as its own anchor
+// (lndconnect); a CA-issued leaf validates against a pinned CA (clnrest).
+// Byte-matching alone is NOT sufficient and is not used: an active MITM
+// could otherwise slip the (public) pinned cert into an attacker-controlled
+// chain. Pins take precedence over both CA validation and the `trusty`
+// opt-out.
 //
 // Idempotent: files already carrying the ZEUS-PIN-PATCH marker are skipped.
 
@@ -70,51 +75,45 @@ const REPLACEMENTS = [
                 anchor:
                     '    public static OkHttpClient.Builder getUnsafeOkHttpClient(OkHttpClient client) {',
                 replacement:
-                    `    // ZEUS-PIN-PATCH: certificate pinning support.
-    // Accepts the connection iff any certificate in the presented chain
-    // byte-matches one of the pinned base64-DER certificates. The pin
-    // authenticates the endpoint, so hostname verification is skipped
-    // (self-signed node certs routinely lack matching SANs).
+                    `    // ZEUS-PIN-PATCH: certificate pinning via trust anchors.
+    // The pinned certificates are loaded as the ONLY anchors of an
+    // in-memory KeyStore and the presented chain is validated against
+    // them with PKIX. A self-signed node cert validates as its own
+    // anchor (lndconnect); a CA-issued leaf validates against a pinned
+    // CA (clnrest); an attacker chain that merely carries a pinned
+    // (public) cert alongside their own leaf FAILS, because the
+    // attacker leaf is not signed by any anchor.
     public static OkHttpClient.Builder getPinnedOkHttpClient(OkHttpClient client, final com.facebook.react.bridge.ReadableArray pinnedCerts) {
         try {
-            final java.util.List<byte[]> pins = new java.util.ArrayList<>();
+            final java.security.KeyStore pinStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+            pinStore.load(null, null);
+            final java.security.cert.CertificateFactory certFactory = java.security.cert.CertificateFactory.getInstance("X.509");
+            int pinCount = 0;
             for (int i = 0; i < pinnedCerts.size(); i++) {
                 final String b64 = pinnedCerts.getString(i);
                 if (b64 == null) continue;
                 final byte[] der = Base64.decode(b64, Base64.DEFAULT);
-                if (der != null && der.length > 0) pins.add(der);
+                if (der == null || der.length == 0) continue;
+                pinStore.setCertificateEntry(
+                    "zeus-pin-" + pinCount++,
+                    certFactory.generateCertificate(new java.io.ByteArrayInputStream(der))
+                );
             }
-            if (pins.isEmpty()) throw new IllegalStateException("pinnedCerts set but none decodable");
+            if (pinCount == 0) throw new IllegalStateException("pinnedCerts set but none decodable");
 
-            final X509TrustManager pinTrustManager = new X509TrustManager() {
-                @Override
-                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+            final javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(pinStore);
+            final X509TrustManager anchorTrustManager = (X509TrustManager) tmf.getTrustManagers()[0];
 
-                @Override
-                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) throws java.security.cert.CertificateException {
-                    for (java.security.cert.X509Certificate cert : chain) {
-                        try {
-                            final byte[] der = cert.getEncoded();
-                            for (byte[] pin : pins) {
-                                if (java.util.Arrays.equals(der, pin)) return;
-                            }
-                        } catch (java.security.cert.CertificateEncodingException ignored) {}
-                    }
-                    throw new java.security.cert.CertificateException("certificate pinning failure");
-                }
-
-                @Override
-                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    return new java.security.cert.X509Certificate[0];
-                }
-            };
-
-            final SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, new TrustManager[]{ pinTrustManager }, new java.security.SecureRandom());
+            final SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{ anchorTrustManager }, new java.security.SecureRandom());
             final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             OkHttpClient.Builder builder = client.newBuilder();
-            builder.sslSocketFactory(sslSocketFactory, pinTrustManager);
+            builder.sslSocketFactory(sslSocketFactory, anchorTrustManager);
+            // the anchor authenticates the endpoint; self-signed node
+            // certs routinely lack matching SANs, so skip hostname
+            // verification
             builder.hostnameVerifier(new HostnameVerifier() {
                 @Override
                 public boolean verify(String hostname, SSLSession session) {
@@ -143,29 +142,39 @@ const REPLACEMENTS = [
                 replacement:
                     `- (void) URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential * _Nullable credantial))completionHandler
 {
-    // ZEUS-PIN-PATCH: certificate pinning — accept iff any presented
-    // certificate byte-matches a pinned base64-DER certificate
+    // ZEUS-PIN-PATCH: certificate pinning via trust anchors. The pinned
+    // certificates become the ONLY anchors for this evaluation and the
+    // presented chain must validate against them — a self-signed node
+    // cert validates as its own anchor (lndconnect), a CA-issued leaf
+    // validates against a pinned CA (clnrest), and an attacker chain
+    // merely carrying a pinned (public) cert fails, because the
+    // attacker leaf is not signed by any anchor. Only server-trust
+    // challenges are handled here; everything else falls through to the
+    // default paths below.
     NSArray *zeusPinnedCerts = [options valueForKey:@"pinnedCerts"];
-    if ([zeusPinnedCerts isKindOfClass:[NSArray class]] && [zeusPinnedCerts count] > 0) {
-        BOOL zeusPinMatched = NO;
+    if ([challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust] &&
+        [zeusPinnedCerts isKindOfClass:[NSArray class]] && [zeusPinnedCerts count] > 0) {
         SecTrustRef zeusServerTrust = challenge.protectionSpace.serverTrust;
-        CFArrayRef zeusChain = SecTrustCopyCertificateChain(zeusServerTrust);
-        if (zeusChain != NULL) {
-            for (id zeusCertObj in (__bridge NSArray *)zeusChain) {
-                NSData *zeusDer = (__bridge_transfer NSData *)SecCertificateCopyData((__bridge SecCertificateRef)zeusCertObj);
-                for (id zeusPinObj in zeusPinnedCerts) {
-                    if (![zeusPinObj isKindOfClass:[NSString class]]) continue;
-                    NSData *zeusPinDer = [[NSData alloc] initWithBase64EncodedString:(NSString *)zeusPinObj options:0];
-                    if (zeusPinDer != nil && [zeusDer isEqualToData:zeusPinDer]) {
-                        zeusPinMatched = YES;
-                        break;
-                    }
-                }
-                if (zeusPinMatched) break;
+        NSMutableArray *zeusAnchors = [NSMutableArray array];
+        for (id zeusPinObj in zeusPinnedCerts) {
+            if (![zeusPinObj isKindOfClass:[NSString class]]) continue;
+            NSData *zeusPinDer = [[NSData alloc] initWithBase64EncodedString:(NSString *)zeusPinObj options:0];
+            if (zeusPinDer == nil) continue;
+            SecCertificateRef zeusAnchor = SecCertificateCreateWithData(NULL, (__bridge CFDataRef)zeusPinDer);
+            if (zeusAnchor != NULL) {
+                [zeusAnchors addObject:(__bridge id)zeusAnchor];
+                CFRelease(zeusAnchor);
             }
-            CFRelease(zeusChain);
         }
-        if (zeusPinMatched) {
+        BOOL zeusTrusted = NO;
+        if ([zeusAnchors count] > 0 && zeusServerTrust != NULL) {
+            SecTrustSetAnchorCertificates(zeusServerTrust, (__bridge CFArrayRef)zeusAnchors);
+            SecTrustSetAnchorCertificatesOnly(zeusServerTrust, true);
+            CFErrorRef zeusError = NULL;
+            zeusTrusted = SecTrustEvaluateWithError(zeusServerTrust, &zeusError);
+            if (zeusError != NULL) CFRelease(zeusError);
+        }
+        if (zeusTrusted) {
             completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:zeusServerTrust]);
         } else {
             completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
@@ -194,8 +203,8 @@ const REPLACEMENTS = [
                     '    trusty?: boolean;\n' +
                     '\n' +
                     '    /**\n' +
-                    '     * ZEUS-PIN-PATCH: base64-DER TLS certificates to pin against. When set, the\n' +
-                    '     * connection is accepted only if a presented certificate byte-matches a pin.\n' +
+                    '     * ZEUS-PIN-PATCH: base64-DER TLS certificates used as the only trust\n' +
+                    '     * anchors. When set, the presented chain must validate against a pin.\n' +
                     '     */\n' +
                     '    pinnedCerts?: string[];'
             }
@@ -224,23 +233,24 @@ export function patchReactNativeBlobUtil() {
         const crlf = content.includes('\r\n');
         const toFileEOL = (s) => (crlf ? s.replace(/\n/g, '\r\n') : s);
 
-        let applied = 0;
+        // All-or-nothing per file: this is a security patch, so a missed
+        // anchor must fail the install loudly rather than ship a client
+        // that silently lacks pinning (a partially-applied file would also
+        // carry the marker and never self-heal on later runs).
+        let rewritten = content;
         for (const { anchor, replacement } of edits) {
             const fileAnchor = toFileEOL(anchor);
-            if (!content.includes(fileAnchor)) {
-                console.warn(
-                    `  - WARNING ${file}: patch anchor not found — pinning NOT applied. ` +
-                        'The react-native-blob-util sources have changed; update patches/patch-react-native-blob-util.mjs.'
+            if (!rewritten.includes(fileAnchor)) {
+                throw new Error(
+                    `react-native-blob-util patch anchor not found in ${file} — ` +
+                        'pinning NOT applied. The library sources have changed; ' +
+                        'update patches/patch-react-native-blob-util.mjs.'
                 );
-                continue;
             }
-            content = content.replace(fileAnchor, toFileEOL(replacement));
-            applied++;
+            rewritten = rewritten.replace(fileAnchor, toFileEOL(replacement));
         }
 
-        if (applied > 0) {
-            fs.writeFileSync(file, content, 'utf8');
-            console.log(`  - Patched ${file} (${applied}/${edits.length} edits)`);
-        }
+        fs.writeFileSync(file, rewritten, 'utf8');
+        console.log(`  - Patched ${file} (${edits.length}/${edits.length} edits)`);
     }
 }
