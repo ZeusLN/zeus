@@ -75,6 +75,8 @@ import {
     getLdkNodeBaseDirectory,
     stopLdkNode
 } from './LdkNodeUtils';
+import { purgeLegacyActivityCsvExports } from './ActivityCsvUtils';
+import { purgeLegacyNodeConfigExports } from './NodeConfigUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
 
@@ -982,6 +984,13 @@ export async function clearAllData(): Promise<void> {
     // 2e. Clear the per-order POS records while the order lists that name
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
+
+    // 2f. Delete legacy export artifacts older builds wrote to shared
+    // storage (activity CSVs and credential-bearing wallet config backups).
+    // These live outside the app-private keys cleared below, so they must
+    // be unlinked explicitly.
+    await purgeLegacyActivityCsvExports();
+    await purgeLegacyNodeConfigExports();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it
