@@ -244,15 +244,16 @@ view → BackendUtils.<method> → call(funcName) → active backend class
 
 Facts you need before reaching for a proxy:
 
-1. **TLS verification is OFF by default for remote REST.** `restReq`'s
-   `certVerification` parameter defaults to `false`, and blob-util is called
-   with `trusty: !certVerification` — i.e. invalid/self-signed certs are
-   accepted unless the user enabled "Certificate Verification" on the node
-   config. Consequence: a MITM proxy (mitmproxy, Charles, Proxyman) can
-   intercept remote-node REST traffic *without installing its CA cert*, as
-   long as certVerification is off and you route the emulator/device through
-   the proxy (Android emulator: `-http-proxy`; iOS simulator honors macOS
-   system proxy). There is no cert pinning anywhere in the REST path.
+1. **TLS verification is ON by default for new remote REST configs** (branch
+   `fix/cert-verification-default`; older saved nodes may still carry
+   `certVerification: false`). `restReq` calls blob-util with
+   `trusty: !certVerification` — and when the node has `pinnedCerts` (from
+   lndconnect `cert=` / clnrest `certs=`), the patched blob-util enforces
+   byte-exact cert pinning regardless of that flag. Consequence for traffic
+   inspection: a MITM proxy (mitmproxy, Charles, Proxyman) only intercepts
+   remote-node REST traffic if the node config has verification off and no
+   pins, or if you install the proxy CA in the device trust store (Android
+   emulator: `-http-proxy`; iOS simulator honors macOS system proxy).
 2. **WebSocket streams bypass Tor entirely.** `wsReq` and the other
    `new WebSocket(...)` call sites in `backends/LND.ts` build `wss://` URLs
    straight from host/port — even when the node has Tor enabled. When
