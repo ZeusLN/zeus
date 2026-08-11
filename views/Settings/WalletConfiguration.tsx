@@ -14,6 +14,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import differenceBy from 'lodash/differenceBy';
+import isEqual from 'lodash/isEqual';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -811,16 +812,36 @@ export default class WalletConfiguration extends React.Component<
             // the deleted node or being clobbered by a snapshot taken
             // before it.
             const newSettings = await updateSettings(
-                (currentSettings: Settings) => ({
-                    nodes: (currentSettings.nodes || []).filter(
-                        (_: any, i: number) => i !== index
-                    ),
-                    selectedNode: this.getNewSelectedNodeIndex(
-                        index,
-                        currentSettings
-                    ),
-                    justDeletedWallet: active
-                })
+                (currentSettings: Settings) => {
+                    const currentNodes = currentSettings.nodes || [];
+                    // Re-locate the wallet at update time: the captured
+                    // index can go stale during the multi-second stops
+                    // above if a concurrent length-changing nodes write
+                    // (e.g. an overlapping deletion of another wallet)
+                    // shifts the array. Matching the captured config keeps
+                    // the removal pinned to the wallet whose data was just
+                    // wiped, never a neighbor that slid into its slot.
+                    const freshIndex = deletedNode
+                        ? currentNodes.findIndex((node) =>
+                              isEqual(node, deletedNode)
+                          )
+                        : index;
+                    if (freshIndex == null || freshIndex === -1) {
+                        // Config already gone (removed concurrently):
+                        // nothing to filter, just flag the deletion
+                        return { justDeletedWallet: active };
+                    }
+                    return {
+                        nodes: currentNodes.filter(
+                            (_: any, i: number) => i !== freshIndex
+                        ),
+                        selectedNode: this.getNewSelectedNodeIndex(
+                            freshIndex,
+                            currentSettings
+                        ),
+                        justDeletedWallet: active
+                    };
+                }
             );
             const remainingNodes = newSettings?.nodes || [];
 
