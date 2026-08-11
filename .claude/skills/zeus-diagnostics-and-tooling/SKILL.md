@@ -244,9 +244,8 @@ view → BackendUtils.<method> → call(funcName) → active backend class
 
 Facts you need before reaching for a proxy:
 
-1. **TLS verification is ON by default for new remote REST configs** (branch
-   `fix/cert-verification-default`; older saved nodes may still carry
-   `certVerification: false`). `restReq` calls blob-util with
+1. **TLS verification is ON by default for new remote REST configs** (PR
+   #4366; older saved nodes may still carry `certVerification: false`). `restReq` calls blob-util with
    `trusty: !certVerification` — and when the node has `pinnedCerts` (from
    lndconnect `cert=` / clnrest `certs=`), the patched blob-util enforces
    byte-exact cert pinning regardless of that flag. Consequence for traffic
