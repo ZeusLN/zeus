@@ -36,7 +36,7 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import {
     saveNodeConfigs,
     createExportFileContent as createExportFileContent,
-    saveNodeConfigExportFile,
+    shareNodeConfigExportFile,
     decryptExportData
 } from '../../utils/NodeConfigUtils';
 import KeychainRecoveryUtils, {
@@ -180,13 +180,9 @@ export default class NodeConfigExportImport extends React.Component<
                                 marginBottom: 20
                             }}
                         >
-                            {Platform.OS === 'android'
-                                ? localeString(
-                                      'views.Tools.nodeConfigExportImport.explainerAndroid'
-                                  )
-                                : localeString(
-                                      'views.Tools.nodeConfigExportImport.explaineriOS'
-                                  )}
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.explainer'
+                            )}
                         </Text>
                         <Button
                             title={localeString('general.ok')}
@@ -548,20 +544,9 @@ export default class NodeConfigExportImport extends React.Component<
             const timestamp = moment().format('YYYYMMDD-HHmmss');
             const filename = `${timestamp}.zeus-wallet-config-backup`;
 
-            await saveNodeConfigExportFile(filename, exportFileContent);
+            await shareNodeConfigExportFile(filename, exportFileContent);
             this.setState({ isLoading: false });
-            Alert.alert(
-                localeString('general.success'),
-                localeString(
-                    'views.Tools.nodeConfigExportImport.exportSuccess'
-                ),
-                [
-                    {
-                        text: localeString('general.ok'),
-                        onPress: () => this.resetExportState()
-                    }
-                ]
-            );
+            this.resetExportState();
         } catch (error) {
             this.handleError(
                 error,
