@@ -581,6 +581,14 @@ class MigrationsUtils {
                 ) || changed;
         }
 
+        if (priorVersion < 3) {
+            // v2 -> v3: normalize nodes with no certVerification key to the
+            // explicit pre-flip default. No flag read: the standalone
+            // 'cert-verification-default-v1' flag this replaces never
+            // shipped, so no install can have it set.
+            changed = this.applyCertVerificationDefault(settings) || changed;
+        }
+
         settings.settingsVersion = SETTINGS_VERSION;
         return changed;
     }
@@ -811,6 +819,30 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await EncryptedStorage.setItem(MOD_KEY_RESCUE_FILE, 'true');
+    }
+
+    // Normalize nodes saved without a `certVerification` key to an explicit
+    // `false`. Those connections were established under trust-all (the old
+    // default), and `JSON.stringify` drops undefined values, so QR/clipboard
+    // imports of that era carry no key at all. Without this normalization
+    // the new secure-by-default fallback (`?? true`) would flip them to
+    // strict CA validation on upgrade and break self-signed remotes that
+    // predate pinnedCerts. Trust-all for existing nodes stays an explicit
+    // stored value; the strict default only governs new configs. Runs as
+    // the v2 -> v3 block of applySettingsMigrations, so it covers both the
+    // legacy and modern (zeus-settings-v2) load paths and is persisted by
+    // whichever of those owns the write.
+    public applyCertVerificationDefault(settings: any): boolean {
+        let changed = false;
+        if (settings?.nodes && Array.isArray(settings.nodes)) {
+            for (const node of settings.nodes) {
+                if (node && node.certVerification === undefined) {
+                    node.certVerification = false;
+                    changed = true;
+                }
+            }
+        }
+        return changed;
     }
 
     public async storageMigrationV2(settings: any) {
