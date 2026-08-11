@@ -4,7 +4,6 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// @ts-ignore:next-line
 import { nip19 } from 'nostr-tools';
 
 import AmountInput from '../../components/AmountInput';

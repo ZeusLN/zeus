@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox } from '@rneui/themed';
-// @ts-ignore:next-line
 import { SimplePool, nip05, nip19 } from 'nostr-tools';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
