@@ -318,6 +318,7 @@ describe('SwapStore host-change rate refetch', () => {
         expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
             'GET',
             'https://swap.coinos.io/v2/swap/submarine',
+            undefined,
             undefined
         );
     });

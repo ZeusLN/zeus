@@ -9,6 +9,7 @@ import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import UrlUtils from '../utils/UrlUtils';
 import {
@@ -339,11 +340,12 @@ export default class SwapStore {
         const host = this.getHost;
         console.log(`Fetching fees from: ${host}`);
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${host}/swap/submarine`,
-                this.getHeaders
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${host}/swap/submarine`,
+                headers: this.getHeaders,
+                enableTor: this.settingsStore.enableTor
+            });
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -370,11 +372,12 @@ export default class SwapStore {
         }
 
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${host}/swap/reverse`,
-                this.getHeaders
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${host}/swap/reverse`,
+                headers: this.getHeaders,
+                enableTor: this.settingsStore.enableTor
+            });
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -409,11 +412,12 @@ export default class SwapStore {
     public getLockupTransaction = async (id: string, endpoint?: string) => {
         try {
             const host = endpoint || this.getHost;
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${host}/swap/submarine/${id}/transaction`,
-                this.getHeaders
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${host}/swap/submarine/${id}/transaction`,
+                headers: this.getHeaders,
+                enableTor: this.settingsStore.enableTor
+            });
 
             // named httpStatus, not status: spreading a local called
             // `status` into a swap is what overwrote the swap's own
@@ -465,20 +469,21 @@ export default class SwapStore {
             );
             const refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
 
-            const response = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${this.getHost}/swap/submarine`,
-                {
+            const response = await networkFetch({
+                method: 'POST',
+                url: `${this.getHost}/swap/submarine`,
+                headers: {
                     'Content-Type': 'application/json'
                 },
-                JSON.stringify({
+                body: JSON.stringify({
                     invoice,
                     to: 'BTC',
                     from: 'BTC',
                     refundPublicKey,
                     ...(this.referralId && { referralId: this.referralId })
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const responseData = JSON.parse(response.data);
             console.log('Parsed Response Data:', responseData);
@@ -600,14 +605,15 @@ export default class SwapStore {
 
             console.log('Data before sending to API:', data);
 
-            const response = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${this.getHost}/swap/reverse`,
-                {
+            const response = await networkFetch({
+                method: 'POST',
+                url: `${this.getHost}/swap/reverse`,
+                headers: {
                     'Content-Type': 'application/json'
                 },
-                data
-            );
+                body: data,
+                enableTor: this.settingsStore.enableTor
+            });
 
             const responseData = JSON.parse(response.data);
             console.log('Created reverse swap:', responseData);
@@ -1085,11 +1091,12 @@ export default class SwapStore {
                 const host = swap.endpoint || this.getHost;
 
                 try {
-                    const response = await ReactNativeBlobUtil.fetch(
-                        'GET',
-                        `${host}/swap/${swap.id}`,
-                        this.getHeaders
-                    );
+                    const response = await networkFetch({
+                        method: 'GET',
+                        url: `${host}/swap/${swap.id}`,
+                        headers: this.getHeaders,
+                        enableTor: this.settingsStore.enableTor
+                    });
 
                     const result = await response.json();
                     if (result?.status) {
@@ -1509,16 +1516,17 @@ export default class SwapStore {
             const xpub = this.getXpub(mnemonic);
 
             try {
-                const response = await ReactNativeBlobUtil.fetch(
-                    'POST',
-                    `${host}/swap/restore`,
-                    {
+                const response = await networkFetch({
+                    method: 'POST',
+                    url: `${host}/swap/restore`,
+                    headers: {
                         'Content-Type': 'application/json'
                     },
-                    JSON.stringify({
+                    body: JSON.stringify({
                         xpub
-                    })
-                );
+                    }),
+                    enableTor: this.settingsStore.enableTor
+                });
 
                 const importedSwaps = JSON.parse(response.data || '[]');
 
