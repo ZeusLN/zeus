@@ -34,6 +34,10 @@ export interface SendPaymentReq {
     payment_request?: string;
     amount?: string;
     pubkey?: string;
+    // BOLT 12 offer (direct-pay backends only): the backend dispatches the
+    // offer payment itself, so it must only be set from the offer review
+    // screen after the user has confirmed the decoded offer
+    offer?: string;
     max_parts?: string;
     max_shard_amt?: string;
     fee_limit_sat?: string;
@@ -578,6 +582,7 @@ export default class TransactionsStore {
         payment_request,
         amount,
         pubkey,
+        offer,
         max_parts,
         max_shard_amt,
         fee_limit_sat,
@@ -620,6 +625,9 @@ export default class TransactionsStore {
         const data: any = {};
         if (payment_request) {
             data.payment_request = payment_request;
+        }
+        if (offer) {
+            data.offer = offer;
         }
         if (amount) {
             data.amt = Number(amount);
@@ -701,13 +709,14 @@ export default class TransactionsStore {
             setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
         }
 
-        const payFunc =
-            (this.settingsStore.implementation === 'cln-rest' ||
-                this.settingsStore.implementation === 'embedded-lnd' ||
-                this.settingsStore.implementation === 'ldk-node') &&
-            pubkey
-                ? BackendUtils.sendKeysend
-                : BackendUtils.payLightningInvoice;
+        const payFunc = offer
+            ? BackendUtils.payOffer
+            : (this.settingsStore.implementation === 'cln-rest' ||
+                  this.settingsStore.implementation === 'embedded-lnd' ||
+                  this.settingsStore.implementation === 'ldk-node') &&
+              pubkey
+            ? BackendUtils.sendKeysend
+            : BackendUtils.payLightningInvoice;
 
         payFunc(data)
             .then((response: any) => {
