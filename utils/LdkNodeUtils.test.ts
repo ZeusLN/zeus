@@ -41,7 +41,9 @@ describe('LdkNodeUtils', () => {
 
     describe('getLdkNodeBaseDirectory', () => {
         it('returns the shared ldk-node directory under Documents', () => {
-            expect(getLdkNodeBaseDirectory()).toEqual('/mock/documents/ldk-node');
+            expect(getLdkNodeBaseDirectory()).toEqual(
+                '/mock/documents/ldk-node'
+            );
         });
     });
 
