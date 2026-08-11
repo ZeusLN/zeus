@@ -249,3 +249,57 @@ describe('NWCConnection budget accounting with pending payments', () => {
         ).toBe(false);
     });
 });
+
+describe('NWCConnection pay_invoice activity lookup', () => {
+    it('findPayInvoiceActivityIndex matches by id', () => {
+        const connection = baseConnection();
+        connection.activity.push({
+            id: 'lnbc1normalized',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 100
+        });
+
+        expect(connection.findPayInvoiceActivityIndex('lnbc1normalized')).toBe(
+            0
+        );
+        expect(connection.findPayInvoiceActivityIndex('missing')).toBe(-1);
+    });
+
+    it('findPayInvoiceActivityIndex matches by paymentHash when ids differ', () => {
+        const connection = baseConnection();
+        const paymentHash = 'abc123paymenthash';
+        connection.activity.push({
+            id: 'lnbc1normalized',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 100,
+            paymentHash
+        });
+
+        expect(
+            connection.findPayInvoiceActivityIndex(
+                'LNBC1NORMALIZED',
+                paymentHash
+            )
+        ).toBe(0);
+    });
+
+    it('findPayInvoiceActivity returns the matching activity', () => {
+        const connection = baseConnection();
+        connection.activity.push({
+            id: 'lnbc1normalized',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100
+        });
+
+        expect(connection.findPayInvoiceActivity('lnbc1normalized')).toEqual(
+            connection.activity[0]
+        );
+        expect(connection.findPayInvoiceActivity('missing')).toBeUndefined();
+    });
+});

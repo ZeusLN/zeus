@@ -242,6 +242,27 @@ export default class NWCConnection extends BaseModel {
         return this.totalSpendSats + this.pendingSpendSats;
     }
 
+    public findPayInvoiceActivityIndex(
+        id: string,
+        paymentHash?: string
+    ): number {
+        return (this.activity ?? []).findIndex(
+            (a) =>
+                a.id === id ||
+                (!!paymentHash &&
+                    !!a.paymentHash &&
+                    a.paymentHash === paymentHash)
+        );
+    }
+
+    public findPayInvoiceActivity(
+        id: string,
+        paymentHash?: string
+    ): ConnectionActivity | undefined {
+        const index = this.findPayInvoiceActivityIndex(id, paymentHash);
+        return index !== -1 ? this.activity[index] : undefined;
+    }
+
     @computed public get remainingBudget(): number {
         if (!this.hasBudgetLimit) return Infinity;
         return Math.max(0, this.maxAmountSats! - this.effectiveSpendSats);
