@@ -1966,6 +1966,9 @@ export default class SettingsStore {
                 await MigrationsUtils.migrateOlympusHostsToZeusLsp(
                     parsedSettings
                 );
+                await MigrationsUtils.migrateCertVerificationDefault(
+                    parsedSettings
+                );
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
