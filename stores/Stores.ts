@@ -92,7 +92,7 @@ export const lightningAddressStore = new LightningAddressStore(
 );
 export const posStore = new PosStore(settingsStore, fiatStore, unitsStore);
 export const inventoryStore = new InventoryStore();
-export const sweepStore = new SweepStore(nodeInfoStore);
+export const sweepStore = new SweepStore(nodeInfoStore, settingsStore);
 export const nostrWalletConnectStore = new NostrWalletConnectStore(
     settingsStore,
     balanceStore,
