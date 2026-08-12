@@ -532,6 +532,8 @@ export async function clearNodeKeychainData(
     // identity key). Derivation failure means a non-default aezeed
     // passphrase; those wallets never had the cache written, because the
     // export screen's decryption failed the same way before its write.
+    // Belt and braces: NodeInfoStore also purges the cache at connect
+    // time using the runtime nodeId, which is passphrase-independent.
     if (
         !opts?.skipXprvPurge &&
         node.implementation === 'embedded-lnd' &&
