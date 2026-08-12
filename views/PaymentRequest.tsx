@@ -219,9 +219,11 @@ export default class PaymentRequest extends React.Component<
             reviewedPaymentRequest: InvoicesStore.paymentRequest
         });
 
-        // If the invoice under review changes without a real focus change (the
-        // injection case above), invalidate any in-progress slide-to-pay
-        // gesture so it cannot complete against the swapped-in invoice.
+        // If the invoice under review changes while this screen is mounted,
+        // invalidate any in-progress slide-to-pay gesture so it cannot
+        // complete against the swapped-in invoice. The render path notices the
+        // mismatch and replaces the pay controls with a warning; the pin is
+        // only advanced when the user explicitly accepts the new request.
         this.payReqDisposer = reaction(
             () => InvoicesStore.paymentRequest,
             () => {
@@ -232,16 +234,15 @@ export default class PaymentRequest extends React.Component<
             }
         );
 
-        // Reset slide to pay slider position when screen comes into focus, and
-        // re-pin to the current invoice: a genuine re-navigation into this
-        // screen (blur then focus) re-reviews whatever is now loaded, whereas a
-        // background injection never fires focus and stays pinned to the
-        // originally reviewed invoice.
+        // Reset slide to pay slider position when screen comes into focus.
+        // Deliberately do NOT re-pin here: a focus event also fires when
+        // returning from a screen pushed on top of this one (e.g. the QR
+        // view), so an invoice injected while the user was away would get
+        // silently re-pinned and paid.
         const { navigation } = this.props;
         this.focusListener = navigation.addListener('focus', () => {
             this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1,
-                reviewedPaymentRequest: InvoicesStore.paymentRequest
+                swipeButtonKey: this.state.swipeButtonKey + 1
             });
         });
     }
@@ -414,11 +415,16 @@ export default class PaymentRequest extends React.Component<
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
         // Refuse to pay rather than paying a different invoice than the one
-        // that was on screen when this confirmation began.
+        // that was on screen when this confirmation began. Reset the swipe
+        // knob so the gesture doesn't stick; the render path shows the
+        // payment-request-changed warning in place of the pay controls.
         if (
             this.state.reviewedPaymentRequest !== '' &&
             paymentRequest !== this.state.reviewedPaymentRequest
         ) {
+            this.setState({
+                swipeButtonKey: this.state.swipeButtonKey + 1
+            });
             return;
         }
 
@@ -626,6 +632,17 @@ export default class PaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean = !requestAmount;
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
+
+        // The screen renders whatever invoice is in the shared InvoicesStore,
+        // so when the store no longer matches the pinned invoice the user has
+        // a different payment request in front of them than the one they were
+        // reviewing. Surface that instead of paying (or silently refusing):
+        // the pay controls are replaced below with a warning and an explicit
+        // button to review the new request, which re-pins it.
+        const payReqChanged =
+            this.state.reviewedPaymentRequest !== '' &&
+            !!paymentRequest &&
+            paymentRequest !== this.state.reviewedPaymentRequest;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -1551,6 +1568,39 @@ export default class PaymentRequest extends React.Component<
                     !isPayReqExpired &&
                     !loading &&
                     !loadingFeeEstimate &&
+                    payReqChanged &&
+                    BackendUtils.supportsLightningSends() && (
+                        <View style={{ bottom: 10 }}>
+                            <View style={styles.content}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.PaymentRequest.payReqChanged'
+                                    )}
+                                />
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.PaymentRequest.reviewNewPayReq'
+                                    )}
+                                    onPress={() =>
+                                        this.setState({
+                                            reviewedPaymentRequest:
+                                                InvoicesStore.paymentRequest,
+                                            swipeButtonKey:
+                                                this.state.swipeButtonKey + 1
+                                        })
+                                    }
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                {!!pay_req &&
+                    !isPayReqExpired &&
+                    !loading &&
+                    !loadingFeeEstimate &&
+                    !payReqChanged &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10 }}>
                             {!!pay_req && !lightningReadyToSend && !noBalance && (
