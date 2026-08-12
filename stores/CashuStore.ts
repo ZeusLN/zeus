@@ -59,7 +59,7 @@ import CashuUtils, {
     MultimintProgressCallback,
     MultinutPaymentStep
 } from '../utils/CashuUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -3853,7 +3853,7 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log('Cashu createInvoice err', e);
             }
-            const error_msg = e?.message || e?.toString() || 'Unknown error';
+            const error_msg = cashuErrorForDisplay(e) || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
@@ -4389,7 +4389,7 @@ export default class CashuStore {
 
             return payment;
         } catch (err: any) {
-            const errorMsg = String(err?.message);
+            const errorMsg = cashuErrorForDisplay(err);
             console.error('CDK payLnInvoiceFromEcash error:', err);
             if (!isDonationPayment) {
                 runInAction(() => {
@@ -4655,9 +4655,9 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.paymentError = true;
-                this.paymentErrorMsg =
-                    firstFailure ||
-                    localeString('stores.CashuStore.errorPayingInvoice');
+                this.paymentErrorMsg = firstFailure
+                    ? cashuErrorForDisplay(firstFailure)
+                    : localeString('stores.CashuStore.errorPayingInvoice');
                 this.loading = false;
             });
 
@@ -4795,9 +4795,9 @@ export default class CashuStore {
             console.error('Error checking token spent status:', error);
             runInAction(() => {
                 this.error = true;
-                this.error_msg =
-                    errorMessage ||
-                    localeString('stores.CashuStore.checkSpentError');
+                this.error_msg = errorMessage
+                    ? cashuErrorForDisplay(errorMessage)
+                    : localeString('stores.CashuStore.checkSpentError');
             });
             return false;
         }
@@ -5392,7 +5392,7 @@ export default class CashuStore {
                 this.error = true;
                 this.error_msg = `${localeString(
                     'stores.CashuStore.sweepError'
-                )} (${mintUrl}): ${error.message || error.toString()}`;
+                )} (${mintUrl}): ${cashuErrorForDisplay(error)}`;
             });
             return false;
         }
@@ -5519,7 +5519,7 @@ export default class CashuStore {
             return { token, decoded };
         } catch (e: any) {
             const errorMsg =
-                e?.message ||
+                cashuErrorForDisplay(e) ||
                 localeString('stores.CashuStore.errorMintingToken');
             console.error('CDK mintToken error:', e);
             runInAction(() => {

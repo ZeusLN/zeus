@@ -450,31 +450,6 @@ class CashuDevKit {
     }
 
     /**
-     * Execute MPP melt (pay Lightning invoice using multi-path payments)
-     * Uses the CDK's high-level melt which handles quote creation,
-     * proof selection, and partial payment in one call.
-     * @param bolt11 - BOLT11 invoice to pay
-     * @param options - Melt options including MPP amount
-     * @param maxFee - Maximum fee in sats (0 for no limit)
-     */
-    async meltMpp(
-        bolt11: string,
-        options?: any,
-        maxFee: number = 0
-    ): Promise<CDKMelted> {
-        try {
-            const json = await CashuDevKitModule.meltMpp(
-                bolt11,
-                options ? JSON.stringify(options) : undefined,
-                maxFee
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
-    }
-
-    /**
      * Execute a partial melt from a specific mint.
      * Creates its own melt quote directly with the mint API
      * to get the actual fee, then sends all proofs.
