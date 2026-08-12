@@ -3505,9 +3505,10 @@ export default class WalletConfiguration extends React.Component<
                             />
                         )}
 
-                        {!saved && certVerification && !enableTor && (
-                            <CertInstallInstructions />
-                        )}
+                        {!saved &&
+                            supportsCertVerification &&
+                            certVerification &&
+                            !enableTor && <CertInstallInstructions />}
 
                         {saved && !active && !newEntry && (
                             <View style={styles.button}>
