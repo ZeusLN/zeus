@@ -160,6 +160,32 @@ describe('SettingsStore.updateSettings', () => {
         expect(StorageMock._backing[STORAGE_KEY]).not.toContain('hunter2');
     });
 
+    it('keeps memory consistent with disk when the write is blocked', async () => {
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+        // Load once so the store holds the seeded settings before the
+        // blocked write, mirroring a wipe that latches mid-session.
+        await store.getSettings();
+
+        // Storage.setItem returns false while the data-wipe write latch
+        // is engaged (storage/index.ts blockWrites).
+        StorageMock.setItem.mockImplementationOnce(async () => false);
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        // The unpersisted update must not surface anywhere: not in the
+        // returned settings, not in memory, not in derived state.
+        expect(result.fiat).toEqual('USD');
+        expect(store.settings.fiat).toEqual('USD');
+        expect(store.triggerSettingsRefresh).toEqual(false);
+        expect(persistedSettings().fiat).toEqual('USD');
+
+        // Once writes land again, updates flow through as normal.
+        const after = await store.updateSettings({ fiat: 'CAD' });
+        expect(after.fiat).toEqual('CAD');
+        expect(store.settings.fiat).toEqual('CAD');
+        expect(persistedSettings().fiat).toEqual('CAD');
+    });
+
     it('keeps processing queued updates after one rejects', async () => {
         seedSettings({ fiat: 'USD' });
         const store = new SettingsStore();

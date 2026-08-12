@@ -1965,12 +1965,20 @@ export default class SettingsStore {
         return this.settings;
     };
 
-    public async setSettings(settings: any) {
+    // Returns whether the settings were persisted. Storage.setItem returns
+    // false while the data-wipe write latch is engaged (and the keychain
+    // call itself is typed `false | Result`); in-memory settings only
+    // update when the write landed, so a blocked write cannot leave the
+    // store advertising state that will not survive the imminent restart.
+    public async setSettings(settings: any): Promise<boolean> {
         this.loading = true;
-        await Storage.setItem(STORAGE_KEY, settings);
-        this.settings = settings;
+        const persisted =
+            (await Storage.setItem(STORAGE_KEY, settings)) !== false;
+        if (persisted) {
+            this.settings = settings;
+        }
         this.loading = false;
-        return settings;
+        return persisted;
     }
 
     // Serializes updateSettings calls. Each update is a read-merge-write
@@ -2018,7 +2026,13 @@ export default class SettingsStore {
                 this.posWasEnabled = true;
             }
 
-            await this.setSettings(newSettings);
+            const persisted = await this.setSettings(newSettings);
+            if (!persisted) {
+                // Write latch engaged (data wipe in progress): nothing was
+                // persisted or kept in memory, so skip the derived-state
+                // updates that would advertise the unsaved settings.
+                return this.settings;
+            }
             this.triggerSettingsRefresh = true;
 
             // Update store's node properties from latest settings
