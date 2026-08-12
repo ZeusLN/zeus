@@ -704,6 +704,36 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         return connection;
     }
 
+    it('returns INTERNAL_ERROR without unsubscribing when wallet identity is unknown', async () => {
+        const store = buildStore();
+        (store as any).nodeInfoStore.nodeInfo = {};
+        const connection = seedConnection(store);
+
+        const unsub = jest.fn();
+        (store as any).activeSubscriptions.set(connection.id, unsub);
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message:
+                    'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+            }
+        });
+        expect(unsub).not.toHaveBeenCalled();
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+    });
+
     it('rejects and unsubscribes when the connection record is missing', async () => {
         const store = buildStore();
         store.connections = [];

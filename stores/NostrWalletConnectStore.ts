@@ -1618,6 +1618,8 @@ export default class NostrWalletConnectStore {
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
      * the subscription) when the connection is missing or has expired.
+     * When wallet identity is transiently unknown (e.g. during reconnect),
+     * returns INTERNAL_ERROR without dropping the subscription.
      */
     private async withGlobalHandler<T>(
         connectionId: string,
@@ -1625,6 +1627,14 @@ export default class NostrWalletConnectStore {
     ): Promise<T> {
         const { connection } = this.getConnection({ connectionId });
         if (!connection) {
+            if (!this.hasWalletContext()) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                    ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                ) as T;
+            }
             this.unsubscribeFromConnection(connectionId);
             return NostrConnectUtils.createNip47Error(
                 localeString(
