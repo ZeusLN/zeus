@@ -93,6 +93,11 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/** Per-connection make_invoice rate limit (remote abuse protection). */
+const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
+const MAX_MAKE_INVOICE_PER_WINDOW = 5;
+const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
+const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -177,6 +182,7 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1772,6 +1778,7 @@ export default class NostrWalletConnectStore {
                 createdAt: new Date(),
                 expiresAt: new Date(expiryTime * 1000)
             });
+            this.pruneConnectionActivity(connection);
             this.findAndUpdateConnection(connection);
         });
         return NostrConnectUtils.buildMakeInvoiceSuccessPayload(
@@ -1786,10 +1793,67 @@ export default class NostrWalletConnectStore {
         );
     }
 
+    private pruneConnectionActivity(connection: NWCConnection): void {
+        while (connection.activity.length > MAX_CONNECTION_ACTIVITY_ENTRIES) {
+            let oldestIdx = 0;
+            let oldestTime = connection.activity[0]?.createdAt?.getTime() ?? 0;
+            for (let i = 1; i < connection.activity.length; i++) {
+                const createdAt =
+                    connection.activity[i]?.createdAt?.getTime() ?? 0;
+                if (createdAt < oldestTime) {
+                    oldestTime = createdAt;
+                    oldestIdx = i;
+                }
+            }
+            connection.activity.splice(oldestIdx, 1);
+        }
+    }
+
+    private checkMakeInvoiceLimits(
+        connection: NWCConnection
+    ): ReturnType<typeof NostrConnectUtils.createNip47Error> | null {
+        const pending = connection.activity.filter(
+            (a) => a.type === 'make_invoice' && a.status === 'pending'
+        ).length;
+        if (pending >= MAX_PENDING_MAKE_INVOICES_PER_CONNECTION) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.makeInvoiceRateLimited'
+                ),
+                Nip47ErrorCode.RATE_LIMITED
+            );
+        }
+
+        const now = Date.now();
+        const timestamps =
+            this.makeInvoiceTimestampsByConnection.get(connection.id) ?? [];
+        const recent = timestamps.filter(
+            (t) => now - t < MAKE_INVOICE_RATE_WINDOW_MS
+        );
+        if (recent.length >= MAX_MAKE_INVOICE_PER_WINDOW) {
+            this.makeInvoiceTimestampsByConnection.set(connection.id, recent);
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.makeInvoiceRateLimited'
+                ),
+                Nip47ErrorCode.RATE_LIMITED
+            );
+        }
+
+        recent.push(now);
+        this.makeInvoiceTimestampsByConnection.set(connection.id, recent);
+        return null;
+    }
+
     private async handleMakeInvoice(
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        const limitError = this.checkMakeInvoiceLimits(connection);
+        if (limitError) {
+            return limitError;
+        }
+
         try {
             if (this.isCashuConfigured) {
                 try {
