@@ -19,6 +19,7 @@ import {
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
+import CashuInvoice from '../models/CashuInvoice';
 
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
@@ -611,13 +612,47 @@ export default class NostrConnectUtils {
         return hash.includes('=') ? Base64Utils.base64ToHex(hash) : hash;
     }
 
+    /** Wrap a persisted plain-object invoice as an Invoice when needed. */
+    static coerceLightningInvoice(
+        invoice: Invoice | CashuInvoice | null | undefined
+    ): Invoice | undefined {
+        if (!invoice) return undefined;
+        if (invoice instanceof Invoice) return invoice;
+        if (invoice instanceof CashuInvoice) return undefined;
+        return new Invoice(invoice as any);
+    }
+
+    /** Resolve a lookup hash from payment_hash and/or invoice on the request. */
+    static async resolveLookupPaymentHash(
+        request: Nip47LookupInvoiceRequest,
+        paymentRequest?: string
+    ): Promise<string | undefined> {
+        const fromRequest = NostrConnectUtils.normalizePaymentHash(
+            request.payment_hash
+        );
+        if (fromRequest) return fromRequest;
+
+        const invoice = request.invoice || paymentRequest;
+        if (!invoice) return undefined;
+
+        try {
+            const decoded = await NostrConnectUtils.decodeInvoiceTags(invoice);
+            return decoded.paymentHash || undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
     /** Whether a BOLT11 string matches a NIP-47 lookup request (invoice or hash). */
     static async paymentRequestMatchesLookupRequest(
         paymentRequest: string,
         request: Nip47LookupInvoiceRequest,
         normalizedHash?: string
     ): Promise<boolean> {
-        if (request.invoice && paymentRequest === request.invoice) {
+        if (
+            request.invoice &&
+            paymentRequest.toLowerCase() === request.invoice.toLowerCase()
+        ) {
             return true;
         }
         const hash =
@@ -651,8 +686,8 @@ export default class NostrConnectUtils {
         activities: ConnectionActivity[],
         request: Nip47LookupInvoiceRequest
     ): Promise<ConnectionActivity | undefined> {
-        const normalizedHash = NostrConnectUtils.normalizePaymentHash(
-            request.payment_hash
+        const normalizedHash = await NostrConnectUtils.resolveLookupPaymentHash(
+            request
         );
         for (const activity of activities) {
             if (
@@ -681,8 +716,11 @@ export default class NostrConnectUtils {
             activity.payment?.getPaymentRequest;
 
         if (request.invoice) {
-            if (activity.id === request.invoice) return true;
-            if (paymentRequest === request.invoice) return true;
+            const requestInvoiceLower = request.invoice.toLowerCase();
+            if (activity.id.toLowerCase() === requestInvoiceLower) return true;
+            if (paymentRequest?.toLowerCase() === requestInvoiceLower) {
+                return true;
+            }
             if (
                 paymentRequest &&
                 (await NostrConnectUtils.paymentRequestMatchesLookupRequest(
@@ -1163,12 +1201,15 @@ export default class NostrConnectUtils {
         }
 
         if (activity.invoice) {
-            if (activity.invoice instanceof Invoice) {
+            const lightningInvoice = NostrConnectUtils.coerceLightningInvoice(
+                activity.invoice
+            );
+            if (lightningInvoice) {
                 const createdAt = Math.floor(
-                    activity.invoice.getCreationDate.getTime() / 1000
+                    lightningInvoice.getCreationDate.getTime() / 1000
                 );
                 return NostrConnectUtils.lightningInvoiceExpiresAt(
-                    activity.invoice,
+                    lightningInvoice,
                     createdAt
                 );
             }
@@ -1263,7 +1304,9 @@ export default class NostrConnectUtils {
             : 0;
 
         const lightningInvoice =
-            activity.invoice instanceof Invoice ? activity.invoice : undefined;
+            activity.payment_source === 'cashu'
+                ? undefined
+                : NostrConnectUtils.coerceLightningInvoice(activity.invoice);
 
         const description =
             activity.invoice?.getMemo || activity.payment?.getMemo || '';

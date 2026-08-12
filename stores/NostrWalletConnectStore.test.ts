@@ -844,6 +844,41 @@ describe('NostrWalletConnectStore connection data scoping', () => {
         expect(response.result?.preimage).toBe(PREIMAGE);
         expect(response.result?.state).toBe('settled');
     });
+
+    it('lookup_invoice includes preimage after invoice rehydration from storage', async () => {
+        const PREIMAGE = hex64('a');
+        const { store } = buildScopedStore();
+        const connection = seedReadOnlyConnection(store, {
+            activity: [
+                {
+                    id: CONNECTION_INVOICE,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 50,
+                    paymentHash: CONNECTION_HASH,
+                    preimage: PREIMAGE,
+                    invoice: {
+                        r_hash: Base64Utils.hexToBase64(CONNECTION_HASH),
+                        payment_request: CONNECTION_INVOICE,
+                        creation_date: String(1_700_000_000),
+                        expiry: String(3600),
+                        value: '1000',
+                        settled: true,
+                        settle_date: String(1_700_000_500)
+                    }
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLookupInvoice(connection, {
+            payment_hash: CONNECTION_HASH
+        });
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe(PREIMAGE);
+        expect(response.result?.state).toBe('settled');
+    });
 });
 
 describe('NostrWalletConnectStore connection expiry enforcement', () => {

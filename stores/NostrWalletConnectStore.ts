@@ -1087,12 +1087,19 @@ export default class NostrWalletConnectStore {
         }
 
         const stalePaidLightningInvoiceActivities = connection.activity.filter(
-            (activity) =>
-                activity.type === 'make_invoice' &&
-                activity.status === 'success' &&
-                activity.payment_source !== 'cashu' &&
-                activity.invoice instanceof Invoice &&
-                !activity.invoice.isPaid
+            (activity) => {
+                if (
+                    activity.type !== 'make_invoice' ||
+                    activity.status !== 'success' ||
+                    activity.payment_source === 'cashu'
+                ) {
+                    return false;
+                }
+                const invoice = NostrConnectUtils.coerceLightningInvoice(
+                    activity.invoice
+                );
+                return !!invoice && !invoice.isPaid;
+            }
         );
         if (stalePaidLightningInvoiceActivities.length > 0) {
             await Promise.all(
@@ -1893,7 +1900,13 @@ export default class NostrWalletConnectStore {
                 );
             }
 
-            await this.refreshActivityForLookup(connection, activity);
+            const refreshed = await this.refreshActivityForLookup(
+                connection,
+                activity
+            );
+            if (refreshed) {
+                this.scheduleSave();
+            }
 
             const result =
                 NostrConnectUtils.convertConnectionActivityToNip47Transaction(
@@ -1912,19 +1925,22 @@ export default class NostrWalletConnectStore {
     private async refreshActivityForLookup(
         connection: NWCConnection,
         activity: ConnectionActivity
-    ): Promise<void> {
+    ): Promise<boolean> {
         if (
             activity.type === 'pay_invoice' &&
             activity.status === 'pending' &&
             activity.payment_source !== 'cashu'
         ) {
-            await this.reconcilePendingPayInvoiceActivities(connection);
-            return;
+            return this.reconcilePendingPayInvoiceActivities(connection);
         }
 
         if (activity.type === 'make_invoice' && activity.status === 'pending') {
+            const statusBefore = activity.status;
             await this.reconcilePendingMakeInvoiceActivity(activity);
+            return activity.status !== statusBefore;
         }
+
+        return false;
     }
 
     private async reconcilePendingMakeInvoiceActivity(
@@ -2655,7 +2671,9 @@ export default class NostrWalletConnectStore {
     private async reconcilePendingLightningMakeInvoice(
         activity: ConnectionActivity
     ): Promise<void> {
-        const invoice = activity.invoice as Invoice | undefined;
+        const invoice = NostrConnectUtils.coerceLightningInvoice(
+            activity.invoice
+        );
         if (!invoice) return;
 
         const settled =
@@ -2670,8 +2688,13 @@ export default class NostrWalletConnectStore {
             );
             runInAction(() => {
                 activity.status = 'success';
+                const paidInvoice = refreshed || invoice;
                 if (refreshed) {
                     activity.invoice = refreshed;
+                }
+                const preimage = paidInvoice.getRPreimage;
+                if (preimage) {
+                    activity.preimage = preimage;
                 }
             });
             return;
@@ -2690,20 +2713,27 @@ export default class NostrWalletConnectStore {
         if (
             activity.type !== 'make_invoice' ||
             activity.status !== 'success' ||
-            activity.payment_source === 'cashu' ||
-            !(activity.invoice instanceof Invoice) ||
-            activity.invoice.isPaid
+            activity.payment_source === 'cashu'
         ) {
             return;
         }
 
-        const refreshed = await this.refreshLightningInvoiceFromNode(
+        const invoice = NostrConnectUtils.coerceLightningInvoice(
             activity.invoice
         );
+        if (!invoice || invoice.isPaid) {
+            return;
+        }
+
+        const refreshed = await this.refreshLightningInvoiceFromNode(invoice);
         if (!refreshed?.isPaid) return;
 
         runInAction(() => {
             activity.invoice = refreshed;
+            const preimage = refreshed.getRPreimage;
+            if (preimage) {
+                activity.preimage = preimage;
+            }
         });
     }
 

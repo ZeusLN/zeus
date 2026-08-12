@@ -846,6 +846,47 @@ describe('NostrConnectUtils', () => {
                 expect(tx.description_hash).toBe(DESCRIPTION_HASH);
                 expect(tx.settled_at).toBe(SETTLE_DATE);
             });
+
+            it('returns preimage from a rehydrated plain-object invoice', () => {
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    invoice: lndInvoice({
+                        settled: true,
+                        settle_date: String(SETTLE_DATE),
+                        r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+                    }) as any
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.preimage).toBe(PREIMAGE);
+                expect(tx.state).toBe('settled');
+            });
+
+            it('prefers activity.preimage over invoice fields', () => {
+                const STORED_PREIMAGE = hex64('c');
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    preimage: STORED_PREIMAGE,
+                    invoice: lndInvoice({ settled: true }) as any
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.preimage).toBe(STORED_PREIMAGE);
+            });
         });
     });
 
@@ -914,6 +955,37 @@ describe('NostrConnectUtils', () => {
                 );
 
             expect(found).toBeUndefined();
+        });
+
+        it('finds activity by payment hash decoded from request.invoice', async () => {
+            const BOLT11 =
+                'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+            const BOLT11_HASH =
+                '0001020304050607080900010203040506070809000102030405060708090102';
+            const activity = makeInvoiceActivity({
+                id: 'different-id',
+                paymentHash: BOLT11_HASH
+            });
+
+            const found =
+                await NostrConnectUtils.findConnectionActivityByLookupRequest(
+                    [activity],
+                    { invoice: BOLT11 }
+                );
+
+            expect(found).toBe(activity);
+        });
+
+        it('matches invoice-only lookups case-insensitively', async () => {
+            const activity = makeInvoiceActivity({ id: INVOICE_A });
+
+            const found =
+                await NostrConnectUtils.findConnectionActivityByLookupRequest(
+                    [activity],
+                    { invoice: INVOICE_A.toUpperCase() }
+                );
+
+            expect(found).toBe(activity);
         });
     });
 
