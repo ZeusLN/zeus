@@ -1456,11 +1456,19 @@ export default class NostrConnectUtils {
             ? satsToMillisats(Number(activity.payment.getFee) || 0)
             : 0;
 
+        const lightningInvoice =
+            activity.invoice instanceof Invoice ? activity.invoice : undefined;
+
         const description =
             activity.invoice?.getMemo || activity.payment?.getMemo || '';
 
+        const description_hash = lightningInvoice?.getDescriptionHash || '';
+
         const preimage =
-            activity.preimage || activity.payment?.getPreimage || '';
+            activity.preimage ||
+            activity.payment?.getPreimage ||
+            (lightningInvoice?.isPaid ? lightningInvoice.getRPreimage : '') ||
+            '';
 
         const settled_at =
             state === 'settled'
@@ -1475,6 +1483,7 @@ export default class NostrConnectUtils {
             payment_hash: paymentHash,
             amount,
             description,
+            description_hash,
             preimage,
             fees_paid: feesPaid,
             settled_at,

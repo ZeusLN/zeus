@@ -930,6 +930,34 @@ describe('NostrConnectUtils', () => {
 
                 expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
             });
+
+            it('returns preimage and description_hash for a settled make_invoice activity', () => {
+                const DESCRIPTION_HASH = hex64('b');
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    invoice: new Invoice(
+                        lndInvoice({
+                            settled: true,
+                            settle_date: String(SETTLE_DATE),
+                            r_preimage: Base64Utils.hexToBase64(PREIMAGE),
+                            description_hash: DESCRIPTION_HASH
+                        })
+                    )
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.state).toBe('settled');
+                expect(tx.preimage).toBe(PREIMAGE);
+                expect(tx.description_hash).toBe(DESCRIPTION_HASH);
+                expect(tx.settled_at).toBe(SETTLE_DATE);
+            });
         });
     });
 

@@ -57,6 +57,8 @@ jest.mock('../storage', () => ({
 
 import Storage from '../storage';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
+import Invoice from '../models/Invoice';
+import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS
@@ -805,6 +807,42 @@ describe('NostrWalletConnectStore connection data scoping', () => {
         expect(response.error).toBeUndefined();
         expect(response.result?.payment_hash).toBe(CONNECTION_HASH);
         expect(response.result?.type).toBe('incoming');
+    });
+
+    it('lookup_invoice includes preimage for a settled make_invoice', async () => {
+        const PREIMAGE = hex64('a');
+        const { store } = buildScopedStore();
+        const settledInvoice = new Invoice({
+            r_hash: Base64Utils.hexToBase64(CONNECTION_HASH),
+            payment_request: CONNECTION_INVOICE,
+            creation_date: String(1_700_000_000),
+            expiry: String(3600),
+            value: '1000',
+            settled: true,
+            settle_date: String(1_700_000_500),
+            r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+        });
+        const connection = seedReadOnlyConnection(store, {
+            activity: [
+                {
+                    id: CONNECTION_INVOICE,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 50,
+                    paymentHash: CONNECTION_HASH,
+                    invoice: settledInvoice
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLookupInvoice(connection, {
+            payment_hash: CONNECTION_HASH
+        });
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe(PREIMAGE);
+        expect(response.result?.state).toBe('settled');
     });
 });
 
