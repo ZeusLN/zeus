@@ -259,12 +259,20 @@ export default class LdkNode {
      */
     getBlockchainBalance = async (): Promise<any> => {
         const balances = await LdkNodeInjection.node.listBalances();
+        // spendableOnchainBalanceSats excludes the anchor channel reserve,
+        // which is confirmed but held back - it must not be counted as
+        // unconfirmed or the balance shows as pending forever
+        const anchorReserve = balances.totalAnchorChannelsReserveSats || 0;
+        let unconfirmed = new BigNumber(balances.totalOnchainBalanceSats)
+            .minus(balances.spendableOnchainBalanceSats)
+            .minus(anchorReserve);
+        if (unconfirmed.lt(0)) unconfirmed = new BigNumber(0);
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
-            confirmed_balance: balances.spendableOnchainBalanceSats.toString(),
-            unconfirmed_balance: new BigNumber(balances.totalOnchainBalanceSats)
-                .minus(balances.spendableOnchainBalanceSats)
-                .toString()
+            confirmed_balance: new BigNumber(balances.totalOnchainBalanceSats)
+                .minus(unconfirmed)
+                .toString(),
+            unconfirmed_balance: unconfirmed.toString()
         };
     };
 
