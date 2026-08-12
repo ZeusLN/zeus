@@ -1,18 +1,47 @@
 import Base64Utils from './Base64Utils';
 import { Implementations } from '../stores/SettingsStore';
 
+// A pin must be actual certificate material: a DER SEQUENCE whose encoded
+// length spans the entire buffer. Anything else is dropped rather than
+// stored — a garbage pin can never authenticate a connection, and the
+// native parse failure it causes surfaces as an opaque connect error
+const isDerCertificate = (b64: string): boolean => {
+    let bytes: Uint8Array;
+    try {
+        bytes = Base64Utils.base64ToBytes(b64);
+    } catch (e) {
+        return false;
+    }
+    if (bytes.length < 4 || bytes[0] !== 0x30) return false;
+    let headerLen = 2;
+    let contentLen = bytes[1];
+    if (contentLen >= 0x80) {
+        const lenBytes = contentLen & 0x7f;
+        if (lenBytes === 0 || lenBytes > 4 || bytes.length < 2 + lenBytes)
+            return false;
+        headerLen = 2 + lenBytes;
+        contentLen = 0;
+        for (let i = 0; i < lenBytes; i++)
+            contentLen = contentLen * 256 + bytes[2 + i];
+    }
+    return headerLen + contentLen === bytes.length;
+};
+
 // Extract the base64-DER body of every CERTIFICATE block in a PEM bundle
 const pemBundleToPinnedCerts = (bundle: string): string[] | undefined => {
     const blocks = bundle.match(
         /-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g
     );
     if (!blocks || blocks.length === 0) return undefined;
-    return blocks.map((block) =>
-        block
-            .replace(/-----BEGIN CERTIFICATE-----/, '')
-            .replace(/-----END CERTIFICATE-----/, '')
-            .replace(/\s+/g, '')
-    );
+    const pins = blocks
+        .map((block) =>
+            block
+                .replace(/-----BEGIN CERTIFICATE-----/, '')
+                .replace(/-----END CERTIFICATE-----/, '')
+                .replace(/\s+/g, '')
+        )
+        .filter(isDerCertificate);
+    return pins.length > 0 ? pins : undefined;
 };
 
 // Normalize connection-string certificate material (lndconnect cert=,
@@ -35,8 +64,9 @@ const certsParamToPinnedCerts = (
         return pemBundleToPinnedCerts(decoded);
     }
     // PEM bundles without a certificate block carry nothing pinnable;
-    // otherwise assume raw DER (lndconnect)
-    return isBase64Url ? [b64] : undefined;
+    // otherwise the param may be raw DER (lndconnect) — pin only what
+    // actually parses as a certificate
+    return isBase64Url && isDerCertificate(b64) ? [b64] : undefined;
 };
 
 class ConnectionFormatUtils {
