@@ -642,6 +642,172 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
     });
 });
 
+describe('NostrWalletConnectStore connection data scoping', () => {
+    const WALLET_ONLY_HASH = hex64('f');
+    const CONNECTION_HASH = hex64('e');
+    const CONNECTION_INVOICE = 'lnbc1connection-only';
+
+    function buildScopedStore() {
+        const paymentsStore = {
+            getPayments: jest.fn().mockResolvedValue(undefined),
+            payments: [
+                {
+                    paymentHash: WALLET_ONLY_HASH,
+                    getAmount: '1000',
+                    getPaymentRequest: 'lnbc1wallet-payment',
+                    getTimestamp: 1_700_000_000
+                }
+            ]
+        };
+        const invoicesStore = {
+            getInvoices: jest.fn().mockResolvedValue(undefined),
+            invoices: [
+                {
+                    getRHash: WALLET_ONLY_HASH,
+                    getAmount: '2000',
+                    getPaymentRequest: 'lnbc1wallet-invoice',
+                    getCreationDate: 1_700_000_000
+                }
+            ]
+        };
+        const transactionsStore = {
+            getTransactions: jest.fn().mockResolvedValue(undefined),
+            transactions: [
+                {
+                    tx_hash: 'onchain-wallet-tx',
+                    amount: 50_000,
+                    dest_addresses: ['bcrt1qsecretaddress'],
+                    raw_tx_hex: 'deadbeef',
+                    time_stamp: 1_700_000_000,
+                    num_confirmations: 1
+                }
+            ]
+        };
+        const settingsStore: any = {
+            connecting: false,
+            implementation: 'lnd',
+            settings: {
+                locale: 'en',
+                ecash: { enableCashu: false },
+                lightningAddress: { enabled: false }
+            }
+        };
+        const store = new NostrWalletConnectStore(
+            settingsStore,
+            {} as any,
+            {
+                nodeInfo: { nodeId: NODE_PUBKEY },
+                getNodeInfo: jest.fn()
+            } as any,
+            transactionsStore as any,
+            {} as any,
+            invoicesStore as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            paymentsStore as any
+        );
+
+        jest.spyOn(store as any, 'scheduleSave').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(
+            store as any,
+            'reconcilePendingPayInvoiceActivities'
+        ).mockResolvedValue(false);
+
+        return { store, paymentsStore, invoicesStore, transactionsStore };
+    }
+
+    function seedReadOnlyConnection(
+        store: NostrWalletConnectStore,
+        overrides: Record<string, unknown> = {}
+    ) {
+        const connection = new NWCConnection({
+            id: 'conn-readonly',
+            name: 'Read Only App',
+            pubkey: OLD_PUBKEY,
+            relayUrl: OLD_RELAY,
+            permissions: ['lookup_invoice', 'list_transactions'],
+            createdAt: new Date('2024-01-01T00:00:00Z'),
+            totalSpendSats: 0,
+            nodePubkey: NODE_PUBKEY,
+            implementation: 'lnd',
+            activity: [],
+            ...overrides
+        } as any);
+        store.connections = [connection];
+        return connection;
+    }
+
+    it('list_transactions returns only the connection activity for read-only connections', async () => {
+        const { store, paymentsStore, invoicesStore, transactionsStore } =
+            buildScopedStore();
+        const connection = seedReadOnlyConnection(store, {
+            activity: [
+                {
+                    id: CONNECTION_INVOICE,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 50,
+                    paymentHash: CONNECTION_HASH
+                }
+            ]
+        });
+
+        const response = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.transactions).toHaveLength(1);
+        expect(response.result?.transactions[0].payment_hash).toBe(
+            CONNECTION_HASH
+        );
+        expect(paymentsStore.getPayments).not.toHaveBeenCalled();
+        expect(invoicesStore.getInvoices).not.toHaveBeenCalled();
+        expect(transactionsStore.getTransactions).not.toHaveBeenCalled();
+    });
+
+    it('lookup_invoice rejects hashes outside the connection activity', async () => {
+        const { store } = buildScopedStore();
+        const connection = seedReadOnlyConnection(store);
+
+        const response = await (store as any).handleLookupInvoice(connection, {
+            payment_hash: WALLET_ONLY_HASH
+        });
+
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe('NOT_FOUND');
+    });
+
+    it('lookup_invoice returns invoices recorded on the connection', async () => {
+        const { store } = buildScopedStore();
+        const connection = seedReadOnlyConnection(store, {
+            activity: [
+                {
+                    id: CONNECTION_INVOICE,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 50,
+                    paymentHash: CONNECTION_HASH
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLookupInvoice(connection, {
+            payment_hash: CONNECTION_HASH
+        });
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.payment_hash).toBe(CONNECTION_HASH);
+        expect(response.result?.type).toBe('incoming');
+    });
+});
+
 describe('NostrWalletConnectStore connection expiry enforcement', () => {
     function buildStore() {
         const settingsStore: any = {

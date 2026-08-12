@@ -108,14 +108,6 @@ export function parseNwcActivityNotif(
 
 export const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 
-export interface Nip47LookupInvoiceContext {
-    request: Nip47LookupInvoiceRequest;
-    isCashu: boolean;
-    getCashuInvoices: () => Promise<CashuInvoice[]>;
-    getCashuPayments: () => Promise<CashuPayment[]>;
-    getLightningPayments: () => Promise<Payment[]>;
-}
-
 export enum Nip47ErrorCode {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
@@ -843,80 +835,62 @@ export default class NostrConnectUtils {
         });
     }
 
-    /**
-     * NIP-47 lookup_invoice: incoming invoice first, then outgoing payment.
-     * Returns undefined when nothing matches so the caller can emit NOT_FOUND.
-     */
-    static async lookupInvoiceTransaction(
-        ctx: Nip47LookupInvoiceContext
-    ): Promise<Nip47Transaction | undefined> {
-        return ctx.isCashu
-            ? NostrConnectUtils.lookupCashuInvoiceTransaction(ctx)
-            : NostrConnectUtils.lookupLightningInvoiceTransaction(ctx);
-    }
-
-    private static async lookupCashuInvoiceTransaction(
-        ctx: Nip47LookupInvoiceContext
-    ): Promise<Nip47Transaction | undefined> {
-        const { request } = ctx;
-        const cashuInvoice =
-            await NostrConnectUtils.findCashuInvoiceByLookupRequest(
-                await ctx.getCashuInvoices(),
-                request
-            );
-        if (cashuInvoice) {
-            const paymentHash =
-                await NostrConnectUtils.resolveLookupPaymentHash(
+    static async findConnectionActivityByLookupRequest(
+        activities: ConnectionActivity[],
+        request: Nip47LookupInvoiceRequest
+    ): Promise<ConnectionActivity | undefined> {
+        const normalizedHash = NostrConnectUtils.normalizePaymentHash(
+            request.payment_hash
+        );
+        for (const activity of activities) {
+            if (
+                await NostrConnectUtils.connectionActivityMatchesLookupRequest(
+                    activity,
                     request,
-                    cashuInvoice.getPaymentRequest
-                );
-            return NostrConnectUtils.cashuInvoiceToNip47Transaction(
-                cashuInvoice,
-                paymentHash
-            );
+                    normalizedHash
+                )
+            ) {
+                return activity;
+            }
         }
-
-        const cashuPayment = NostrConnectUtils.findPaymentByLookupRequest(
-            await ctx.getCashuPayments(),
-            request
-        );
-        return cashuPayment
-            ? NostrConnectUtils.cashuPaymentToNip47Transaction(cashuPayment)
-            : undefined;
+        return undefined;
     }
 
-    private static async lookupLightningInvoiceTransaction(
-        ctx: Nip47LookupInvoiceContext
-    ): Promise<Nip47Transaction | undefined> {
-        const { request } = ctx;
-        const paymentHash = await NostrConnectUtils.resolveLookupPaymentHash(
-            request
-        );
-        if (paymentHash) {
-            try {
-                const rawInvoice = await BackendUtils.lookupInvoice({
-                    r_hash: paymentHash
-                });
-                if (rawInvoice && typeof rawInvoice === 'object') {
-                    return NostrConnectUtils.lightningInvoiceToNip47Transaction(
-                        new Invoice(rawInvoice),
-                        { fallbackHash: paymentHash }
-                    );
-                }
-            } catch {
-                // Outgoing payments share the hash but are not node invoices.
+    static async connectionActivityMatchesLookupRequest(
+        activity: ConnectionActivity,
+        request: Nip47LookupInvoiceRequest,
+        normalizedHash?: string
+    ): Promise<boolean> {
+        const hash =
+            normalizedHash ??
+            NostrConnectUtils.normalizePaymentHash(request.payment_hash);
+        const paymentRequest =
+            activity.invoice?.getPaymentRequest ||
+            activity.payment?.getPaymentRequest;
+
+        if (request.invoice) {
+            if (activity.id === request.invoice) return true;
+            if (paymentRequest === request.invoice) return true;
+            if (
+                paymentRequest &&
+                (await NostrConnectUtils.paymentRequestMatchesLookupRequest(
+                    paymentRequest,
+                    request,
+                    hash
+                ))
+            ) {
+                return true;
             }
         }
 
-        const lightningPayment = NostrConnectUtils.findPaymentByLookupRequest(
-            await ctx.getLightningPayments(),
-            request
-        );
-        return lightningPayment
-            ? NostrConnectUtils.lightningPaymentToNip47Transaction(
-                  lightningPayment
-              )
-            : undefined;
+        if (hash) {
+            const activityHash = NostrConnectUtils.normalizePaymentHash(
+                NostrConnectUtils.extractPaymentHashFromActivity(activity)
+            );
+            if (activityHash && activityHash === hash) return true;
+        }
+
+        return false;
     }
 
     private static paymentTimestamp(payment: Payment): number {
@@ -1677,9 +1651,7 @@ export default class NostrConnectUtils {
                 metadata: {
                     block_height: tx.block_height,
                     block_hash: tx.block_hash,
-                    num_confirmations: tx.num_confirmations,
-                    dest_addresses: tx.dest_addresses,
-                    raw_tx_hex: tx.raw_tx_hex
+                    num_confirmations: tx.num_confirmations
                 }
             });
         });

@@ -39,7 +39,6 @@ import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Base64Utils from './Base64Utils';
-import BackendUtils from './BackendUtils';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
 import CashuInvoice from '../models/CashuInvoice';
@@ -1083,91 +1082,51 @@ describe('NostrConnectUtils', () => {
         });
     });
 
-    describe('lookupInvoiceTransaction', () => {
-        const TIMESTAMP = 1700000000;
-        const getLightningPayments = (payments: Payment[] = []) =>
-            jest.fn().mockResolvedValue(payments);
-        const getCashuPayments = (payments: CashuPayment[] = []) =>
-            jest.fn().mockResolvedValue(payments);
-        const getCashuInvoices = (invoices: CashuInvoice[] = []) =>
-            jest.fn().mockResolvedValue(invoices);
-
-        it('finds a Lightning invoice from the node by payment hash', async () => {
-            (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
-                r_hash: Base64Utils.hexToBase64(HASH_A),
-                payment_request: INVOICE_A,
-                creation_date: String(TIMESTAMP),
-                expiry: '3600',
-                value: '1000',
-                settled: false
-            });
-            const getPayments = getLightningPayments();
-
-            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
-                request: { payment_hash: HASH_A },
-                isCashu: false,
-                getCashuInvoices: getCashuInvoices(),
-                getCashuPayments: getCashuPayments(),
-                getLightningPayments: getPayments
-            });
-
-            expect(tx?.type).toBe('incoming');
-            expect(tx?.payment_hash).toBe(HASH_A);
-            expect(getPayments).not.toHaveBeenCalled();
+    describe('findConnectionActivityByLookupRequest', () => {
+        const makeInvoiceActivity = (
+            overrides: Partial<ConnectionActivity> = {}
+        ): ConnectionActivity => ({
+            id: INVOICE_A,
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            paymentHash: HASH_A,
+            satAmount: 1000,
+            ...overrides
         });
 
-        it('falls back to an outgoing Lightning payment when the node has no invoice', async () => {
-            (BackendUtils as any).lookupInvoice = jest
-                .fn()
-                .mockRejectedValue(new Error('not found'));
-            const payment = new Payment({
-                payment_hash: HASH_A,
-                timestamp: TIMESTAMP,
-                value: '2000',
-                fee: '2'
-            });
-            const getPayments = getLightningPayments([payment]);
+        it('finds activity by payment hash', async () => {
+            const activity = makeInvoiceActivity();
 
-            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
-                request: { payment_hash: HASH_A },
-                isCashu: false,
-                getCashuInvoices: getCashuInvoices(),
-                getCashuPayments: getCashuPayments(),
-                getLightningPayments: getPayments
-            });
+            const found =
+                await NostrConnectUtils.findConnectionActivityByLookupRequest(
+                    [activity],
+                    { payment_hash: HASH_A }
+                );
 
-            expect(tx?.type).toBe('outgoing');
-            expect(tx?.payment_hash).toBe(HASH_A);
-            expect(BackendUtils.lookupInvoice).toHaveBeenCalled();
-            expect(getPayments).toHaveBeenCalledTimes(1);
+            expect(found).toBe(activity);
         });
 
-        it('resolves an invoice-only Lightning request from the BOLT11 string', async () => {
-            const BOLT11 =
-                'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
-            (BackendUtils as any).lookupInvoice = jest.fn().mockResolvedValue({
-                payment_hash:
-                    '0001020304050607080900010203040506070809000102030405060708090102',
-                bolt11: BOLT11,
-                created_at: TIMESTAMP,
-                expires_at: TIMESTAMP + 3600,
-                status: 'unpaid'
-            });
-            const getPayments = getLightningPayments();
+        it('finds activity by BOLT11 invoice string', async () => {
+            const activity = makeInvoiceActivity();
 
-            const tx = await NostrConnectUtils.lookupInvoiceTransaction({
-                request: { invoice: BOLT11 },
-                isCashu: false,
-                getCashuInvoices: getCashuInvoices(),
-                getCashuPayments: getCashuPayments(),
-                getLightningPayments: getPayments
-            });
+            const found =
+                await NostrConnectUtils.findConnectionActivityByLookupRequest(
+                    [activity],
+                    { invoice: INVOICE_A }
+                );
 
-            expect(tx?.type).toBe('incoming');
-            expect(BackendUtils.lookupInvoice).toHaveBeenCalledWith({
-                r_hash: '0001020304050607080900010203040506070809000102030405060708090102'
-            });
-            expect(getPayments).not.toHaveBeenCalled();
+            expect(found).toBe(activity);
+        });
+
+        it('returns undefined when the hash is not in connection activity', async () => {
+            const found =
+                await NostrConnectUtils.findConnectionActivityByLookupRequest(
+                    [makeInvoiceActivity()],
+                    { payment_hash: hex64('f') }
+                );
+
+            expect(found).toBeUndefined();
         });
     });
 
