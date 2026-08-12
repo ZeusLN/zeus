@@ -61,7 +61,13 @@ const NWC_TRAY_NOTIFICATION_KEYS = {
     outgoingFailedTitle:
         'stores.NostrWalletConnectStore.paymentFailedNotificationTitle',
     outgoingFailedBody:
-        'stores.NostrWalletConnectStore.paymentFailedNotificationBody'
+        'stores.NostrWalletConnectStore.paymentFailedNotificationBody',
+    invoiceReadyTitle:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle',
+    invoiceReadyBody:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationBody',
+    invoiceReadyBodyWithDescription:
+        'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription'
 } as const;
 
 export const NWC_ACTIVITY_NOTIF_KEYS = {
@@ -798,6 +804,7 @@ export default class NostrConnectUtils {
     }
 
     static buildMakeInvoiceSuccessPayload(
+        connectionDisplayName: string,
         request: Nip47MakeInvoiceRequest,
         fields: {
             paymentRequest: string;
@@ -806,6 +813,11 @@ export default class NostrConnectUtils {
             expiryTime: number;
         }
     ): { result: Nip47Transaction; error: undefined } {
+        NostrConnectUtils.notifyNwcInvoiceReady(
+            millisatsToSats(request.amount),
+            connectionDisplayName,
+            request.description
+        );
         const result = NostrConnectUtils.createNip47Transaction({
             type: 'incoming',
             state: 'pending',
@@ -1459,6 +1471,37 @@ export default class NostrConnectUtils {
             [k.failedActivityId]: failedActivityId
         };
         NostrConnectUtils.emitOsNotification(title, body, extras);
+    }
+
+    static notifyNwcInvoiceReady(
+        amountSats: number,
+        connectionDisplayName: string,
+        description?: string
+    ): void {
+        const amountLabel = numberWithCommas(amountSats.toString());
+        const unit = localeString('general.sats');
+        const title = localeString(
+            NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyTitle
+        );
+        let body: string;
+        if (description) {
+            body = localeString(
+                NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBodyWithDescription,
+                {
+                    amount: amountLabel,
+                    unit,
+                    connectionName: connectionDisplayName,
+                    description
+                }
+            );
+        } else {
+            body = localeString(NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyBody, {
+                amount: amountLabel,
+                unit,
+                connectionName: connectionDisplayName
+            });
+        }
+        NostrConnectUtils.emitOsNotification(title, body);
     }
 
     private static emitOsNotification(

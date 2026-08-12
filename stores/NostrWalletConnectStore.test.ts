@@ -1187,6 +1187,37 @@ describe('NostrWalletConnectStore make_invoice limits', () => {
 
         expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
     });
+
+    it('does not advance the per-window rate limit during limit checks alone', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+        const now = Date.now();
+        (store as any).makeInvoiceTimestampsByConnection.set(
+            connection.id,
+            Array.from({ length: 4 }, () => now)
+        );
+
+        for (let i = 0; i < 3; i++) {
+            expect(
+                (store as any).checkMakeInvoiceLimits(connection)
+            ).toBeNull();
+        }
+
+        expect(
+            (store as any).makeInvoiceTimestampsByConnection.get(connection.id)
+        ).toHaveLength(4);
+    });
+
+    it('records a rate-limit timestamp only after a successful make_invoice', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+
+        (store as any).recordMakeInvoiceRateLimitTimestamp(connection.id);
+
+        expect(
+            (store as any).makeInvoiceTimestampsByConnection.get(connection.id)
+        ).toHaveLength(1);
+    });
 });
 
 describe('NostrWalletConnectStore activity prune', () => {

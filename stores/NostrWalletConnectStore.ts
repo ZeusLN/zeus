@@ -645,6 +645,7 @@ export default class NostrWalletConnectStore {
             this.unsubscribeFromConnection(connectionId);
             this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
             this.lastPendingInvoiceStatusFetchByConnection.delete(connectionId);
+            this.makeInvoiceTimestampsByConnection.delete(connectionId);
             runInAction(() => {
                 this.connections.splice(index, 1);
             });
@@ -1781,12 +1782,17 @@ export default class NostrWalletConnectStore {
             this.pruneConnectionActivity(connection);
             this.findAndUpdateConnection(connection);
         });
-        return NostrConnectUtils.buildMakeInvoiceSuccessPayload(request, {
-            paymentRequest: invoice?.getPaymentRequest || paymentRequest,
-            paymentHash: rHash || paymentHash,
-            descriptionHash,
-            expiryTime
-        });
+        this.recordMakeInvoiceRateLimitTimestamp(connection.id);
+        return NostrConnectUtils.buildMakeInvoiceSuccessPayload(
+            connection.name,
+            request,
+            {
+                paymentRequest: invoice?.getPaymentRequest || paymentRequest,
+                paymentHash: rHash || paymentHash,
+                descriptionHash,
+                expiryTime
+            }
+        );
     }
 
     private pruneConnectionActivity(connection: NWCConnection): void {
@@ -1886,9 +1892,18 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        recent.push(now);
-        this.makeInvoiceTimestampsByConnection.set(connection.id, recent);
         return null;
+    }
+
+    private recordMakeInvoiceRateLimitTimestamp(connectionId: string): void {
+        const now = Date.now();
+        const timestamps =
+            this.makeInvoiceTimestampsByConnection.get(connectionId) ?? [];
+        const recent = timestamps.filter(
+            (t) => now - t < MAKE_INVOICE_RATE_WINDOW_MS
+        );
+        recent.push(now);
+        this.makeInvoiceTimestampsByConnection.set(connectionId, recent);
     }
 
     private async handleMakeInvoice(
