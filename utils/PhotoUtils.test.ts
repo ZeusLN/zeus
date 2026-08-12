@@ -25,11 +25,14 @@ describe('PhotoUtils', () => {
         });
 
         it('groks out preset:// values', () => {
-            expect(getPhoto('preset://lnd')).toEqual(
-                '../../../assets/images/lnd.jpg'
+            // jest's asset transform returns the asset path relative to
+            // node_modules/react-native/jest, so only assert on the
+            // checkout-independent suffix
+            expect(getPhoto('preset://lnd')).toMatch(
+                /assets\/images\/lnd\.jpg$/
             );
-            expect(getPhoto('preset://zeusillustration1a')).toEqual(
-                '../../../assets/images/zeus_illustration_1a.jpg'
+            expect(getPhoto('preset://zeusillustration1a')).toMatch(
+                /assets\/images\/zeus_illustration_1a\.jpg$/
             );
         });
 
