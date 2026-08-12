@@ -81,7 +81,8 @@ ios/LndMobileLibZipFile
 
 # Cashu CDK binaries
 android/cdk/cashudevkit.aar
-ios/Cdk/cdkFFI.xcframework
+android/cdk/cdk-jvm.jar
+ios/Cdk/CashuDevKitFFI.xcframework
 ios/CashuDevKitLibZipFile
 ios/CashuDevKit/CashuDevKit.swift
 

@@ -4,7 +4,7 @@ platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
 # CashuDevKit framework path
-cashudevkit_framework_path = File.join(__dir__, 'Cdk', 'cdkFFI.xcframework')
+cashudevkit_framework_path = File.join(__dir__, 'Cdk', 'CashuDevKitFFI.xcframework')
 
 target 'zeus' do
   config = use_native_modules!

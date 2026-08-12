@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'CashuDevKit'
-  s.version          = '0.14.2'
+  s.version          = '0.17.3'
   s.summary          = 'Cashu Development Kit - FFI bindings for iOS'
   s.description      = <<-DESC
     CashuDevKit provides Swift bindings to the Cashu Development Kit (CDK),
@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.swift_version = '5.0'
 
   # Vendored xcframework
-  s.vendored_frameworks = 'Cdk/cdkFFI.xcframework'
+  s.vendored_frameworks = 'Cdk/CashuDevKitFFI.xcframework'
 
   # Source files - Swift bindings
   s.source_files = 'CashuDevKit/CashuDevKit.swift'
@@ -38,5 +38,5 @@ Pod::Spec.new do |s|
   }
 
   # Preserve paths for the framework
-  s.preserve_paths = 'Cdk/cdkFFI.xcframework/**/*'
+  s.preserve_paths = 'Cdk/CashuDevKitFFI.xcframework/**/*'
 end

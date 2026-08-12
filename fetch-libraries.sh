@@ -10,6 +10,7 @@ LDK_NODE_ANDROID_SHA256=$(jq "['ldk-node']['androidSha256']")
 LDK_NODE_IOS_SHA256=$(jq "['ldk-node']['iosSha256']")
 CDK_VERSION=$(jq "['cdk']['version']")
 CDK_ANDROID_SHA256=$(jq "['cdk']['androidSha256']")
+CDK_ANDROID_BINDINGS_SHA256=$(jq "['cdk']['androidBindingsSha256']")
 CDK_IOS_SHA256=$(jq "['cdk']['iosSha256']")
 CDK_IOS_BINDINGS_SHA256=$(jq "['cdk']['iosBindingsSha256']")
 RESTORE_VERSION=$(jq "['zeus-cashu-restore']['version']")
@@ -23,8 +24,8 @@ RESTORE_IOS_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['iosBindingsSha256']")
 # blank hash would otherwise skip verification silently.
 for HASH in "$EMBEDDED_LND_ANDROID_SHA256" "$EMBEDDED_LND_IOS_SHA256" \
             "$LDK_NODE_ANDROID_SHA256" "$LDK_NODE_IOS_SHA256" \
-            "$CDK_ANDROID_SHA256" "$CDK_IOS_SHA256" \
-            "$CDK_IOS_BINDINGS_SHA256" \
+            "$CDK_ANDROID_SHA256" "$CDK_ANDROID_BINDINGS_SHA256" \
+            "$CDK_IOS_SHA256" "$CDK_IOS_BINDINGS_SHA256" \
             "$RESTORE_ANDROID_SHA256" "$RESTORE_IOS_SHA256" \
             "$RESTORE_ANDROID_BINDINGS_SHA256" "$RESTORE_IOS_BINDINGS_SHA256"; do
     if ! echo "$HASH" | grep -qE '^[0-9a-f]{64}$'; then
@@ -112,16 +113,19 @@ unzip ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip -d ios/LncMobile
 # CashuDevKit #
 ###############
 
-# Local filename (what we save as)
+# Local filenames (what we save as)
 CDK_ANDROID_FILE=cashudevkit.aar
-CDK_IOS_FILE=cdkFFI.xcframework
-# Remote filename (what's on GitHub releases)
-CDK_ANDROID_REMOTE=cdk-kotlin-$CDK_VERSION.aar
+CDK_ANDROID_BINDINGS_FILE=cdk-jvm.jar
+CDK_IOS_FILE=CashuDevKitFFI.xcframework
 
-CDK_FILE_PATH=https://github.com/cashubtc/cdk-kotlin/releases/download/v$CDK_VERSION/
+# Since 0.17.x, cdk-kotlin is distributed via Maven Central and split in two:
+# cdk-android (only the per-ABI libcdk_ffi.so) + cdk-jvm (the compiled Kotlin
+# bindings). Both are vendored here with pinned hashes; JNA comes via gradle.
+CDK_MAVEN_PATH=https://repo1.maven.org/maven2/org/cashudevkit
 CDK_IOS_PATH=https://github.com/cashubtc/cdk-swift/releases/download/v$CDK_VERSION/
 
-CDK_ANDROID_LINK=$CDK_FILE_PATH$CDK_ANDROID_REMOTE
+CDK_ANDROID_LINK=$CDK_MAVEN_PATH/cdk-android/$CDK_VERSION/cdk-android-$CDK_VERSION.aar
+CDK_ANDROID_BINDINGS_LINK=$CDK_MAVEN_PATH/cdk-jvm/$CDK_VERSION/cdk-jvm-$CDK_VERSION.jar
 CDK_IOS_LINK=$CDK_IOS_PATH$CDK_IOS_FILE.zip
 
 # Android CDK
@@ -135,6 +139,19 @@ if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; 
 
     if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
         echo "CDK Android checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# Android CDK Kotlin bindings (cdk-jvm)
+if ! echo "$CDK_ANDROID_BINDINGS_SHA256 android/cdk/$CDK_ANDROID_BINDINGS_FILE" | sha256sum -c -; then
+    echo "CDK Android bindings jar missing or checksum failed" >&2
+
+    rm -f android/cdk/$CDK_ANDROID_BINDINGS_FILE
+    curl -fL $CDK_ANDROID_BINDINGS_LINK > android/cdk/$CDK_ANDROID_BINDINGS_FILE
+
+    if ! echo "$CDK_ANDROID_BINDINGS_SHA256 android/cdk/$CDK_ANDROID_BINDINGS_FILE" | sha256sum -c -; then
+        echo "CDK Android bindings checksum failed" >&2
         exit 1
     fi
 fi
@@ -155,17 +172,38 @@ if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256
     fi
 fi
 
+# Remove artifacts from the pre-0.17.x layout (framework and zip were named
+# cdkFFI; the Android aar bundled its own bindings so there was no jar)
+rm -rf ios/Cdk/cdkFFI.xcframework
+rm -f ios/CashuDevKitLibZipFile/cdkFFI.xcframework.zip
+
 # Extract to ios/Cdk directory (used by Podfile)
 rm -rf ios/Cdk/$CDK_IOS_FILE
 
 unzip ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip -d ios/Cdk
+
+# Strip the macOS slice: upstream ships it as a dynamic library while the
+# iOS slices are static archives, and CocoaPods refuses mixed xcframeworks.
+rm -rf ios/Cdk/$CDK_IOS_FILE/macos-arm64_x86_64
+python3 - <<EOF
+import plistlib
+path = "ios/Cdk/$CDK_IOS_FILE/Info.plist"
+with open(path, "rb") as f:
+    plist = plistlib.load(f)
+plist["AvailableLibraries"] = [
+    lib for lib in plist["AvailableLibraries"]
+    if lib.get("SupportedPlatform") != "macos"
+]
+with open(path, "wb") as f:
+    plistlib.dump(plist, f)
+EOF
 
 echo "CashuDevKit iOS framework installed to ios/Cdk/$CDK_IOS_FILE"
 
 # Download matching Swift bindings from cdk-swift repo. When bumping the CDK
 # version, update iosBindingsSha256 in fetch-libraries-versions.json to the
 # hash of the file at the new tag.
-CDK_SWIFT_BINDINGS_URL="https://raw.githubusercontent.com/cashubtc/cdk-swift/v$CDK_VERSION/Sources/CashuDevKit/CashuDevKit.swift"
+CDK_SWIFT_BINDINGS_URL="https://raw.githubusercontent.com/cashubtc/cdk-swift/v$CDK_VERSION/Sources/Cdk/CashuDevKit.swift"
 mkdir -p ios/CashuDevKit
 
 if ! echo "$CDK_IOS_BINDINGS_SHA256 ios/CashuDevKit/CashuDevKit.swift" | sha256sum -c -; then
