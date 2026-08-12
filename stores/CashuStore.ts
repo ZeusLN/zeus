@@ -423,8 +423,22 @@ export default class CashuStore {
         try {
             await CashuDevKit.addMint(normalizedUrl);
             this.addedMintsCache.add(normalizedUrl);
+            runInAction(() => {
+                if (this.cashuWallets[normalizedUrl]) {
+                    this.cashuWallets[normalizedUrl].errorConnecting = false;
+                }
+            });
         } catch (e) {
-            // Don't cache failures - allow retries on subsequent calls
+            // Don't cache failures - allow retries on subsequent calls.
+            // Rethrow so callers fail at the first broken step instead of
+            // a later, more confusing one.
+            console.error(`CDK: Failed to add mint ${normalizedUrl}:`, e);
+            runInAction(() => {
+                if (this.cashuWallets[normalizedUrl]) {
+                    this.cashuWallets[normalizedUrl].errorConnecting = true;
+                }
+            });
+            throw e;
         }
     };
 
