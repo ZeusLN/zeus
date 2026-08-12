@@ -747,7 +747,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         placeholder={`${localeString(
                                             'views.LSPS1.initialLSPBalance'
                                         )} (${localeString('general.sats')})`}
-                                        value={numberWithCommas(lspBalanceSat)}
+                                        value={
+                                            lspBalanceSat === ''
+                                                ? ''
+                                                : numberWithCommas(
+                                                      lspBalanceSat
+                                                  )
+                                        }
                                         onChangeText={(text: any) => {
                                             const value = text.replace(
                                                 /,/g,
@@ -830,9 +836,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             placeholder={localeString(
                                                 'views.LSPS1.channelExpiryBlocks'
                                             )}
-                                            value={numberWithCommas(
-                                                channelExpiryBlocks
-                                            )}
+                                            value={
+                                                channelExpiryBlocks === ''
+                                                    ? ''
+                                                    : numberWithCommas(
+                                                          channelExpiryBlocks
+                                                      )
+                                            }
                                             onChangeText={(text: any) => {
                                                 let newValue: string | number =
                                                     parseInt(
@@ -921,9 +931,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         )} (${localeString(
                                                             'general.sats'
                                                         )})`}
-                                                        value={numberWithCommas(
-                                                            clientBalanceSat
-                                                        ).toString()}
+                                                        value={
+                                                            clientBalanceSat ===
+                                                            ''
+                                                                ? ''
+                                                                : numberWithCommas(
+                                                                      clientBalanceSat
+                                                                  )
+                                                        }
                                                         onChangeText={(
                                                             text: any
                                                         ) => {
