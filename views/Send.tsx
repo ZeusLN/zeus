@@ -107,6 +107,7 @@ interface SendState {
     maxShardAmt: string;
     feeLimitSat: string;
     maxFeePercent: string;
+    feeOption: string;
     timeoutSeconds: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
@@ -181,6 +182,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt: '',
             feeLimitSat: '100',
             maxFeePercent: '5.0',
+            feeOption: 'fixed',
             timeoutSeconds: '60',
             message: '',
             enableAtomicMultiPathPayment: false,
@@ -555,7 +557,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             message,
             enableAtomicMultiPathPayment,
             feeLimitSat,
-            maxFeePercent
+            maxFeePercent,
+            feeOption
         } = this.state;
 
         // Guard against double-submission: bail if a payment is already in
@@ -578,7 +581,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amount: satAmount.toString(),
                 pubkey: destination,
                 fee_limit_sat: feeLimitSat,
-                max_fee_percent: maxFeePercent,
+                // CLN takes either a percent cap or the fixed fee_limit_sat
+                // cap, so only send the percent when that mode is selected
+                max_fee_percent:
+                    feeOption === 'percent' ? maxFeePercent : undefined,
                 message
             });
         }
@@ -1493,6 +1499,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onMaxFeePercentChange={(value: string) =>
                                         this.setState({
                                             maxFeePercent: value
+                                        })
+                                    }
+                                    onFeeOptionChange={(value: string) =>
+                                        this.setState({
+                                            feeOption: value
                                         })
                                     }
                                     SettingsStore={SettingsStore}

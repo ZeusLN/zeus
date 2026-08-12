@@ -18,6 +18,7 @@ import { themeColor } from '../utils/ThemeUtils';
 interface FeeLimitProps {
     onFeeLimitSatChange: (satAmount: string) => void;
     onMaxFeePercentChange?: (maxFeePercent: string) => void;
+    onFeeOptionChange?: (feeOption: string) => void;
     satAmount?: string | number;
     SettingsStore: SettingsStore;
     InvoicesStore?: InvoicesStore;
@@ -179,20 +180,18 @@ export default class FeeLimit extends React.Component<
 
     render() {
         const {
-            SettingsStore,
             onFeeLimitSatChange,
             onMaxFeePercentChange,
+            onFeeOptionChange,
             displayFeeRecommendation,
             satAmount,
             hide
         } = this.props;
         const { feeOption, feeLimitSat, maxFeePercent, percentAmount } =
             this.state;
-        const { implementation } = SettingsStore;
 
         const supportsCustomFeeLimit: boolean =
             BackendUtils.supportsCustomFeeLimit();
-        const isCLightning: boolean = implementation === 'cln-rest';
 
         if (hide) return;
 
@@ -245,6 +244,8 @@ export default class FeeLimit extends React.Component<
                                         feeOption: 'fixed'
                                     });
                                     onFeeLimitSatChange(feeLimitSat);
+                                    if (onFeeOptionChange)
+                                        onFeeOptionChange('fixed');
                                 }}
                             />
                             <TextInput
@@ -281,65 +282,12 @@ export default class FeeLimit extends React.Component<
                                         feeOption: 'percent'
                                     });
                                     onFeeLimitSatChange(percentAmount);
+                                    if (onFeeOptionChange)
+                                        onFeeOptionChange('percent');
                                 }}
                             />
                         </View>
                     </>
-                )}
-
-                {isCLightning && (
-                    <React.Fragment>
-                        <Row justify="space-between">
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.PaymentRequest.feeLimit')}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                <Amount sats={percentAmount} />
-                            </Text>
-                        </Row>
-                        <TextInput
-                            keyboardType="numeric"
-                            value={maxFeePercent}
-                            suffix="%"
-                            onChangeText={(text: string) => {
-                                this.setState(
-                                    {
-                                        maxFeePercent: text
-                                    },
-                                    () => {
-                                        const percentAmount =
-                                            this.calculatePercentAmount(
-                                                satAmount
-                                            );
-
-                                        this.setState({
-                                            percentAmount
-                                        });
-                                        onFeeLimitSatChange(percentAmount);
-
-                                        if (onMaxFeePercentChange)
-                                            onMaxFeePercentChange(text);
-                                    }
-                                );
-                            }}
-                            onPressIn={() => {
-                                this.setState({
-                                    feeOption: 'percent'
-                                });
-                                onFeeLimitSatChange(percentAmount);
-                            }}
-                        />
-                    </React.Fragment>
                 )}
             </React.Fragment>
         );
