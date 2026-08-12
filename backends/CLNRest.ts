@@ -408,37 +408,13 @@ export default class CLNRest {
         });
 
     // xpay and xkeysend only accept an absolute fee cap (maxfee), not
-    // maxfeepercent: derive one from the user's max fee percent, decoding
-    // the invoice server-side when the caller didn't supply the amount,
-    // and fall back to fee_limit_sat (fixed fee limit mode, silent sends).
+    // maxfeepercent. fee_limit_sat is the source of truth: FeeLimit
+    // already emits the percent-derived sat amount as fee_limit_sat in
+    // percent mode, so the cap always matches what the fee UI displays.
     // Returning undefined leaves the cap to xpay's default of
     // max(5000msat, 1%).
-    private getMaxFeeMsat = async (data: any, invstring?: string) => {
-        if (data.max_fee_percent) {
-            let amountMsat = data.amt ? Number(data.amt) * 1000 : undefined;
-            if (!amountMsat && invstring) {
-                const decoded = await this.postRequest('/v1/decode', {
-                    string: invstring
-                });
-                // bolt11 decodes carry amount_msat, bolt12 invoices
-                // carry invoice_amount_msat
-                const msat =
-                    decoded?.amount_msat ?? decoded?.invoice_amount_msat;
-                if (msat != null) {
-                    amountMsat = Number(msat.toString().replace('msat', ''));
-                }
-            }
-            if (amountMsat) {
-                return new BigNumber(amountMsat)
-                    .times(data.max_fee_percent)
-                    .dividedBy(100)
-                    .integerValue(BigNumber.ROUND_CEIL)
-                    .toNumber();
-            }
-        }
-        if (data.fee_limit_sat) return Number(data.fee_limit_sat) * 1000;
-        return undefined;
-    };
+    private getMaxFeeMsat = (data: any) =>
+        data.fee_limit_sat ? Number(data.fee_limit_sat) * 1000 : undefined;
 
     // xpay and xkeysend results omit status and payment_hash: synthesize
     // both so handlePayment success detection and payment note keys
@@ -470,10 +446,12 @@ export default class CLNRest {
             };
             // pay takes either a percent cap or an absolute maxfee, not
             // both. maxfee predates clnrest itself, so no version gate.
-            if (data.max_fee_percent) {
-                legacyRequest.maxfeepercent = data.max_fee_percent;
-            } else if (data.fee_limit_sat) {
+            // Prefer fee_limit_sat so the cap matches the fee UI, same
+            // as the xpay path.
+            if (data.fee_limit_sat) {
                 legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+            } else if (data.max_fee_percent) {
+                legacyRequest.maxfeepercent = data.max_fee_percent;
             }
             return this.postRequest(
                 '/v1/pay',
@@ -487,7 +465,7 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
         if (data.amt) request.amount_msat = Number(data.amt) * 1000;
-        const maxfee = await this.getMaxFeeMsat(data, data.payment_request);
+        const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.postRequest(
@@ -536,7 +514,7 @@ export default class CLNRest {
             amount_msat: Number(data.amt && data.amt * 1000),
             retry_for: data.timeout_seconds
         };
-        const maxfee = await this.getMaxFeeMsat(data);
+        const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.postRequest(

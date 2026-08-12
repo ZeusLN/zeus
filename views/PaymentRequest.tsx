@@ -1053,7 +1053,7 @@ export default class PaymentRequest extends React.Component<
                                         <FeeLimit
                                             satAmount={
                                                 isNoAmountInvoice
-                                                    ? customAmount
+                                                    ? this.state.satAmount
                                                     : requestAmount || 0
                                             }
                                             onFeeLimitSatChange={(
@@ -1356,7 +1356,7 @@ export default class PaymentRequest extends React.Component<
                                     <FeeLimit
                                         satAmount={
                                             isNoAmountInvoice
-                                                ? customAmount
+                                                ? this.state.satAmount
                                                 : requestAmount || 0
                                         }
                                         onFeeLimitSatChange={(value: string) =>
