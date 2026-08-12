@@ -1617,7 +1617,7 @@ export default class NostrWalletConnectStore {
 
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
-     * the subscription) when the connection has expired.
+     * the subscription) when the connection is missing or has expired.
      */
     private async withGlobalHandler<T>(
         connectionId: string,
@@ -1625,11 +1625,12 @@ export default class NostrWalletConnectStore {
     ): Promise<T> {
         const { connection } = this.getConnection({ connectionId });
         if (!connection) {
+            this.unsubscribeFromConnection(connectionId);
             return NostrConnectUtils.createNip47Error(
                 localeString(
                     'stores.NostrWalletConnectStore.error.connectionNotFound'
                 ),
-                Nip47ErrorCode.NOT_FOUND
+                Nip47ErrorCode.UNAUTHORIZED
             ) as T;
         }
         if (connection.isExpired) {

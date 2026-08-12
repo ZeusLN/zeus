@@ -704,6 +704,36 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         return connection;
     }
 
+    it('rejects and unsubscribes when the connection record is missing', async () => {
+        const store = buildStore();
+        store.connections = [];
+
+        const connectionId = 'conn-missing';
+        const unsub = jest.fn();
+        (store as any).activeSubscriptions.set(connectionId, unsub);
+
+        const response = await (store as any).withGlobalHandler(
+            connectionId,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'UNAUTHORIZED',
+                message:
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+            }
+        });
+        expect(unsub).toHaveBeenCalled();
+        expect((store as any).activeSubscriptions.has(connectionId)).toBe(
+            false
+        );
+    });
+
     it('rejects every NWC method once the connection has expired', async () => {
         const store = buildStore();
         const connection = seedConnection(store, {
