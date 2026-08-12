@@ -4079,6 +4079,16 @@ export default class CashuStore {
             // Set payReq early so the view can render invoice details
             // even if melt quote preparation fails
             this.payReq = payReq;
+
+            // don't request melt quotes for an expired invoice: it can't
+            // be paid, and the quote requests would needlessly disclose
+            // the invoice to the mint(s)
+            if (payReq.isExpiredNow()) {
+                this.meltQuotes = [];
+                this.meltQuote = undefined;
+                return;
+            }
+
             const rawPaymentAmt = payReq.getRequestAmount
                 ? payReq.getRequestAmount
                 : 0;

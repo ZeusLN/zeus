@@ -24,7 +24,10 @@ import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
-import { WarningMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -215,6 +218,17 @@ export default class CashuPaymentRequest extends React.Component<
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
         const { satAmount, multiMintEnabled, donationAmount } = this.state;
+
+        // Fail closed if the invoice has expired since it was reviewed:
+        // the invoice can lapse while this screen is open, and expiry is
+        // otherwise only enforced by the mint and recipient
+        if (CashuStore.payReq?.isExpiredNow()) {
+            // re-render so the expired notice appears and the pay
+            // controls are removed
+            this.forceUpdate();
+            return;
+        }
+
         const requestAmount = CashuStore.payReq?.getRequestAmount;
         const paymentAmount = satAmount
             ? satAmount.toString()
@@ -332,6 +346,8 @@ export default class CashuPaymentRequest extends React.Component<
         } = LnurlPayStore;
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
+
+        const isPayReqExpired = !!payReq && payReq.isExpiredNow();
 
         const requestAmount =
             payReq && payReq.getRequestAmount
@@ -479,6 +495,20 @@ export default class CashuPaymentRequest extends React.Component<
                         {!loading && !loadingFeeEstimate && !!payReq && (
                             <View style={styles.content}>
                                 <>
+                                    {isPayReqExpired && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <ErrorMessage
+                                                message={localeString(
+                                                    'views.PaymentRequest.invoiceExpired'
+                                                )}
+                                            />
+                                        </View>
+                                    )}
                                     {showZaplockerWarning &&
                                         implementation === 'embedded-lnd' && (
                                             <View
@@ -962,6 +992,7 @@ export default class CashuPaymentRequest extends React.Component<
                 </View>
 
                 {!!payReq &&
+                    !isPayReqExpired &&
                     !loading &&
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (

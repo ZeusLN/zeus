@@ -704,7 +704,7 @@ export default class PaymentRequest extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            <SwapButton />
+                            {!isPayReqExpired && <SwapButton />}
                             <QRButton />
                         </Row>
                     }
