@@ -1188,3 +1188,68 @@ describe('NostrWalletConnectStore make_invoice limits', () => {
         expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
     });
 });
+
+describe('NostrWalletConnectStore activity prune', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('never prunes pending pay_invoice entries when trimming the activity log', () => {
+        const store = buildPayInvoiceTestStore();
+        const oldest = new Date('2024-01-01T00:00:00Z');
+        const activity = [
+            {
+                id: 'lnbc-pending-pay',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'pending' as const,
+                satAmount: 1000,
+                createdAt: oldest
+            },
+            ...Array.from({ length: 99 }, (_, i) => ({
+                id: `lnbc-make-${i}`,
+                type: 'make_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const,
+                createdAt: new Date(oldest.getTime() + (i + 1) * 1000)
+            }))
+        ];
+        const connection = seedPayInvoiceConnection(store, { activity });
+        connection.activity.push({
+            id: 'lnbc-make-new',
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            createdAt: new Date('2024-06-01T00:00:00Z')
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(100);
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-pending-pay')
+        ).toBeDefined();
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-make-0')
+        ).toBeUndefined();
+        expect(connection.pendingSpendSats).toBe(1000);
+    });
+
+    it('stops pruning when every activity entry is still pending', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: Array.from({ length: 101 }, (_, i) => ({
+                id: `lnbc-pending-${i}`,
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'pending' as const,
+                satAmount: 1,
+                createdAt: new Date(2024, 0, 1, 0, 0, i)
+            }))
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(101);
+    });
+});

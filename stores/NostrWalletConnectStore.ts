@@ -1791,15 +1791,23 @@ export default class NostrWalletConnectStore {
 
     private pruneConnectionActivity(connection: NWCConnection): void {
         while (connection.activity.length > MAX_CONNECTION_ACTIVITY_ENTRIES) {
-            let oldestIdx = 0;
-            let oldestTime = connection.activity[0]?.createdAt?.getTime() ?? 0;
-            for (let i = 1; i < connection.activity.length; i++) {
-                const createdAt =
-                    connection.activity[i]?.createdAt?.getTime() ?? 0;
+            let oldestIdx = -1;
+            let oldestTime = Infinity;
+            for (let i = 0; i < connection.activity.length; i++) {
+                const activity = connection.activity[i];
+                // Pending pay_invoice entries hold budget via pendingSpendSats and
+                // must survive until reconcilePendingPayInvoiceActivities settles them.
+                if (activity.status === 'pending') {
+                    continue;
+                }
+                const createdAt = activity?.createdAt?.getTime() ?? 0;
                 if (createdAt < oldestTime) {
                     oldestTime = createdAt;
                     oldestIdx = i;
                 }
+            }
+            if (oldestIdx === -1) {
+                break;
             }
             connection.activity.splice(oldestIdx, 1);
         }
