@@ -1090,17 +1090,45 @@ export default class LdkNode {
      * Get UTXOs for coin control
      */
     getUTXOs = async (): Promise<any> => {
-        const utxos = await LdkNodeInjection.onchain.listUtxos();
+        const [utxos, payments, status] = await Promise.all([
+            LdkNodeInjection.onchain.listUtxos(),
+            LdkNodeInjection.payments.listPayments(),
+            LdkNodeInjection.node.status()
+        ]);
+        const bestBlockHeight = status.currentBestBlock_height;
+
+        // WalletUtxo carries no confirmation height, so look it up from
+        // the on-chain payment that created each UTXO
+        const confirmationHeights: { [txid: string]: number } = {};
+        for (const payment of payments) {
+            if (
+                payment.kind.type === 'onchain' &&
+                payment.kind.txid &&
+                payment.kind.confirmationHeight
+            ) {
+                confirmationHeights[payment.kind.txid] =
+                    payment.kind.confirmationHeight;
+            }
+        }
+
         return {
-            utxos: utxos.map((u) => ({
-                outpoint: {
-                    txid_str: u.txid,
-                    output_index: u.vout
-                },
-                address: u.address,
-                amount_sat: u.value_sats,
-                confirmations: u.is_spent ? '0' : '1'
-            }))
+            utxos: utxos
+                .filter((u) => !u.is_spent)
+                .map((u) => {
+                    const confirmationHeight = confirmationHeights[u.txid];
+                    const confirmations = confirmationHeight
+                        ? bestBlockHeight - confirmationHeight + 1
+                        : 0;
+                    return {
+                        outpoint: {
+                            txid_str: u.txid,
+                            output_index: u.vout
+                        },
+                        address: u.address,
+                        amount_sat: u.value_sats,
+                        confirmations: confirmations.toString()
+                    };
+                })
         };
     };
 
