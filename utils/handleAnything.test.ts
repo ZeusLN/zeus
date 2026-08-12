@@ -904,6 +904,156 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('BIP 353 BOLT 12 address resolution', () => {
+        // The worked example from BIP 353 (matt@mattcorallo.com): a decoy
+        // TXT record that must be ignored, plus the real record split
+        // across two character-strings that must be concatenated in RDATA
+        // order.
+        const DECOY_TXT =
+            '"as long as it doesn\'t start with bitcoin:, other records should be ignored"';
+        const B12_PART1 =
+            'bitcoin:bc1qztwy6xen3zdtt7z0vrgapmjtfz8acjkfp5fp7l?lno=lno1zr5qyugqgskrk70kqmuq7v3dnr2fnmhukps9n8hut48vkqpqnskt2svsqwjakp7k6pyhtkuxw7y2kqmsxlwruhzqv0zsnhh9q3t9xhx39suc6qsr07ekm5esdyum0w66mnx8vdquwvp7dp5jp7j3v5cp6aj0w329fnkqqv60q96sz5nkrc5r95qffx002q53tqdk';
+        const B12_PART2 =
+            '8x9m2tmt85jtpmcycvfnrpx3lr45h2g7na3sec7xguctfzzcm8jjqtj5ya27te60j03vpt0vq9tm2n9yxl2hngfnmygesa25s4u4zlxewqpvp94xt7rur4rhxunwkthk9vly3lm5hh0pqv4aymcqejlgssnlpzwlggykkajp7yjs5jvr2agkyypcdlj280cy46jpynsezrcj2kwa2lyr8xvd6lfkph4xrxtk2xc3lpq';
+        const REAL_TXT = `"${B12_PART1}" "${B12_PART2}"`;
+        const RECONSTRUCTED_URI = B12_PART1 + B12_PART2;
+        const ADDRESS = 'matt@mattcorallo.com';
+
+        const txt = (data: string) => ({
+            name: 'matt.user._bitcoin-payment.mattcorallo.com',
+            type: 16,
+            TTL: 3600,
+            data
+        });
+
+        const originalFetch = global.fetch;
+        let mockDnsFetch: jest.Mock;
+
+        const mockDoHResponse = (json: any) => {
+            mockDnsFetch = jest.fn().mockResolvedValue({
+                json: async () => json
+            });
+            global.fetch = mockDnsFetch as any;
+        };
+
+        const bitcoinUriCalls = () =>
+            mockProcessBIP21Uri.mock.calls.filter((call: any[]) =>
+                String(call[0]).toLowerCase().startsWith('bitcoin:')
+            );
+
+        beforeEach(() => {
+            mockIsValidLightningAddress = true;
+            mockProcessBIP21Uri.mockImplementation((input: string) => {
+                if (input === RECONSTRUCTED_URI) {
+                    return {
+                        value: 'bc1qztwy6xen3zdtt7z0vrgapmjtfz8acjkfp5fp7l',
+                        offer: 'lno1zr5qyugqgskrk70kqmuq'
+                    };
+                }
+                return { value: input };
+            });
+            // LNURL fallback succeeds so non-BOLT 12 outcomes are observable
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+        });
+
+        afterEach(() => {
+            global.fetch = originalFetch;
+        });
+
+        it('accepts a DNSSEC-validated answer, ignoring the non-bitcoin: decoy record', async () => {
+            mockDoHResponse({
+                Status: 0,
+                AD: true,
+                Answer: [txt(DECOY_TXT), txt(REAL_TXT)]
+            });
+            // no LNURL endpoint on the domain
+            mockBlobUtilFetch.mockRejectedValue(new Error('404'));
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(mockProcessBIP21Uri).toHaveBeenCalledWith(RECONSTRUCTED_URI);
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].offer).toBe('lno1zr5qyugqgskrk70kqmuq');
+        });
+
+        it('rejects an answer without the AD (DNSSEC-validated) bit', async () => {
+            mockDoHResponse({
+                Status: 0,
+                AD: false,
+                Answer: [txt(REAL_TXT)]
+            });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+
+        it('rejects a non-NOERROR response status', async () => {
+            mockDoHResponse({
+                Status: 2,
+                AD: true,
+                Answer: [txt(REAL_TXT)]
+            });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+
+        it('rejects multiple bitcoin: TXT records', async () => {
+            mockDoHResponse({
+                Status: 0,
+                AD: true,
+                Answer: [txt(REAL_TXT), txt(REAL_TXT)]
+            });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+
+        it('rejects when only non-bitcoin: TXT records exist', async () => {
+            mockDoHResponse({
+                Status: 0,
+                AD: true,
+                Answer: [txt(DECOY_TXT)]
+            });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+
+        it('ignores non-TXT records even if their data looks like a bitcoin: URI', async () => {
+            mockDoHResponse({
+                Status: 0,
+                AD: true,
+                Answer: [{ ...txt(REAL_TXT), type: 5 }]
+            });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+
+        it('rejects an empty or missing Answer section', async () => {
+            mockDoHResponse({ Status: 0, AD: true });
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(bitcoinUriCalls()).toHaveLength(0);
+            expect(result[0]).toBe('LnurlPay');
+        });
+    });
+
     describe('node configuration handling', () => {
         it('should handle lndhub:// URLs', async () => {
             const lndhubUrl =
