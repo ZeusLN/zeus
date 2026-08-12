@@ -2013,7 +2013,7 @@
     "views.Settings.NostrWalletConnect.regenerateConnection": "重新建立连接",
     "views.Settings.NostrWalletConnect.regeneratingConnection": "正在重新建立连接……",
     "views.Settings.NostrWalletConnect.regenerateConnection.confirm": "此操作将断开当前连接，并使用新的连接密钥建立新连接。任何曾与旧密钥关联的应用都将停止工作，直到您使用新的二维码或配对链接重新连接为止。您确定要重新建立连接吗？",
-    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ Changing the relay URL rotates the connection secret. Linked apps must reconnect with the new QR code or pairing link.",
+    "views.Settings.NostrWalletConnect.relayChangeWarning": "⚠️ 更改中继节点网址将轮换连接密钥。已关联的应用必须使用新的二维码或配对链接重新建立连接。",
     "views.Settings.NostrWalletConnect.createFirstConnection": "点击 + 按钮来创建您的首个连接",
     "views.Settings.NostrWalletConnect.chooseWalletPermissions": "选择钱包权限",
     "views.Settings.NostrWalletConnect.fullAccess": "完全访问",
