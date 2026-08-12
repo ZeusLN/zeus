@@ -11,13 +11,14 @@ import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
+import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import { SimplePool, nip05, nip19 } from 'nostr-tools';
+import { SimplePool, nip05 } from 'nostr-tools';
 import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
@@ -875,8 +876,10 @@ const handleAnything = async (
         // lookup to when the user acts on the value.
         if (isClipboardValue) return true;
         try {
-            const decoded = nip19.decode(data);
-            const pubkey = decoded.data.toString();
+            const pubkey = NostrUtils.npubToHex(data);
+            if (!pubkey) {
+                throw new Error('Invalid npub');
+            }
             return await nostrProfileLookup(pubkey);
         } catch (e) {
             throw new Error(

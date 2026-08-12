@@ -27,6 +27,7 @@ import { Row } from '../components/layout/Row';
 import AddressUtils from '../utils/AddressUtils';
 import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
+import NostrUtils from '../utils/NostrUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Storage from '../storage';
@@ -254,8 +255,7 @@ export default class NostrContacts extends React.Component<
 
         let pubkey: string = '';
         if (this.state.isValidNpub) {
-            const decoded = nip19.decode(account);
-            pubkey = decoded.data.toString();
+            pubkey = NostrUtils.npubToHex(account) || '';
         } else if (this.state.isValidNip05) {
             try {
                 const lookup: any = await nip05.queryProfile(account);
