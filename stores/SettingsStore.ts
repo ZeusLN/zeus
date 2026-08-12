@@ -320,12 +320,6 @@ export const FEE_ESTIMATOR_KEYS = [
 
 export const SWAP_HOST_KEYS_MAINNET = [
     {
-        key: 'ZEUS',
-        value: 'https://swaps.zeuslsp.com/api/v2',
-        pro: false,
-        supportsRescue: true
-    },
-    {
         key: 'Boltz',
         value: 'https://api.boltz.exchange/v2',
         pro: true,
@@ -353,12 +347,6 @@ export const SWAP_HOST_KEYS_MAINNET = [
 ];
 
 export const SWAP_HOST_KEYS_TESTNET = [
-    {
-        key: 'ZEUS',
-        value: 'https://testnet-swaps.zeuslsp.com/api/v2',
-        pro: false,
-        supportsRescue: true
-    },
     {
         key: 'Boltz',
         value: 'https://api.testnet.boltz.exchange/v2',
@@ -1373,8 +1361,12 @@ export function getLspConfigForNetwork(
 }
 
 // Swaps
-export const DEFAULT_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
+export const DEFAULT_SWAP_HOST_MAINNET = 'https://api.boltz.exchange/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =
+    'https://api.testnet.boltz.exchange/v2';
+// Retired ZEUS swap server hosts, migrated to Boltz
+export const LEGACY_ZEUS_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
+export const LEGACY_ZEUS_SWAP_HOST_TESTNET =
     'https://testnet-swaps.zeuslsp.com/api/v2';
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
@@ -1930,6 +1922,7 @@ export default class SettingsStore {
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
                 await MigrationsUtils.migrateRgsDefaultToZeus(parsedSettings);
+                await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
                 await MigrationsUtils.migrateInvoiceExpiryDisplay(
                     parsedSettings
                 );
