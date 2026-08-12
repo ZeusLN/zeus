@@ -1,5 +1,20 @@
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 
+// minimal valid DER: a SEQUENCE whose encoded length spans the buffer
+const derCert = Buffer.from([0x30, 0x03, 0x02, 0x01, 0x01]);
+const derCert2 = Buffer.from([0x30, 0x03, 0x02, 0x01, 0x02]);
+// long-form length encoding (0x82), as real certificates use
+const derCertLong = Buffer.concat([
+    Buffer.from([0x30, 0x82, 0x01, 0x2c]),
+    Buffer.alloc(300, 0x01)
+]);
+const toBase64Url = (buf: Buffer) =>
+    buf
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+
 describe('ConnectionFormatUtils', () => {
     describe('processLndConnectUrl', () => {
         it('validates IPv4 lndconnect hosts properly', () => {
@@ -44,54 +59,57 @@ describe('ConnectionFormatUtils', () => {
         it('validates all params correctly - different order params', () => {
             expect(
                 ConnectionFormatUtils.processLndConnectUrl(
-                    'lndconnect://8.8.8.8:2059?otherParam=B&macaroon=0201b6&cert=asfdaa'
+                    `lndconnect://8.8.8.8:2059?otherParam=B&macaroon=0201b6&cert=${toBase64Url(
+                        derCert
+                    )}`
                 )
             ).toEqual({
                 host: 'https://8.8.8.8',
                 macaroonHex: 'd36d356f',
                 port: '2059',
                 enableTor: false,
-                pinnedCerts: ['asfdaa==']
+                pinnedCerts: [derCert.toString('base64')]
             });
         });
 
         it('validates onion addresses correctly', () => {
             expect(
                 ConnectionFormatUtils.processLndConnectUrl(
-                    'lndconnect://fasm2nfsakmn2dd.onion:2059?otherParam=B&macaroon=0201b6&cert=asfdaa'
+                    `lndconnect://fasm2nfsakmn2dd.onion:2059?otherParam=B&macaroon=0201b6&cert=${toBase64Url(
+                        derCert
+                    )}`
                 )
             ).toEqual({
                 host: 'https://fasm2nfsakmn2dd.onion',
                 macaroonHex: 'd36d356f',
                 port: '2059',
                 enableTor: true,
-                pinnedCerts: ['asfdaa==']
+                pinnedCerts: [derCert.toString('base64')]
             });
         });
 
         it('normalizes base64url DER certs into base64 pins', () => {
-            // 'my-der-cert' as unpadded base64url
+            // long-form length encoding, as real certificates use
             expect(
                 ConnectionFormatUtils.processLndConnectUrl(
-                    'lndconnect://mynode.local:10009?cert=bXktZGVyLWNlcnQ&macaroon=0201b6'
+                    `lndconnect://mynode.local:10009?cert=${toBase64Url(
+                        derCertLong
+                    )}&macaroon=0201b6`
                 )
             ).toEqual({
                 host: 'https://mynode.local',
                 macaroonHex: 'd36d356f',
                 port: '10009',
                 enableTor: false,
-                pinnedCerts: ['bXktZGVyLWNlcnQ=']
+                pinnedCerts: [derCertLong.toString('base64')]
             });
         });
 
         it('extracts the certificate from PEM-armored cert params', () => {
-            const pem =
-                '-----BEGIN CERTIFICATE-----\nbXktZGVyLWNlcnQ=\n-----END CERTIFICATE-----\n';
-            const cert = Buffer.from(pem, 'utf8')
-                .toString('base64')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=/g, '');
+            const pem = `-----BEGIN CERTIFICATE-----\n${derCert.toString(
+                'base64'
+            )}\n-----END CERTIFICATE-----\n`;
+            const cert = toBase64Url(Buffer.from(pem, 'utf8'));
             expect(
                 ConnectionFormatUtils.processLndConnectUrl(
                     `lndconnect://mynode.local:10009?cert=${cert}&macaroon=0201b6`
@@ -101,8 +119,29 @@ describe('ConnectionFormatUtils', () => {
                 macaroonHex: 'd36d356f',
                 port: '10009',
                 enableTor: false,
-                pinnedCerts: ['bXktZGVyLWNlcnQ=']
+                pinnedCerts: [derCert.toString('base64')]
             });
+        });
+
+        it('does not pin cert params that are not certificates', () => {
+            // decodes fine as base64url, but is not DER — previously the
+            // param was discarded outright, so garbage must not become a
+            // stored pin that fails opaquely at connect time
+            const result: any = ConnectionFormatUtils.processLndConnectUrl(
+                'lndconnect://mynode.local:10009?cert=asfdaa&macaroon=0201b6'
+            );
+            expect(result.pinnedCerts).toBeUndefined();
+            expect(result.host).toEqual('https://mynode.local');
+        });
+
+        it('does not pin truncated DER', () => {
+            // valid SEQUENCE header, but the encoded length overruns the
+            // buffer
+            const truncated = toBase64Url(derCertLong.subarray(0, 200));
+            const result: any = ConnectionFormatUtils.processLndConnectUrl(
+                `lndconnect://mynode.local:10009?cert=${truncated}&macaroon=0201b6`
+            );
+            expect(result.pinnedCerts).toBeUndefined();
         });
 
         it('does not throw on malformed cert params', () => {
@@ -258,8 +297,12 @@ describe('ConnectionFormatUtils', () => {
         it('pins every certificate in the certs PEM bundle, skipping keys', () => {
             const bundle = [
                 '-----BEGIN PRIVATE KEY-----\nUFJJVkFURUtFWQ==\n-----END PRIVATE KEY-----',
-                '-----BEGIN CERTIFICATE-----\nQ0xJRU5ULUNFUlQ=\n-----END CERTIFICATE-----',
-                '-----BEGIN CERTIFICATE-----\nQ0EtQ0VSVA==\n-----END CERTIFICATE-----'
+                `-----BEGIN CERTIFICATE-----\n${derCert.toString(
+                    'base64'
+                )}\n-----END CERTIFICATE-----`,
+                `-----BEGIN CERTIFICATE-----\n${derCert2.toString(
+                    'base64'
+                )}\n-----END CERTIFICATE-----`
             ].join('\n');
             const certs = Buffer.from(bundle, 'utf8').toString('base64');
             expect(
@@ -272,8 +315,25 @@ describe('ConnectionFormatUtils', () => {
                 port: '3010',
                 enableTor: false,
                 implementation: 'cln-rest',
-                pinnedCerts: ['Q0xJRU5ULUNFUlQ=', 'Q0EtQ0VSVA==']
+                pinnedCerts: [
+                    derCert.toString('base64'),
+                    derCert2.toString('base64')
+                ]
             });
+        });
+
+        it('drops certificate blocks that do not carry DER', () => {
+            const bundle = [
+                '-----BEGIN CERTIFICATE-----\nbm90LWEtY2VydA==\n-----END CERTIFICATE-----',
+                `-----BEGIN CERTIFICATE-----\n${derCert.toString(
+                    'base64'
+                )}\n-----END CERTIFICATE-----`
+            ].join('\n');
+            const certs = Buffer.from(bundle, 'utf8').toString('base64');
+            const result: any = ConnectionFormatUtils.processCLNRestConnectUrl(
+                `clnrest+https://cln.local:3010?rune=8hJ6ZKFvRune&certs=${certs}`
+            );
+            expect(result.pinnedCerts).toEqual([derCert.toString('base64')]);
         });
 
         it('sets no pins when the certs bundle has no certificate block', () => {
