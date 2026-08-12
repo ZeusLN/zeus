@@ -798,9 +798,26 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     else -> QuoteState.PAID // Default to PAID for external quotes
                 }
 
+                // ZEUS Pay locks quotes to the wallet's seed-prefix key
+                // (seed[0..32]), which is byte-identical to cdk's "legacy
+                // NpubCash" key. Storing that key on the quote makes cdk's
+                // mint saga scrub it mid-flight (a version bump), and the
+                // saga's post-mint write then dies with ConcurrentUpdate
+                // AFTER the mint has issued the signatures. Instead, store
+                // the quote with no key and write cdk's NpubCash quote-key
+                // marker: at signing time cdk re-derives the identical
+                // seed-prefix key from the marker, with no mid-saga write.
+                if (!secretKey.isNullOrEmpty()) {
+                    db!!.kvWrite(
+                        primaryNamespace = "npubcash",
+                        secondaryNamespace = "quotes",
+                        key = quoteId,
+                        value = "legacy-seed-prefix".toByteArray(Charsets.UTF_8)
+                    )
+                }
+
                 // Create the MintQuote object
                 // For external quotes that are PAID, we set amountPaid = amount
-                // Include secretKey for P2PK-locked quotes
                 val zeroAmount = Amount(0UL)
                 val quote = MintQuote(
                     id = quoteId,
@@ -814,7 +831,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
-                    secretKey = secretKey,
+                    secretKey = null,
                     usedByOperation = null,
                     version = 0u
                 )
