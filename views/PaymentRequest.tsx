@@ -432,6 +432,7 @@ export default class PaymentRequest extends React.Component<
             maxParts,
             maxShardAmt,
             feeLimitSat,
+            feeOption,
             outgoingChanId,
             lastHopPubkey,
             satAmount,
@@ -474,7 +475,12 @@ export default class PaymentRequest extends React.Component<
             max_parts: enableMultiPathPayment ? maxParts : '16',
             max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
             fee_limit_sat: feeLimitSat,
-            max_fee_percent: isCLightning ? maxFeePercentFormatted : '5.0',
+            // CLN takes either a percent cap or the fixed fee_limit_sat cap,
+            // so only send the percent when that mode is selected
+            max_fee_percent:
+                isCLightning && feeOption === 'percent'
+                    ? maxFeePercentFormatted
+                    : undefined,
             outgoing_chan_id: outgoingChanId ?? '',
             last_hop_pubkey: lastHopPubkey ?? '',
             amp: enableAmp,
@@ -623,7 +629,6 @@ export default class PaymentRequest extends React.Component<
         const enableDonations =
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
 
-        const isCLightning: boolean = implementation === 'cln-rest';
         const isLdkNode: boolean = implementation === 'ldk-node';
 
         const isNoAmountInvoice: boolean = !requestAmount;
@@ -1032,8 +1037,7 @@ export default class PaymentRequest extends React.Component<
                                     />
                                 )}
 
-                                {(BackendUtils.supportsCustomFeeLimit() ||
-                                    isCLightning) && (
+                                {BackendUtils.supportsCustomFeeLimit() && (
                                     <Accordion
                                         headerLayout="form"
                                         id="payment-request-fee-settings"
@@ -1049,7 +1053,7 @@ export default class PaymentRequest extends React.Component<
                                         <FeeLimit
                                             satAmount={
                                                 isNoAmountInvoice
-                                                    ? customAmount
+                                                    ? this.state.satAmount
                                                     : requestAmount || 0
                                             }
                                             onFeeLimitSatChange={(
@@ -1064,6 +1068,13 @@ export default class PaymentRequest extends React.Component<
                                             ) =>
                                                 this.setState({
                                                     maxFeePercent: value
+                                                })
+                                            }
+                                            onFeeOptionChange={(
+                                                value: string
+                                            ) =>
+                                                this.setState({
+                                                    feeOption: value
                                                 })
                                             }
                                             feeOption={feeOption}
@@ -1312,7 +1323,6 @@ export default class PaymentRequest extends React.Component<
                                         )}
 
                                         {(BackendUtils.supportsCustomFeeLimit() ||
-                                            isCLightning ||
                                             isLdkNode) && (
                                             <>
                                                 <Text
@@ -1342,14 +1352,11 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     </Accordion>
                                 )}
-                                {!(
-                                    BackendUtils.supportsCustomFeeLimit() ||
-                                    isCLightning
-                                ) && (
+                                {!BackendUtils.supportsCustomFeeLimit() && (
                                     <FeeLimit
                                         satAmount={
                                             isNoAmountInvoice
-                                                ? customAmount
+                                                ? this.state.satAmount
                                                 : requestAmount || 0
                                         }
                                         onFeeLimitSatChange={(value: string) =>

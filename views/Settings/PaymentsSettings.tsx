@@ -126,7 +126,7 @@ export default class PaymentsSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    {BackendUtils.isLNDBased() && (
+                    {BackendUtils.supportsCustomFeeLimit() && (
                         <View style={{ marginBottom: 20 }}>
                             <Text
                                 style={{
@@ -202,45 +202,6 @@ export default class PaymentsSettings extends React.Component<
                                     'views.Settings.Payments.feeLimitMethodExplainer'
                                 )}
                             </Text>
-                        </View>
-                    )}
-
-                    {implementation === 'cln-rest' && (
-                        <View>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {`${localeString(
-                                    'general.lightning'
-                                )} - ${localeString(
-                                    'views.Settings.Payments.defaultFeeLimit'
-                                )}`}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                value={feePercentage}
-                                suffix="%"
-                                onChangeText={async (text: string) => {
-                                    this.setState({
-                                        feePercentage: text
-                                    });
-                                    await updateSettings({
-                                        payments: {
-                                            ...settings.payments,
-                                            defaultFeeMethod: 'percent',
-                                            defaultFeePercentage: text
-                                        }
-                                    });
-                                }}
-                                onPressIn={() =>
-                                    this.setState({
-                                        feeLimitMethod: 'percent'
-                                    })
-                                }
-                            />
                         </View>
                     )}
 

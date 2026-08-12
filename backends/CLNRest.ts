@@ -407,28 +407,121 @@ export default class CLNRest {
             string: urlParams && urlParams[0]
         });
 
-    payLightningInvoice = (data: any) =>
-        this.postRequest(
-            '/v1/pay',
-            {
+    // xpay and xkeysend only accept an absolute fee cap (maxfee), not
+    // maxfeepercent. fee_limit_sat is the source of truth: FeeLimit
+    // already emits the percent-derived sat amount as fee_limit_sat in
+    // percent mode, so the cap always matches what the fee UI displays.
+    // Returning undefined leaves the cap to xpay's default of
+    // max(5000msat, 1%).
+    private getMaxFeeMsat = (data: any) =>
+        data.fee_limit_sat ? Number(data.fee_limit_sat) * 1000 : undefined;
+
+    // xpay and xkeysend results omit status and payment_hash: synthesize
+    // both so handlePayment success detection and payment note keys
+    // (note-<payment_hash>) keep working. hash = SHA256(preimage), and
+    // xpay only resolves on success (failures reject via the HTTP error
+    // path), so status is always complete here.
+    private formatXpayResult = (result: any) => {
+        const formatted: any = { ...result, status: 'complete' };
+        if (result?.payment_preimage) {
+            formatted.payment_hash = Base64Utils.bytesToHex(
+                Array.from(
+                    new sha256Hash()
+                        .update(Base64Utils.hexToBytes(result.payment_preimage))
+                        .digest()
+                )
+            );
+        }
+        return formatted;
+    };
+
+    payLightningInvoice = async (data: any) => {
+        // pay is deprecated in CLN v26.06 and removed in v27.03; use xpay
+        // (available since v24.11) when the node has it
+        if (!this.supports('v24.11')) {
+            const legacyRequest: any = {
                 bolt11: data.payment_request,
                 amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
-            },
-            data.timeout_seconds * 1000
-        );
-    sendKeysend = (data: any) => {
+            };
+            // pay takes either a percent cap or an absolute maxfee, not
+            // both. maxfee predates clnrest itself, so no version gate.
+            // Prefer fee_limit_sat so the cap matches the fee UI, same
+            // as the xpay path.
+            if (data.fee_limit_sat) {
+                legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+            } else if (data.max_fee_percent) {
+                legacyRequest.maxfeepercent = data.max_fee_percent;
+            }
+            return this.postRequest(
+                '/v1/pay',
+                legacyRequest,
+                data.timeout_seconds * 1000
+            );
+        }
+
+        const request: any = {
+            invstring: data.payment_request,
+            retry_for: data.timeout_seconds
+        };
+        if (data.amt) request.amount_msat = Number(data.amt) * 1000;
+        const maxfee = this.getMaxFeeMsat(data);
+        if (maxfee !== undefined) request.maxfee = maxfee;
+
         return this.postRequest(
-            '/v1/keysend',
-            {
+            '/v1/xpay',
+            request,
+            data.timeout_seconds * 1000
+        ).then(this.formatXpayResult);
+    };
+    sendKeysend = async (data: any) => {
+        // keysend is deprecated in CLN v26.06 and removed in v27.03; use
+        // xkeysend (introduced alongside the deprecation in v26.06) when
+        // the node has it
+        if (!this.supports('v26.06')) {
+            const legacyRequest: any = {
                 destination: data.pubkey,
                 amount_msat: Number(data.amt && data.amt * 1000),
-                maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
-            },
+            };
+            // keysend takes either a percent cap or an absolute maxfee,
+            // not both, and only gained maxfee in v24.11: on older nodes
+            // express the fixed cap as the equivalent percent of the
+            // keysend amount (capped at CLN's 100% param limit)
+            if (data.max_fee_percent) {
+                legacyRequest.maxfeepercent = data.max_fee_percent;
+            } else if (data.fee_limit_sat) {
+                if (this.supports('v24.11')) {
+                    legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+                } else if (data.amt) {
+                    legacyRequest.maxfeepercent = BigNumber.min(
+                        new BigNumber(data.fee_limit_sat)
+                            .times(100)
+                            .dividedBy(data.amt),
+                        100
+                    ).toNumber();
+                }
+            }
+            return this.postRequest(
+                '/v1/keysend',
+                legacyRequest,
+                data.timeout_seconds * 1000
+            );
+        }
+
+        const request: any = {
+            destination: data.pubkey,
+            amount_msat: Number(data.amt && data.amt * 1000),
+            retry_for: data.timeout_seconds
+        };
+        const maxfee = this.getMaxFeeMsat(data);
+        if (maxfee !== undefined) request.maxfee = maxfee;
+
+        return this.postRequest(
+            '/v1/xkeysend',
+            request,
             data.timeout_seconds * 1000
-        );
+        ).then(this.formatXpayResult);
     };
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
@@ -677,7 +770,7 @@ export default class CLNRest {
     supportsOffers = () => true;
     supportsListingOffers = () => true;
     supportsBolt12Address = () => true;
-    supportsCustomFeeLimit = () => false;
+    supportsCustomFeeLimit = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => true;
     supportInboundFees = () => false;
