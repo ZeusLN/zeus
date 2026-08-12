@@ -538,6 +538,13 @@ describe('handleAnything', () => {
                 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m';
             mockProcessBIP21Uri.mockReturnValue({ value: data });
             mockIsValidNpub = true;
+            // Return a real decode shape so that if the clipboard guard ever
+            // regresses, execution survives decoded.data and actually reaches
+            // new SimplePool(), keeping the assertion below meaningful
+            mockNip19Decode.mockReturnValue({
+                type: 'npub',
+                data: '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'
+            });
 
             const result = await handleAnything(data, undefined, true);
 
