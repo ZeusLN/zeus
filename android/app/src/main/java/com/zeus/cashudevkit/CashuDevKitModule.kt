@@ -9,6 +9,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 import org.cashudevkit.*
 import uniffi.zeus_cashu_restore.restoreFromSeed as zeusRestoreFromSeed
@@ -17,13 +18,25 @@ import uniffi.zeus_cashu_restore.RestoreException
 /**
  * CashuDevKit Native Module for React Native
  * Provides bridge to CDK FFI bindings
+ *
+ * CDK 0.15+ replaced the MultiMintWallet with a WalletRepository plus
+ * per-mint Wallet objects, and one-shot melts with a two-phase
+ * prepare/confirm flow. This module adapts the new API behind the
+ * pre-existing bridge contract: method names, parameters and resolved
+ * JSON shapes are unchanged from the 0.14.x module.
  */
 class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    private var wallet: MultiMintWallet? = null
+    @Volatile
+    private var repo: WalletRepository? = null
+    @Volatile
     private var db: WalletSqliteDatabase? = null
-    private val preparedSends = mutableMapOf<String, PreparedSend>()
+    @Volatile
+    private var walletUnit: CurrencyUnit = CurrencyUnit.Sat
+    private val wallets = ConcurrentHashMap<String, Wallet>()
+    private val preparedSends = ConcurrentHashMap<String, PreparedSend>()
+    @Volatile
     private var isInitialized = false
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -106,13 +119,43 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
-     * Returns the initialized wallet or rejects with NO_WALLET error and returns null
+     * Returns the initialized wallet repository or rejects with NO_WALLET
+     * error and returns null
      */
-    private fun getInitializedWallet(promise: Promise): MultiMintWallet? {
-        if (!isInitialized || wallet == null) {
+    private fun getInitializedRepo(promise: Promise): WalletRepository? {
+        val current = repo
+        if (!isInitialized || current == null) {
             promise.reject("NO_WALLET", "Wallet not initialized")
             return null
         }
+        return current
+    }
+
+    private fun normalizeMintUrl(mintUrl: String): String = mintUrl.trimEnd('/')
+
+    /**
+     * Get (or lazily create) the per-mint Wallet for a mint URL.
+     *
+     * The repository only creates an in-memory Wallet handle here; no
+     * network request is made until the wallet is used. Creating on
+     * demand preserves the 0.14.x MultiMintWallet behavior where
+     * receive/restore operated with allowUntrusted: true.
+     */
+    private suspend fun getWallet(mintUrl: String): Wallet {
+        val normalized = normalizeMintUrl(mintUrl)
+        wallets[normalized]?.let { return it }
+
+        val currentRepo = repo
+        if (!isInitialized || currentRepo == null) {
+            throw FfiException.Internal("Wallet not initialized")
+        }
+
+        val url = MintUrl(normalized)
+        if (!currentRepo.hasMint(url)) {
+            currentRepo.createWallet(url, walletUnit, null)
+        }
+        val wallet = currentRepo.getWallet(url, walletUnit)
+        wallets[normalized] = wallet
         return wallet
     }
 
@@ -145,6 +188,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             is CurrencyUnit.Eur -> "eur"
             is CurrencyUnit.Auth -> "auth"
             is CurrencyUnit.Custom -> unit.unit
+            else -> "sat"
         }
     }
 
@@ -157,38 +201,42 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    private fun proofStateToString(state: ProofState): String {
-        return when (state) {
-            ProofState.UNSPENT -> "Unspent"
-            ProofState.PENDING -> "Pending"
-            ProofState.SPENT -> "Spent"
-            ProofState.RESERVED -> "Reserved"
-            ProofState.PENDING_SPENT -> "PendingSpent"
+    /**
+     * Map the CDK FFI exception to the legacy bridge error codes that JS
+     * consumers were written against. CDK 0.15+ collapsed the previous
+     * 19 error variants into Cdk(code, errorMessage) with Cashu protocol
+     * error codes, plus Internal(errorMessage) for infrastructure errors.
+     */
+    private fun mapFfiException(e: FfiException): Pair<String, String> {
+        return when (e) {
+            is FfiException.Cdk ->
+                legacyErrorCode(e.code, e.errorMessage) to e.errorMessage
+            is FfiException.Internal ->
+                legacyErrorCode(null, e.errorMessage) to e.errorMessage
         }
     }
 
-    private fun mapFfiException(e: FfiException): Pair<String, String> {
-        return when (e) {
-            is FfiException.Generic -> "GENERIC_ERROR" to (e.message ?: "Generic error")
-            is FfiException.AmountOverflow -> "AMOUNT_OVERFLOW" to (e.message ?: "Amount overflow")
-            is FfiException.PaymentFailed -> "PAYMENT_FAILED" to (e.message ?: "Payment failed")
-            is FfiException.PaymentPending -> "PAYMENT_PENDING" to (e.message ?: "Payment pending")
-            is FfiException.InsufficientFunds -> "INSUFFICIENT_FUNDS" to (e.message ?: "Insufficient funds")
-            is FfiException.Database -> "DATABASE_ERROR" to (e.message ?: "Database error")
-            is FfiException.Network -> "NETWORK_ERROR" to (e.message ?: "Network error")
-            is FfiException.InvalidToken -> "INVALID_TOKEN" to (e.message ?: "Invalid token")
-            is FfiException.Wallet -> "WALLET_ERROR" to (e.message ?: "Wallet error")
-            is FfiException.KeysetUnknown -> "KEYSET_UNKNOWN" to (e.message ?: "Keyset unknown")
-            is FfiException.UnitNotSupported -> "UNIT_NOT_SUPPORTED" to (e.message ?: "Unit not supported")
-            is FfiException.InvalidMnemonic -> "INVALID_MNEMONIC" to (e.message ?: "Invalid mnemonic")
-            is FfiException.InvalidUrl -> "INVALID_URL" to (e.message ?: "Invalid URL")
-            is FfiException.DivisionByZero -> "DIVISION_BY_ZERO" to (e.message ?: "Division by zero")
-            is FfiException.Amount -> "AMOUNT_ERROR" to (e.message ?: "Amount error")
-            is FfiException.RuntimeTaskJoin -> "RUNTIME_ERROR" to (e.message ?: "Runtime error")
-            is FfiException.InvalidHex -> "INVALID_HEX" to (e.message ?: "Invalid hex")
-            is FfiException.InvalidCryptographicKey -> "INVALID_KEY" to (e.message ?: "Invalid key")
-            is FfiException.Serialization -> "SERIALIZATION_ERROR" to (e.message ?: "Serialization error")
-            else -> "UNKNOWN_ERROR" to (e.message ?: "Unknown error")
+    private fun legacyErrorCode(protocolCode: UInt?, message: String): String {
+        when (protocolCode?.toInt()) {
+            10003, 11001, 11002, 11007 ->
+                // Token verification / already spent / unbalanced / duplicate inputs
+                return "INVALID_TOKEN"
+            11005 -> return "UNIT_NOT_SUPPORTED"
+            12001, 12002 -> return "KEYSET_UNKNOWN"
+            20005 -> return "PAYMENT_PENDING"
+            in 20000..20999 -> return "PAYMENT_FAILED"
+        }
+
+        val lowered = message.lowercase()
+        return when {
+            lowered.contains("insufficient funds") -> "INSUFFICIENT_FUNDS"
+            lowered.contains("payment failed") -> "PAYMENT_FAILED"
+            lowered.contains("payment pending") || lowered.contains("quote pending") -> "PAYMENT_PENDING"
+            lowered.contains("network") || lowered.contains("connection") || lowered.contains("transport") -> "NETWORK_ERROR"
+            lowered.contains("database") -> "DATABASE_ERROR"
+            lowered.contains("mnemonic") -> "INVALID_MNEMONIC"
+            lowered.contains("invalid url") -> "INVALID_URL"
+            else -> "GENERIC_ERROR"
         }
     }
 
@@ -213,11 +261,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("fee_reserve", quote.feeReserve.value.toLong())
             put("state", quoteStateToString(quote.state))
             put("expiry", quote.expiry)
-            quote.paymentPreimage?.let { put("payment_preimage", it) }
+            // Upstream renamed payment_preimage to payment_proof; the bridge
+            // key is part of the JS contract and keeps the old name
+            quote.paymentProof?.let { put("payment_preimage", it) }
         }
     }
 
-    private fun encodeMelted(melted: Melted): JSONObject {
+    private fun encodeMelted(melted: FinalizedMelt): JSONObject {
         return JSONObject().apply {
             put("state", quoteStateToString(melted.state))
             put("amount", melted.amount.value.toLong())
@@ -241,15 +291,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     private suspend fun encodeToken(token: Token): JSONObject {
-        val mintUrl = token.mintUrl();
+        val mintUrl = token.mintUrl()
         val proofsArray = JSONArray()
-        val w = wallet
-        if (w != null) {
+        val currentRepo = repo
+        if (isInitialized && currentRepo != null) {
             try {
-                val keysets = w.getMintKeysets(mintUrl) ?: emptyList()
-                val proofs = token.proofs(keysets)
-                proofs.forEach { proof ->
-                    proofsArray.put(encodeProof(proof))
+                // Only resolve proofs through a wallet the mint is already
+                // part of; decoding a foreign token must not add its mint or
+                // contact it
+                if (currentRepo.hasMint(MintUrl(normalizeMintUrl(mintUrl.url)))) {
+                    val wallet = getWallet(mintUrl.url)
+                    val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
+                    val proofs = token.proofs(keysets)
+                    proofs.forEach { proof ->
+                        proofsArray.put(encodeProof(proof))
+                    }
                 }
             } catch (_: Exception) {
                 // Mint may not be known to the wallet yet (e.g. decoding a
@@ -307,17 +363,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val dbPath = getDatabasePath(mnemonic)
                 currentDbPath = dbPath
                 val database = WalletSqliteDatabase(dbPath)
-                db = database
 
                 val currencyUnit = parseCurrencyUnit(unit)
 
-                val newWallet = MultiMintWallet(
-                    unit = currencyUnit,
+                // WalletSqliteDatabase conforms to WalletDatabase; passing
+                // it via WalletStore.Custom keeps the same handle available
+                // for the direct database methods below
+                val newRepo = WalletRepository(
                     mnemonic = mnemonic,
-                    db = database
+                    store = WalletStore.Custom(database)
                 )
 
-                wallet = newWallet
+                db = database
+                repo = newRepo
+                walletUnit = currencyUnit
+                wallets.clear()
                 isInitialized = true
 
                 withContext(Dispatchers.Main) {
@@ -340,12 +400,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun addMint(mintUrl: String, targetProofCount: Int?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        val repo = getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                wallet.addMint(url, targetProofCount?.toUInt())
+                val url = MintUrl(normalizeMintUrl(mintUrl))
+                repo.createWallet(url, walletUnit, targetProofCount?.toUInt())
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
@@ -367,12 +427,17 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun removeMint(mintUrl: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        val repo = getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                wallet.removeMint(url)
+                val normalized = normalizeMintUrl(mintUrl)
+                val url = MintUrl(normalized)
+                // removeWallet only drops the in-memory wallet; tolerate a
+                // mint the repository does not know (parity with the
+                // non-throwing 0.14.x removeMint)
+                runCatching { repo.removeWallet(url, walletUnit) }
+                wallets.remove(normalized)
                 db!!.removeMint(url)
 
                 withContext(Dispatchers.Main) {
@@ -395,11 +460,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getMintUrls(promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        val repo = getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val urls = wallet.getMintUrls() ?: emptyList()
+                val urls = mutableListOf<String>()
+                val seen = mutableSetOf<String>()
+                repo.getWallets().forEach { wallet ->
+                    val url = runCatching { wallet.mintUrl().url }.getOrNull() ?: return@forEach
+                    if (seen.add(url)) {
+                        urls.add(url)
+                    }
+                }
 
                 val array = Arguments.createArray()
                 urls.forEach { array.pushString(it) }
@@ -428,11 +500,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getTotalBalance(promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        val repo = getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val balances = wallet.getBalances() ?: emptyMap()
+                val balances = repo.getBalances()
                 var total: ULong = 0UL
                 balances.values.forEach { amount ->
                     total += amount.value
@@ -458,14 +530,19 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getBalances(promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        val repo = getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val balances = wallet.getBalances() ?: emptyMap()
+                val balances = repo.getBalances()
+                val totals = mutableMapOf<String, Long>()
+                balances.forEach { (key, amount) ->
+                    val url = key.mintUrl.url
+                    totals[url] = (totals[url] ?: 0L) + amount.value.toLong()
+                }
                 val result = JSONObject()
-                balances.forEach { (mintUrl, amount) ->
-                    result.put(mintUrl, amount.value.toLong())
+                totals.forEach { (url, value) ->
+                    result.put(url, value)
                 }
 
                 withContext(Dispatchers.Main) {
@@ -531,12 +608,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getMintKeysets(mintUrl: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val keysets = wallet.getMintKeysets(url) ?: emptyList()
+                val wallet = getWallet(mintUrl)
+                val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
 
                 val array = JSONArray()
                 keysets.forEach { keyset ->
@@ -567,13 +644,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun createMintQuote(mintUrl: String, amount: Double, description: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val amt = Amount(amount.toLong().toULong())
-                val quote = wallet!!.mintQuote(url, amt, description)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.mintQuote(
+                    paymentMethod = PaymentMethod.Bolt11,
+                    amount = amt,
+                    description = description,
+                    extra = null
+                )
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMintQuote(quote).toString())
@@ -595,12 +677,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun checkMintQuote(mintUrl: String, quoteId: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val quote = wallet!!.checkMintQuote(url, quoteId)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.checkMintQuote(quoteId)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMintQuote(quote).toString())
@@ -730,8 +812,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     expiry = expiry.toLong().toULong(),
                     amountPaid = if (quoteState == QuoteState.PAID || quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
+                    estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
-                    secretKey = secretKey
+                    secretKey = secretKey,
+                    usedByOperation = null,
+                    version = 0u
                 )
 
                 Log.d(TAG, "addExternalMintQuote: Adding quote $quoteId to database")
@@ -765,15 +850,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
      */
     @ReactMethod
     fun mintExternal(mintUrl: String, quoteId: String, amount: Double, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-
                 Log.d(TAG, "mintExternal: Attempting to mint quote $quoteId from $mintUrl")
 
-                val proofs = wallet!!.mint(url, quoteId, null)
+                val wallet = getWallet(mintUrl)
+                val proofs = wallet.mint(
+                    quoteId = quoteId,
+                    amountSplitTarget = SplitTarget.None,
+                    spendingConditions = null
+                )
 
                 val array = JSONArray()
                 proofs.forEach { proof ->
@@ -802,19 +890,22 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun mint(mintUrl: String, quoteId: String, conditionsJson: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-
                 // Parse spending conditions if provided
                 val conditions = conditionsJson?.let { json ->
                     runCatching {
                         parseP2PKConditions(JSONObject(json))
                     }.getOrNull()
                 }
-                val proofs = wallet!!.mint(url, quoteId, conditions)
+                val wallet = getWallet(mintUrl)
+                val proofs = wallet.mint(
+                    quoteId = quoteId,
+                    amountSplitTarget = SplitTarget.None,
+                    spendingConditions = conditions
+                )
 
                 val array = JSONArray()
 
@@ -846,13 +937,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun createMeltQuote(mintUrl: String, request: String, optionsJson: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val options = parseMeltOptions(optionsJson)
-                val quote = wallet!!.meltQuote(url, request, options)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.meltQuote(
+                    method = PaymentMethod.Bolt11,
+                    request = request,
+                    options = options,
+                    extra = null
+                )
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -874,12 +970,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun checkMeltQuote(mintUrl: String, quoteId: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val quote = wallet!!.checkMeltQuote(url, quoteId)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.checkMeltQuoteStatus(quoteId)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -901,12 +997,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun melt(mintUrl: String, quoteId: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val melted = wallet!!.meltWithMint(url, quoteId)
+                val wallet = getWallet(mintUrl)
+                val prepared = wallet.prepareMelt(quoteId)
+                val melted = prepared.confirm()
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())
@@ -927,56 +1024,40 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun meltMpp(bolt11: String, optionsJson: String?, maxFee: Double, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
-
-        scope.launch {
-            try {
-                val options = parseMeltOptions(optionsJson)
-                val fee = if (maxFee > 0) Amount(maxFee.toULong()) else null
-                val melted = wallet!!.melt(bolt11, options, fee)
-
-                withContext(Dispatchers.Main) {
-                    promise.resolve(encodeMelted(melted).toString())
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "meltMpp error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "meltMpp error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("MELT_MPP_ERROR", e.message, e)
-                }
-            }
-        }
-    }
-
-    @ReactMethod
     fun meltPartial(mintUrl: String, bolt11: String, mppAmountMsat: Double, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val mppAmount = Amount(mppAmountMsat.toLong().toULong())
-                val normalizedUrl = mintUrl.trimEnd('/')
+                val wallet = getWallet(mintUrl)
 
                 // Step 1: Create melt quote via CDK with MPP options
                 val options = MeltOptions.Mpp(mppAmount)
-                val quote = wallet!!.meltQuote(url, bolt11, options)
+                val quote = wallet.meltQuote(
+                    method = PaymentMethod.Bolt11,
+                    request = bolt11,
+                    options = options,
+                    extra = null
+                )
 
-                // Step 2: Get all proofs for this mint
-                val allProofs = wallet!!.listProofs()
-                val mintProofs = mutableListOf<org.cashudevkit.Proof>()
-                for ((key, proofs) in allProofs) {
-                    if (key.trimEnd('/') == normalizedUrl) {
-                        mintProofs.addAll(proofs)
-                        break
+                // Step 2: Gather this mint's unspent proofs —
+                // the mint knows the MPP partial amount from the quote
+                val database = db
+                if (database == null) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("NO_WALLET", "Wallet not initialized")
                     }
+                    return@launch
                 }
+                val url = MintUrl(normalizeMintUrl(mintUrl))
+                val proofInfos = database.getProofs(
+                    mintUrl = url,
+                    unit = CurrencyUnit.Sat,
+                    state = listOf(ProofState.UNSPENT),
+                    spendingConditions = null
+                )
+                val mintProofs = proofInfos.map { it.proof }
 
                 if (mintProofs.isEmpty()) {
                     withContext(Dispatchers.Main) {
@@ -985,8 +1066,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                // Step 3: Try CDK's meltProofs (keeps proof DB in sync)
-                val melted = wallet!!.meltProofs(url, quote.id, mintProofs)
+                // Step 3: Two-phase melt with the selected proofs
+                val prepared = wallet.prepareMeltProofs(quote.id, mintProofs)
+                val melted = prepared.confirm()
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())
@@ -1012,11 +1094,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun prepareSend(mintUrl: String, amount: Double, optionsJson: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val amt = Amount(amount.toLong().toULong())
 
                 // Parse options if provided; be defensive so malformed JSON doesn't crash
@@ -1046,27 +1127,23 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     }
                 }
 
-                val innerSendOptions = SendOptions(
+                val sendOptions = SendOptions(
                     memo = null,
                     conditions = conditions,
                     amountSplitTarget = SplitTarget.None,
                     sendKind = sendKind,
                     includeFee = includeFee,
+                    useP2bk = false,
                     maxProofs = 0U,
-                    metadata = emptyMap()
+                    metadata = emptyMap(),
+                    p2pkSigningKeys = emptyList(),
+                    p2pkLockedProofSendMode = P2pkLockedProofSendMode.SWAP
                 )
 
-                val sendOptions = MultiMintSendOptions(
-                    allowTransfer = false,
-                    maxTransferAmount = Amount(0UL),
-                    allowedMints = emptyList(),
-                    excludedMints = emptyList(),
-                    sendOptions = innerSendOptions
-                )
+                val wallet = getWallet(mintUrl)
+                val prepared = wallet.prepareSend(amt, sendOptions)
 
-                val prepared = wallet!!.prepareSend(url, amt, sendOptions)
-
-                val preparedId = prepared.id()
+                val preparedId = prepared.operationId()
                 val preparedAmount = prepared.amount().value.toLong()
                 val preparedFee = prepared.fee().value.toLong()
 
@@ -1106,7 +1183,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val token = prepared.confirm(memo)
-                val encodedTokenJson = encodeToken(token)  
+                val encodedTokenJson = encodeToken(token)
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodedTokenJson.toString())
                 }
@@ -1162,14 +1239,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun receive(encodedToken: String, optionsJson: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
                 val token = Token.fromString(encodedToken)
 
                 // Parse options if provided; be defensive so malformed JSON doesn't crash
-                var innerReceiveOptions = ReceiveOptions(
+                var receiveOptions = ReceiveOptions(
                     amountSplitTarget = SplitTarget.None,
                     p2pkSigningKeys = emptyList(),
                     preimages = emptyList(),
@@ -1194,7 +1271,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                             }
                         } ?: emptyList()
 
-                    innerReceiveOptions = ReceiveOptions(
+                    receiveOptions = ReceiveOptions(
                         amountSplitTarget = SplitTarget.None,
                         p2pkSigningKeys = p2pkKeys ?: emptyList(),
                         preimages = preimages,
@@ -1202,13 +1279,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     )
                 }
 
-                val receiveOptions = MultiMintReceiveOptions(
-                    allowUntrusted = true,
-                    transferToMint = null,
-                    receiveOptions = innerReceiveOptions
-                )
-
-                val amount = wallet!!.receive(token, receiveOptions)
+                // The token's mint is added on demand, matching the 0.14.x
+                // MultiMintWallet behavior of allowUntrusted: true
+                val wallet = getWallet(token.mintUrl().url)
+                val amount = wallet.receive(token, receiveOptions)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(amount.value.toDouble())
@@ -1272,15 +1346,17 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun restore(mintUrl: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val amount = wallet!!.restore(url)
+                val wallet = getWallet(mintUrl)
+                // Restored splits the result into spent/unspent/pending;
+                // the bridge contract is the recovered spendable amount
+                val restored = wallet.restore()
 
                 withContext(Dispatchers.Main) {
-                    promise.resolve(amount.value.toDouble())
+                    promise.resolve(restored.unspent.value.toDouble())
                 }
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
@@ -1299,7 +1375,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun restoreFromSeed(mintUrl: String, seedHex: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
@@ -1317,18 +1393,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // Step 2: Feed the token into CDK's receive to import proofs into the wallet
                 val token = Token.fromString(tokenString)
 
-                val innerReceiveOptions = ReceiveOptions(
+                val receiveOptions = ReceiveOptions(
                     amountSplitTarget = SplitTarget.None,
                     p2pkSigningKeys = emptyList(),
                     preimages = emptyList(),
                     metadata = emptyMap()
                 )
-                val receiveOptions = MultiMintReceiveOptions(
-                    allowUntrusted = true,
-                    transferToMint = null,
-                    receiveOptions = innerReceiveOptions
-                )
 
+                val wallet = getWallet(mintUrl)
                 val amount = wallet.receive(token, receiveOptions)
 
                 withContext(Dispatchers.Main) {
@@ -1360,12 +1432,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun checkProofsState(mintUrl: String, proofsJson: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-
                 // Parse proofs from JSON
                 val proofsArray = JSONArray(proofsJson)
                 val proofs = mutableListOf<Proof>()
@@ -1377,16 +1447,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                         c = proofJson.getString("c"),
                         keysetId = proofJson.getString("keyset_id"),
                         witness = null,
-                        dleq = null
+                        dleq = null,
+                        p2pkE = null
                     )
                     proofs.add(proof)
                 }
 
-                val states = wallet!!.checkProofsState(url, proofs)
+                val wallet = getWallet(mintUrl)
+                val spentFlags = wallet.checkProofsSpent(proofs)
 
                 val result = JSONArray()
-                states.forEach { state ->
-                    result.put(JSONObject().put("state", proofStateToString(state)))
+                spentFlags.forEach { spent ->
+                    result.put(JSONObject().put("state", if (spent) "Spent" else "Unspent"))
                 }
 
                 withContext(Dispatchers.Main) {
@@ -1413,15 +1485,19 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun createMintBolt12Quote(mintUrl: String, amount: Double?, description: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val amt = amount?.let { Amount(it.toLong().toULong()) } ?: Amount(0UL)
 
-                // Note: BOLT12 mint quote uses the same mintQuote API
-                val quote = wallet!!.mintQuote(url, amt, description)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.mintQuote(
+                    paymentMethod = PaymentMethod.Bolt12,
+                    amount = amt,
+                    description = description,
+                    extra = null
+                )
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMintQuote(quote).toString())
@@ -1443,13 +1519,18 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun createMeltBolt12Quote(mintUrl: String, request: String, optionsJson: String?, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
                 val options = parseMeltOptions(optionsJson)
-                val quote = wallet!!.meltQuote(url, request, options)
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.meltQuote(
+                    method = PaymentMethod.Bolt12,
+                    request = request,
+                    options = options,
+                    extra = null
+                )
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -1471,12 +1552,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun createMeltHumanReadableQuote(mintUrl: String, address: String, amountMsat: Double, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
+        getInitializedRepo(promise) ?: return
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
-                val quote = wallet!!.meltHumanReadableQuote(url, address, amountMsat.toLong().toULong())
+                val wallet = getWallet(mintUrl)
+                val quote = wallet.meltHumanReadableQuote(
+                    address = address,
+                    amountMsat = Amount(amountMsat.toLong().toULong()),
+                    network = BitcoinNetwork.BITCOIN
+                )
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -1502,7 +1587,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun listTransactions(direction: String?, promise: Promise) {
-        if (!isInitialized || wallet == null || db == null) {
+        if (!isInitialized || repo == null || db == null) {
             promise.reject("NO_WALLET", "Wallet not initialized")
             return
         }
@@ -1648,8 +1733,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     override fun onCatalystInstanceDestroy() {
         scope.cancel()
-        wallet = null
+        repo = null
         db = null
+        wallets.clear()
         preparedSends.clear()
         isInitialized = false
     }
