@@ -1044,10 +1044,12 @@ export default class CashuStore {
     private classifyMppRejection = (body: string): MultimintSkipReason => {
         const lower = (body || '').toLowerCase();
         // Mints refuse MPP for invoices they themselves issued. Nutshell
-        // returns "internal mpp not allowed"; other implementations may
-        // phrase it as a self-payment.
+        // returns "internal mpp not allowed"; cdk-mintd returns
+        // "Multi-Part Internal Melt Quotes are not supported"; other
+        // implementations may phrase it as a self-payment.
         if (
             lower.includes('internal mpp not allowed') ||
+            lower.includes('internal melt quote') ||
             lower.includes('self payment') ||
             lower.includes('self-payment')
         ) {
