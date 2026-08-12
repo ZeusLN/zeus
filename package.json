@@ -15,7 +15,8 @@
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts",
-      "zeus_modules"
+      "zeus_modules",
+      "/.claude/"
     ]
   },
   "scripts": {
