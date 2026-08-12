@@ -1,4 +1,4 @@
-import { action, observable, computed, runInAction, reaction } from 'mobx';
+import { action, observable, computed, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -63,6 +63,9 @@ export default class SwapStore {
     @observable public swapsLoading = false;
     @observable public DERIVATION_PATH = 'm/44/0/0/0';
     @observable ECPair: ECPairAPI;
+    // host the swap rates were last fetched from; rates are only
+    // fetched from the Swaps view, never on startup
+    @observable public fetchedRatesHost: string | undefined;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -72,11 +75,6 @@ export default class SwapStore {
         this.settingsStore = settingsStore;
         initEccLib(ecc);
         this.ECPair = ECPairFactory(ecc);
-
-        reaction(
-            () => this.getHost,
-            () => this.getSwapFees()
-        );
     }
 
     @computed get claimMinerFee(): number {
@@ -188,6 +186,7 @@ export default class SwapStore {
     public getSwapFees = async () => {
         this.loading = true;
         this.apiError = '';
+        this.fetchedRatesHost = this.getHost;
         console.log(`Fetching fees from: ${this.getHost}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
