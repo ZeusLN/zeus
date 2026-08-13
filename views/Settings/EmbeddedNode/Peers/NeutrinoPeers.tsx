@@ -124,7 +124,11 @@ export default class NeutrinoPeers extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading ? <LoadingIndicator size={30} /> : undefined
+                            loading ? (
+                                <View>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            ) : undefined
                         }
                         navigation={navigation}
                     />
