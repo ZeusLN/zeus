@@ -535,9 +535,13 @@ class CashuDevKitModule: RCTEventEmitter {
 
         Task {
             do {
+                // getBalances() is keyed by (mint URL, unit) and load_wallets
+                // creates a wallet per supported unit, so only fold this
+                // wallet's unit; other units must not count toward the total
+                let unit = walletQueue.sync { walletUnit }
                 let balances = try await repo.getBalances()
                 var total: UInt64 = 0
-                for (_, amount) in balances {
+                for (key, amount) in balances where key.unit == unit {
                     total += amount.value
                 }
                 resolve(NSNumber(value: total))
@@ -557,9 +561,10 @@ class CashuDevKitModule: RCTEventEmitter {
 
         Task {
             do {
+                let unit = walletQueue.sync { walletUnit }
                 let balances = try await repo.getBalances()
                 var result: [String: UInt64] = [:]
-                for (key, amount) in balances {
+                for (key, amount) in balances where key.unit == unit {
                     result[key.mintUrl.url, default: 0] += amount.value
                 }
                 resolve(encodeToJson(result))

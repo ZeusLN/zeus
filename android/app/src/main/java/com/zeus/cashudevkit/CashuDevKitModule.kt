@@ -504,10 +504,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
+                // getBalances() is keyed by (mint URL, unit) and load_wallets
+                // creates a wallet per supported unit, so only fold this
+                // wallet's unit; other units must not count toward the total
                 val balances = repo.getBalances()
                 var total: ULong = 0UL
-                balances.values.forEach { amount ->
-                    total += amount.value
+                balances.forEach { (key, amount) ->
+                    if (key.unit == walletUnit) total += amount.value
                 }
 
                 withContext(Dispatchers.Main) {
@@ -537,6 +540,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val balances = repo.getBalances()
                 val totals = mutableMapOf<String, Long>()
                 balances.forEach { (key, amount) ->
+                    if (key.unit != walletUnit) return@forEach
                     val url = key.mintUrl.url
                     totals[url] = (totals[url] ?: 0L) + amount.value.toLong()
                 }
