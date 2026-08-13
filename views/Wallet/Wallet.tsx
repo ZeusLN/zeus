@@ -191,9 +191,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private linkingSubscription: EmitterSubscription | undefined;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
     private _navigating = false;
-    // Monotonic token identifying the fetchData invocation that currently
-    // owns SettingsStore.fetchLock; see the release logic in fetchData
-    private fetchDataSeq = 0;
     // Set once this instance replaces itself with the startup wallet
     // selection screen; late focus/AppState triggers must not connect to
     // the previously selected wallet or consume the initial deep link
@@ -531,9 +528,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore } = this.props;
 
         // ensure we don't run this twice in parallel
-        if (SettingsStore.fetchLock) return;
-        SettingsStore.fetchLock = true;
-        const seq = ++this.fetchDataSeq;
+        const seq = SettingsStore.acquireFetchLock();
+        if (seq === null) return;
 
         try {
             await this.fetchDataCore(transientRetryCount);
@@ -541,13 +537,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // Single release point: every exit from fetchDataCore (success,
             // early return, or throw) must free the lock, otherwise
             // pull-to-refresh and app-resume refreshes silently no-op until
-            // the next full reconnect. Skip the release if this invocation
-            // no longer owns the lock: setConnectingStatus(true) (wallet
-            // switch, restart) clears it mid-flight and a newer fetchData
-            // may have re-acquired it.
-            if (this.fetchDataSeq === seq) {
-                SettingsStore.fetchLock = false;
-            }
+            // the next full reconnect. The store ignores the release if this
+            // invocation no longer owns the lock.
+            SettingsStore.releaseFetchLock(seq);
         }
     }
 
@@ -925,6 +917,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             isLndError(error, LndErrorCode.LND_START_FAILED) ||
                             isLndError(error, LndErrorCode.LND_READY_TIMEOUT)
                         ) {
+                            // Leave connecting mode before showing the restart
+                            // alert: with the fetch lock now released on exit,
+                            // a background/foreground would otherwise re-run
+                            // the full stop/init/start cycle and stack a
+                            // second restart alert on top of this one
+                            setConnectingStatus(false);
                             restartNeeded(true);
                             return;
                         }
