@@ -166,6 +166,7 @@ export interface PendingSweepBalance {
 export interface BalanceDetails {
     totalOnchainBalanceSats: number;
     spendableOnchainBalanceSats: number;
+    totalAnchorChannelsReserveSats: number;
     totalLightningBalanceSats: number;
     lightningBalances: LightningBalance[];
     pendingBalancesFromChannelClosures: PendingSweepBalance[];

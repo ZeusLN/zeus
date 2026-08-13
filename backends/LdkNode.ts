@@ -259,12 +259,44 @@ export default class LdkNode {
      */
     getBlockchainBalance = async (): Promise<any> => {
         const balances = await LdkNodeInjection.node.listBalances();
+        // spendableOnchainBalanceSats excludes the anchor channel reserve,
+        // which is confirmed but held back - it must not be counted as
+        // unconfirmed or the balance shows as pending forever
+        const anchorReserve = balances.totalAnchorChannelsReserveSats || 0;
+        const total = new BigNumber(balances.totalOnchainBalanceSats);
+
+        let confirmed: BigNumber;
+        if (balances.spendableOnchainBalanceSats > 0) {
+            // spendable is the trusted balance minus the reserve, so adding
+            // the reserve back recovers the confirmed balance exactly
+            confirmed = BigNumber.min(
+                new BigNumber(balances.spendableOnchainBalanceSats).plus(
+                    anchorReserve
+                ),
+                total
+            );
+        } else if (total.isZero()) {
+            confirmed = new BigNumber(0);
+        } else {
+            // spendable saturates at 0 once the trusted balance falls below
+            // the reserve (e.g. right after a fund-max channel open), which
+            // makes confirmed unrecoverable from the aggregate balances -
+            // sum confirmed UTXOs directly instead
+            const utxos = await this.listUnspentWithConfirmations();
+            confirmed = BigNumber.min(
+                utxos.reduce(
+                    (sum, u) =>
+                        u.confirmations > 0 ? sum.plus(u.value_sats) : sum,
+                    new BigNumber(0)
+                ),
+                total
+            );
+        }
+
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
-            confirmed_balance: balances.spendableOnchainBalanceSats.toString(),
-            unconfirmed_balance: new BigNumber(balances.totalOnchainBalanceSats)
-                .minus(balances.spendableOnchainBalanceSats)
-                .toString()
+            confirmed_balance: confirmed.toString(),
+            unconfirmed_balance: total.minus(confirmed).toString()
         };
     };
 
@@ -1087,10 +1119,48 @@ export default class LdkNode {
     };
 
     /**
+     * List unspent outputs with confirmation counts. WalletUtxo carries no
+     * confirmation height, so look it up from the on-chain payment that
+     * created each UTXO; outputs whose height is unknown report 0.
+     */
+    private listUnspentWithConfirmations = async () => {
+        const [utxos, payments, status] = await Promise.all([
+            LdkNodeInjection.onchain.listUtxos(),
+            LdkNodeInjection.payments.listPayments(),
+            LdkNodeInjection.node.status()
+        ]);
+        const bestBlockHeight = status.currentBestBlock_height;
+
+        const confirmationHeights: { [txid: string]: number } = {};
+        for (const payment of payments) {
+            if (
+                payment.kind.type === 'onchain' &&
+                payment.kind.txid &&
+                payment.kind.confirmationHeight
+            ) {
+                confirmationHeights[payment.kind.txid] =
+                    payment.kind.confirmationHeight;
+            }
+        }
+
+        return utxos
+            .filter((u) => !u.is_spent)
+            .map((u) => {
+                const confirmationHeight = confirmationHeights[u.txid];
+                return {
+                    ...u,
+                    confirmations: confirmationHeight
+                        ? bestBlockHeight - confirmationHeight + 1
+                        : 0
+                };
+            });
+    };
+
+    /**
      * Get UTXOs for coin control
      */
     getUTXOs = async (): Promise<any> => {
-        const utxos = await LdkNodeInjection.onchain.listUtxos();
+        const utxos = await this.listUnspentWithConfirmations();
         return {
             utxos: utxos.map((u) => ({
                 outpoint: {
@@ -1099,7 +1169,7 @@ export default class LdkNode {
                 },
                 address: u.address,
                 amount_sat: u.value_sats,
-                confirmations: u.is_spent ? '0' : '1'
+                confirmations: u.confirmations.toString()
             }))
         };
     };
