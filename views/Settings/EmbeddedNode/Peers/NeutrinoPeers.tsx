@@ -123,10 +123,16 @@ export default class NeutrinoPeers extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
+                        rightComponent={
+                            loading ? (
+                                <View>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            ) : undefined
+                        }
                         navigation={navigation}
                     />
                     <View style={{ flex: 1 }}>
-                        {loading && <LoadingIndicator />}
                         {!pingTimeout &&
                             !pingUnreachable &&
                             !loading &&
