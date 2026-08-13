@@ -59,7 +59,7 @@ import Storage from '../storage';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import Base64Utils from '../utils/Base64Utils';
-import NostrConnectUtils from '../utils/NostrConnectUtils';
+import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS
 } from './NostrWalletConnectStore';
@@ -1055,5 +1055,263 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
             error: undefined
         });
         expect(connection.lastUsed).toBeInstanceOf(Date);
+    });
+});
+
+function buildMakeInvoiceTestStore(invoices: Invoice[] = []) {
+    const settingsStore: any = {
+        connecting: false,
+        implementation: 'lnd',
+        settings: {
+            locale: 'en',
+            ecash: { enableCashu: false },
+            lightningAddress: { enabled: false }
+        }
+    };
+    const store = new NostrWalletConnectStore(
+        settingsStore,
+        {} as any,
+        {
+            nodeInfo: { nodeId: NODE_PUBKEY },
+            getNodeInfo: jest.fn()
+        } as any,
+        {} as any,
+        {} as any,
+        { invoices } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+    );
+
+    return store;
+}
+
+function seedMakeInvoiceConnection(
+    store: NostrWalletConnectStore,
+    overrides: Record<string, unknown> = {}
+) {
+    const connection = new NWCConnection({
+        id: 'conn-make',
+        name: 'Make Invoice Test App',
+        pubkey: OLD_PUBKEY,
+        relayUrl: OLD_RELAY,
+        permissions: [],
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        totalSpendSats: 0,
+        nodePubkey: NODE_PUBKEY,
+        implementation: 'lnd',
+        activity: [],
+        ...overrides
+    } as any);
+    store.connections = [connection];
+    return connection;
+}
+
+function makePendingMakeInvoiceActivity(
+    id: string,
+    expiresAt: Date,
+    overrides: Record<string, unknown> = {}
+) {
+    return {
+        id,
+        type: 'make_invoice' as const,
+        payment_source: 'lightning' as const,
+        status: 'pending' as const,
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        expiresAt,
+        ...overrides
+    };
+}
+
+describe('NostrWalletConnectStore make_invoice limits', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('does not count expired pending make_invoice toward the outstanding cap', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store, {
+            activity: Array.from({ length: 10 }, (_, i) =>
+                makePendingMakeInvoiceActivity(
+                    `lnbc-expired-${i}`,
+                    new Date('2020-01-01T00:00:00Z')
+                )
+            )
+        });
+
+        const result = (store as any).checkMakeInvoiceLimits(connection);
+
+        expect(result).toBeNull();
+    });
+
+    it('does not count paid pending make_invoice toward the outstanding cap', () => {
+        const paymentRequests = Array.from(
+            { length: 10 },
+            (_, i) => `lnbc-paid-${i}`
+        );
+        const invoices = paymentRequests.map(
+            (paymentRequest) =>
+                new Invoice({
+                    payment_request: paymentRequest,
+                    state: 'settled'
+                })
+        );
+        const store = buildMakeInvoiceTestStore(invoices);
+        const connection = seedMakeInvoiceConnection(store, {
+            activity: paymentRequests.map((id) =>
+                makePendingMakeInvoiceActivity(
+                    id,
+                    new Date('2099-01-01T00:00:00Z')
+                )
+            )
+        });
+
+        const result = (store as any).checkMakeInvoiceLimits(connection);
+
+        expect(result).toBeNull();
+    });
+
+    it('rate limits when active pending make_invoice count reaches the cap', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store, {
+            activity: Array.from({ length: 10 }, (_, i) =>
+                makePendingMakeInvoiceActivity(
+                    `lnbc-active-${i}`,
+                    new Date('2099-01-01T00:00:00Z')
+                )
+            )
+        });
+
+        const result = (store as any).checkMakeInvoiceLimits(connection);
+
+        expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
+    });
+
+    it('does not advance the per-window rate limit during limit checks alone', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+        const now = Date.now();
+        (store as any).makeInvoiceTimestampsByConnection.set(
+            connection.id,
+            Array.from({ length: 4 }, () => now)
+        );
+
+        for (let i = 0; i < 3; i++) {
+            expect(
+                (store as any).checkMakeInvoiceLimits(connection)
+            ).toBeNull();
+        }
+
+        expect(
+            (store as any).makeInvoiceTimestampsByConnection.get(connection.id)
+        ).toHaveLength(4);
+    });
+
+    it('records a rate-limit timestamp only after a successful make_invoice', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+
+        (store as any).recordMakeInvoiceRateLimitTimestamp(connection.id);
+
+        expect(
+            (store as any).makeInvoiceTimestampsByConnection.get(connection.id)
+        ).toHaveLength(1);
+    });
+
+    it('rate limits when the per-window timestamp cap is reached', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+        const now = Date.now();
+        (store as any).makeInvoiceTimestampsByConnection.set(
+            connection.id,
+            Array.from({ length: 5 }, () => now)
+        );
+
+        const result = (store as any).checkMakeInvoiceLimits(connection);
+
+        expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
+    });
+});
+
+describe('NostrWalletConnectStore activity prune', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('never prunes pending pay_invoice entries when trimming the activity log', () => {
+        const store = buildPayInvoiceTestStore();
+        const oldest = new Date('2024-01-01T00:00:00Z');
+        const activity = [
+            {
+                id: 'lnbc-pending-pay',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'pending' as const,
+                satAmount: 1000,
+                createdAt: oldest
+            },
+            ...Array.from({ length: 99 }, (_, i) => ({
+                id: `lnbc-make-${i}`,
+                type: 'make_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const,
+                createdAt: new Date(oldest.getTime() + (i + 1) * 1000)
+            }))
+        ];
+        const connection = seedPayInvoiceConnection(store, { activity });
+        connection.activity.push({
+            id: 'lnbc-make-new',
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            createdAt: new Date('2024-06-01T00:00:00Z')
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(100);
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-pending-pay')
+        ).toBeDefined();
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-make-0')
+        ).toBeUndefined();
+        expect(connection.pendingSpendSats).toBe(1000);
+    });
+
+    it('stops pruning when every activity entry is still pending', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: Array.from({ length: 101 }, (_, i) => ({
+                id: `lnbc-pending-${i}`,
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'pending' as const,
+                satAmount: 1,
+                createdAt: new Date(2024, 0, 1, 0, 0, i)
+            }))
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(101);
+    });
+
+    it('prunes expired pending make_invoice entries past the cap', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store, {
+            activity: Array.from({ length: 150 }, (_, i) =>
+                makePendingMakeInvoiceActivity(
+                    `lnbc-expired-${i}`,
+                    new Date('2020-01-01T00:00:00Z'),
+                    { createdAt: new Date(2024, 0, 1, 0, 0, i) }
+                )
+            )
+        });
+        // the outstanding cap never trips, so the client keeps creating:
+        expect((store as any).checkMakeInvoiceLimits(connection)).toBeNull();
+        (store as any).pruneConnectionActivity(connection);
+        expect(connection.activity.length).toBeLessThanOrEqual(100);
     });
 });

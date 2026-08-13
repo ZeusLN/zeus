@@ -93,6 +93,11 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/** Per-connection make_invoice rate limit (remote abuse protection; in-memory, resets on app restart). */
+const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
+const MAX_MAKE_INVOICE_PER_WINDOW = 5;
+const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
+const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -177,6 +182,7 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -639,6 +645,7 @@ export default class NostrWalletConnectStore {
             this.unsubscribeFromConnection(connectionId);
             this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
             this.lastPendingInvoiceStatusFetchByConnection.delete(connectionId);
+            this.makeInvoiceTimestampsByConnection.delete(connectionId);
             runInAction(() => {
                 this.connections.splice(index, 1);
             });
@@ -1772,8 +1779,10 @@ export default class NostrWalletConnectStore {
                 createdAt: new Date(),
                 expiresAt: new Date(expiryTime * 1000)
             });
+            this.pruneConnectionActivity(connection);
             this.findAndUpdateConnection(connection);
         });
+        this.recordMakeInvoiceRateLimitTimestamp(connection.id);
         return NostrConnectUtils.buildMakeInvoiceSuccessPayload(
             connection.name,
             request,
@@ -1786,10 +1795,134 @@ export default class NostrWalletConnectStore {
         );
     }
 
+    private pruneConnectionActivity(connection: NWCConnection): void {
+        while (connection.activity.length > MAX_CONNECTION_ACTIVITY_ENTRIES) {
+            let oldestIdx = -1;
+            let oldestTime = Infinity;
+            for (let i = 0; i < connection.activity.length; i++) {
+                const activity = connection.activity[i];
+                // Pending pay_invoice holds budget via pendingSpendSats until
+                // reconcilePendingPayInvoiceActivities settles it. Active pending
+                // make_invoice must stay for the outstanding cap. Expired or
+                // already-paid pending make_invoice is prunable: those entries are
+                // only reconciled from user-driven paths, so a make_invoice-only
+                // client would otherwise grow activity without bound.
+                if (
+                    activity.status === 'pending' &&
+                    (activity.type !== 'make_invoice' ||
+                        this.isActivePendingMakeInvoice(activity))
+                ) {
+                    continue;
+                }
+                const createdAt = activity?.createdAt?.getTime() ?? 0;
+                if (createdAt < oldestTime) {
+                    oldestTime = createdAt;
+                    oldestIdx = i;
+                }
+            }
+            if (oldestIdx === -1) {
+                break;
+            }
+            connection.activity.splice(oldestIdx, 1);
+        }
+    }
+
+    /**
+     * Pending make_invoice activities are only reconciled in getActivities (user-driven
+     * screens). For background NWC receive, exclude expired and already-paid invoices
+     * so the outstanding cap does not brick long-running connections.
+     */
+    private isActivePendingMakeInvoice(activity: ConnectionActivity): boolean {
+        if (activity.type !== 'make_invoice' || activity.status !== 'pending') {
+            return false;
+        }
+
+        const now = Date.now();
+        if (activity.expiresAt && activity.expiresAt.getTime() <= now) {
+            return false;
+        }
+
+        if (activity.payment_source === 'cashu') {
+            const paymentRequest =
+                activity.invoice?.getPaymentRequest ?? activity.id;
+            const paidInStore = this.cashuStore.invoices?.some(
+                (inv) => inv.getPaymentRequest === paymentRequest && inv.isPaid
+            );
+            return !paidInStore;
+        }
+
+        if (activity.invoice) {
+            const invoice =
+                activity.invoice instanceof Invoice
+                    ? activity.invoice
+                    : new Invoice(activity.invoice);
+            const fromStore = this.findLightningInvoiceInStore(invoice);
+            if (fromStore?.isPaid || invoice.isPaid) {
+                return false;
+            }
+            return true;
+        }
+
+        const paidById = this.invoicesStore.invoices?.some(
+            (inv) => inv.getPaymentRequest === activity.id && inv.isPaid
+        );
+        return !paidById;
+    }
+
+    private checkMakeInvoiceLimits(
+        connection: NWCConnection
+    ): ReturnType<typeof NostrConnectUtils.createNip47Error> | null {
+        const pending = connection.activity.filter((a) =>
+            this.isActivePendingMakeInvoice(a)
+        ).length;
+        if (pending >= MAX_PENDING_MAKE_INVOICES_PER_CONNECTION) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.makeInvoiceRateLimited'
+                ),
+                Nip47ErrorCode.RATE_LIMITED
+            );
+        }
+
+        const now = Date.now();
+        const timestamps =
+            this.makeInvoiceTimestampsByConnection.get(connection.id) ?? [];
+        const recent = timestamps.filter(
+            (t) => now - t < MAKE_INVOICE_RATE_WINDOW_MS
+        );
+        if (recent.length >= MAX_MAKE_INVOICE_PER_WINDOW) {
+            this.makeInvoiceTimestampsByConnection.set(connection.id, recent);
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.makeInvoiceRateLimited'
+                ),
+                Nip47ErrorCode.RATE_LIMITED
+            );
+        }
+
+        return null;
+    }
+
+    private recordMakeInvoiceRateLimitTimestamp(connectionId: string): void {
+        const now = Date.now();
+        const timestamps =
+            this.makeInvoiceTimestampsByConnection.get(connectionId) ?? [];
+        const recent = timestamps.filter(
+            (t) => now - t < MAKE_INVOICE_RATE_WINDOW_MS
+        );
+        recent.push(now);
+        this.makeInvoiceTimestampsByConnection.set(connectionId, recent);
+    }
+
     private async handleMakeInvoice(
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        const limitError = this.checkMakeInvoiceLimits(connection);
+        if (limitError) {
+            return limitError;
+        }
+
         try {
             if (this.isCashuConfigured) {
                 try {
@@ -3039,6 +3172,7 @@ export default class NostrWalletConnectStore {
             });
         }
 
+        this.pruneConnectionActivity(connection);
         this.findAndUpdateConnection(connection);
         return true;
     }
