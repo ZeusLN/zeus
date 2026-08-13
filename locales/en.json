@@ -810,6 +810,7 @@
     "views.Payment.writeNote": "Write your note here",
     "views.PaymentRequest.title": "Lightning Invoice",
     "views.PaymentRequest.error": "Error loading invoice",
+    "views.PaymentRequest.invoiceExpired": "This invoice has expired and can no longer be paid",
     "views.PaymentRequest.customAmt": "Custom Amount",
     "views.PaymentRequest.payDefault": "Pay default amount",
     "views.PaymentRequest.payCustom": "Pay custom amount",
