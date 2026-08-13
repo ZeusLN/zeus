@@ -622,6 +622,21 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
+        // The offer path dispatches via payOffer, which only direct-pay
+        // backends implement; anywhere else the dispatcher returns false
+        // and the .then() below would throw. The offer review screen is
+        // gated on this capability, but fail fast in case a future caller
+        // passes an offer on another backend
+        if (offer && !BackendUtils.supportsOffersDirectPay()) {
+            this.handlePaymentError(
+                new Error(
+                    localeString('views.Send.payBolt12.offersNotSupported')
+                ),
+                seq
+            );
+            return;
+        }
+
         const data: any = {};
         if (payment_request) {
             data.payment_request = payment_request;
