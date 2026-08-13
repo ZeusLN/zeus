@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    Animated,
+    Pressable,
     StyleProp,
     StyleSheet,
     Text,
@@ -16,7 +18,10 @@ import { showCopiedToast } from './CopiedToast';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+
+import Copy from '../assets/images/SVG/Copy.svg';
 
 import ModalStore from '../stores/ModalStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -36,6 +41,7 @@ interface KeyValueProps {
     }>;
     mempoolLink?: () => void;
     disableCopy?: boolean;
+    showCopyIcon?: boolean;
     containerStyle?: StyleProp<ViewStyle>;
     ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
@@ -44,11 +50,21 @@ interface KeyValueProps {
 @inject('ModalStore', 'SettingsStore')
 @observer
 export default class KeyValue extends React.Component<KeyValueProps> {
+    valueOpacity = new Animated.Value(1);
+
     copyText = () => {
         const { value } = this.props;
         Clipboard.setString(value.toString());
         Vibration.vibrate(50);
         showCopiedToast();
+    };
+
+    setValueOpacity = (toValue: number) => {
+        Animated.timing(this.valueOpacity, {
+            toValue,
+            duration: toValue === 1 ? 150 : 50,
+            useNativeDriver: true
+        }).start();
     };
 
     render() {
@@ -64,6 +80,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
             infoModalAdditionalButtons,
             mempoolLink,
             disableCopy,
+            showCopyIcon,
             containerStyle,
             ModalStore,
             SettingsStore
@@ -76,9 +93,10 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         {
             /* TODO: rig up RTL */
         }
-        const isCopyable = disableCopy
-            ? false
-            : typeof value === 'string' || typeof value === 'number';
+        const isCopyable =
+            !disableCopy &&
+            !!showCopyIcon &&
+            (typeof value === 'string' || typeof value === 'number');
         const rtl = false;
         const KeyBase = (
             <Body>
@@ -153,25 +171,56 @@ export default class KeyValue extends React.Component<KeyValueProps> {
                 <Text
                     style={{
                         color: color || themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'PPNeueMontreal-Book',
+                        flexShrink: 1
                     }}
                 >
                     {sensitive
                         ? PrivacyUtils.sensitiveValue({ input: value })
                         : value}
                 </Text>
+                {isCopyable && !lurkerMode && (
+                    <Pressable
+                        onPress={() => this.copyText()}
+                        onPressIn={() => this.setValueOpacity(0.2)}
+                        onPressOut={() => this.setValueOpacity(1)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel={localeString(
+                            'components.CopyButton.copy'
+                        )}
+                        style={{ marginLeft: 6 }}
+                    >
+                        {/* viewBox crops the whitespace baked into
+                            Copy.svg so the icon's layout box matches
+                            its visible artwork */}
+                        <Copy
+                            viewBox="6 4 12 16"
+                            height={15}
+                            width={11.25}
+                            stroke={themeColor('secondaryText')}
+                        />
+                    </Pressable>
+                )}
             </View>
         );
 
         let Value: any;
-        if (!lurkerMode && isCopyable) {
+        if (!lurkerMode && (isCopyable || mempoolLink)) {
             Value = (
-                <TouchableOpacity
-                    onLongPress={() => this.copyText()}
-                    onPress={mempoolLink}
+                <Pressable
+                    onPress={mempoolLink ? mempoolLink : () => this.copyText()}
+                    onLongPress={
+                        mempoolLink && isCopyable
+                            ? () => this.copyText()
+                            : undefined
+                    }
+                    onPressIn={() => this.setValueOpacity(0.2)}
+                    onPressOut={() => this.setValueOpacity(1)}
                 >
-                    {ValueBase}
-                </TouchableOpacity>
+                    <Animated.View style={{ opacity: this.valueOpacity }}>
+                        {ValueBase}
+                    </Animated.View>
+                </Pressable>
             );
         } else {
             Value = typeof value === 'object' ? value : ValueBase;
