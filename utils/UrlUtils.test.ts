@@ -2,6 +2,7 @@ jest.mock('../stores/Stores', () => ({
     modalStore: {
         setUrl: jest.fn(),
         setClipboardValue: jest.fn(),
+        setIsEmail: jest.fn(),
         toggleExternalLinkModal: jest.fn(),
         setAction: jest.fn()
     },
@@ -24,7 +25,7 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_MEMPOOL_INSTANCE: 'electrs.zeusln.com'
 }));
 
-import { settingsStore } from '../stores/Stores';
+import { modalStore, settingsStore } from '../stores/Stores';
 import UrlUtils from './UrlUtils';
 
 const mainnet = { isMutinynet: false, isTestNet: false };
@@ -123,6 +124,133 @@ describe('UrlUtils', () => {
             expect(UrlUtils.getMempoolInstanceHost(mainnet)).toEqual(
                 '192.168.1.1:8999'
             );
+        });
+    });
+
+    describe('goToBlockExplorer', () => {
+        const lastUrl = () =>
+            (modalStore.setUrl as jest.Mock).mock.calls.slice(-1)[0][0];
+
+        beforeEach(() => {
+            (modalStore.setUrl as jest.Mock).mockClear();
+            settingsStore.settings.privacy = {};
+        });
+
+        it('uses the default explorer when no custom one is set', () => {
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://mempool.space/tx/abc');
+        });
+
+        it('uses a custom explorer with a scheme', () => {
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer: 'https://explorer.mynode.local'
+            };
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://explorer.mynode.local/tx/abc');
+        });
+
+        it('resolves a scheme-less custom explorer as https', () => {
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer: 'explorer.mynode.local'
+            };
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://explorer.mynode.local/tx/abc');
+        });
+
+        it("honors the '#mempool.space' convention hint for block heights", () => {
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer:
+                    'https://explorer.mynode.local#mempool.space'
+            };
+            UrlUtils.goToBlockExplorerBlockHeight(800000);
+            // hint selects mempool.space's 'block' path, and is not in the url
+            expect(lastUrl()).toEqual(
+                'https://explorer.mynode.local/block/800000'
+            );
+        });
+
+        it('strips the convention hint from scheme-less hosts too', () => {
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer: 'explorer.mynode.local#mempool.space'
+            };
+            UrlUtils.goToBlockExplorerBlockHeight(800000);
+            expect(lastUrl()).toEqual(
+                'https://explorer.mynode.local/block/800000'
+            );
+        });
+
+        it('uses block-height paths for non-mempool.space explorers', () => {
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer: 'https://explorer.mynode.local'
+            };
+            UrlUtils.goToBlockExplorerBlockHeight(800000);
+            expect(lastUrl()).toEqual(
+                'https://explorer.mynode.local/block-height/800000'
+            );
+        });
+    });
+
+    describe('withScheme', () => {
+        it('prepends https to bare hosts', () => {
+            expect(UrlUtils.withScheme('mempool.space')).toEqual(
+                'https://mempool.space'
+            );
+            expect(UrlUtils.withScheme('192.168.1.1:8999')).toEqual(
+                'https://192.168.1.1:8999'
+            );
+            expect(UrlUtils.withScheme('localhost')).toEqual(
+                'https://localhost'
+            );
+        });
+
+        it('leaves values that already carry a scheme alone', () => {
+            expect(UrlUtils.withScheme('https://mempool.space')).toEqual(
+                'https://mempool.space'
+            );
+            expect(UrlUtils.withScheme('http://192.168.1.1:8999')).toEqual(
+                'http://192.168.1.1:8999'
+            );
+            // not our business to rewrite an unsupported scheme
+            expect(UrlUtils.withScheme('ftp://mempool.space')).toEqual(
+                'ftp://mempool.space'
+            );
+        });
+
+        it('leaves an empty value empty', () => {
+            expect(UrlUtils.withScheme('')).toEqual('');
+        });
+
+        it('strips leading slashes so scheme-relative hosts stay clean', () => {
+            expect(UrlUtils.withScheme('//mempool.space')).toEqual(
+                'https://mempool.space'
+            );
+        });
+
+        it('preserves paths and convention hints', () => {
+            expect(UrlUtils.withScheme('mempool.mynode.local/api')).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            expect(UrlUtils.withScheme('explorer.local#mempool.space')).toEqual(
+                'https://explorer.local#mempool.space'
+            );
+        });
+
+        it('produces values that isValidUrl accepts', () => {
+            for (const host of [
+                'mempool.space',
+                '192.168.1.1:8999',
+                '//mempool.space',
+                'mempool.mynode.local/api'
+            ]) {
+                expect(UrlUtils.isValidUrl(UrlUtils.withScheme(host))).toBe(
+                    true
+                );
+            }
         });
     });
 
