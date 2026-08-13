@@ -545,10 +545,35 @@ const handleAnything = async (
                 }
             });
             const json = await res.json();
-            if (json.Answer && json.Answer[0]) {
-                bolt12 = json.Answer[0].data;
-                bolt12 = bolt12!.replace(/("|\\|\s+)/g, '');
-                bolt12 = bolt12!.replace(/bitcoin:b12=/, '');
+
+            // BIP 353 requires the payment instructions to be secured by
+            // DNSSEC. Cloudflare performs the validation and reports the
+            // outcome via the AD (Authenticated Data) bit; Status 0 is
+            // NOERROR. If the answer is not proven-signed we ignore it,
+            // otherwise a forged, poisoned, or hijacked DNS response could
+            // silently redirect the payment to an attacker's offer.
+            // TODO: BIP 353 also states clients MUST NOT trust a remote
+            // resolver to validate DNSSEC on their behalf. Full conformance
+            // requires validating the DNSSEC proof chain client-side.
+            const dnssecValidated = json?.Status === 0 && json?.AD === true;
+
+            // Concatenate each TXT record's character-strings in RDATA order,
+            // never across records. BIP 353 requires TXT records at the label
+            // which don't begin with 'bitcoin:' to be ignored, and treats
+            // multiple 'bitcoin:' records as invalid.
+            const bitcoinTxts: string[] = (
+                Array.isArray(json?.Answer) ? json.Answer : []
+            )
+                .filter(
+                    (a: any) => a?.type === 16 && typeof a?.data === 'string'
+                )
+                .map((a: any) => a.data.replace(/("|\\|\s+)/g, ''))
+                .filter((data: string) =>
+                    data.toLowerCase().startsWith('bitcoin:')
+                );
+
+            if (dnssecValidated && bitcoinTxts.length === 1) {
+                bolt12 = bitcoinTxts[0].replace(/^bitcoin:b12=/i, '');
 
                 const {
                     value: _v,
