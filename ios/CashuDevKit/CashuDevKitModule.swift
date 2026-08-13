@@ -490,11 +490,21 @@ class CashuDevKitModule: RCTEventEmitter {
             do {
                 let normalized = normalizeMintUrl(mintUrl)
                 let url = MintUrl(url: normalized)
-                let unit = walletQueue.sync { walletUnit }
-                // removeWallet only drops the in-memory wallet; tolerate a
-                // mint the repository does not know (parity with the
-                // non-throwing 0.14.x removeMint)
-                try? await repo.removeWallet(mintUrl: url, currencyUnit: unit)
+                // load_wallets creates one wallet per supported unit, so
+                // drop every unit's wallet for this mint, not just the
+                // configured one: a leftover handle keeps the mint in
+                // getMintUrls, and the persisted list then re-adds the
+                // mint at the next boot's reconcile. Compare
+                // case-insensitively since cdk canonicalizes scheme and
+                // host casing. removeWallet failures are tolerated (parity
+                // with the non-throwing 0.14.x removeMint)
+                for wallet in await repo.getWallets()
+                where wallet.mintUrl().url.lowercased() == normalized.lowercased() {
+                    try? await repo.removeWallet(
+                        mintUrl: wallet.mintUrl(),
+                        currencyUnit: wallet.unit()
+                    )
+                }
                 _ = walletQueue.sync { wallets.removeValue(forKey: normalized) }
                 let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
                 if let db = dbHandle {

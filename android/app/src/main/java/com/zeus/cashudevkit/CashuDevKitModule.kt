@@ -445,10 +445,19 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             try {
                 val normalized = normalizeMintUrl(mintUrl)
                 val url = MintUrl(normalized)
-                // removeWallet only drops the in-memory wallet; tolerate a
-                // mint the repository does not know (parity with the
-                // non-throwing 0.14.x removeMint)
-                runCatching { repo.removeWallet(url, walletUnit) }
+                // load_wallets creates one wallet per supported unit, so
+                // drop every unit's wallet for this mint, not just the
+                // configured one: a leftover handle keeps the mint in
+                // getMintUrls, and the persisted list then re-adds the
+                // mint at the next boot's reconcile. Compare
+                // case-insensitively since cdk canonicalizes scheme and
+                // host casing. removeWallet failures are tolerated (parity
+                // with the non-throwing 0.14.x removeMint)
+                repo.getWallets().forEach { wallet ->
+                    val wUrl = runCatching { wallet.mintUrl() }.getOrNull() ?: return@forEach
+                    if (!wUrl.url.equals(normalized, ignoreCase = true)) return@forEach
+                    runCatching { repo.removeWallet(wUrl, wallet.unit()) }
+                }
                 wallets.remove(normalized)
                 db!!.removeMint(url)
 
