@@ -66,9 +66,12 @@ export default class ContactStore {
                 // Creating a new contact
                 const contactId = uuidv4();
 
+                // contactId spread last so a leaked ID in contactDetails
+                // can never override the fresh one; duplicate IDs make
+                // delete/edit act on multiple contacts at once
                 const newContact: Contact = {
-                    contactId,
-                    ...compactedContactDetails
+                    ...compactedContactDetails,
+                    contactId
                 };
 
                 const updatedContacts = [...existingContacts, newContact].sort(

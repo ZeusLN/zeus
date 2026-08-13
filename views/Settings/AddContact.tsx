@@ -249,7 +249,40 @@ export default class AddContact extends React.Component<
     saveContact = async () => {
         const { navigation, route, ContactStore } = this.props;
         const { isEdit, isNostrContact } = route.params ?? {};
-        const contactDetails = { ...this.state };
+        const {
+            lnAddress,
+            bolt12Address,
+            bolt12Offer,
+            noffer,
+            onchainAddress,
+            nip05,
+            nostrNpub,
+            pubkey,
+            cashuPubkey,
+            name,
+            description,
+            photo,
+            isFavourite
+        } = this.state;
+        // Only pass actual contact fields; UI state (validation arrays,
+        // modal flags) and any prefilled contactId must not be persisted.
+        // The store matches edits via prefillContact.contactId and assigns
+        // fresh IDs to new contacts
+        const contactDetails = {
+            lnAddress,
+            bolt12Address,
+            bolt12Offer,
+            noffer,
+            onchainAddress,
+            nip05,
+            nostrNpub,
+            pubkey,
+            cashuPubkey,
+            name,
+            description,
+            photo,
+            isFavourite
+        };
         await ContactStore.saveContact(
             contactDetails,
             isEdit,
@@ -438,6 +471,14 @@ export default class AddContact extends React.Component<
         this.handlePrefillContact();
     }
 
+    componentWillUnmount() {
+        // The header back arrow, the Android hardware back button and the
+        // iOS swipe-back gesture all pop this screen; only clearing here
+        // covers every exit path, so stale prefill data can never seed a
+        // later Add Contact form
+        this.props.ContactStore.clearPrefillContact();
+    }
+
     componentDidUpdate(prevProps: AddContactProps) {
         const { ContactStore } = this.props;
         if (
@@ -449,7 +490,12 @@ export default class AddContact extends React.Component<
     }
 
     handlePrefillContact = () => {
-        const { ContactStore } = this.props;
+        const { ContactStore, route } = this.props;
+        const { isEdit, isNostrContact } = route.params ?? {};
+
+        // A fresh Add Contact form must never be seeded by prefill data
+        // left over from a previous edit or import flow
+        if (!isEdit && !isNostrContact) return;
 
         if (ContactStore.prefillContact) {
             // Since invalid data cannot be saved, we know all existing fields are valid.
@@ -871,9 +917,6 @@ export default class AddContact extends React.Component<
                                 <ScanBadge navigation={navigation} />
                             </Row>
                         }
-                        onBack={() => {
-                            ContactStore?.clearPrefillContact();
-                        }}
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
