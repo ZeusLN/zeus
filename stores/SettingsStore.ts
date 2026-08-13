@@ -1638,6 +1638,9 @@ export default class SettingsStore {
     @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
     @observable public fetchLock = false;
+    // Monotonic token identifying the fetchData invocation that currently
+    // owns fetchLock; releaseFetchLock is a no-op for stale owners
+    private fetchLockSeq = 0;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
@@ -2214,6 +2217,26 @@ export default class SettingsStore {
         this.settings.supportedBiometryType !== undefined;
 
     public setLoginStatus = (status = false) => (this.loggedIn = status);
+
+    // Single-flight guard for Wallet.fetchData. Returns an ownership token,
+    // or null if another invocation already holds the lock.
+    @action
+    public acquireFetchLock = (): number | null => {
+        if (this.fetchLock) return null;
+        this.fetchLock = true;
+        return ++this.fetchLockSeq;
+    };
+
+    // Release is a no-op unless the caller still owns the lock:
+    // setConnectingStatus(true) (wallet switch, restart) clears the lock
+    // mid-flight and a newer invocation may have re-acquired it; a stale
+    // invocation must never free the current owner's lock.
+    @action
+    public releaseFetchLock = (seq: number) => {
+        if (this.fetchLockSeq === seq) {
+            this.fetchLock = false;
+        }
+    };
 
     @action
     public setConnectingStatus = (status = false) => {

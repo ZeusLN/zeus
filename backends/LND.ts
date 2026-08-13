@@ -59,10 +59,18 @@ export default class LND {
                     // Clearnet-over-Tor: keep strict TLS because exit
                     // nodes can MITM.
                     isOnionHttpsUrl(url)
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
+                )
+                    .then((response: any) => {
+                        calls.delete(id);
+                        return response;
+                    })
+                    .catch((error: any) => {
+                        // evict rejected requests too, otherwise every
+                        // subsequent identical call gets the same cached
+                        // rejection until the next reconnect clears the map
+                        calls.delete(id);
+                        throw error;
+                    })
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {

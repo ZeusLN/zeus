@@ -525,6 +525,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     async fetchData(transientRetryCount = 0) {
+        const { SettingsStore } = this.props;
+
+        // ensure we don't run this twice in parallel
+        const seq = SettingsStore.acquireFetchLock();
+        if (seq === null) return;
+
+        try {
+            await this.fetchDataCore(transientRetryCount);
+        } finally {
+            // Single release point: every exit from fetchDataCore (success,
+            // early return, or throw) must free the lock, otherwise
+            // pull-to-refresh and app-resume refreshes silently no-op until
+            // the next full reconnect. The store ignores the release if this
+            // invocation no longer owns the lock.
+            SettingsStore.releaseFetchLock(seq);
+        }
+    }
+
+    private async fetchDataCore(transientRetryCount = 0) {
         const {
             AlertStore,
             NodeInfoStore,
@@ -570,8 +589,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ldkRgsServer,
             ldkScorerUrl,
             ldkVssServer,
-            updateSettings,
-            fetchLock
+            updateSettings
         } = SettingsStore;
         const { isSyncing } = SyncStore;
         const {
@@ -586,10 +604,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = settings;
         const expressGraphSyncEnabled =
             settings.expressGraphSync && embeddedLndNetwork === 'Mainnet';
-
-        // ensure we don't run this twice in parallel
-        if (fetchLock) return;
-        SettingsStore.fetchLock = true;
 
         let start;
         if (connecting) {
@@ -710,7 +724,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         : errMsg;
                     SettingsStore.ldkNodeSyncing = false;
                     SettingsStore.setConnectingStatus(false);
-                    SettingsStore.fetchLock = false;
                     return;
                 }
 
@@ -904,6 +917,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             isLndError(error, LndErrorCode.LND_START_FAILED) ||
                             isLndError(error, LndErrorCode.LND_READY_TIMEOUT)
                         ) {
+                            // Leave connecting mode before showing the restart
+                            // alert: with the fetch lock now released on exit,
+                            // a background/foreground would otherwise re-run
+                            // the full stop/init/start cycle and stack a
+                            // second restart alert on top of this one
+                            setConnectingStatus(false);
                             restartNeeded(true);
                             return;
                         }
@@ -1348,8 +1367,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        SettingsStore.fetchLock = false;
-
         // Process any deep link that was deferred while login was required
         LinkingUtils.processPendingDeepLink(this.props.navigation);
 
@@ -1567,6 +1584,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <LayerBalances
                                 navigation={navigation}
                                 onRefresh={() => this.getSettingsAndNavigate()}
+                                refreshing={this.state.loading}
                                 consolidated
                             />
 
