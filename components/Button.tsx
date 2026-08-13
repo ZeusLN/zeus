@@ -75,14 +75,18 @@ function Button(props: ButtonProps) {
                     ? React.isValidElement(icon)
                         ? icon
                         : {
-                              color: icon.color
+                              ...icon,
+                              // match @rneui's disabled title color:
+                              // color(theme.colors.disabled).darken(0.3)
+                              color: disabled
+                                  ? 'hsl(208, 8%, 63%)'
+                                  : icon.color
                                   ? icon.color
                                   : iconOnly
                                   ? textColor
                                   : secondary
                                   ? themeColor('highlight')
-                                  : themeColor('background'),
-                              ...icon
+                                  : themeColor('background')
                           }
                     : null
             }
