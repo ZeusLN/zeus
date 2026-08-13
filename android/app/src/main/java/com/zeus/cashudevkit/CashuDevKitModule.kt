@@ -835,7 +835,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // Create the MintQuote object
                 // For external quotes that are PAID, we set amountPaid = amount
                 val zeroAmount = Amount(0UL)
-                val quote = MintQuote(
+                fun makeQuote(version: UInt) = MintQuote(
                     id = quoteId,
                     mintUrl = url,
                     amount = amt,
@@ -849,13 +849,25 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     paymentMethod = PaymentMethod.Bolt11,
                     secretKey = if (useSeedPrefixMarker) null else storedSecretKey,
                     usedByOperation = null,
-                    version = 0u
+                    version = version
                 )
 
                 Log.d(TAG, "addExternalMintQuote: Adding quote $quoteId to database")
 
-                // Add to database
-                db!!.addMintQuote(quote)
+                // addMintQuote is a CAS upsert: the update only applies while
+                // the stored row still has the version we write, and a failed
+                // mint attempt leaves the row bumped by the saga's claim.
+                // Reuse the stored version (0 for a fresh insert) so retries
+                // do not die with ConcurrentUpdate before minting
+                val storedVersion = db!!.getMintQuote(quoteId)?.version ?: 0u
+                try {
+                    db!!.addMintQuote(makeQuote(storedVersion))
+                } catch (e: FfiException) {
+                    // Lost the CAS race between read and write; re-read and
+                    // retry once
+                    val retryVersion = db!!.getMintQuote(quoteId)?.version ?: 0u
+                    db!!.addMintQuote(makeQuote(retryVersion))
+                }
 
                 Log.d(TAG, "addExternalMintQuote: Successfully added quote $quoteId")
 

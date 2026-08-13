@@ -823,25 +823,39 @@ class CashuDevKitModule: RCTEventEmitter {
                 // Create the MintQuote object
                 // For external quotes that are PAID, we set amountPaid = amount
                 let zeroAmount = Amount(value: 0)
-                let quote = MintQuote(
-                    id: quoteId,
-                    amount: amt,
-                    unit: .sat,
-                    request: request,
-                    state: quoteState,
-                    expiry: UInt64(truncating: expiry),
-                    mintUrl: url,
-                    amountIssued: quoteState == .issued ? amt : zeroAmount,
-                    amountPaid: (quoteState == .paid || quoteState == .issued) ? amt : zeroAmount,
-                    estimatedBlocks: nil,
-                    paymentMethod: .bolt11,
-                    secretKey: useSeedPrefixMarker ? nil : storedSecretKey,
-                    usedByOperation: nil,
-                    version: 0
-                )
+                func makeQuote(version: UInt32) -> MintQuote {
+                    MintQuote(
+                        id: quoteId,
+                        amount: amt,
+                        unit: .sat,
+                        request: request,
+                        state: quoteState,
+                        expiry: UInt64(truncating: expiry),
+                        mintUrl: url,
+                        amountIssued: quoteState == .issued ? amt : zeroAmount,
+                        amountPaid: (quoteState == .paid || quoteState == .issued) ? amt : zeroAmount,
+                        estimatedBlocks: nil,
+                        paymentMethod: .bolt11,
+                        secretKey: useSeedPrefixMarker ? nil : storedSecretKey,
+                        usedByOperation: nil,
+                        version: version
+                    )
+                }
 
-                // Add to database
-                try await db.addMintQuote(quote: quote)
+                // addMintQuote is a CAS upsert: the update only applies while
+                // the stored row still has the version we write, and a failed
+                // mint attempt leaves the row bumped by the saga's claim.
+                // Reuse the stored version (0 for a fresh insert) so retries
+                // do not die with ConcurrentUpdate before minting
+                let storedVersion = try await db.getMintQuote(quoteId: quoteId)?.version ?? 0
+                do {
+                    try await db.addMintQuote(quote: makeQuote(version: storedVersion))
+                } catch {
+                    // Lost the CAS race between read and write; re-read and
+                    // retry once
+                    let retryVersion = try await db.getMintQuote(quoteId: quoteId)?.version ?? 0
+                    try await db.addMintQuote(quote: makeQuote(version: retryVersion))
+                }
 
                 resolve(true)
             } catch let error as FfiError {
