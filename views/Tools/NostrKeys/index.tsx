@@ -120,6 +120,7 @@ export default class NostrKeys extends React.Component<
                                     keyValue={localeString('nostr.npub')}
                                     value={npub}
                                     sensitive
+                                    showCopyIcon
                                 />
 
                                 <KeyValue
@@ -128,6 +129,8 @@ export default class NostrKeys extends React.Component<
                                         revealSensitive ? nsec : '*'.repeat(63)
                                     }
                                     sensitive
+                                    showCopyIcon
+                                    disableCopy={!revealSensitive}
                                 />
 
                                 <View style={styles.navItem}>

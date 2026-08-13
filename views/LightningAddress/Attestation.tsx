@@ -117,6 +117,7 @@ export default function Attestation(props: AttestationProps) {
                             <KeyValue
                                 keyValue={localeString('general.id')}
                                 value={item.id}
+                                showCopyIcon
                             />
                         )}
 
@@ -147,12 +148,14 @@ export default function Attestation(props: AttestationProps) {
                             <KeyValue
                                 keyValue={localeString('nostr.pubkey')}
                                 value={item.pubkey}
+                                showCopyIcon
                             />
                         )}
 
                         <KeyValue
                             keyValue={localeString('nostr.npub')}
                             value={nip19.npubEncode(item.pubkey)}
+                            showCopyIcon
                         />
                     </ScrollView>
                     <View style={{ bottom: 15 }}>

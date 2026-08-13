@@ -94,6 +94,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                         <KeyValue
                             keyValue={localeString('general.outpoint')}
                             value={getOutpoint}
+                            showCopyIcon
                         />
 
                         {!!address && (

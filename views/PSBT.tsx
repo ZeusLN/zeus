@@ -351,6 +351,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                                                 value={Base64Utils.bytesToHex(
                                                                                     derivation.masterFingerprint
                                                                                 ).toUpperCase()}
+                                                                                showCopyIcon
                                                                             />
                                                                         )}
                                                                         {derivation.pubkey && (
@@ -361,6 +362,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                                                 value={Base64Utils.bytesToHex(
                                                                                     derivation.pubkey
                                                                                 ).toUpperCase()}
+                                                                                showCopyIcon
                                                                             />
                                                                         )}
                                                                         {derivation.path && (
@@ -446,6 +448,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                                                 value={Base64Utils.bytesToHex(
                                                                                     derivation.masterFingerprint
                                                                                 ).toUpperCase()}
+                                                                                showCopyIcon
                                                                             />
                                                                         )}
                                                                         {derivation.pubkey && (
@@ -456,6 +459,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                                                 value={Base64Utils.bytesToHex(
                                                                                     derivation.pubkey
                                                                                 ).toUpperCase()}
+                                                                                showCopyIcon
                                                                             />
                                                                         )}
                                                                         {derivation.path && (

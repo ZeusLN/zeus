@@ -683,12 +683,14 @@ export default class ChannelView extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.channelId')}
                             value={channelId}
+                            showCopyIcon
                         />
                     )}
                     {shortChannelId && (
                         <KeyValue
                             keyValue={localeString('views.Channel.scid')}
                             value={shortChannelId}
+                            showCopyIcon
                         />
                     )}
 
@@ -745,6 +747,7 @@ export default class ChannelView extends React.Component<
                                     value={PrivacyUtils.sensitiveValue({
                                         input: aliasScids.join(', ')
                                     })}
+                                    showCopyIcon
                                 />
                             )}
                             {showPeerAliasScid && (
@@ -755,6 +758,7 @@ export default class ChannelView extends React.Component<
                                     value={PrivacyUtils.sensitiveValue({
                                         input: peerScidAlias
                                     })}
+                                    showCopyIcon
                                 />
                             )}
                             {showZeroConfConfirmedScid && (
@@ -765,6 +769,7 @@ export default class ChannelView extends React.Component<
                                     value={PrivacyUtils.sensitiveValue({
                                         input: zeroConfConfirmedScid
                                     })}
+                                    showCopyIcon
                                 />
                             )}
                         </>
@@ -799,6 +804,7 @@ export default class ChannelView extends React.Component<
                             keyValue={localeString('views.Channel.chainHash')}
                             value={chain_hash}
                             sensitive
+                            showCopyIcon
                         />
                     )}
                     {!!closeHeight && (
@@ -807,6 +813,7 @@ export default class ChannelView extends React.Component<
                             value={closeHeight}
                             color={themeColor('highlight')}
                             sensitive
+                            showCopyIcon
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerBlockHeight(
                                     closeHeight,
@@ -846,6 +853,7 @@ export default class ChannelView extends React.Component<
                             value={closing_txid}
                             sensitive
                             color={themeColor('highlight')}
+                            showCopyIcon
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     closing_txid,
@@ -862,6 +870,7 @@ export default class ChannelView extends React.Component<
                             value={closing_tx_hash}
                             sensitive
                             color={themeColor('highlight')}
+                            showCopyIcon
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     closing_tx_hash,
@@ -882,6 +891,7 @@ export default class ChannelView extends React.Component<
                                 value={channel_point}
                                 sensitive
                                 color={themeColor('highlight')}
+                                showCopyIcon
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         channel_point,

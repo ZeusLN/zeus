@@ -711,6 +711,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             )}
                                             value={zaplockerNpub}
                                             sensitive
+                                            showCopyIcon
                                         />
 
                                         <View style={styles.button}>
@@ -771,6 +772,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             'general.destination'
                                         )}
                                         value={destination}
+                                        showCopyIcon
                                     />
                                 )}
 
@@ -780,6 +782,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             'views.PaymentRequest.paymentHash'
                                         )}
                                         value={payment_hash}
+                                        showCopyIcon
                                     />
                                 )}
 

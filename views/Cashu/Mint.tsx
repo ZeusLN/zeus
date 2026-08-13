@@ -820,6 +820,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         <KeyValue
                             keyValue={localeString('cashu.mintUrl')}
                             value={mint?.mintUrl}
+                            showCopyIcon
                         />
                     )}
 
@@ -834,6 +835,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         <KeyValue
                             keyValue={localeString('views.NodeInfo.pubkey')}
                             value={mintInfo?.pubkey}
+                            showCopyIcon
                         />
                     )}
 

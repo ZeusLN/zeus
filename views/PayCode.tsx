@@ -189,6 +189,7 @@ export default class PayCodeView extends React.Component<
                             <KeyValue
                                 keyValue={localeString('views.PayCode.offerId')}
                                 value={offer_id}
+                                showCopyIcon
                             />
 
                             {bolt12 && (
@@ -197,6 +198,7 @@ export default class PayCodeView extends React.Component<
                                         'views.PayCode.bolt12'
                                     )}
                                     value={bolt12}
+                                    showCopyIcon
                                 />
                             )}
                         </View>

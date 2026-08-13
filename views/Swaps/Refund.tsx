@@ -351,6 +351,7 @@ export default class RefundSwap extends React.Component<
                                         key={key}
                                         keyValue={pascalToHumanReadable(key)}
                                         value={value.toString()}
+                                        showCopyIcon
                                     />
                                 );
                             })}

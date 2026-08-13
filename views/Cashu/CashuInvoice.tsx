@@ -203,6 +203,7 @@ export default class CashuInvoiceView extends React.Component<
                                 keyValue={localeString('cashu.mintUrl')}
                                 value={mintUrl}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -259,6 +260,7 @@ export default class CashuInvoiceView extends React.Component<
                                 keyValue={localeString('general.note')}
                                 value={getNote}
                                 sensitive
+                                showCopyIcon
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
                                         noteKey: getNoteKey

@@ -178,6 +178,7 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                         'nostr.npub'
                                                     )}
                                                     value={nostrNpub}
+                                                    showCopyIcon
                                                 />
                                             )}
                                         </View>

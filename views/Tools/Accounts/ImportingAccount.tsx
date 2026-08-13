@@ -130,6 +130,7 @@ export default class ImportingAccount extends React.Component<
                             'views.ImportAccount.extendedPubKey'
                         )}
                         value={extended_public_key}
+                        showCopyIcon
                     />
 
                     {!!master_key_fingerprint && (
@@ -140,6 +141,7 @@ export default class ImportingAccount extends React.Component<
                             value={Base64Utils.reverseMfpBytes(
                                 Base64Utils.base64ToHex(master_key_fingerprint)
                             ).toUpperCase()}
+                            showCopyIcon
                         />
                     )}
 
@@ -155,6 +157,7 @@ export default class ImportingAccount extends React.Component<
                             'views.ImportAccount.derivationPath'
                         )}
                         value={derivation_path}
+                        showCopyIcon
                     />
 
                     <KeyValue

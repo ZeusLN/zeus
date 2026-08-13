@@ -293,6 +293,8 @@ export default class NostrKey extends React.Component<
                                             : '*'.repeat(64)
                                     }
                                     sensitive
+                                    showCopyIcon
+                                    disableCopy={!revealSensitive}
                                 />
                             )}
 
@@ -301,6 +303,7 @@ export default class NostrKey extends React.Component<
                                     keyValue={localeString('nostr.pubkey')}
                                     value={nostrPublicKey}
                                     sensitive
+                                    showCopyIcon
                                 />
                             )}
 
@@ -313,6 +316,8 @@ export default class NostrKey extends React.Component<
                                             : '*'.repeat(63)
                                     }
                                     sensitive
+                                    showCopyIcon
+                                    disableCopy={!revealSensitive}
                                 />
                             )}
 
@@ -321,6 +326,7 @@ export default class NostrKey extends React.Component<
                                     keyValue={localeString('nostr.npub')}
                                     value={nostrNpub}
                                     sensitive
+                                    showCopyIcon
                                 />
                             )}
                         </View>

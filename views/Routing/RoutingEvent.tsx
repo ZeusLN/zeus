@@ -163,6 +163,7 @@ export default class RoutingEvent extends React.Component<
                             channel.chan_id || channel.channelId || channelId
                         }
                         sensitive
+                        showCopyIcon
                     />
                 </>
             )}

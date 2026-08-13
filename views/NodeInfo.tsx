@@ -126,6 +126,7 @@ export default class NodeInfo extends React.Component<
                         keyValue={localeString('views.NodeInfo.pubkey')}
                         value={nodeInfo.nodeId}
                         sensitive
+                        showCopyIcon
                     />
                 )}
 
@@ -136,6 +137,7 @@ export default class NodeInfo extends React.Component<
                         )}
                         value={selectedMintPubkey}
                         sensitive
+                        showCopyIcon
                     />
                 )}
                 {nodeInfo.version && (
@@ -200,6 +202,7 @@ export default class NodeInfo extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.blockHash')}
                         value={nodeInfo.block_hash}
+                        showCopyIcon
                     />
                 )}
 
