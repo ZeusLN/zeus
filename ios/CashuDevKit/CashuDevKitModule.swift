@@ -166,12 +166,20 @@ class CashuDevKitModule: RCTEventEmitter {
 
         let url = MintUrl(url: normalized)
         let unit = walletQueue.sync { walletUnit }
-        // hasMint matches any unit for the URL while getWallet is keyed on
-        // (URL, unit), so a mint loaded only under a non-sat unit would skip
-        // creation here and then miss. createWallet is a no-network map
-        // insert, so create unconditionally instead of guarding
-        try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
-        let wallet = try await repo.getWallet(mintUrl: url, unit: unit)
+        // Try the (URL, unit)-keyed lookup first and only create on a miss:
+        // creating unconditionally would overwrite a wallet configured by
+        // addMint (e.g. a custom targetProofCount) with a default-config
+        // handle. The FFI does not expose the unit-keyed hasWallet, so a
+        // failed get is the miss signal; createWallet is a no-network map
+        // insert, and a concurrent double-create is a benign same-config
+        // overwrite
+        let wallet: Wallet
+        do {
+            wallet = try await repo.getWallet(mintUrl: url, unit: unit)
+        } catch {
+            try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
+            wallet = try await repo.getWallet(mintUrl: url, unit: unit)
+        }
         walletQueue.sync { wallets[normalized] = wallet }
         return wallet
     }

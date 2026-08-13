@@ -151,12 +151,19 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
 
         val url = MintUrl(normalized)
-        // hasMint matches any unit for the URL while getWallet is keyed on
-        // (URL, unit), so a mint loaded only under a non-sat unit would skip
-        // creation here and then miss. createWallet is a no-network map
-        // insert, so create unconditionally instead of guarding
-        currentRepo.createWallet(url, walletUnit, null)
-        val wallet = currentRepo.getWallet(url, walletUnit)
+        // Try the (URL, unit)-keyed lookup first and only create on a miss:
+        // creating unconditionally would overwrite a wallet configured by
+        // addMint (e.g. a custom targetProofCount) with a default-config
+        // handle. The FFI does not expose the unit-keyed hasWallet, so a
+        // failed get is the miss signal; createWallet is a no-network map
+        // insert, and a concurrent double-create is a benign same-config
+        // overwrite
+        val wallet = try {
+            currentRepo.getWallet(url, walletUnit)
+        } catch (e: FfiException) {
+            currentRepo.createWallet(url, walletUnit, null)
+            currentRepo.getWallet(url, walletUnit)
+        }
         wallets[normalized] = wallet
         return wallet
     }
@@ -407,7 +414,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val url = MintUrl(normalizeMintUrl(mintUrl))
-                repo.createWallet(url, walletUnit, targetProofCount?.toUInt())
+                // 0 is the JS sentinel for "use default"; match iOS, which
+                // maps it to null rather than a target of zero proofs
+                val count = targetProofCount?.takeIf { it > 0 }?.toUInt()
+                repo.createWallet(url, walletUnit, count)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
