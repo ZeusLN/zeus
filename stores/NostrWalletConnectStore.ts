@@ -1351,8 +1351,16 @@ export default class NostrWalletConnectStore {
                     ? this.handleCashuPayInvoice.bind(this, connection)
                     : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.enqueuePayment(
+                    this.withGlobalHandler(connection.id, async () => {
+                        const cached = await this.getCachedPayInvoiceResponse(
+                            connection,
+                            request.invoice
+                        );
+                        if (cached) {
+                            return cached;
+                        }
+
+                        return this.enqueuePayment(
                             () => payHandler(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
@@ -1361,8 +1369,8 @@ export default class NostrWalletConnectStore {
                                     ),
                                     Nip47ErrorCode.RATE_LIMITED
                                 )
-                        )
-                    );
+                        );
+                    });
             }
 
             if (connection.hasPermission('make_invoice')) {
@@ -2227,6 +2235,52 @@ export default class NostrWalletConnectStore {
     }
 
     // PAYMENT PROCESSING METHODS
+
+    /**
+     * Idempotency guard for pay_invoice. connection.activity is persisted per
+     * connection and survives restarts. If this invoice was already paid or is
+     * in-flight, return the cached NIP-47 response instead of sendPayment.
+     */
+    private async getCachedPayInvoiceResponse(
+        connection: NWCConnection,
+        rawInvoice: string
+    ): Promise<{ result: Nip47PayResponse; error: undefined } | undefined> {
+        const { paymentRequest, paymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        const id = paymentRequest || rawInvoice;
+        const existing = connection.findPayInvoiceActivity(id, paymentHash);
+        if (!existing) {
+            return undefined;
+        }
+
+        const fees_paid = satsToMillisats(Number(existing.fees_paid) || 0);
+
+        if (existing.status === 'success') {
+            return {
+                result: {
+                    preimage:
+                        existing.preimage ||
+                        existing.payment?.getPreimage ||
+                        '',
+                    fees_paid
+                },
+                error: undefined
+            };
+        }
+
+        if (existing.status === 'pending') {
+            return {
+                result: {
+                    preimage: '',
+                    fees_paid
+                },
+                error: undefined
+            };
+        }
+
+        // failed — allow a genuine client retry, not a replay of a settled pay
+        return undefined;
+    }
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
