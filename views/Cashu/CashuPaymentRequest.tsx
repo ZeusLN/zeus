@@ -1028,7 +1028,8 @@ export default class CashuPaymentRequest extends React.Component<
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold &&
                             !SettingsStore.settingsUpdateInProgress &&
-                            !hasPayReqError ? (
+                            !hasPayReqError &&
+                            !noBalance ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -1067,7 +1068,8 @@ export default class CashuPaymentRequest extends React.Component<
                                         onPress={this.triggerPayment}
                                         disabled={
                                             SettingsStore.settingsUpdateInProgress ||
-                                            hasPayReqError
+                                            hasPayReqError ||
+                                            noBalance
                                         }
                                     />
                                 </View>

@@ -1605,7 +1605,10 @@ export default class PaymentRequest extends React.Component<
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
-                                    disabled={TransactionsStore.paymentInFlight}
+                                    disabled={
+                                        TransactionsStore.paymentInFlight ||
+                                        noBalance
+                                    }
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
                                     )}
@@ -1623,18 +1626,15 @@ export default class PaymentRequest extends React.Component<
                                         title={localeString(
                                             'views.PaymentRequest.payInvoice'
                                         )}
-                                        icon={
-                                            lightningReadyToSend
-                                                ? {
-                                                      name: 'send',
-                                                      size: 25
-                                                  }
-                                                : undefined
-                                        }
+                                        icon={{
+                                            name: 'send',
+                                            size: 25
+                                        }}
                                         onPress={this.triggerPayment}
                                         disabled={
                                             !lightningReadyToSend ||
-                                            TransactionsStore.paymentInFlight
+                                            TransactionsStore.paymentInFlight ||
+                                            noBalance
                                         }
                                     />
                                 </View>
