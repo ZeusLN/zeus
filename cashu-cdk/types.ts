@@ -259,7 +259,8 @@ export interface CashuDevKitNativeModule {
         request: string,
         state: string,
         expiry: number,
-        secretKey?: string
+        secretKey?: string,
+        useSeedPrefixMarker?: boolean
     ): Promise<boolean>;
     mint(
         mintUrl: string,

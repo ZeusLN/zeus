@@ -777,6 +777,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         state: String,
         expiry: Double,
         secretKey: String?,
+        useSeedPrefixMarker: Boolean,
         promise: Promise
     ) {
         if (!isInitialized || db == null) {
@@ -798,18 +799,25 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     else -> QuoteState.PAID // Default to PAID for external quotes
                 }
 
-                // ZEUS Pay locks quotes to the wallet's seed-prefix key
-                // (seed[0..32]), which is byte-identical to cdk's "legacy
-                // NpubCash" key. Storing that key on the quote makes cdk's
-                // mint saga scrub it mid-flight (a version bump), and the
-                // saga's post-mint write then dies with ConcurrentUpdate
-                // AFTER the mint has issued the signatures. Instead, store
-                // the quote with no key and write cdk's NpubCash quote-key
-                // marker: at signing time cdk re-derives the identical
-                // seed-prefix key from the marker, with no mid-saga write.
+                // For v2-bip39 wallets, ZEUS Pay locks quotes to the seed-
+                // prefix key (seed[0..32]), which is byte-identical to cdk's
+                // "legacy NpubCash" key. Storing that key on the quote makes
+                // cdk's mint saga scrub it mid-flight (a version bump), and
+                // the saga's post-mint write then dies with ConcurrentUpdate
+                // AFTER the mint has issued the signatures. For those quotes
+                // (useSeedPrefixMarker, decided by JS via byte comparison),
+                // store the quote with no key and write cdk's NpubCash
+                // quote-key marker: at signing time cdk re-derives the
+                // identical seed-prefix key from the marker, with no mid-saga
+                // write. v1 wallets sign with a different key (LND seed
+                // bytes [32:64]), so the marker would derive the wrong key
+                // for them; their key is stored on the quote instead, which
+                // is safe because the scrub only triggers on byte equality
+                // with the seed prefix.
                 // Upstream bug: https://github.com/cashubtc/cdk/issues/2335
                 // Remove when fixed: https://github.com/ZeusLN/zeus/issues/4402
-                if (!secretKey.isNullOrEmpty()) {
+                val storedSecretKey = secretKey?.takeIf { it.isNotEmpty() }
+                if (storedSecretKey != null && useSeedPrefixMarker) {
                     db!!.kvWrite(
                         primaryNamespace = "npubcash",
                         secondaryNamespace = "quotes",
@@ -833,7 +841,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
-                    secretKey = null,
+                    secretKey = if (useSeedPrefixMarker) null else storedSecretKey,
                     usedByOperation = null,
                     version = 0u
                 )
