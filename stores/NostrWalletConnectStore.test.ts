@@ -728,6 +728,94 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
     });
 });
 
+describe('NostrWalletConnectStore NWC request event replay guard', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('claims unseen event ids and skips already-seen ones', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store);
+        jest.spyOn(store as any, 'scheduleSave').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(store as any, 'flushScheduledSave').mockResolvedValue(
+            undefined
+        );
+
+        const first = await (store as any).shouldProcessNwcRequestEvent(
+            connection,
+            { id: 'event-1' }
+        );
+        const replay = await (store as any).shouldProcessNwcRequestEvent(
+            connection,
+            { id: 'event-1' }
+        );
+
+        expect(first).toBe(true);
+        expect(replay).toBe(false);
+        expect(connection.processedEventIds).toEqual(['event-1']);
+        expect((store as any).flushScheduledSave).toHaveBeenCalled();
+    });
+
+    it('skips SDK handlers for already-seen request events', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            processedEventIds: ['seen-event']
+        });
+        jest.spyOn(store as any, 'scheduleSave').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(store as any, 'flushScheduledSave').mockResolvedValue(
+            undefined
+        );
+
+        const sdkOnEvent = jest.fn();
+        const pool = {
+            subscribe: jest.fn(
+                async (
+                    _relays: string[],
+                    _filter: Record<string, unknown>,
+                    params: {
+                        onevent: (event: {
+                            id: string;
+                        }) => void | Promise<void>;
+                    }
+                ) => {
+                    await params.onevent({ id: 'seen-event' });
+                    await params.onevent({ id: 'new-event' });
+                    return { close: jest.fn() };
+                }
+            )
+        };
+        const nwcWalletService = {
+            pool,
+            subscribe: async (_keypair: unknown, _handler: unknown) => {
+                await pool.subscribe(
+                    ['wss://relay'],
+                    {},
+                    { onevent: sdkOnEvent }
+                );
+                return () => undefined;
+            }
+        };
+
+        await (store as any).subscribeWithSeenEventGuard(
+            connection,
+            nwcWalletService,
+            {},
+            {}
+        );
+
+        expect(sdkOnEvent).toHaveBeenCalledTimes(1);
+        expect(sdkOnEvent).toHaveBeenCalledWith({ id: 'new-event' });
+        expect(connection.processedEventIds).toEqual([
+            'seen-event',
+            'new-event'
+        ]);
+    });
+});
+
 describe('NostrWalletConnectStore connection data scoping', () => {
     const WALLET_ONLY_HASH = hex64('f');
     const CONNECTION_HASH = hex64('e');

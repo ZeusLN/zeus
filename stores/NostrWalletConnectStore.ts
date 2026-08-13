@@ -98,6 +98,8 @@ const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
 const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
+/** Cap persisted NWC request event ids per connection (replay protection). */
+const MAX_PROCESSED_NWC_EVENT_IDS = 2000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -1417,9 +1419,13 @@ export default class NostrWalletConnectStore {
                 );
             }
             const unsubscribe = await retry({
-                fn: async () => {
-                    return await nwcWalletService.subscribe(keypair, handler);
-                },
+                fn: async () =>
+                    this.subscribeWithSeenEventGuard(
+                        connection,
+                        nwcWalletService,
+                        keypair,
+                        handler
+                    ),
                 maxRetries: MAX_RELAY_ATTEMPTS,
                 exponentialBackoff: true
             });
@@ -1433,6 +1439,93 @@ export default class NostrWalletConnectStore {
                 error?.message || String(error)
             );
         }
+    }
+
+    /**
+     * Subscribe through the SDK, but claim each request event id first.
+     * Already-seen ids never reach method handlers (pay_invoice, make_invoice, …).
+     * The SDK does not expose event metadata to handlers, so we wrap pool.subscribe
+     * for this call only — decrypt/dispatch/publish stay in @getalby/sdk.
+     */
+    private async subscribeWithSeenEventGuard(
+        connection: NWCConnection,
+        nwcWalletService: NWCWalletService,
+        keypair: NWCWalletServiceKeyPair,
+        handler: NWCWalletServiceRequestHandler
+    ): Promise<() => void> {
+        const service = nwcWalletService as NWCWalletService & {
+            pool: {
+                subscribe: (...args: any[]) => { close: () => void };
+            };
+        };
+        const originalSubscribe = service.pool.subscribe.bind(service.pool);
+
+        service.pool.subscribe = (
+            relays: string[],
+            filter: Record<string, unknown>,
+            params: {
+                onevent?: (event: {
+                    id: string;
+                    created_at: number;
+                    content: string;
+                    tags: string[][];
+                    [key: string]: unknown;
+                }) => void | Promise<void>;
+                [key: string]: unknown;
+            }
+        ) => {
+            const sdkOnEvent = params.onevent;
+            params.onevent = async (event) => {
+                const isNew = await this.shouldProcessNwcRequestEvent(
+                    connection,
+                    event
+                );
+                if (!isNew || !sdkOnEvent) {
+                    return;
+                }
+                return sdkOnEvent(event);
+            };
+            return originalSubscribe(relays, filter, params);
+        };
+
+        try {
+            return await nwcWalletService.subscribe(keypair, handler);
+        } finally {
+            service.pool.subscribe = originalSubscribe;
+        }
+    }
+
+    /**
+     * Returns true if this request event has not been processed yet.
+     * Persists the id before handlers run so a restart cannot re-execute it.
+     */
+    private async shouldProcessNwcRequestEvent(
+        connection: NWCConnection,
+        event: { id?: string }
+    ): Promise<boolean> {
+        const eventId = event?.id;
+        if (!eventId) {
+            return false;
+        }
+        if (connection.processedEventIds.includes(eventId)) {
+            return false;
+        }
+
+        runInAction(() => {
+            const next = connection.processedEventIds.filter(
+                (id) => id !== eventId
+            );
+            next.push(eventId);
+            connection.processedEventIds =
+                next.length > MAX_PROCESSED_NWC_EVENT_IDS
+                    ? next.slice(next.length - MAX_PROCESSED_NWC_EVENT_IDS)
+                    : next;
+            this.findAndUpdateConnection(connection);
+        });
+
+        this.scheduleSave();
+        await this.flushScheduledSave();
+        return true;
     }
 
     private async subscribeToAllConnections(): Promise<void> {

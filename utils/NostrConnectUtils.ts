@@ -520,6 +520,15 @@ export default class NostrConnectUtils {
      * @throws Error if invoice decoding fails
      */
 
+    /** Decode without logging; lookup paths treat malformed invoices as a miss. */
+    private static tryDecodeBolt11(invoice: string) {
+        try {
+            return Bolt11Utils.decode(invoice);
+        } catch {
+            return undefined;
+        }
+    }
+
     static async decodeInvoiceTags(
         invoice: string,
         checkForPaidStatus: boolean = false
@@ -635,12 +644,8 @@ export default class NostrConnectUtils {
         const invoice = request.invoice || paymentRequest;
         if (!invoice) return undefined;
 
-        try {
-            const decoded = await NostrConnectUtils.decodeInvoiceTags(invoice);
-            return decoded.paymentHash || undefined;
-        } catch {
-            return undefined;
-        }
+        const decoded = NostrConnectUtils.tryDecodeBolt11(invoice);
+        return decoded?.payment_hash || undefined;
     }
 
     /** Whether a BOLT11 string matches a NIP-47 lookup request (invoice or hash). */
@@ -659,14 +664,8 @@ export default class NostrConnectUtils {
             normalizedHash ??
             NostrConnectUtils.normalizePaymentHash(request.payment_hash);
         if (!hash) return false;
-        try {
-            const decoded = await NostrConnectUtils.decodeInvoiceTags(
-                paymentRequest
-            );
-            return decoded.paymentHash === hash;
-        } catch {
-            return false;
-        }
+        const decoded = NostrConnectUtils.tryDecodeBolt11(paymentRequest);
+        return !!decoded?.payment_hash && decoded.payment_hash === hash;
     }
 
     static lightningInvoiceExpiresAt(
