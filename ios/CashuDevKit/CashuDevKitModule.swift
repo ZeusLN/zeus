@@ -794,6 +794,8 @@ class CashuDevKitModule: RCTEventEmitter {
                 // the quote with no key and write cdk's NpubCash quote-key
                 // marker: at signing time cdk re-derives the identical
                 // seed-prefix key from the marker, with no mid-saga write.
+                // Upstream bug: https://github.com/cashubtc/cdk/issues/2335
+                // Remove when fixed: https://github.com/ZeusLN/zeus/issues/4402
                 if let secretKey, !secretKey.isEmpty {
                     try await db.kvWrite(
                         primaryNamespace: "npubcash",
