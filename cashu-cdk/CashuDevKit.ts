@@ -316,6 +316,12 @@ class CashuDevKit {
      * @param state - The quote state (UNPAID, PAID, PENDING, ISSUED)
      * @param expiry - The quote expiry timestamp
      * @param secretKey - Optional hex-encoded secret key for P2PK-locked quotes
+     * @param useSeedPrefixMarker - When the secret key equals CDK's seed
+     * prefix (seed[0..32]), store the quote keyless and write cdk's NpubCash
+     * quote-key marker instead, to avoid cdk's legacy npubcash scrub
+     * (https://github.com/cashubtc/cdk/issues/2335). Must be false when the
+     * key differs from the seed prefix (v1 wallets), or cdk would sign with
+     * the wrong key.
      */
     async addExternalMintQuote(
         mintUrl: string,
@@ -324,7 +330,8 @@ class CashuDevKit {
         request: string,
         state: string,
         expiry: number,
-        secretKey?: string
+        secretKey?: string,
+        useSeedPrefixMarker: boolean = false
     ): Promise<boolean> {
         try {
             return await CashuDevKitModule.addExternalMintQuote(
@@ -334,7 +341,8 @@ class CashuDevKit {
                 request,
                 state,
                 expiry,
-                secretKey
+                secretKey,
+                useSeedPrefixMarker
             );
         } catch (error) {
             throw mapCDKError(error);
@@ -443,31 +451,6 @@ class CashuDevKit {
     async melt(mintUrl: string, quoteId: string): Promise<CDKMelted> {
         try {
             const json = await CashuDevKitModule.melt(mintUrl, quoteId);
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
-    }
-
-    /**
-     * Execute MPP melt (pay Lightning invoice using multi-path payments)
-     * Uses the CDK's high-level melt which handles quote creation,
-     * proof selection, and partial payment in one call.
-     * @param bolt11 - BOLT11 invoice to pay
-     * @param options - Melt options including MPP amount
-     * @param maxFee - Maximum fee in sats (0 for no limit)
-     */
-    async meltMpp(
-        bolt11: string,
-        options?: any,
-        maxFee: number = 0
-    ): Promise<CDKMelted> {
-        try {
-            const json = await CashuDevKitModule.meltMpp(
-                bolt11,
-                options ? JSON.stringify(options) : undefined,
-                maxFee
-            );
             return JSON.parse(json);
         } catch (error) {
             throw mapCDKError(error);

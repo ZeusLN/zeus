@@ -204,8 +204,10 @@ dependencies {
 
     implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
 
-    // CashuDevKit - Cashu wallet FFI bindings
+    // CashuDevKit - native libs (cdk-android) + Kotlin bindings (cdk-jvm),
+    // vendored from Maven Central by fetch-libraries.sh
     implementation files("../cdk/cashudevkit.aar")
+    implementation files("../cdk/cdk-jvm.jar")
     // Zeus Cashu Restore - standalone NUT-13 restore for v1 legacy seeds
     implementation files("../zeus-restore/zeus-cashu-restore.aar")
     // CDK / LDK Node dependencies

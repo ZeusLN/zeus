@@ -59,7 +59,7 @@ import CashuUtils, {
     MultimintProgressCallback,
     MultinutPaymentStep
 } from '../utils/CashuUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -423,8 +423,22 @@ export default class CashuStore {
         try {
             await CashuDevKit.addMint(normalizedUrl);
             this.addedMintsCache.add(normalizedUrl);
+            runInAction(() => {
+                if (this.cashuWallets[normalizedUrl]) {
+                    this.cashuWallets[normalizedUrl].errorConnecting = false;
+                }
+            });
         } catch (e) {
-            // Don't cache failures - allow retries on subsequent calls
+            // Don't cache failures - allow retries on subsequent calls.
+            // Rethrow so callers fail at the first broken step instead of
+            // a later, more confusing one.
+            console.error(`CDK: Failed to add mint ${normalizedUrl}:`, e);
+            runInAction(() => {
+                if (this.cashuWallets[normalizedUrl]) {
+                    this.cashuWallets[normalizedUrl].errorConnecting = true;
+                }
+            });
+            throw e;
         }
     };
 
@@ -822,7 +836,14 @@ export default class CashuStore {
                                 }
                             }
 
-                            // First, add the external quote to CDK's database with secret key
+                            // First, add the external quote to CDK's database with secret key.
+                            // When the key equals CDK's seed prefix (v2-bip39
+                            // wallets), the native side stores the quote
+                            // keyless with cdk's NpubCash marker instead, to
+                            // dodge cdk's legacy npubcash scrub (cdk#2335).
+                            const useSeedPrefixMarker = secretKey
+                                ? this.secretKeyMatchesCdkSeedPrefix(secretKey)
+                                : false;
                             await CashuDevKit.addExternalMintQuote(
                                 mintUrl,
                                 quoteId,
@@ -830,7 +851,8 @@ export default class CashuStore {
                                 externalQuote.request || '',
                                 externalQuote.state || 'PAID',
                                 externalQuote.expiry || 0,
-                                secretKey || undefined
+                                secretKey || undefined,
+                                useSeedPrefixMarker
                             );
                             if (__DEV__) {
                                 console.log(
@@ -1030,10 +1052,12 @@ export default class CashuStore {
     private classifyMppRejection = (body: string): MultimintSkipReason => {
         const lower = (body || '').toLowerCase();
         // Mints refuse MPP for invoices they themselves issued. Nutshell
-        // returns "internal mpp not allowed"; other implementations may
-        // phrase it as a self-payment.
+        // returns "internal mpp not allowed"; cdk-mintd returns
+        // "Multi-Part Internal Melt Quotes are not supported"; other
+        // implementations may phrase it as a self-payment.
         if (
             lower.includes('internal mpp not allowed') ||
+            lower.includes('internal melt quote') ||
             lower.includes('self payment') ||
             lower.includes('self-payment')
         ) {
@@ -2709,6 +2733,9 @@ export default class CashuStore {
         }
 
         delete this.cashuWallets[mintUrl];
+        // Evict from the ensureMintAdded cache so later flows cannot treat
+        // the removed mint as still present
+        this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
         const updatedMintUrls = await CashuDevKit.getMintUrls();
         runInAction(() => {
             this.mintUrls = updatedMintUrls;
@@ -3041,9 +3068,20 @@ export default class CashuStore {
     @action
     public checkPendingItems = async () => {
         InteractionManager.runAfterInteractions(async () => {
+            // Skip items for mints that are no longer configured: polling
+            // them goes through ensureMintAdded, which would re-add a
+            // removed mint on the next boot
+            const knownMints = new Set(
+                this.mintUrls.map((url) => this.normalizeMintUrl(url))
+            );
+
             // Check pending invoices
             const pendingInvoices = this.invoices?.filter(
-                (invoice) => !invoice.isPaid && !invoice.isExpired
+                (invoice) =>
+                    !invoice.isPaid &&
+                    !invoice.isExpired &&
+                    (!invoice.mintUrl ||
+                        knownMints.has(this.normalizeMintUrl(invoice.mintUrl)))
             );
             if (pendingInvoices && pendingInvoices.length > 0) {
                 for (const invoice of pendingInvoices) {
@@ -3063,7 +3101,10 @@ export default class CashuStore {
 
             // Check unspent sent tokens
             const unspentSentTokens = this.sentTokens?.filter(
-                (token) => !token.spent
+                (token) =>
+                    !token.spent &&
+                    (!token.mint ||
+                        knownMints.has(this.normalizeMintUrl(token.mint)))
             );
             let tokensUpdated = false;
             if (unspentSentTokens && unspentSentTokens.length > 0) {
@@ -3095,8 +3136,16 @@ export default class CashuStore {
      */
     @action
     public checkSentTokensSpentStatus = async (): Promise<boolean> => {
+        // Same removed-mint gate as checkPendingItems: checkTokenSpent runs
+        // ensureMintAdded, which would re-add a removed mint
+        const knownMints = new Set(
+            this.mintUrls.map((url) => this.normalizeMintUrl(url))
+        );
         const unspentSentTokens = this.sentTokens?.filter(
-            (token) => !token.spent
+            (token) =>
+                !token.spent &&
+                (!token.mint ||
+                    knownMints.has(this.normalizeMintUrl(token.mint)))
         );
 
         let tokensUpdated = false;
@@ -3273,9 +3322,13 @@ export default class CashuStore {
                     ? JSON.parse(storedMintUrls)
                     : [];
 
-                // If no mints in local storage (e.g. fresh recovery),
-                // try to restore mint list from Nostr backup
-                if (localMintUrls.length === 0) {
+                // If mints have never been stored locally (fresh install
+                // or recovery), try to restore the mint list from Nostr
+                // backup. A stored empty list means the user removed every
+                // mint; treating it as fresh would resurrect the removed
+                // mints from the stale relay backup, since empty lists are
+                // deliberately never published
+                if (!storedMintUrls) {
                     try {
                         const nostrMints = await this.nostrRestoreMints();
                         if (nostrMints && nostrMints.length > 0) {
@@ -3609,7 +3662,11 @@ export default class CashuStore {
             if (
                 initialMintUrls &&
                 initialMintUrls.length > 0 &&
-                this.mintUrls.length === 0
+                this.mintUrls.length === 0 &&
+                // Same fresh-state discriminator as the Nostr restore above:
+                // a stored empty list means the user removed every mint, so
+                // onboarding mints must not come back
+                !storedMintUrls
             ) {
                 console.log(
                     'Adding initial mints from onboarding:',
@@ -3685,6 +3742,25 @@ export default class CashuStore {
             return null;
         }
         return privkey;
+    };
+
+    /**
+     * Whether the given P2PK secret key is byte-identical to the CDK
+     * wallet's seed prefix (seed[0..32]). cdk's legacy NpubCash heuristic
+     * claims such keys as its own, so quotes carrying them must use the
+     * quote-key marker workaround instead of storing the key. v1 wallets
+     * derive their key from LND seed bytes [32:64] and won't match, so
+     * their key is stored on the quote and signs correctly.
+     * See https://github.com/cashubtc/cdk/issues/2335
+     */
+    private secretKeyMatchesCdkSeedPrefix = (secretKeyHex: string): boolean => {
+        const mnemonic = this.getCDKMnemonic();
+        if (!mnemonic) return false;
+        const seed = bip39scure.mnemonicToSeedSync(mnemonic);
+        return (
+            bytesToHex(seed.slice(0, 32)).toLowerCase() ===
+            secretKeyHex.toLowerCase()
+        );
     };
 
     @action
@@ -3853,7 +3929,7 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log('Cashu createInvoice err', e);
             }
-            const error_msg = e?.message || e?.toString() || 'Unknown error';
+            const error_msg = cashuErrorForDisplay(e) || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
@@ -4399,7 +4475,7 @@ export default class CashuStore {
 
             return payment;
         } catch (err: any) {
-            const errorMsg = String(err?.message);
+            const errorMsg = cashuErrorForDisplay(err);
             console.error('CDK payLnInvoiceFromEcash error:', err);
             if (!isDonationPayment) {
                 runInAction(() => {
@@ -4665,9 +4741,9 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.paymentError = true;
-                this.paymentErrorMsg =
-                    firstFailure ||
-                    localeString('stores.CashuStore.errorPayingInvoice');
+                this.paymentErrorMsg = firstFailure
+                    ? cashuErrorForDisplay(firstFailure)
+                    : localeString('stores.CashuStore.errorPayingInvoice');
                 this.loading = false;
             });
 
@@ -4805,9 +4881,9 @@ export default class CashuStore {
             console.error('Error checking token spent status:', error);
             runInAction(() => {
                 this.error = true;
-                this.error_msg =
-                    errorMessage ||
-                    localeString('stores.CashuStore.checkSpentError');
+                this.error_msg = errorMessage
+                    ? cashuErrorForDisplay(errorMessage)
+                    : localeString('stores.CashuStore.checkSpentError');
             });
             return false;
         }
@@ -5402,7 +5478,7 @@ export default class CashuStore {
                 this.error = true;
                 this.error_msg = `${localeString(
                     'stores.CashuStore.sweepError'
-                )} (${mintUrl}): ${error.message || error.toString()}`;
+                )} (${mintUrl}): ${cashuErrorForDisplay(error)}`;
             });
             return false;
         }
@@ -5529,7 +5605,7 @@ export default class CashuStore {
             return { token, decoded };
         } catch (e: any) {
             const errorMsg =
-                e?.message ||
+                cashuErrorForDisplay(e) ||
                 localeString('stores.CashuStore.errorMintingToken');
             console.error('CDK mintToken error:', e);
             runInAction(() => {

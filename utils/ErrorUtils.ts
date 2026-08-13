@@ -56,10 +56,16 @@ const parseLdkNodeError = (error: any): string => {
 };
 
 // Parses CashuDevKit FFI error strings from both platforms into clean messages.
-// iOS:     "CashuDevKit.FfiError.Generic(message: \"actual message\")" (UniFFI
-//          generates errorDescription = String(reflecting: self) which leaks the
-//          fully-qualified type whenever the generic catch block fires).
-// Android: "uniffi.cdk_ffi.FfiException$Generic: actual message"
+// cdk 0.17.x collapsed the FFI error into two variants, Cdk(code, errorMessage)
+// and Internal(errorMessage), and the Kotlin bindings moved from the
+// uniffi.cdk_ffi package to org.cashudevkit. The native modules normally
+// unwrap these before rejecting, but raw shapes can still leak via generic
+// catch paths:
+// iOS:     "CashuDevKit.FfiError.Cdk(code: 20001, errorMessage: \"actual message\")"
+//          (UniFFI generates errorDescription = String(reflecting: self))
+// Android: "org.cashudevkit.FfiException$Cdk: code=20001, errorMessage=actual message"
+// Pre-0.17 shapes ("...FfiError.Generic(message: ...)",
+// "uniffi.cdk_ffi.FfiException$Generic: ...") are kept for robustness.
 const parseCashuDevKitError = (error: any): string => {
     const str =
         typeof error === 'string'
@@ -68,7 +74,7 @@ const parseCashuDevKitError = (error: any): string => {
     if (!str) return str;
 
     const iosWithAssoc = str.match(
-        /CashuDevKit\.FfiError\.\w+\(message:\s*"([\s\S]+?)"\)/
+        /CashuDevKit\.FfiError\.\w+\((?:code:\s*\d+,\s*)?(?:message|errorMessage):\s*"([\s\S]+?)"\)/
     );
     if (iosWithAssoc) return extractMintDetail(iosWithAssoc[1].trim());
 
@@ -76,16 +82,30 @@ const parseCashuDevKitError = (error: any): string => {
     if (iosBare) return humanizeVariantName(iosBare[1]);
 
     const androidMatch = str.match(
-        /uniffi\.cdk_ffi\.FfiException[.$](\w+)(?::\s*([\s\S]+))?/
+        /(?:uniffi\.cdk_ffi|org\.cashudevkit)\.FfiException[.$](\w+)(?::\s*([\s\S]+))?/
     );
     if (androidMatch) {
-        const inner = androidMatch[2]?.trim();
+        // Kotlin's Internal variant formats its message as
+        // "errorMessage=<text>" with no code prefix; strip the envelope
+        const inner = androidMatch[2]?.trim().replace(/^errorMessage=\s*/, '');
         return inner
             ? extractMintDetail(inner)
             : humanizeVariantName(androidMatch[1]);
     }
 
     return extractMintDetail(str);
+};
+
+// Hard cap on Cashu error text bound for direct display. Mint failures can
+// carry entire JSON documents in the error detail (e.g. an unparseable
+// /v1/info body); the parsed message is truncated so a raw dump can never
+// fill the screen.
+const CASHU_ERROR_DISPLAY_LIMIT = 300;
+
+const cashuErrorForDisplay = (error: any): string => {
+    const parsed = parseCashuDevKitError(error);
+    if (parsed.length <= CASHU_ERROR_DISPLAY_LIMIT) return parsed;
+    return `${parsed.slice(0, CASHU_ERROR_DISPLAY_LIMIT).trimEnd()}…`;
 };
 
 // "InsufficientFunds" -> "Insufficient funds"
@@ -102,7 +122,7 @@ const humanizeVariantName = (variant: string): string => {
 // to just the detail, capitalized.
 const extractMintDetail = (msg: string): string => {
     const detailMatch = msg.match(
-        /code:\s*\d+,\s*(?:detail|error):\s*([\s\S]+)$/i
+        /code[:=]\s*\d+,\s*(?:detail|error|errorMessage)[:=]\s*([\s\S]+)$/i
     );
     if (!detailMatch) return msg;
 
@@ -168,4 +188,9 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     return baseError;
 };
 
-export { errorToUserFriendly, parseLdkNodeError, parseCashuDevKitError };
+export {
+    errorToUserFriendly,
+    parseLdkNodeError,
+    parseCashuDevKitError,
+    cashuErrorForDisplay
+};

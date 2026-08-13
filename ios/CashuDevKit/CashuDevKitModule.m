@@ -73,6 +73,7 @@ RCT_EXTERN_METHOD(addExternalMintQuote:(NSString *)mintUrl
                   state:(NSString *)state
                   expiry:(nonnull NSNumber *)expiry
                   secretKey:(NSString * _Nullable)secretKey
+                  useSeedPrefixMarker:(BOOL)useSeedPrefixMarker
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
@@ -102,12 +103,6 @@ RCT_EXTERN_METHOD(checkMeltQuote:(NSString *)mintUrl
 
 RCT_EXTERN_METHOD(melt:(NSString *)mintUrl
                   quoteId:(NSString *)quoteId
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(meltMpp:(NSString *)bolt11
-                  optionsJson:(NSString * _Nullable)optionsJson
-                  maxFee:(nonnull NSNumber *)maxFee
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

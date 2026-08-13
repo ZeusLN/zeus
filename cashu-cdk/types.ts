@@ -259,7 +259,8 @@ export interface CashuDevKitNativeModule {
         request: string,
         state: string,
         expiry: number,
-        secretKey?: string
+        secretKey?: string,
+        useSeedPrefixMarker?: boolean
     ): Promise<boolean>;
     mint(
         mintUrl: string,
@@ -280,11 +281,6 @@ export interface CashuDevKitNativeModule {
     ): Promise<string>;
     checkMeltQuote(mintUrl: string, quoteId: string): Promise<string>;
     melt(mintUrl: string, quoteId: string): Promise<string>;
-    meltMpp(
-        bolt11: string,
-        optionsJson?: string,
-        maxFee?: number
-    ): Promise<string>;
     meltPartial(
         mintUrl: string,
         bolt11: string,

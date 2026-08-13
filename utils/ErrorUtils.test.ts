@@ -1,7 +1,8 @@
 import {
     errorToUserFriendly,
     parseLdkNodeError,
-    parseCashuDevKitError
+    parseCashuDevKitError,
+    cashuErrorForDisplay
 } from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
@@ -457,6 +458,69 @@ describe('ErrorUtils', () => {
                     'CashuDevKit.FfiError.PaymentFailed(message: "no route to recipient")'
                 )
             ).toEqual('no route to recipient');
+        });
+
+        // cdk 0.17.x error shapes: FfiError collapsed to Cdk(code, errorMessage)
+        // and Internal(errorMessage); Kotlin package moved to org.cashudevkit
+
+        it('extracts errorMessage from iOS 0.17.x FfiError.Cdk with code', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Cdk(code: 20001, errorMessage: "Quote not paid")'
+                )
+            ).toEqual('Quote not paid');
+        });
+
+        it('extracts errorMessage from iOS 0.17.x FfiError.Internal', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Internal(errorMessage: "Insufficient funds")'
+                )
+            ).toEqual('Insufficient funds');
+        });
+
+        it('extracts errorMessage from Android 0.17.x FfiException.Cdk envelope', () => {
+            expect(
+                parseCashuDevKitError(
+                    'org.cashudevkit.FfiException$Cdk: code=20005, errorMessage=Quote pending'
+                )
+            ).toEqual('Quote pending');
+        });
+
+        it('extracts errorMessage from Android 0.17.x FfiException.Internal envelope', () => {
+            expect(
+                parseCashuDevKitError(
+                    'org.cashudevkit.FfiException$Internal: errorMessage=timed out connecting to mint'
+                )
+            ).toEqual('timed out connecting to mint');
+        });
+
+        it('strips a bare code=/errorMessage= envelope', () => {
+            expect(
+                parseCashuDevKitError(
+                    'code=20001, errorMessage=insufficient inputs provided'
+                )
+            ).toEqual('Insufficient inputs provided');
+        });
+    });
+
+    describe('cashuErrorForDisplay', () => {
+        it('passes short parsed messages through unchanged', () => {
+            expect(
+                cashuErrorForDisplay(
+                    'CashuDevKit.FfiError.Cdk(code: 20001, errorMessage: "Quote not paid")'
+                )
+            ).toEqual('Quote not paid');
+        });
+
+        it('truncates oversized error bodies so raw dumps cannot fill the screen', () => {
+            const jsonDump = `Error creating invoice: ${JSON.stringify({
+                contact: [{ info: 'npub…', method: 'nostr' }],
+                description: 'x'.repeat(400)
+            })}`;
+            const result = cashuErrorForDisplay(jsonDump);
+            expect(result.length).toBeLessThanOrEqual(301);
+            expect(result.endsWith('…')).toBe(true);
         });
     });
 });

@@ -19,7 +19,7 @@ class CashuDevKitPackage : ReactPackage {
          */
         fun isAvailable(): Boolean {
             return try {
-                Class.forName("org.cashudevkit.MultiMintWallet")
+                Class.forName("org.cashudevkit.WalletRepository")
                 true
             } catch (e: ClassNotFoundException) {
                 Log.w(TAG, "CashuDevKit library not available: ${e.message}")
