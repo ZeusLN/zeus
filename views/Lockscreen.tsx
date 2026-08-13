@@ -15,6 +15,7 @@ import RNRestart from 'react-native-restart';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
+import LoadingIndicator from '../components/LoadingIndicator';
 import Pin from '../components/Pin';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
@@ -60,6 +61,7 @@ interface LockscreenState {
     deletePassword: boolean;
     deleteDuressPassword: boolean;
     authenticationAttempts: number;
+    wiping: boolean;
 }
 
 const maxAuthenticationAttempts = 5;
@@ -88,7 +90,8 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin: false,
             deletePassword: false,
             deleteDuressPassword: false,
-            authenticationAttempts: 0
+            authenticationAttempts: 0,
+            wiping: false
         };
     }
 
@@ -283,6 +286,10 @@ export default class Lockscreen extends React.Component<
         } = this.state;
         const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
+        // a wipe is already running; a second submit must not start another
+        // wipe or mutate settings mid-wipe
+        if (this.state.wiping) return;
+
         this.setState({
             error: false
         });
@@ -347,7 +354,12 @@ export default class Lockscreen extends React.Component<
             ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
                 (duressPin && pinAttempt === duressPin))
         ) {
-            SettingsStore.setLoginStatus(true);
+            // never mark the session logged in here: the wipe takes long
+            // enough that an unlocked app would expose the wallet UI (and
+            // the configs being wiped) before the restart lands. Keeping
+            // loggedIn false holds every auth gate shut for the duration -
+            // back-press still exits and the Wallet view renders nothing.
+            this.setState({ wiping: true });
             await this.deleteNodes();
         } else {
             // need to fetch updated settings to get incremented value of
@@ -362,7 +374,9 @@ export default class Lockscreen extends React.Component<
                 authenticationAttempts
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
-                SettingsStore.setLoginStatus(true);
+                // see the duress branch: loggedIn must stay false so the
+                // wallet UI stays gated while the wipe runs
+                this.setState({ wiping: true });
                 // wipe node configs, passwords, and pins
                 await this.authenticationFailure();
             } else {
@@ -516,8 +530,29 @@ export default class Lockscreen extends React.Component<
             deletePin,
             deleteDuressPin,
             deletePassword,
-            deleteDuressPassword
+            deleteDuressPassword,
+            wiping
         } = this.state;
+
+        // neutral cover while the wipe runs, for both the duress and the
+        // failed-attempts paths: an indistinct loading state discloses
+        // nothing about the wipe and leaves nothing interactive until the
+        // restart lands
+        if (wiping) {
+            return (
+                <Screen>
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <LoadingIndicator />
+                    </View>
+                </Screen>
+            );
+        }
 
         return (
             <Screen>
