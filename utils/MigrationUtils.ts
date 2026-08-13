@@ -19,6 +19,8 @@ import {
     DEFAULT_LSPS1_PUBKEY_TESTNET,
     DEFAULT_LSPS1_REST_MAINNET,
     DEFAULT_LSPS1_REST_TESTNET,
+    DEFAULT_LSP_MUTINYNET,
+    DEFAULT_LSPS1_REST_MUTINYNET,
     DEFAULT_SPEEDLOADER,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
@@ -457,6 +459,9 @@ class MigrationsUtils {
         // migrate old default RGS server to new ZEUS RGS server
         await this.migrateRgsDefaultToZeus(newSettings);
 
+        // migrate old default Olympus LSP hosts to new zeuslsp.com hosts
+        await this.migrateOlympusHostsToZeusLsp(newSettings);
+
         return newSettings;
     }
 
@@ -483,6 +488,68 @@ class MigrationsUtils {
         }
         await settingsStore.setSettings(settings);
         await EncryptedStorage.setItem(MOD_KEY_RGS, 'true');
+        return settings;
+    }
+
+    // Rewrite persisted old-default Olympus LSP hosts (lnolymp.us) to the
+    // new zeuslsp.com hosts. Only values still equal to an old default are
+    // touched; custom hosts are left alone. Unset values need no migration —
+    // runtime falls back to the (updated) DEFAULT_* constants. Must run on
+    // both the legacy and modern (zeus-settings-v2) paths.
+    public async migrateOlympusHostsToZeusLsp(settings: any) {
+        const MOD_KEY_ZEUSLSP = 'zeuslsp-hosts-2026';
+        const mod = await EncryptedStorage.getItem(MOD_KEY_ZEUSLSP);
+        if (mod) return settings;
+
+        const hostMigrations: Array<{
+            settingsKey: string;
+            oldHost: string;
+            newHost: string;
+        }> = [
+            {
+                settingsKey: 'lspMainnet',
+                oldHost: 'https://0conf.lnolymp.us',
+                newHost: DEFAULT_LSP_MAINNET
+            },
+            {
+                settingsKey: 'lspTestnet',
+                oldHost: 'https://testnet-0conf.lnolymp.us',
+                newHost: DEFAULT_LSP_TESTNET
+            },
+            {
+                settingsKey: 'lspMutinynet',
+                oldHost: 'https://mutinynet-flow.lnolymp.us',
+                newHost: DEFAULT_LSP_MUTINYNET
+            },
+            {
+                settingsKey: 'lsps1RestMainnet',
+                oldHost: 'https://lsps1.lnolymp.us',
+                newHost: DEFAULT_LSPS1_REST_MAINNET
+            },
+            {
+                settingsKey: 'lsps1RestTestnet',
+                oldHost: 'https://testnet-lsps1.lnolymp.us',
+                newHost: DEFAULT_LSPS1_REST_TESTNET
+            },
+            {
+                settingsKey: 'lsps1RestMutinynet',
+                oldHost: 'https://mutinynet-lsps1.lnolymp.us',
+                newHost: DEFAULT_LSPS1_REST_MUTINYNET
+            }
+        ];
+
+        let changed = false;
+        for (const { settingsKey, oldHost, newHost } of hostMigrations) {
+            if (settings?.[settingsKey] === oldHost) {
+                settings[settingsKey] = newHost;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await settingsStore.setSettings(settings);
+        }
+        await EncryptedStorage.setItem(MOD_KEY_ZEUSLSP, 'true');
         return settings;
     }
 

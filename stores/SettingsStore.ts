@@ -1295,12 +1295,12 @@ export const LNDHUB_AUTH_MODES = [
     { key: 'Alby', value: 'Alby' }
 ];
 
-export const DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us';
-export const DEFAULT_LSP_TESTNET = 'https://testnet-0conf.lnolymp.us';
+export const DEFAULT_LSP_MAINNET = 'https://flow.zeuslsp.com';
+export const DEFAULT_LSP_TESTNET = 'https://flow.testnet.zeuslsp.com';
 
 // LSPS1 REST
-export const DEFAULT_LSPS1_REST_MAINNET = 'https://lsps1.lnolymp.us';
-export const DEFAULT_LSPS1_REST_TESTNET = 'https://testnet-lsps1.lnolymp.us';
+export const DEFAULT_LSPS1_REST_MAINNET = 'https://lsps1.zeuslsp.com';
+export const DEFAULT_LSPS1_REST_TESTNET = 'https://lsps1.testnet.zeuslsp.com';
 
 export const DEFAULT_LSPS1_PUBKEY_MAINNET =
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
@@ -1309,9 +1309,9 @@ export const DEFAULT_LSPS1_PUBKEY_TESTNET =
 export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
-export const DEFAULT_LSP_MUTINYNET = 'https://mutinynet-flow.lnolymp.us';
+export const DEFAULT_LSP_MUTINYNET = 'https://flow.mutinynet.zeuslsp.com';
 export const DEFAULT_LSPS1_REST_MUTINYNET =
-    'https://mutinynet-lsps1.lnolymp.us';
+    'https://lsps1.mutinynet.zeuslsp.com';
 export const DEFAULT_LSPS1_PUBKEY_MUTINYNET =
     '032ae843e4d7d177f151d021ac8044b0636ec72b1ce3ffcde5c04748db2517ab03';
 export const DEFAULT_LSPS1_HOST_MUTINYNET = '45.79.201.241:9735';
@@ -1931,6 +1931,9 @@ export default class SettingsStore {
                 this.settings = parsedSettings;
                 await MigrationsUtils.migrateRgsDefaultToZeus(parsedSettings);
                 await MigrationsUtils.migrateInvoiceExpiryDisplay(
+                    parsedSettings
+                );
+                await MigrationsUtils.migrateOlympusHostsToZeusLsp(
                     parsedSettings
                 );
                 this.settings = parsedSettings;
