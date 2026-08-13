@@ -1,4 +1,4 @@
-import { action, observable, computed, runInAction } from 'mobx';
+import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -75,6 +75,19 @@ export default class SwapStore {
         this.settingsStore = settingsStore;
         initEccLib(ecc);
         this.ECPair = ECPairFactory(ecc);
+
+        reaction(
+            () => this.getHost,
+            (host) => {
+                // only refetch when rates were already fetched this
+                // session; getHost also changes on startup as settings
+                // load and node info resolves, and rates must not be
+                // fetched on startup
+                if (this.fetchedRatesHost && this.fetchedRatesHost !== host) {
+                    this.getSwapFees();
+                }
+            }
+        );
     }
 
     @computed get claimMinerFee(): number {
@@ -186,12 +199,12 @@ export default class SwapStore {
     public getSwapFees = async () => {
         this.loading = true;
         this.apiError = '';
-        this.fetchedRatesHost = this.getHost;
-        console.log(`Fetching fees from: ${this.getHost}`);
+        const host = this.getHost;
+        console.log(`Fetching fees from: ${host}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine`,
+                `${host}/swap/submarine`,
                 this.getHeaders
             );
             const status = response.info().status;
@@ -222,7 +235,7 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/reverse`,
+                `${host}/swap/reverse`,
                 this.getHeaders
             );
             const status = response.info().status;
@@ -249,6 +262,9 @@ export default class SwapStore {
             console.error('Error fetching reverse swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
+        // only record the host once both fetches succeed, so a failed
+        // fetch is retried the next time the Swaps view gains focus
+        if (!this.apiError) this.fetchedRatesHost = host;
         this.loading = false;
     };
 

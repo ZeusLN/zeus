@@ -280,8 +280,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             'focus',
             async () => {
                 // re-fetch rates if the swap host changed since the
-                // last fetch (e.g. returning from Swap Settings)
-                if (SwapStore.fetchedRatesHost !== SwapStore.getHost) {
+                // last fetch (e.g. returning from Swap Settings) or
+                // the last fetch failed (fetchedRatesHost stays unset)
+                if (
+                    !SwapStore.loading &&
+                    SwapStore.fetchedRatesHost !== SwapStore.getHost
+                ) {
                     SwapStore.getSwapFees();
                 }
 
