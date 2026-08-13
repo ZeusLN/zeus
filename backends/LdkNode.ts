@@ -263,16 +263,40 @@ export default class LdkNode {
         // which is confirmed but held back - it must not be counted as
         // unconfirmed or the balance shows as pending forever
         const anchorReserve = balances.totalAnchorChannelsReserveSats || 0;
-        let unconfirmed = new BigNumber(balances.totalOnchainBalanceSats)
-            .minus(balances.spendableOnchainBalanceSats)
-            .minus(anchorReserve);
-        if (unconfirmed.lt(0)) unconfirmed = new BigNumber(0);
+        const total = new BigNumber(balances.totalOnchainBalanceSats);
+
+        let confirmed: BigNumber;
+        if (balances.spendableOnchainBalanceSats > 0) {
+            // spendable is the trusted balance minus the reserve, so adding
+            // the reserve back recovers the confirmed balance exactly
+            confirmed = BigNumber.min(
+                new BigNumber(balances.spendableOnchainBalanceSats).plus(
+                    anchorReserve
+                ),
+                total
+            );
+        } else if (total.isZero()) {
+            confirmed = new BigNumber(0);
+        } else {
+            // spendable saturates at 0 once the trusted balance falls below
+            // the reserve (e.g. right after a fund-max channel open), which
+            // makes confirmed unrecoverable from the aggregate balances -
+            // sum confirmed UTXOs directly instead
+            const utxos = await this.listUnspentWithConfirmations();
+            confirmed = BigNumber.min(
+                utxos.reduce(
+                    (sum, u) =>
+                        u.confirmations > 0 ? sum.plus(u.value_sats) : sum,
+                    new BigNumber(0)
+                ),
+                total
+            );
+        }
+
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
-            confirmed_balance: new BigNumber(balances.totalOnchainBalanceSats)
-                .minus(unconfirmed)
-                .toString(),
-            unconfirmed_balance: unconfirmed.toString()
+            confirmed_balance: confirmed.toString(),
+            unconfirmed_balance: total.minus(confirmed).toString()
         };
     };
 
@@ -1095,9 +1119,11 @@ export default class LdkNode {
     };
 
     /**
-     * Get UTXOs for coin control
+     * List unspent outputs with confirmation counts. WalletUtxo carries no
+     * confirmation height, so look it up from the on-chain payment that
+     * created each UTXO; outputs whose height is unknown report 0.
      */
-    getUTXOs = async (): Promise<any> => {
+    private listUnspentWithConfirmations = async () => {
         const [utxos, payments, status] = await Promise.all([
             LdkNodeInjection.onchain.listUtxos(),
             LdkNodeInjection.payments.listPayments(),
@@ -1105,8 +1131,6 @@ export default class LdkNode {
         ]);
         const bestBlockHeight = status.currentBestBlock_height;
 
-        // WalletUtxo carries no confirmation height, so look it up from
-        // the on-chain payment that created each UTXO
         const confirmationHeights: { [txid: string]: number } = {};
         for (const payment of payments) {
             if (
@@ -1119,24 +1143,34 @@ export default class LdkNode {
             }
         }
 
-        return {
-            utxos: utxos
-                .filter((u) => !u.is_spent)
-                .map((u) => {
-                    const confirmationHeight = confirmationHeights[u.txid];
-                    const confirmations = confirmationHeight
+        return utxos
+            .filter((u) => !u.is_spent)
+            .map((u) => {
+                const confirmationHeight = confirmationHeights[u.txid];
+                return {
+                    ...u,
+                    confirmations: confirmationHeight
                         ? bestBlockHeight - confirmationHeight + 1
-                        : 0;
-                    return {
-                        outpoint: {
-                            txid_str: u.txid,
-                            output_index: u.vout
-                        },
-                        address: u.address,
-                        amount_sat: u.value_sats,
-                        confirmations: confirmations.toString()
-                    };
-                })
+                        : 0
+                };
+            });
+    };
+
+    /**
+     * Get UTXOs for coin control
+     */
+    getUTXOs = async (): Promise<any> => {
+        const utxos = await this.listUnspentWithConfirmations();
+        return {
+            utxos: utxos.map((u) => ({
+                outpoint: {
+                    txid_str: u.txid,
+                    output_index: u.vout
+                },
+                address: u.address,
+                amount_sat: u.value_sats,
+                confirmations: u.confirmations.toString()
+            }))
         };
     };
 
