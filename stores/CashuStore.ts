@@ -2733,6 +2733,9 @@ export default class CashuStore {
         }
 
         delete this.cashuWallets[mintUrl];
+        // Evict from the ensureMintAdded cache so later flows cannot treat
+        // the removed mint as still present
+        this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
         const updatedMintUrls = await CashuDevKit.getMintUrls();
         runInAction(() => {
             this.mintUrls = updatedMintUrls;
@@ -3065,9 +3068,20 @@ export default class CashuStore {
     @action
     public checkPendingItems = async () => {
         InteractionManager.runAfterInteractions(async () => {
+            // Skip items for mints that are no longer configured: polling
+            // them goes through ensureMintAdded, which would re-add a
+            // removed mint on the next boot
+            const knownMints = new Set(
+                this.mintUrls.map((url) => this.normalizeMintUrl(url))
+            );
+
             // Check pending invoices
             const pendingInvoices = this.invoices?.filter(
-                (invoice) => !invoice.isPaid && !invoice.isExpired
+                (invoice) =>
+                    !invoice.isPaid &&
+                    !invoice.isExpired &&
+                    (!invoice.mintUrl ||
+                        knownMints.has(this.normalizeMintUrl(invoice.mintUrl)))
             );
             if (pendingInvoices && pendingInvoices.length > 0) {
                 for (const invoice of pendingInvoices) {
@@ -3087,7 +3101,10 @@ export default class CashuStore {
 
             // Check unspent sent tokens
             const unspentSentTokens = this.sentTokens?.filter(
-                (token) => !token.spent
+                (token) =>
+                    !token.spent &&
+                    (!token.mint ||
+                        knownMints.has(this.normalizeMintUrl(token.mint)))
             );
             let tokensUpdated = false;
             if (unspentSentTokens && unspentSentTokens.length > 0) {
@@ -3119,8 +3136,16 @@ export default class CashuStore {
      */
     @action
     public checkSentTokensSpentStatus = async (): Promise<boolean> => {
+        // Same removed-mint gate as checkPendingItems: checkTokenSpent runs
+        // ensureMintAdded, which would re-add a removed mint
+        const knownMints = new Set(
+            this.mintUrls.map((url) => this.normalizeMintUrl(url))
+        );
         const unspentSentTokens = this.sentTokens?.filter(
-            (token) => !token.spent
+            (token) =>
+                !token.spent &&
+                (!token.mint ||
+                    knownMints.has(this.normalizeMintUrl(token.mint)))
         );
 
         let tokensUpdated = false;
