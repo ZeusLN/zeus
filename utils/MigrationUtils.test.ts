@@ -53,6 +53,10 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_LSPS1_REST_TESTNET: 'https://lsps1.testnet.zeuslsp.com',
     DEFAULT_LSPS1_REST_MUTINYNET: 'https://lsps1.mutinynet.zeuslsp.com',
     DEFAULT_SPEEDLOADER: 'https://egs.lnze.us/',
+    DEFAULT_SWAP_HOST_MAINNET: 'https://api.boltz.exchange/v2',
+    DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
+    LEGACY_ZEUS_SWAP_HOST_MAINNET: 'https://swaps.zeuslsp.com/api/v2',
+    LEGACY_ZEUS_SWAP_HOST_TESTNET: 'https://testnet-swaps.zeuslsp.com/api/v2',
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
         'wss://relay.damus.io',
@@ -337,6 +341,99 @@ describe('MigrationUtils', () => {
                     expirySeconds: '7200'
                 }
             });
+        });
+    });
+
+    describe('migrateSwapHostsToBoltz', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('migrates retired ZEUS swap hosts to the Boltz defaults', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://swaps.zeuslsp.com/api/v2',
+                    hostTestnet: 'https://testnet-swaps.zeuslsp.com/api/v2',
+                    customHost: '',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateSwapHostsToBoltz(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+            expect(settings.swaps.hostTestnet).toBe(
+                'https://api.testnet.boltz.exchange/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(settingsStore.setSettings.mock.calls[0][0]).toBe(settings);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-boltz',
+                'true'
+            );
+        });
+
+        it('leaves non-ZEUS hosts untouched and does not rewrite storage', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://api.middle-way.space/v2',
+                    hostTestnet: 'Custom',
+                    customHost: 'https://my-boltz.local/v2',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateSwapHostsToBoltz(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.middle-way.space/v2'
+            );
+            expect(settings.swaps.hostTestnet).toBe('Custom');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-boltz',
+                'true'
+            );
+        });
+
+        it('only sets the flag when settings have no swaps block', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {};
+
+            await MigrationUtils.migrateSwapHostsToBoltz(settings);
+
+            expect(settings).toEqual({});
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-boltz',
+                'true'
+            );
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://swaps.zeuslsp.com/api/v2'
+                }
+            };
+
+            await MigrationUtils.migrateSwapHostsToBoltz(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://swaps.zeuslsp.com/api/v2'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 

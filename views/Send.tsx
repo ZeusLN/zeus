@@ -28,7 +28,6 @@ import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
-import SwapStore from '../stores/SwapStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
@@ -58,11 +57,9 @@ import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
-import SwapIcon from '../assets/images/SVG/Swap.svg';
 
 import Contact from '../models/Contact';
 import { AdditionalOutput } from '../models/TransactionRequest';
-import BigNumber from 'bignumber.js';
 
 interface SendProps {
     exitSetup: any;
@@ -75,7 +72,6 @@ interface SendProps {
     SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
     UTXOsStore: UTXOsStore;
-    SwapStore: SwapStore;
     route: Route<
         'Send',
         {
@@ -118,7 +114,6 @@ interface SendState {
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
-    validAmountToSwap: boolean;
     nfcSupported: boolean;
 }
 
@@ -130,8 +125,7 @@ interface SendState {
     'NodeInfoStore',
     'SettingsStore',
     'TransactionsStore',
-    'UTXOsStore',
-    'SwapStore'
+    'UTXOsStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -193,12 +187,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             account: 'default',
             additionalOutputs: [],
             fundMax: false,
-            validAmountToSwap: false,
             nfcSupported: false
         };
     }
 
-    async componentDidUpdate(prevProps: SendProps, prevState: SendState) {
+    async componentDidUpdate(prevProps: SendProps) {
         const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
@@ -234,76 +227,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             }
             this.setState(stateUpdate as SendState);
         }
-
-        const { SwapStore } = this.props;
-
-        if (
-            this.state.satAmount !== prevState.satAmount &&
-            this.state.satAmount !== '0'
-        ) {
-            const reverseInfo: any = SwapStore.reverseInfo;
-
-            const validAmountToSwap = this.isAmountValidToSwap(
-                reverseInfo,
-                this.state.satAmount
-            );
-
-            if (validAmountToSwap !== this.state.validAmountToSwap) {
-                this.setState({
-                    validAmountToSwap
-                });
-            }
-        }
     }
-
-    isAmountValidToSwap(
-        reverseInfo: any,
-        requestAmount: number | string | null
-    ): boolean {
-        if (!reverseInfo) {
-            return false;
-        }
-        const serviceFeePct = reverseInfo?.fees?.percentage || 0;
-        const networkFeeBigNum = new BigNumber(
-            reverseInfo?.fees?.minerFees?.claim || 0
-        ).plus(reverseInfo?.fees?.minerFees?.lockup || 0);
-        const networkFee = networkFeeBigNum.toNumber();
-
-        const min = reverseInfo?.limits?.minimal || 0;
-        const max = reverseInfo?.limits?.maximal || 0;
-        const minBN = new BigNumber(min);
-        const maxBN = new BigNumber(max);
-
-        const satAmountNew = new BigNumber(requestAmount || 0);
-
-        let input: any;
-        input = this.calculateSendAmount(
-            satAmountNew,
-            serviceFeePct,
-            networkFee
-        );
-
-        return input.gte(minBN) && input.lte(maxBN);
-    }
-
-    bigCeil = (big: BigNumber): BigNumber => {
-        return big.integerValue(BigNumber.ROUND_CEIL);
-    };
-
-    calculateSendAmount = (
-        receiveAmount: BigNumber,
-        serviceFee: number,
-        minerFee: number
-    ): BigNumber => {
-        if (receiveAmount.isNaN() || receiveAmount.isLessThanOrEqualTo(0)) {
-            return new BigNumber(0);
-        }
-        return this.bigCeil(
-            receiveAmount
-                .plus(minerFee)
-                .div(new BigNumber(1).minus(new BigNumber(serviceFee).div(100)))
-        );
-    };
 
     async componentDidMount() {
         const { SettingsStore, route } = this.props;
@@ -736,7 +660,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             additionalOutputs,
             fundMax,
             account,
-            validAmountToSwap,
             utxos,
             nfcSupported,
             timeoutSeconds
@@ -804,42 +727,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
-                            {transactionType === 'On-chain' &&
-                                BackendUtils.supportsOnchainSends() &&
-                                validAmountToSwap && (
-                                    <View
-                                        style={{
-                                            marginRight: 15
-                                        }}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                // For "all", actual satAmount might be resolved later or be 0 initially.
-                                                // Swaps might need a concrete amount.
-                                                // For now, send what we have. If "all", it might be 0 or a balance.
-                                                const amountForSwap =
-                                                    fundMax &&
-                                                    implementation ===
-                                                        'cln-rest' &&
-                                                    amount === 'all'
-                                                        ? '0' // CLN 'all' is symbolic, swap needs a number or let user input
-                                                        : satAmount || '0';
-                                                navigation.navigate('Swaps', {
-                                                    initialInvoice: destination,
-                                                    initialAmountSats:
-                                                        amountForSwap.toString(),
-                                                    initialReverse: true // LN -> OnChain for sending to an OnChain address
-                                                });
-                                            }}
-                                        >
-                                            <SwapIcon
-                                                fill={themeColor('text')}
-                                                width="36"
-                                                height="26"
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
                             {nfcSupported && (
                                 <View style={{ marginRight: 15 }}>
                                     <TouchableOpacity

@@ -371,7 +371,8 @@ export default class RefundSwap extends React.Component<
                             if (!swapData.lockupTransaction) {
                                 swapData.lockupTransaction =
                                     await SwapStore?.getLockupTransaction(
-                                        swapData.id
+                                        swapData.id,
+                                        swapData.endpoint
                                     );
                             }
 

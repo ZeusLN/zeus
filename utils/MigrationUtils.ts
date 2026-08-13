@@ -22,6 +22,10 @@ import {
     DEFAULT_LSP_MUTINYNET,
     DEFAULT_LSPS1_REST_MUTINYNET,
     DEFAULT_SPEEDLOADER,
+    DEFAULT_SWAP_HOST_MAINNET,
+    DEFAULT_SWAP_HOST_TESTNET,
+    LEGACY_ZEUS_SWAP_HOST_MAINNET,
+    LEGACY_ZEUS_SWAP_HOST_TESTNET,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
@@ -462,6 +466,9 @@ class MigrationsUtils {
         // migrate old default Olympus LSP hosts to new zeuslsp.com hosts
         await this.migrateOlympusHostsToZeusLsp(newSettings);
 
+        // migrate retired ZEUS swap server hosts to Boltz
+        await this.migrateSwapHostsToBoltz(newSettings);
+
         return newSettings;
     }
 
@@ -550,6 +557,30 @@ class MigrationsUtils {
             await settingsStore.setSettings(settings);
         }
         await EncryptedStorage.setItem(MOD_KEY_ZEUSLSP, 'true');
+        return settings;
+    }
+
+    // migrate users pointed at the retired ZEUS swap server to Boltz.
+    // Must run on both the legacy and modern (zeus-settings-v2) paths.
+    public async migrateSwapHostsToBoltz(settings: any) {
+        const MOD_KEY_SWAP_HOSTS = 'swap-hosts-boltz';
+        const modSwapHosts = await EncryptedStorage.getItem(MOD_KEY_SWAP_HOSTS);
+        if (modSwapHosts) return settings;
+
+        let changed = false;
+        if (settings?.swaps) {
+            if (settings.swaps.hostMainnet === LEGACY_ZEUS_SWAP_HOST_MAINNET) {
+                settings.swaps.hostMainnet = DEFAULT_SWAP_HOST_MAINNET;
+                changed = true;
+            }
+            if (settings.swaps.hostTestnet === LEGACY_ZEUS_SWAP_HOST_TESTNET) {
+                settings.swaps.hostTestnet = DEFAULT_SWAP_HOST_TESTNET;
+                changed = true;
+            }
+        }
+
+        if (changed) await settingsStore.setSettings(settings);
+        await EncryptedStorage.setItem(MOD_KEY_SWAP_HOSTS, 'true');
         return settings;
     }
 

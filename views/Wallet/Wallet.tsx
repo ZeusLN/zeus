@@ -1309,8 +1309,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // check for swaps after node info is fetched
+        // NOTE: swap rates are only fetched from the Swaps view
         if (connecting) {
-            SwapStore.getSwapFees();
             SwapStore.fetchAndUpdateSwaps();
         }
 

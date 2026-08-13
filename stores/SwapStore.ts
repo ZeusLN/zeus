@@ -63,6 +63,9 @@ export default class SwapStore {
     @observable public swapsLoading = false;
     @observable public DERIVATION_PATH = 'm/44/0/0/0';
     @observable ECPair: ECPairAPI;
+    // host the swap rates were last fetched from; rates are only
+    // fetched from the Swaps view, never on startup
+    @observable public fetchedRatesHost: string | undefined;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -75,7 +78,15 @@ export default class SwapStore {
 
         reaction(
             () => this.getHost,
-            () => this.getSwapFees()
+            (host) => {
+                // only refetch when rates were already fetched this
+                // session; getHost also changes on startup as settings
+                // load and node info resolves, and rates must not be
+                // fetched on startup
+                if (this.fetchedRatesHost && this.fetchedRatesHost !== host) {
+                    this.getSwapFees();
+                }
+            }
         );
     }
 
@@ -188,11 +199,12 @@ export default class SwapStore {
     public getSwapFees = async () => {
         this.loading = true;
         this.apiError = '';
-        console.log(`Fetching fees from: ${this.getHost}`);
+        const host = this.getHost;
+        console.log(`Fetching fees from: ${host}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine`,
+                `${host}/swap/submarine`,
                 this.getHeaders
             );
             const status = response.info().status;
@@ -223,7 +235,7 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/reverse`,
+                `${host}/swap/reverse`,
                 this.getHeaders
             );
             const status = response.info().status;
@@ -250,15 +262,19 @@ export default class SwapStore {
             console.error('Error fetching reverse swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
+        // only record the host once both fetches succeed, so a failed
+        // fetch is retried the next time the Swaps view gains focus
+        if (!this.apiError) this.fetchedRatesHost = host;
         this.loading = false;
     };
 
     @action
-    public getLockupTransaction = async (id: string) => {
+    public getLockupTransaction = async (id: string, endpoint?: string) => {
         try {
+            const host = endpoint || this.getHost;
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine/${id}/transaction`,
+                `${host}/swap/submarine/${id}/transaction`,
                 this.getHeaders
             );
 
@@ -591,10 +607,15 @@ export default class SwapStore {
 
                 if (shouldSkip) continue;
 
+                // poll the server the swap was created on; the currently
+                // selected provider may differ (e.g. after the ZEUS ->
+                // Boltz host migration) and won't know this swap's ID
+                const host = swap.endpoint || this.getHost;
+
                 try {
                     const response = await ReactNativeBlobUtil.fetch(
                         'GET',
-                        `${this.getHost}/swap/${swap.id}`,
+                        `${host}/swap/${swap.id}`,
                         this.getHeaders
                     );
 
