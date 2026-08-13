@@ -373,7 +373,8 @@ export default class SwapDetails extends React.Component<
                         !this.state.swapData?.lockupTransaction?.hex
                     ) {
                         const lockupTx = await SwapStore?.getLockupTransaction(
-                            createdResponse.id
+                            createdResponse.id,
+                            endpoint
                         );
                         this.setState((prevState) => ({
                             swapData: new Swap({

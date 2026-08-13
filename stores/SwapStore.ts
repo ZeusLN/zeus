@@ -269,11 +269,12 @@ export default class SwapStore {
     };
 
     @action
-    public getLockupTransaction = async (id: string) => {
+    public getLockupTransaction = async (id: string, endpoint?: string) => {
         try {
+            const host = endpoint || this.getHost;
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine/${id}/transaction`,
+                `${host}/swap/submarine/${id}/transaction`,
                 this.getHeaders
             );
 
@@ -606,10 +607,15 @@ export default class SwapStore {
 
                 if (shouldSkip) continue;
 
+                // poll the server the swap was created on; the currently
+                // selected provider may differ (e.g. after the ZEUS ->
+                // Boltz host migration) and won't know this swap's ID
+                const host = swap.endpoint || this.getHost;
+
                 try {
                     const response = await ReactNativeBlobUtil.fetch(
                         'GET',
-                        `${this.getHost}/swap/${swap.id}`,
+                        `${host}/swap/${swap.id}`,
                         this.getHeaders
                     );
 
