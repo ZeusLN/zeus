@@ -775,7 +775,7 @@ class CashuDevKitModule: RCTEventEmitter {
 
         Task {
             do {
-                let url = MintUrl(url: mintUrl)
+                let url = MintUrl(url: normalizeMintUrl(mintUrl))
                 let amt = Amount(value: UInt64(truncating: amount))
 
                 // Map state string to QuoteState enum

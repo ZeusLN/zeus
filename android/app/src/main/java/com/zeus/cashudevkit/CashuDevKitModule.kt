@@ -793,7 +793,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                val url = MintUrl(mintUrl)
+                val url = MintUrl(normalizeMintUrl(mintUrl))
                 val amt = Amount(amount.toLong().toULong())
 
                 // Map state string to QuoteState enum
