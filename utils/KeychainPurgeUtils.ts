@@ -193,6 +193,11 @@ const deriveDynamicLegacyKeys = async (): Promise<string[]> => {
  * copies of app data. On iOS this is authoritative (native enumeration of
  * both keychain partitions); on Android, which has no synchronizable
  * partition, candidates come from the reconstructed legacy key catalog.
+ *
+ * The iCloud-synced copies exist because of the react-native-keychain
+ * cloudSync bug (oblador/react-native-keychain#800). This consent-gated
+ * purge, the desync migration, and the patch are transitional; retirement
+ * is tracked in ZeusLN/zeus#4403.
  */
 export const scanPurgeCandidates = async (): Promise<PurgeScan> => {
     const hasLegacyEncryptedSettings = !!(await EncryptedStorage.getItem(
