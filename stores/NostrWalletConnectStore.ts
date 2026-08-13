@@ -1801,9 +1801,17 @@ export default class NostrWalletConnectStore {
             let oldestTime = Infinity;
             for (let i = 0; i < connection.activity.length; i++) {
                 const activity = connection.activity[i];
-                // Pending pay_invoice entries hold budget via pendingSpendSats and
-                // must survive until reconcilePendingPayInvoiceActivities settles them.
-                if (activity.status === 'pending') {
+                // Pending pay_invoice holds budget via pendingSpendSats until
+                // reconcilePendingPayInvoiceActivities settles it. Active pending
+                // make_invoice must stay for the outstanding cap. Expired or
+                // already-paid pending make_invoice is prunable: those entries are
+                // only reconciled from user-driven paths, so a make_invoice-only
+                // client would otherwise grow activity without bound.
+                if (
+                    activity.status === 'pending' &&
+                    (activity.type !== 'make_invoice' ||
+                        this.isActivePendingMakeInvoice(activity))
+                ) {
                     continue;
                 }
                 const createdAt = activity?.createdAt?.getTime() ?? 0;
@@ -3164,6 +3172,7 @@ export default class NostrWalletConnectStore {
             });
         }
 
+        this.pruneConnectionActivity(connection);
         this.findAndUpdateConnection(connection);
         return true;
     }

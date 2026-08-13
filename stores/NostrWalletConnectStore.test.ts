@@ -1218,6 +1218,20 @@ describe('NostrWalletConnectStore make_invoice limits', () => {
             (store as any).makeInvoiceTimestampsByConnection.get(connection.id)
         ).toHaveLength(1);
     });
+
+    it('rate limits when the per-window timestamp cap is reached', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store);
+        const now = Date.now();
+        (store as any).makeInvoiceTimestampsByConnection.set(
+            connection.id,
+            Array.from({ length: 5 }, () => now)
+        );
+
+        const result = (store as any).checkMakeInvoiceLimits(connection);
+
+        expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
+    });
 });
 
 describe('NostrWalletConnectStore activity prune', () => {
@@ -1282,5 +1296,22 @@ describe('NostrWalletConnectStore activity prune', () => {
         (store as any).pruneConnectionActivity(connection);
 
         expect(connection.activity).toHaveLength(101);
+    });
+
+    it('prunes expired pending make_invoice entries past the cap', () => {
+        const store = buildMakeInvoiceTestStore();
+        const connection = seedMakeInvoiceConnection(store, {
+            activity: Array.from({ length: 150 }, (_, i) =>
+                makePendingMakeInvoiceActivity(
+                    `lnbc-expired-${i}`,
+                    new Date('2020-01-01T00:00:00Z'),
+                    { createdAt: new Date(2024, 0, 1, 0, 0, i) }
+                )
+            )
+        });
+        // the outstanding cap never trips, so the client keeps creating:
+        expect((store as any).checkMakeInvoiceLimits(connection)).toBeNull();
+        (store as any).pruneConnectionActivity(connection);
+        expect(connection.activity.length).toBeLessThanOrEqual(100);
     });
 });
