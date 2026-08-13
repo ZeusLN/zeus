@@ -151,9 +151,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
 
         val url = MintUrl(normalized)
-        if (!currentRepo.hasMint(url)) {
-            currentRepo.createWallet(url, walletUnit, null)
-        }
+        // hasMint matches any unit for the URL while getWallet is keyed on
+        // (URL, unit), so a mint loaded only under a non-sat unit would skip
+        // creation here and then miss. createWallet is a no-network map
+        // insert, so create unconditionally instead of guarding
+        currentRepo.createWallet(url, walletUnit, null)
         val wallet = currentRepo.getWallet(url, walletUnit)
         wallets[normalized] = wallet
         return wallet

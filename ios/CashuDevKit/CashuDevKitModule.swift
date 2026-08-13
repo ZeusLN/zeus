@@ -166,9 +166,11 @@ class CashuDevKitModule: RCTEventEmitter {
 
         let url = MintUrl(url: normalized)
         let unit = walletQueue.sync { walletUnit }
-        if !(await repo.hasMint(mintUrl: url)) {
-            try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
-        }
+        // hasMint matches any unit for the URL while getWallet is keyed on
+        // (URL, unit), so a mint loaded only under a non-sat unit would skip
+        // creation here and then miss. createWallet is a no-network map
+        // insert, so create unconditionally instead of guarding
+        try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
         let wallet = try await repo.getWallet(mintUrl: url, unit: unit)
         walletQueue.sync { wallets[normalized] = wallet }
         return wallet
