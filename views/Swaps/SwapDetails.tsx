@@ -142,6 +142,16 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
+            // legacy swaps predate claimMinerFee being stored at
+            // creation; fetch rates so the claim fee does not fall
+            // back to zero
+            if (
+                swapData.claimMinerFee == null &&
+                !this.props.SwapStore?.claimMinerFee
+            ) {
+                this.props.SwapStore?.getSwapFees();
+            }
+
             this.getReverseSwapUpdates(swapData, swapData.isSubmarineSwap);
         }
     }
@@ -659,7 +669,10 @@ export default class SwapDetails extends React.Component<
                 endpoint,
                 transactionHex,
                 feeRate: Number(fee || 2),
-                minerFee: this.props.SwapStore?.claimMinerFee || 0,
+                minerFee:
+                    this.state.swapData?.claimMinerFee ??
+                    this.props.SwapStore?.claimMinerFee ??
+                    0,
                 isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
             if (!claim) return false;
