@@ -3322,9 +3322,13 @@ export default class CashuStore {
                     ? JSON.parse(storedMintUrls)
                     : [];
 
-                // If no mints in local storage (e.g. fresh recovery),
-                // try to restore mint list from Nostr backup
-                if (localMintUrls.length === 0) {
+                // If mints have never been stored locally (fresh install
+                // or recovery), try to restore the mint list from Nostr
+                // backup. A stored empty list means the user removed every
+                // mint; treating it as fresh would resurrect the removed
+                // mints from the stale relay backup, since empty lists are
+                // deliberately never published
+                if (!storedMintUrls) {
                     try {
                         const nostrMints = await this.nostrRestoreMints();
                         if (nostrMints && nostrMints.length > 0) {
@@ -3658,7 +3662,11 @@ export default class CashuStore {
             if (
                 initialMintUrls &&
                 initialMintUrls.length > 0 &&
-                this.mintUrls.length === 0
+                this.mintUrls.length === 0 &&
+                // Same fresh-state discriminator as the Nostr restore above:
+                // a stored empty list means the user removed every mint, so
+                // onboarding mints must not come back
+                !storedMintUrls
             ) {
                 console.log(
                     'Adding initial mints from onboarding:',
