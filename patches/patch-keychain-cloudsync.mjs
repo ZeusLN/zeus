@@ -10,6 +10,8 @@
 //
 // Upstream: react-native-keychain 10.0.0 (latest at time of writing) is
 // affected; the presence check dates to the feature's introduction in v9.1.0.
+// Reported upstream: https://github.com/oblador/react-native-keychain/issues/800
+// Remove this patch once fixed: https://github.com/ZeusLN/zeus/issues/4403
 //
 // This patch is security-load-bearing: if the expected pattern is missing
 // (e.g. after a dependency bump), it THROWS so postinstall fails loudly
