@@ -659,6 +659,25 @@ export default class SwapDetails extends React.Component<
         fee: string
     ): Promise<boolean> => {
         try {
+            const { SwapStore } = this.props;
+
+            // legacy swaps predate claimMinerFee being stored at
+            // creation; the mount-time rates prefetch may not have
+            // resolved yet, so wait for it here rather than building
+            // the claim with a zero miner fee
+            let minerFee =
+                this.state.swapData?.claimMinerFee ??
+                SwapStore?.claimMinerFee ??
+                0;
+            if (!minerFee) {
+                try {
+                    await SwapStore?.getSwapFees();
+                    minerFee = SwapStore?.claimMinerFee ?? 0;
+                } catch (e) {
+                    console.log('Error fetching rates for claim fee', e);
+                }
+            }
+
             const claim = ReverseClaimTransaction.build({
                 swap: new Swap({
                     ...createdResponse,
@@ -670,10 +689,7 @@ export default class SwapDetails extends React.Component<
                 endpoint,
                 transactionHex,
                 feeRate: Number(fee || 2),
-                minerFee:
-                    this.state.swapData?.claimMinerFee ??
-                    this.props.SwapStore?.claimMinerFee ??
-                    0,
+                minerFee,
                 isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
             if (!claim) return false;
