@@ -90,6 +90,33 @@ export default class Privacy extends React.Component<
         });
     }
 
+    componentWillUnmount() {
+        // 'Custom' with no saved URL makes every consumer fall back to the
+        // default preset, so leaving it selected would misrepresent the
+        // instance actually in use. Revert the dropdown on the way out.
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings }: any = SettingsStore;
+        const privacy = settings.privacy || {};
+        const updates: any = {};
+
+        if (
+            privacy.defaultBlockExplorer === 'Custom' &&
+            !(privacy.customBlockExplorer || '').trim()
+        ) {
+            updates.defaultBlockExplorer = 'mempool.space';
+        }
+        if (
+            privacy.mempoolInstance === 'Custom' &&
+            !(privacy.customMempoolInstance || '').trim()
+        ) {
+            updates.mempoolInstance = DEFAULT_MEMPOOL_INSTANCE;
+        }
+
+        if (Object.keys(updates).length > 0) {
+            updateSettings({ privacy: { ...privacy, ...updates } });
+        }
+    }
+
     // Both fields require a full http(s) URL, matching the other custom
     // server settings. The block explorer's optional '#mempool.space'
     // convention hint parses as a URL fragment, and is only honored by
