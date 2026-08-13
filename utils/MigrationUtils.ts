@@ -1087,11 +1087,12 @@ class MigrationsUtils {
     }
 
     /**
-     * One-shot iOS repair for the react-native-keychain cloudSync bug: every
-     * Storage write passed { cloudSync: false }, which the unpatched library
-     * treated as true, so all zeus:-prefixed data (including the settings
-     * blob with wallet seeds) lived in the SYNCHRONIZABLE keychain partition
-     * and synced to iCloud Keychain. With the patched library, Storage reads
+     * One-shot iOS repair for the react-native-keychain cloudSync bug
+     * (oblador/react-native-keychain#800; tracked for removal in
+     * ZeusLN/zeus#4403): every Storage write passed { cloudSync: false },
+     * which the unpatched library treated as true, so all zeus:-prefixed
+     * data (including the settings blob with wallet seeds) lived in the
+     * SYNCHRONIZABLE keychain partition and synced to iCloud Keychain. With the patched library, Storage reads
      * the device-local partition, which is empty for existing users; this
      * migration copies every zeus:* item from the synchronizable partition
      * into the local one. It never deletes anything (the multi-device wipe
