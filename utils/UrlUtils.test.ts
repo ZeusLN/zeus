@@ -97,6 +97,23 @@ describe('UrlUtils', () => {
             );
         });
 
+        it('does not double /api when the custom URL already ends with it', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'https://mempool.mynode.local/api'
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'mempool.mynode.local/esplora/API/'
+            };
+            expect(UrlUtils.getMempoolApiUrl(mainnet)).toEqual(
+                'https://mempool.mynode.local/esplora/api'
+            );
+        });
+
         it('falls back to the default instance when Custom is selected but empty', () => {
             settingsStore.settings.privacy = {
                 mempoolInstance: 'Custom',

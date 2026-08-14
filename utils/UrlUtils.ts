@@ -24,10 +24,15 @@ const getMempoolApiUrl = (nodeInfo: {
     const privacy = settingsStore?.settings?.privacy;
     const instance = privacy?.mempoolInstance || DEFAULT_MEMPOOL_INSTANCE;
 
-    // Custom instance is used verbatim on every network
+    // Custom instance is used verbatim on every network. '/api' is appended
+    // here, so drop it from the stored URL if the user pasted the full API
+    // base (e.g. 'https://mempool.example.com/api') instead of the site root.
     if (instance === 'Custom' && privacy?.customMempoolInstance) {
         const host = withScheme(
-            privacy.customMempoolInstance.trim().replace(/\/+$/, '')
+            privacy.customMempoolInstance
+                .trim()
+                .replace(/\/+$/, '')
+                .replace(/\/api$/i, '')
         );
         return `${host}/api`;
     }
