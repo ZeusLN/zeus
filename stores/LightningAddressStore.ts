@@ -98,7 +98,7 @@ export default class LightningAddressStore {
     @observable public readyToAutomaticallyAccept: boolean = false;
     @observable public prepareToAutomaticallyAcceptStart: boolean = false;
     // Auth
-    auth: Auth;
+    auth?: Auth;
     authDate?: Date;
 
     cashuStore: CashuStore;
@@ -118,7 +118,7 @@ export default class LightningAddressStore {
     private getAuthData = async () => {
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
-        if (this.authDate && this.authDate > tenMinutesAgo) {
+        if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
             const authResponse = await ReactNativeBlobUtil.fetch(
@@ -1389,6 +1389,12 @@ export default class LightningAddressStore {
         this.localHashes = 0;
         this.paid = [];
         this.preimageMap = {};
+        // the cached auth signature is tied to the previous node's
+        // pubkey; reusing it after a node switch makes the server
+        // reject calls with 'invalid signature'
+        this.auth = undefined;
+        this.authDate = undefined;
+        if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
         this.lightningAddressHandle = '';
