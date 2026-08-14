@@ -7,7 +7,7 @@ class Storage {
     // until the post-wipe restart lands, and any in-flight writer would
     // otherwise re-persist wiped data from memory (SettingsStore.updateSettings
     // merges the full in-memory settings on a storage miss, resurrecting every
-    // node config). The reload after RNRestart resets this naturally.
+    // node config). The post-wipe restart (restartApp) resets this naturally.
     private writesBlocked = false;
 
     blockWrites = () => {

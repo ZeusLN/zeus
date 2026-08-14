@@ -135,7 +135,7 @@ jest.mock('../utils/RatingUtils', () => ({
 }));
 
 import hashjs from 'hash.js';
-import { Platform } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import fs from 'fs';
@@ -144,6 +144,7 @@ import path from 'path';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
+    blockNavigationDuringWipe,
     clearAllData,
     clearNodeKeychainData,
     clearCDKDatabase,
@@ -970,5 +971,83 @@ describe('CDK database deletion', () => {
 
             expect(mockedUnlink).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('blockNavigationDuringWipe (mid-wipe navigation guard)', () => {
+    // Reported on-device (PR #4328): during the wipe's loading state the user
+    // could still leave the screen - hardware/gesture back exits the app from
+    // the lockscreen or pops the Tools screen while the wipe runs beneath it.
+    const makeNavigation = () => {
+        const removeBeforeRemove = jest.fn();
+        const navigation = {
+            setOptions: jest.fn(),
+            addListener: jest.fn().mockReturnValue(removeBeforeRemove)
+        };
+        return { navigation, removeBeforeRemove };
+    };
+
+    let backSubscription: { remove: jest.Mock };
+    let backHandlerSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        backSubscription = { remove: jest.fn() };
+        backHandlerSpy = jest
+            .spyOn(BackHandler, 'addEventListener')
+            .mockReturnValue(backSubscription as any);
+    });
+
+    afterEach(() => {
+        backHandlerSpy.mockRestore();
+    });
+
+    it('swallows hardware back presses for the duration of the wipe', () => {
+        const { navigation } = makeNavigation();
+
+        blockNavigationDuringWipe(navigation);
+
+        expect(backHandlerSpy).toHaveBeenCalledWith(
+            'hardwareBackPress',
+            expect.any(Function)
+        );
+        // returning true stops the event before the App-level handler can
+        // exit the app (lockscreen) or pop the screen (Tools)
+        const handler = backHandlerSpy.mock.calls[0][1];
+        expect(handler()).toBe(true);
+    });
+
+    it('blocks removal of the screen from the navigation stack', () => {
+        const { navigation } = makeNavigation();
+
+        blockNavigationDuringWipe(navigation);
+
+        expect(navigation.addListener).toHaveBeenCalledWith(
+            'beforeRemove',
+            expect.any(Function)
+        );
+        const listener = navigation.addListener.mock.calls[0][1];
+        const event = { preventDefault: jest.fn() };
+        listener(event);
+        expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('disables the iOS back-swipe gesture', () => {
+        const { navigation } = makeNavigation();
+
+        blockNavigationDuringWipe(navigation);
+
+        expect(navigation.setOptions).toHaveBeenCalledWith({
+            gestureEnabled: false
+        });
+    });
+
+    it('releases every guard through the returned function', () => {
+        const { navigation, removeBeforeRemove } = makeNavigation();
+
+        const release = blockNavigationDuringWipe(navigation);
+        release();
+
+        expect(backSubscription.remove).toHaveBeenCalled();
+        expect(removeBeforeRemove).toHaveBeenCalled();
     });
 });

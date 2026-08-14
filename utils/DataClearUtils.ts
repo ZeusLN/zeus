@@ -2,7 +2,7 @@ import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Platform } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 import Storage from '../storage';
 
 import {
@@ -137,6 +137,34 @@ const STORAGE_KEYS = [
     'backup-complete',
     'backup-complete-v2'
 ];
+
+/**
+ * Pins the user to the current screen while a wipe runs. clearAllData()
+ * takes tens of seconds on device, and both wipe surfaces sit on screens
+ * the user can otherwise leave mid-wipe: hardware/gesture back either
+ * exits the app (Lockscreen, via the App-level loginRequired handler) or
+ * pops back into an app whose data is being destroyed underneath it
+ * (Tools). Swallows hardware back presses (registered after the App-level
+ * handler, so it runs first), blocks removal of the screen from the
+ * navigation stack, and disables the iOS back-swipe gesture. Returns a
+ * release function for unmount hygiene; in practice the guard holds until
+ * the post-wipe restart tears the JS context down.
+ */
+export function blockNavigationDuringWipe(navigation: any): () => void {
+    navigation.setOptions({ gestureEnabled: false });
+    const backSubscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => true
+    );
+    const removeBeforeRemove = navigation.addListener(
+        'beforeRemove',
+        (e: any) => e.preventDefault()
+    );
+    return () => {
+        backSubscription.remove();
+        removeBeforeRemove();
+    };
+}
 
 /**
  * Clears a key from all possible locations:

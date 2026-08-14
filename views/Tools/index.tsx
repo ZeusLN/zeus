@@ -10,7 +10,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import RNRestart from 'react-native-restart';
 
 import AccountIcon from '../../assets/images/SVG/Account.svg';
 import CashuIcon from '../../assets/images/SVG/Ecash.svg';
@@ -31,7 +30,11 @@ import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoad
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { clearAllData } from '../../utils/DataClearUtils';
+import {
+    blockNavigationDuringWipe,
+    clearAllData
+} from '../../utils/DataClearUtils';
+import { restartApp } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
 
@@ -62,6 +65,7 @@ interface ToolsState {
 @observer
 export default class Tools extends React.Component<ToolsProps, ToolsState> {
     focusListener: any = null;
+    private releaseWipeGuard: (() => void) | null = null;
 
     constructor(props: ToolsProps) {
         super(props);
@@ -87,6 +91,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         if (this.focusListener) {
             this.focusListener();
         }
+        this.releaseWipeGuard?.();
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();
@@ -110,12 +115,15 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         // Bailing out on error would leave a session where
                         // every Storage.setItem is a silent no-op.
                         this.setState({ isClearingData: true });
+                        this.releaseWipeGuard = blockNavigationDuringWipe(
+                            this.props.navigation
+                        );
                         try {
                             await clearAllData();
                         } catch (error) {
                             console.error('Failed to clear storage:', error);
                         } finally {
-                            RNRestart.Restart();
+                            restartApp();
                         }
                     }
                 }

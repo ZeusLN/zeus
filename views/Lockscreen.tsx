@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import RNRestart from 'react-native-restart';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -25,8 +24,12 @@ import ShowHideToggle from '../components/ShowHideToggle';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
-import { clearAllData } from '../utils/DataClearUtils';
+import {
+    blockNavigationDuringWipe,
+    clearAllData
+} from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { restartApp } from '../utils/RestartUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
@@ -73,6 +76,7 @@ export default class Lockscreen extends React.Component<
     LockscreenState
 > {
     private subscription: NativeEventSubscription;
+    private releaseWipeGuard: (() => void) | null = null;
 
     constructor(props: any) {
         super(props);
@@ -257,6 +261,7 @@ export default class Lockscreen extends React.Component<
 
     componentWillUnmount() {
         this.subscription?.remove();
+        this.releaseWipeGuard?.();
     }
 
     handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -357,8 +362,8 @@ export default class Lockscreen extends React.Component<
             // never mark the session logged in here: the wipe takes long
             // enough that an unlocked app would expose the wallet UI (and
             // the configs being wiped) before the restart lands. Keeping
-            // loggedIn false holds every auth gate shut for the duration -
-            // back-press still exits and the Wallet view renders nothing.
+            // loggedIn false holds every auth gate shut for the duration,
+            // and the wipe guard pins the user to the wiping screen.
             this.setState({ wiping: true });
             await this.deleteNodes();
         } else {
@@ -460,6 +465,9 @@ export default class Lockscreen extends React.Component<
         // pre-wipe in-memory blob and re-persist it (pins, passphrases and
         // all), and a restart is also the only way to drop node credentials
         // still held in memory by the stores.
+        this.releaseWipeGuard = blockNavigationDuringWipe(
+            this.props.navigation
+        );
         try {
             await clearAllData();
         } catch (e) {
@@ -471,7 +479,7 @@ export default class Lockscreen extends React.Component<
             // blob is cleared early, so a restart still lands on a fresh
             // install state rather than stranding the user on a dead
             // lockscreen
-            RNRestart.Restart();
+            restartApp();
         }
     };
 
@@ -480,13 +488,16 @@ export default class Lockscreen extends React.Component<
         // removes the node data dirs, Cashu seeds + CDK db, swap rescue key
         // and the settings blob itself (including pins and passphrases).
         // Restart instead of writing settings back - see deleteNodes above.
+        this.releaseWipeGuard = blockNavigationDuringWipe(
+            this.props.navigation
+        );
         try {
             await clearAllData();
         } catch (e) {
             // see deleteNodes: log only, never surface, always restart
             console.warn('[Lockscreen] wipe failed part-way', e);
         } finally {
-            RNRestart.Restart();
+            restartApp();
         }
     };
 
