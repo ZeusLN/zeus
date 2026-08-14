@@ -124,15 +124,21 @@ export default class PushNotificationManager extends React.Component<any, any> {
                         'Notification Received - Background',
                         notification
                     );
-                // ZEUS Pay 'self': fulfill the invoice request while the
-                // process is alive in the background, then complete without
-                // presenting anything
+                // ZEUS Pay 'self': fulfill the invoice request in the
+                // background, then complete without presenting anything.
+                // On iOS this event also fires for the silent-push relaunch
+                // of a killed (not force-quit) app, where nothing else will
+                // start the node — manage the lifecycle here and hold a
+                // short settlement window within the ~30s budget.
                 if (isSelfInvoiceRequestPayload(notification.payload)) {
                     try {
                         const {
                             fulfillInvoiceRequest
                         } = require('./utils/SelfPayUtils');
-                        await fulfillInvoiceRequest(notification.payload);
+                        await fulfillInvoiceRequest(notification.payload, {
+                            manageNodeLifecycle: true,
+                            settlementWaitMs: 10000
+                        });
                     } catch (e) {
                         console.log('SelfPay: background fulfillment error', e);
                     }

@@ -87,6 +87,15 @@ static void ClearKeychainIfNecessary() {
   [RNNotifications didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
+// Silent (content-available) pushes: iOS launches or resumes the app in the
+// background and hands the payload here. Forwarded to RNNotifications, which
+// emits the JS notificationReceivedBackground event that ZEUS Pay
+// self-custodial invoice requests are fulfilled from. Never called for
+// force-quit apps — the server's visible fallback push covers that case.
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+  [RNNotifications didReceiveBackgroundNotification:userInfo withCompletionHandler:completionHandler];
+}
+
 - (void)applicationDidEnterBackground:(UIApplication *)application {
   NSLog(@"App entered background");
 }
