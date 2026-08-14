@@ -11,10 +11,6 @@ import ecc from '../../zeus_modules/noble_ecc';
 // You must wrap a tiny-secp256k1 compatible implementation
 const bip32 = BIP32Factory(ecc);
 
-const aez = require('aez');
-const crc32 = require('fast-crc32c/impls/js_crc32c');
-const scrypt = require('scrypt-js').scrypt;
-
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
 import Header from '../../components/Header';
@@ -28,7 +24,7 @@ import {
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
+import { decodeAezeedEntropy } from '../../utils/AezeedUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
@@ -55,20 +51,6 @@ interface SeedQRExportState {
     error: string;
 }
 
-const AEZEED_DEFAULT_PASSPHRASE = 'aezeed',
-    AEZEED_VERSION = 0,
-    SCRYPT_N = 32768,
-    SCRYPT_R = 8,
-    SCRYPT_P = 1,
-    SCRYPT_KEY_LENGTH = 32,
-    ENCIPHERED_LENGTH = 33,
-    SALT_LENGTH = 5,
-    AD_LENGTH = SALT_LENGTH + 1,
-    AEZ_TAU = 4,
-    CHECKSUM_LENGTH = 4,
-    CHECKSUM_OFFSET = ENCIPHERED_LENGTH - CHECKSUM_LENGTH,
-    SALT_OFFSET = CHECKSUM_OFFSET - SALT_LENGTH;
-
 @inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class SeedQRExport extends React.PureComponent<
@@ -82,19 +64,6 @@ export default class SeedQRExport extends React.PureComponent<
         nodeBase58NativeSegwit: '',
         error: ''
     };
-
-    lpad(str: string, padString: string, length: number) {
-        while (str.length < length) {
-            str = padString + str;
-        }
-        return str;
-    }
-
-    getAD(salt: any) {
-        const ad = Buffer.alloc(AD_LENGTH, AEZEED_VERSION);
-        salt.copy(ad, 1);
-        return ad;
-    }
 
     componentDidMount() {
         this.initializeSeed();
@@ -112,86 +81,32 @@ export default class SeedQRExport extends React.PureComponent<
             const seedPhrase: string[] =
                 seedFromRoute || SettingsStore.seedPhrase;
 
-            // Cache is keyed by the active node's pubkey — only use it when
-            // exporting the active wallet's seed (no override from route).
+            // Never persist derived extended private keys. Always recompute
+            // them from the seed below, and proactively delete any cache
+            // written by older builds so the wallet's HD master keys do not
+            // linger in the keychain after wallet deletion / data wipe
+            // (KEY-006: '<pubkey>-extended-private-keys' had no deletion path).
+            // NodeInfoStore.getNodeInfo also purges on connect; this read-site
+            // purge is belt and braces for when nodeInfo is already loaded.
             if (!seedFromRoute) {
                 const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-                const storageKey = `${pubkey}-extended-private-keys`;
-                const extendedKeys = await Storage.getItem(storageKey);
-                if (extendedKeys) {
-                    const extendedKeysJson = JSON.parse(extendedKeys);
-                    const { nodeBase58Segwit, nodeBase58NativeSegwit } =
-                        extendedKeysJson;
-
-                    this.setState({
-                        loading: false,
-                        nodeBase58Segwit,
-                        nodeBase58NativeSegwit
-                    });
-                    return;
+                if (pubkey) {
+                    await Storage.removeItem(`${pubkey}-extended-private-keys`);
                 }
             }
 
-            const bits = seedPhrase
-                .map((word: string) => {
-                    const index = BIP39_WORD_LIST.indexOf(word);
-                    return this.lpad(index.toString(2), '0', 11);
-                })
-                .join('');
-
-            const seedBytes = (bits.match(/(.{1,8})/g) || []).map(
-                (bin: string) => parseInt(bin, 2)
-            );
-            const seed = Buffer.from(seedBytes);
-
-            if (!seed || seed.length === 0 || seed[0] !== AEZEED_VERSION) {
+            let entropy: string;
+            try {
+                entropy = (await decodeAezeedEntropy(seedPhrase)).toString(
+                    'hex'
+                );
+            } catch (e: any) {
                 this.setState({
                     loading: false,
-                    error: 'Invalid seed or version!'
+                    error: e.message
                 });
                 return;
             }
-
-            const salt = seed.slice(SALT_OFFSET, SALT_OFFSET + SALT_LENGTH);
-            const password = Buffer.from(AEZEED_DEFAULT_PASSPHRASE, 'utf8');
-            const cipherSeed = seed.slice(1, SALT_OFFSET);
-            const checksum = seed.slice(CHECKSUM_OFFSET);
-
-            const newChecksum = crc32.calculate(seed.slice(0, CHECKSUM_OFFSET));
-            if (newChecksum !== checksum.readUInt32BE(0)) {
-                this.setState({
-                    loading: false,
-                    error: 'Invalid seed checksum!'
-                });
-                return;
-            }
-
-            const key = await scrypt(
-                password,
-                salt,
-                SCRYPT_N,
-                SCRYPT_R,
-                SCRYPT_P,
-                SCRYPT_KEY_LENGTH
-            );
-
-            const plainSeedBytes = aez.decrypt(
-                key,
-                null,
-                [this.getAD(salt)],
-                AEZ_TAU,
-                cipherSeed
-            );
-
-            if (plainSeedBytes == null) {
-                this.setState({
-                    loading: false,
-                    error: 'Decryption failed. Invalid passphrase?'
-                });
-                return;
-            }
-
-            const entropy = plainSeedBytes.slice(3).toString('hex');
 
             const SEGWIT_MAINNET = {
                 label: 'BTC (Bitcoin, SegWit, BIP49)',
@@ -272,17 +187,6 @@ export default class SeedQRExport extends React.PureComponent<
                         : NATIVE_SEGWIT_MAINNET.config
                 )
                 .toBase58();
-
-            // Only cache for the active wallet — never overwrite the active
-            // node's cached keys with an inactive wallet's derived keys.
-            if (!seedFromRoute) {
-                const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
-                const storageKey = `${pubkey}-extended-private-keys`;
-                await Storage.setItem(storageKey, {
-                    nodeBase58Segwit,
-                    nodeBase58NativeSegwit
-                });
-            }
 
             this.setState({
                 loading: false,

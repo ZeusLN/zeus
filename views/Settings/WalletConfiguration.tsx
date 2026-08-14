@@ -14,6 +14,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import differenceBy from 'lodash/differenceBy';
+import isEqual from 'lodash/isEqual';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -71,15 +72,19 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
+    clearNodeKeychainData,
+    clearCDKDatabase,
+    clearCDKDatabaseForNode,
+    deleteNodeDataDirectoryWithRetry
+} from '../../utils/DataClearUtils';
+import {
     optimizeNeutrinoPeers,
     createLndWallet,
-    deleteLndWallet,
     stopLnd
 } from '../../utils/LndMobileUtils';
 import {
     createLdkNodeWallet,
     stopLdkNode,
-    deleteLdkNodeWallet,
     getDefaultEsploraServer,
     getDefaultRgsServer,
     DEFAULT_VSS_SERVER,
@@ -166,6 +171,7 @@ interface WalletConfigurationState {
     // NWC
     nostrWalletConnectUrl: string;
     deletingWallet: boolean;
+    saving: boolean;
     // Errors
     lndhubUrlError: boolean;
     usernameError: boolean;
@@ -234,6 +240,7 @@ export default class WalletConfiguration extends React.Component<
         creatingWallet: false,
         errorCreatingWallet: false,
         deletingWallet: false,
+        saving: false,
         // embedded ldk node
         ldkMnemonic: '',
         ldkPassphrase: '',
@@ -571,6 +578,10 @@ export default class WalletConfiguration extends React.Component<
             throw new Error('lndhub settings missing.');
         }
 
+        // Block the action buttons until navigation: a second Save (or a
+        // Delete) firing mid-write would re-persist the stale nodes array.
+        this.setState({ saving: true });
+
         const node = {
             nickname,
             dismissCustodialWarning,
@@ -637,53 +648,58 @@ export default class WalletConfiguration extends React.Component<
             };
         }
 
-        updateSettings(update).then(async () => {
-            if (recoveryCipherSeed) {
-                await updateSettings({
-                    recovery: true
+        updateSettings(update)
+            .then(async () => {
+                if (recoveryCipherSeed) {
+                    await updateSettings({
+                        recovery: true
+                    });
+                }
+
+                this.setState({
+                    saved: true
                 });
-            }
 
-            this.setState({
-                saved: true
-            });
-
-            const activeNodeIndex = settings.selectedNode || 0;
-            if (index === activeNodeIndex) {
-                // updating active node
-                if (originalNode != null) {
-                    const diff = differenceBy(
-                        Object.entries(originalNode),
-                        Object.entries(node),
-                        (entry) => entry[0] + entry[1]
-                    ).filter(
-                        (entry) =>
-                            entry[0] !== 'nickname' && entry[0] !== 'photo'
-                    );
-                    if (diff.length === 0) {
-                        // only nickname or photo was edited - no reconnect necessary
-                        navigation.goBack();
-                        return;
+                const activeNodeIndex = settings.selectedNode || 0;
+                if (index === activeNodeIndex) {
+                    // updating active node
+                    if (originalNode != null) {
+                        const diff = differenceBy(
+                            Object.entries(originalNode),
+                            Object.entries(node),
+                            (entry) => entry[0] + entry[1]
+                        ).filter(
+                            (entry) =>
+                                entry[0] !== 'nickname' && entry[0] !== 'photo'
+                        );
+                        if (diff.length === 0) {
+                            // only nickname or photo was edited - no reconnect necessary
+                            navigation.goBack();
+                            return;
+                        }
                     }
-                }
-                if (implementation === 'lightning-node-connect') {
-                    BackendUtils.disconnect();
-                }
-                setConnectingStatus(true);
-                navigation.popTo('Wallet');
-            } else {
-                if (newEmbeddedLndWallet) {
-                    // New wallet created - trigger fresh connection
-                    // LND was already stopped in createNewWallet(), just navigate
+                    if (implementation === 'lightning-node-connect') {
+                        BackendUtils.disconnect();
+                    }
                     setConnectingStatus(true);
                     navigation.popTo('Wallet');
-                } else if (this.state.newEntry) {
-                    navigation.navigate('Wallets');
                 } else {
-                    navigation.goBack();
+                    if (newEmbeddedLndWallet) {
+                        // New wallet created - trigger fresh connection
+                        // LND was already stopped in createNewWallet(), just navigate
+                        setConnectingStatus(true);
+                        navigation.popTo('Wallet');
+                    } else if (this.state.newEntry) {
+                        navigation.navigate('Wallets');
+                    } else {
+                        navigation.goBack();
+                    }
                 }
-            }
-        });
+            })
+            .catch((error: any) => {
+                console.error('Error saving wallet configuration:', error);
+                this.setState({ saving: false });
+            });
     };
 
     copyNodeConfig = () => {
@@ -740,21 +756,16 @@ export default class WalletConfiguration extends React.Component<
     };
 
     deleteNodeConfig = async () => {
+        if (this.state.deletingWallet) return;
         this.setState({ deletingWallet: true });
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
         const { index, implementation, lndDir, ldkNodeDir, active } =
             this.state;
         const { nodes } = settings;
+        const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
-            const newNodes: any = [];
-            for (let i = 0; nodes && i < nodes.length; i++) {
-                if (index !== i) {
-                    newNodes.push(nodes[i]);
-                }
-            }
-
             // If deleting active embedded LND wallet, stop it first
             if (
                 active &&
@@ -779,29 +790,85 @@ export default class WalletConfiguration extends React.Component<
                 await stopLdkNode();
             }
 
+            // Delete this wallet's per-wallet CDK ecash database first: its
+            // filename embeds a hash of the cashu seed, which
+            // clearNodeKeychainData wipes below.
+            await clearCDKDatabaseForNode(deletedNode);
+
+            // Clear this node's keychain material (Cashu seeds/keys namespaced
+            // by node dir, LNC pairing credentials) so it does not outlive the
+            // wallet. This must happen before updateSettings removes the node
+            // config: the hashed LNC keys can only be reconstructed from the
+            // pairing phrase stored there, so a crash after the config is gone
+            // would orphan them permanently.
+            await clearNodeKeychainData(deletedNode);
+
             // Update settings first to clear node references before
             // deleting files — prevents stale references if navigation
-            // triggers a reconnect
-            const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
-                index,
-                settings
+            // triggers a reconnect. The nodes array is computed inside the
+            // serialized update from the freshest persisted settings: the
+            // stops above take seconds, and a functional update is what
+            // keeps a concurrent settings write from either resurrecting
+            // the deleted node or being clobbered by a snapshot taken
+            // before it.
+            const newSettings = await updateSettings(
+                (currentSettings: Settings) => {
+                    const currentNodes = currentSettings.nodes || [];
+                    // Re-locate the wallet at update time: the captured
+                    // index can go stale during the multi-second stops
+                    // above if a concurrent length-changing nodes write
+                    // (e.g. an overlapping deletion of another wallet)
+                    // shifts the array. Matching the captured config keeps
+                    // the removal pinned to the wallet whose data was just
+                    // wiped, never a neighbor that slid into its slot.
+                    const freshIndex = deletedNode
+                        ? currentNodes.findIndex((node) =>
+                              isEqual(node, deletedNode)
+                          )
+                        : index;
+                    if (freshIndex == null || freshIndex === -1) {
+                        // Config already gone (removed concurrently):
+                        // nothing to filter, just flag the deletion
+                        return { justDeletedWallet: active };
+                    }
+                    return {
+                        nodes: currentNodes.filter(
+                            (_: any, i: number) => i !== freshIndex
+                        ),
+                        selectedNode: this.getNewSelectedNodeIndex(
+                            freshIndex,
+                            currentSettings
+                        ),
+                        justDeletedWallet: active
+                    };
+                }
             );
+            const remainingNodes = newSettings?.nodes || [];
 
-            await updateSettings({
-                nodes: newNodes,
-                selectedNode: newSelectedNodeIndex,
-                justDeletedWallet: active
-            });
-
-            // Delete wallet data after settings are updated
-            if (implementation === 'embedded-lnd') {
-                await deleteLndWallet(lndDir || 'lnd');
+            // Delete wallet data after settings are updated. Retried: the
+            // node may still hold file handles while shutting down, which
+            // clears on its own after a moment.
+            const dirDeleted = await deleteNodeDataDirectoryWithRetry(
+                deletedNode ?? { implementation, lndDir, ldkNodeDir }
+            );
+            if (!dirDeleted) {
+                // Surface the failure instead of navigating away as if the
+                // deletion succeeded: the directory holds wallet and channel
+                // state. The config is already gone, so retrying from the
+                // captured node object is the only remaining path; Skip is
+                // offered so a permanently held file handle cannot strand
+                // the user here. (The duress wipe path never comes through
+                // here and stays silent by design.)
+                await this.promptRetryDataDirDeletion(
+                    deletedNode ?? { implementation, lndDir, ldkNodeDir }
+                );
             }
-            if (implementation === 'ldk-node' && ldkNodeDir) {
-                await deleteLdkNodeWallet(ldkNodeDir);
-            }
 
-            if (newNodes.length === 0) {
+            if (remainingNodes.length === 0) {
+                // Last wallet gone: sweep every remaining CDK database file
+                // (legacy shared db, any per-wallet dbs whose seeds are no
+                // longer recoverable, and WAL/SHM sidecars).
+                await clearCDKDatabase();
                 navigation.navigate('IntroSplash');
             } else {
                 navigation.popTo('Wallets');
@@ -811,6 +878,42 @@ export default class WalletConfiguration extends React.Component<
             this.setState({ deletingWallet: false });
         }
     };
+
+    // Alert loop for a node data directory that survived deletion retries.
+    // Resolves once a retry succeeds or the user explicitly skips, so the
+    // caller only navigates on an informed decision, never on silent failure.
+    private promptRetryDataDirDeletion = (node: any): Promise<void> =>
+        new Promise((resolve) => {
+            const prompt = () => {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString(
+                        'views.Settings.WalletConfiguration.deleteWallet.dataDirError'
+                    ),
+                    [
+                        {
+                            text: localeString('general.retry'),
+                            onPress: async () => {
+                                const dirDeleted =
+                                    await deleteNodeDataDirectoryWithRetry(
+                                        node
+                                    );
+                                if (dirDeleted) resolve();
+                                else prompt();
+                            },
+                            isPreferred: true
+                        },
+                        {
+                            text: localeString('general.skip'),
+                            style: 'destructive',
+                            onPress: () => resolve()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            };
+            prompt();
+        });
 
     private handleDeletePress = () => {
         confirmAction(
@@ -1237,6 +1340,7 @@ export default class WalletConfiguration extends React.Component<
             creatingWallet,
             errorCreatingWallet,
             deletingWallet,
+            saving,
             // LDK Node
             ldkMnemonic,
             ldkNetwork,
@@ -1262,6 +1366,11 @@ export default class WalletConfiguration extends React.Component<
             createAccountSuccess,
             createAccount
         } = SettingsStore;
+
+        // A save or delete in flight: block every action button so a
+        // concurrent updateSettings cannot re-persist stale node configs
+        // (e.g. resurrecting a wallet mid-deletion).
+        const processing = loading || saving || deletingWallet;
 
         const isLocalImpl =
             implementation === 'embedded-lnd' || implementation === 'ldk-node';
@@ -1349,7 +1458,7 @@ export default class WalletConfiguration extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {(loading || deletingWallet) && (
+                            {processing && (
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
@@ -3167,9 +3276,9 @@ export default class WalletConfiguration extends React.Component<
                                                 this.saveWalletConfiguration();
                                             }
                                         }}
-                                        // disable save button if loading, required input missing or input invalid
+                                        // disable save button if processing, required input missing or input invalid
                                         disabled={
-                                            loading ||
+                                            processing ||
                                             hostError ||
                                             (host &&
                                                 !ValidationUtils.isValidServerAddress(
@@ -3257,7 +3366,7 @@ export default class WalletConfiguration extends React.Component<
                                     onPress={() =>
                                         this.setWalletConfigurationAsActive()
                                     }
-                                    disabled={loading}
+                                    disabled={processing}
                                 />
                             </View>
                         )}
@@ -3286,7 +3395,7 @@ export default class WalletConfiguration extends React.Component<
                                             this.copyNodeConfig();
                                         }}
                                         secondary
-                                        disabled={loading}
+                                        disabled={processing}
                                     />
                                 </View>
                             )}
@@ -3299,7 +3408,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                     onPress={this.handleDeletePress}
                                     warning
-                                    disabled={loading}
+                                    disabled={processing}
                                 />
                             </View>
                         )}

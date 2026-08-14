@@ -1,4 +1,5 @@
 import { Alert, NativeModules, Platform } from 'react-native';
+import RNRestart from 'react-native-restart';
 import { localeString } from './LocaleUtils';
 import { settingsStore } from '../stores/Stores';
 import LdkNode from '../ldknode/LdkNodeInjection';
@@ -28,6 +29,25 @@ const stopNode = async () => {
     }
 };
 
+/**
+ * Fully restarts the app. On Android this must go through the native
+ * ProcessPhoenix rebirth (LndMobileTools.restartApp): react-native-restart's
+ * ReactInstanceManager path throws under the New Architecture (see
+ * ReactApplication.getReactNativeHost), so RNRestart.Restart() degrades to
+ * Activity.recreate(), which keeps the JS runtime - and every in-memory
+ * store - alive. After a data wipe that leaves the pre-wipe settings (node
+ * configs, pins) live in memory, and the relaunched UI lands back on the
+ * lockscreen instead of the intro screen. iOS has no process-restart API;
+ * there RNRestart performs a genuine JS reload, which resets module state.
+ */
+const restartApp = () => {
+    if (Platform.OS === 'android') {
+        NativeModules.LndMobileTools.restartApp();
+    } else {
+        RNRestart.Restart();
+    }
+};
+
 const restartNeeded = (force?: boolean) => {
     const title = localeString('restart.title');
     const message = localeString('restart.msg');
@@ -46,7 +66,7 @@ const restartNeeded = (force?: boolean) => {
                 : localeString('general.yes'),
             onPress: async () => {
                 await stopNode();
-                NativeModules.LndMobileTools.restartApp();
+                restartApp();
             }
         });
         Alert.alert(
@@ -59,4 +79,4 @@ const restartNeeded = (force?: boolean) => {
     }
 };
 
-export { restartNeeded };
+export { restartApp, restartNeeded };

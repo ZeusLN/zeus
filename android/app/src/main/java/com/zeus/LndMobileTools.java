@@ -427,12 +427,18 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     promise.resolve(null);
   }
 
-  void deleteRecursive(File fileOrDirectory) {
+  // Returns whether everything under fileOrDirectory was actually removed
+  boolean deleteRecursive(File fileOrDirectory) {
+    boolean success = true;
     if (fileOrDirectory.isDirectory()) {
-      for (File child : fileOrDirectory.listFiles()) {
-        deleteRecursive(child);
+      File[] children = fileOrDirectory.listFiles();
+      if (children != null) {
+        for (File child : children) {
+          success = deleteRecursive(child) && success;
+        }
       }
     }
+    return fileOrDirectory.delete() && success;
   }
 
   @ReactMethod
@@ -522,15 +528,32 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void deleteLndDirectory(String lndDir, Promise promise) {
-    String filename;
+    File filesDir = getReactApplicationContext().getFilesDir();
+    boolean success = true;
     if (lndDir.equals("lnd")) {
-      filename = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
+      // Legacy wallets ran LND directly in the files-dir root, which also
+      // holds other wallets' directories, CDK databases, etc. Only delete
+      // LND's own artifacts there.
+      String[] lndArtifacts = { "data", "logs", "lnd.conf", "tls.cert", "tls.key" };
+      for (String artifact : lndArtifacts) {
+        File file = new File(filesDir, artifact);
+        if (file.exists()) {
+          success = deleteRecursive(file) && success;
+        }
+      }
     } else {
-      filename = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
+      File file = new File(filesDir, lndDir);
+      if (file.exists()) {
+        success = deleteRecursive(file);
+      }
     }
-    File file = new File(filename);
-    deleteRecursive(file);
-    promise.resolve(null);
+    if (success) {
+      promise.resolve(null);
+    } else {
+      // Surface real failures so the JS-side retry logic (deleteLndWallet
+      // callers) does not treat a partial deletion as success
+      promise.reject("deleteLndDirectory", "Failed to fully delete LND directory: " + lndDir);
+    }
   }
 
   @ReactMethod

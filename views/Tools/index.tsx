@@ -10,7 +10,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import RNRestart from 'react-native-restart';
 
 import AccountIcon from '../../assets/images/SVG/Account.svg';
 import CashuIcon from '../../assets/images/SVG/Ecash.svg';
@@ -31,7 +30,11 @@ import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoad
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { clearAllData } from '../../utils/DataClearUtils';
+import {
+    blockNavigationDuringWipe,
+    clearAllData
+} from '../../utils/DataClearUtils';
+import { restartApp } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
 
@@ -55,18 +58,21 @@ interface ToolsProps {
 interface ToolsState {
     isChannelExporting: boolean;
     channelExportMessage: string;
+    isClearingData: boolean;
 }
 
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Tools extends React.Component<ToolsProps, ToolsState> {
     focusListener: any = null;
+    private releaseWipeGuard: (() => void) | null = null;
 
     constructor(props: ToolsProps) {
         super(props);
         this.state = {
             isChannelExporting: false,
-            channelExportMessage: ''
+            channelExportMessage: '',
+            isClearingData: false
         };
     }
 
@@ -85,6 +91,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         if (this.focusListener) {
             this.focusListener();
         }
+        this.releaseWipeGuard?.();
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();
@@ -102,15 +109,21 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.clearStorage.confirm'),
                     style: 'destructive',
                     onPress: async () => {
+                        // clearAllData() latches Storage writes as its first
+                        // step and nothing releases the latch, so restart
+                        // unconditionally (matching Lockscreen's duress paths).
+                        // Bailing out on error would leave a session where
+                        // every Storage.setItem is a silent no-op.
+                        this.setState({ isClearingData: true });
+                        this.releaseWipeGuard = blockNavigationDuringWipe(
+                            this.props.navigation
+                        );
                         try {
                             await clearAllData();
-                            RNRestart.Restart();
                         } catch (error) {
                             console.error('Failed to clear storage:', error);
-                            Alert.alert(
-                                localeString('general.error'),
-                                localeString('views.Tools.clearStorage.error')
-                            );
+                        } finally {
+                            restartApp();
                         }
                     }
                 }
@@ -174,8 +187,15 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     navigation={navigation}
                 />
                 <ChannelBackupLoadingModal
-                    isOpen={this.state.isChannelExporting}
-                    message={this.state.channelExportMessage}
+                    isOpen={
+                        this.state.isChannelExporting ||
+                        this.state.isClearingData
+                    }
+                    message={
+                        this.state.isClearingData
+                            ? localeString('views.Tools.clearStorage.clearing')
+                            : this.state.channelExportMessage
+                    }
                 />
                 <ScrollView
                     style={{

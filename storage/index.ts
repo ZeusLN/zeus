@@ -3,6 +3,17 @@ import * as Keychain from 'react-native-keychain';
 const KEY_PREFIX = 'zeus:';
 
 class Storage {
+    // Set once a data wipe has started. The dying JS context keeps running
+    // until the post-wipe restart lands, and any in-flight writer would
+    // otherwise re-persist wiped data from memory (SettingsStore.updateSettings
+    // merges the full in-memory settings on a storage miss, resurrecting every
+    // node config). The post-wipe restart (restartApp) resets this naturally.
+    private writesBlocked = false;
+
+    blockWrites = () => {
+        this.writesBlocked = true;
+    };
+
     private prefixKey = (key: string) => `${KEY_PREFIX}${key}`;
 
     getItem = async (key: string) => {
@@ -21,6 +32,11 @@ class Storage {
     };
 
     setItem = async (key: string, value: any) => {
+        if (this.writesBlocked) {
+            console.warn(`[Storage] Write blocked during data wipe: ${key}`);
+            return false;
+        }
+
         const prefixedKey = this.prefixKey(key);
         const stringValue =
             typeof value === 'string' ? value : JSON.stringify(value);

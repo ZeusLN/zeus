@@ -1964,36 +1964,82 @@ export default class SettingsStore {
         return this.settings;
     };
 
-    public async setSettings(settings: any) {
+    // Returns whether the settings were persisted. Storage.setItem returns
+    // false while the data-wipe write latch is engaged (and the keychain
+    // call itself is typed `false | Result`); in-memory settings only
+    // update when the write landed, so a blocked write cannot leave the
+    // store advertising state that will not survive the imminent restart.
+    public async setSettings(settings: any): Promise<boolean> {
         this.loading = true;
-        await Storage.setItem(STORAGE_KEY, settings);
-        this.settings = settings;
+        const persisted =
+            (await Storage.setItem(STORAGE_KEY, settings)) !== false;
+        if (persisted) {
+            this.settings = settings;
+        }
         this.loading = false;
-        return settings;
+        return persisted;
     }
 
-    public updateSettings = async (newSetting: any) => {
+    // Serializes updateSettings calls. Each update is a read-merge-write
+    // against the persisted blob; without ordering, a caller that read
+    // before another's write can commit a stale snapshot over it, e.g. a
+    // background update straddling a wallet deletion writes the old nodes
+    // array back, resurrecting the deleted node's seed and password.
+    private updateSettingsQueue: Promise<unknown> = Promise.resolve();
+
+    public updateSettings = (
+        newSetting: any | ((currentSettings: Settings) => any)
+    ): Promise<Settings> => {
+        const task = this.updateSettingsQueue.then(() =>
+            this.applySettingsUpdate(newSetting)
+        );
+        // Keep the queue alive after a rejected update; the caller still
+        // sees the rejection through `task`.
+        this.updateSettingsQueue = task.catch(() => undefined);
+        return task;
+    };
+
+    private applySettingsUpdate = async (
+        newSetting: any | ((currentSettings: Settings) => any)
+    ) => {
         this.settingsUpdateInProgress = true;
-        const existingSettings = await this.getSettings();
-        const newSettings = {
-            ...existingSettings,
-            ...newSetting
-        };
+        try {
+            const existingSettings = await this.getSettings();
+            // Functional updates read the settings inside the critical
+            // section, so callers whose new value depends on the current
+            // one (delete node X from the array) cannot act on a snapshot
+            // taken before earlier queued writes landed.
+            const resolvedSetting =
+                typeof newSetting === 'function'
+                    ? newSetting(existingSettings)
+                    : newSetting;
+            const newSettings = {
+                ...existingSettings,
+                ...resolvedSetting
+            };
 
-        if (
-            newSetting.pos?.posEnabled &&
-            newSetting.pos.posEnabled !== PosEnabled.Disabled
-        ) {
-            this.posWasEnabled = true;
+            if (
+                resolvedSetting.pos?.posEnabled &&
+                resolvedSetting.pos.posEnabled !== PosEnabled.Disabled
+            ) {
+                this.posWasEnabled = true;
+            }
+
+            const persisted = await this.setSettings(newSettings);
+            if (!persisted) {
+                // Write latch engaged (data wipe in progress): nothing was
+                // persisted or kept in memory, so skip the derived-state
+                // updates that would advertise the unsaved settings.
+                return this.settings;
+            }
+            this.triggerSettingsRefresh = true;
+
+            // Update store's node properties from latest settings
+            this.updateNodeProperties(newSettings);
+            return newSettings;
+        } finally {
+            this.settingsUpdateInProgress = false;
         }
-
-        await this.setSettings(newSettings);
-        this.triggerSettingsRefresh = true;
-
-        // Update store's node properties from latest settings
-        this.updateNodeProperties(newSettings);
-        this.settingsUpdateInProgress = false;
-        return newSettings;
     };
 
     // LNDHub
