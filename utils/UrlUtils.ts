@@ -22,6 +22,10 @@ const getMempoolApiUrl = (nodeInfo: {
     isTestNet: boolean;
 }): string => {
     const privacy = settingsStore?.settings?.privacy;
+    // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
+    // intentionally covers installs that predate the setting: on upgrade they
+    // move off the previously hardcoded mempool.space onto the ZEUS-operated
+    // instance, without a migration writing anything to settings.
     const instance = privacy?.mempoolInstance || DEFAULT_MEMPOOL_INSTANCE;
 
     // Custom instance is used verbatim on every network. '/api' is appended
