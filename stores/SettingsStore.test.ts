@@ -373,6 +373,73 @@ describe('SettingsStore.updateSettings', () => {
     });
 });
 
+// triggerSettingsRefresh makes the Wallet screen run a full node refetch on
+// its next focus, which costs the user a noticeable loading time.
+// Bookkeeping writes that re-persist what is already stored must not arm it.
+describe('SettingsStore.updateSettings refresh flag', () => {
+    it('stays unarmed when a write re-persists an identical value', async () => {
+        seedSettings({ authenticationAttempts: 0 });
+        const store = new SettingsStore();
+
+        await store.updateSettings({ authenticationAttempts: 0 });
+
+        expect(store.triggerSettingsRefresh).toEqual(false);
+    });
+
+    it('is armed when a write changes a value', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+    });
+
+    it('stays unarmed when a functional update resolves to the stored values', async () => {
+        // Functional updaters are resolved inside the queue, so the no-op
+        // check has to run on their result. A filter that removes nothing
+        // returns a new but equal array.
+        seedSettings({
+            nodes: [{ implementation: 'lnd', host: 'example.com' }],
+            selectedNode: 0
+        });
+        const store = new SettingsStore();
+
+        await store.updateSettings((currentSettings: any) => ({
+            nodes: currentSettings.nodes.filter(() => true),
+            selectedNode: currentSettings.selectedNode
+        }));
+
+        expect(store.triggerSettingsRefresh).toEqual(false);
+    });
+
+    it('stays unarmed when an undefined value is written for an absent key', async () => {
+        // Devices without biometrics: getSupportedBiometryType() returns
+        // undefined and Wallet writes it on every start. JSON.stringify
+        // drops the key, so nothing changes on disk.
+        seedSettings({});
+        const store = new SettingsStore();
+
+        await store.updateSettings({ supportedBiometryType: undefined });
+
+        expect(store.triggerSettingsRefresh).toEqual(false);
+        expect(persistedSettings()).not.toHaveProperty('supportedBiometryType');
+    });
+
+    it('is armed and clears the key when undefined overwrites a stored value', async () => {
+        // Biometrics removed in the OS settings: writing undefined is how
+        // the stored sensor type gets cleared, so it is a real change.
+        seedSettings({ supportedBiometryType: 'Biometrics' });
+        const store = new SettingsStore();
+
+        await store.updateSettings({ supportedBiometryType: undefined });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+        expect(store.settings.supportedBiometryType).toBeUndefined();
+        expect(persistedSettings()).not.toHaveProperty('supportedBiometryType');
+    });
+});
+
 describe('SettingsStore.getSettings', () => {
     afterEach(() => {
         StorageMock.getRawItem.mockReset();
