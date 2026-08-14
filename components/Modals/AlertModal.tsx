@@ -10,7 +10,7 @@ import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/LndMobileUtils';
+import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/NeutrinoPeersUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';

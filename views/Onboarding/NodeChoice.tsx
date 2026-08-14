@@ -23,7 +23,7 @@ import { font } from '../../utils/FontUtils';
 import {
     pingPeer,
     NEUTRINO_PING_THRESHOLD_MS
-} from '../../utils/LndMobileUtils';
+} from '../../utils/NeutrinoPeersUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 

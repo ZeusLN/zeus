@@ -71,6 +71,7 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
+import { checkAndOptimizeNeutrinoPeersIfNeeded } from '../../utils/NeutrinoPeersUtils';
 
 import {
     loadPendingPaymentData,
@@ -788,7 +789,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // skip the stop→init→start cycle entirely
                 if (!SettingsStore.walletJustCreated) {
                     try {
-                        AlertStore.checkNeutrinoPeers();
+                        const { alertProbes } =
+                            await checkAndOptimizeNeutrinoPeersIfNeeded(
+                                embeddedLndNetwork === 'Testnet'
+                            );
+                        AlertStore.setNeutrinoPeerAlertsFromProbes(alertProbes);
 
                         const isChannelMigrating =
                             this.state.isChannelMigrating ||
@@ -952,7 +957,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 } else {
                     try {
                         // LND was just created and is already running — skip stop→init→start
-                        AlertStore.checkNeutrinoPeers();
+                        await AlertStore.checkNeutrinoPeers();
                         SettingsStore.walletJustCreated = false;
 
                         if (settings?.ecash?.enableCashu)
