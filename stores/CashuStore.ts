@@ -836,14 +836,8 @@ export default class CashuStore {
                                 }
                             }
 
-                            // First, add the external quote to CDK's database with secret key.
-                            // When the key equals CDK's seed prefix (v2-bip39
-                            // wallets), the native side stores the quote
-                            // keyless with cdk's NpubCash marker instead, to
-                            // dodge cdk's legacy npubcash scrub (cdk#2335).
-                            const useSeedPrefixMarker = secretKey
-                                ? this.secretKeyMatchesCdkSeedPrefix(secretKey)
-                                : false;
+                            // First, add the external quote to CDK's database
+                            // with the secret key
                             await CashuDevKit.addExternalMintQuote(
                                 mintUrl,
                                 quoteId,
@@ -851,8 +845,7 @@ export default class CashuStore {
                                 externalQuote.request || '',
                                 externalQuote.state || 'PAID',
                                 externalQuote.expiry || 0,
-                                secretKey || undefined,
-                                useSeedPrefixMarker
+                                secretKey || undefined
                             );
                             if (__DEV__) {
                                 console.log(
@@ -3742,25 +3735,6 @@ export default class CashuStore {
             return null;
         }
         return privkey;
-    };
-
-    /**
-     * Whether the given P2PK secret key is byte-identical to the CDK
-     * wallet's seed prefix (seed[0..32]). cdk's legacy NpubCash heuristic
-     * claims such keys as its own, so quotes carrying them must use the
-     * quote-key marker workaround instead of storing the key. v1 wallets
-     * derive their key from LND seed bytes [32:64] and won't match, so
-     * their key is stored on the quote and signs correctly.
-     * See https://github.com/cashubtc/cdk/issues/2335
-     */
-    private secretKeyMatchesCdkSeedPrefix = (secretKeyHex: string): boolean => {
-        const mnemonic = this.getCDKMnemonic();
-        if (!mnemonic) return false;
-        const seed = bip39scure.mnemonicToSeedSync(mnemonic);
-        return (
-            bytesToHex(seed.slice(0, 32)).toLowerCase() ===
-            secretKeyHex.toLowerCase()
-        );
     };
 
     @action

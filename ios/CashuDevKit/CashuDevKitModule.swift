@@ -775,11 +775,10 @@ class CashuDevKitModule: RCTEventEmitter {
 
     /// Add an external mint quote to CDK's database.
     /// This allows minting from quotes created externally (e.g., by ZeusPay server).
-    @objc(addExternalMintQuote:quoteId:amount:request:state:expiry:secretKey:useSeedPrefixMarker:resolver:rejecter:)
+    @objc(addExternalMintQuote:quoteId:amount:request:state:expiry:secretKey:resolver:rejecter:)
     func addExternalMintQuote(_ mintUrl: String, quoteId: String, amount: NSNumber,
                                request: String, state: String, expiry: NSNumber,
                                secretKey: String?,
-                               useSeedPrefixMarker: Bool,
                                resolve: @escaping RCTPromiseResolveBlock,
                                reject: @escaping RCTPromiseRejectBlock) {
         let dbHandle: WalletSqliteDatabase? = walletQueue.sync {
@@ -811,32 +810,11 @@ class CashuDevKitModule: RCTEventEmitter {
                     quoteState = .paid // Default to PAID for external quotes
                 }
 
-                // For v2-bip39 wallets, ZEUS Pay locks quotes to the seed-
-                // prefix key (seed[0..32]), which is byte-identical to cdk's
-                // "legacy NpubCash" key. Storing that key on the quote makes
-                // cdk's mint saga scrub it mid-flight (a version bump), and
-                // the saga's post-mint write then dies with ConcurrentUpdate
-                // AFTER the mint has issued the signatures. For those quotes
-                // (useSeedPrefixMarker, decided by JS via byte comparison),
-                // store the quote with no key and write cdk's NpubCash
-                // quote-key marker: at signing time cdk re-derives the
-                // identical seed-prefix key from the marker, with no mid-saga
-                // write. v1 wallets sign with a different key (LND seed
-                // bytes [32:64]), so the marker would derive the wrong key
-                // for them; their key is stored on the quote instead, which
-                // is safe because the scrub only triggers on byte equality
-                // with the seed prefix.
-                // Upstream bug: https://github.com/cashubtc/cdk/issues/2335
-                // Remove when fixed: https://github.com/ZeusLN/zeus/issues/4402
+                // Storing a key equal to cdk's seed prefix on the quote
+                // requires cdk >= 0.17.4: earlier versions claim it as a
+                // legacy NpubCash key and scrub it mid-mint-saga, stranding
+                // the minted funds (cashubtc/cdk#2335).
                 let storedSecretKey = (secretKey?.isEmpty == false) ? secretKey : nil
-                if storedSecretKey != nil && useSeedPrefixMarker {
-                    try await db.kvWrite(
-                        primaryNamespace: "npubcash",
-                        secondaryNamespace: "quotes",
-                        key: quoteId,
-                        value: Data("legacy-seed-prefix".utf8)
-                    )
-                }
 
                 // Create the MintQuote object
                 // For external quotes that are PAID, we set amountPaid = amount
@@ -854,7 +832,7 @@ class CashuDevKitModule: RCTEventEmitter {
                         amountPaid: (quoteState == .paid || quoteState == .issued) ? amt : zeroAmount,
                         estimatedBlocks: nil,
                         paymentMethod: .bolt11,
-                        secretKey: useSeedPrefixMarker ? nil : storedSecretKey,
+                        secretKey: storedSecretKey,
                         usedByOperation: nil,
                         version: version
                     )

@@ -73,7 +73,6 @@ RCT_EXTERN_METHOD(addExternalMintQuote:(NSString *)mintUrl
                   state:(NSString *)state
                   expiry:(nonnull NSNumber *)expiry
                   secretKey:(NSString * _Nullable)secretKey
-                  useSeedPrefixMarker:(BOOL)useSeedPrefixMarker
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
