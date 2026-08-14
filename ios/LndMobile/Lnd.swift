@@ -218,10 +218,24 @@ open class Lnd {
     do {
       let stopRequest = Lnrpc_StopRequest()
       let payload = try stopRequest.serializedData()
-      LndmobileStopDaemon(payload, LndmobileCallback(method: "stopLnd", callback: callback))
+      LndmobileStopDaemon(
+        payload,
+        LndmobileCallback(method: "stopLnd", callback: { (data, error) in
+          self.lndStarted = false
+          callback(data, error)
+        })
+      )
     } catch let error {
+      self.lndStarted = false
       callback(nil, error)
     }
+  }
+
+  /// Last-resort cleanup when SubscribeState EOF never arrives (JS timeout path).
+  /// Only resets tracking so a restart can subscribe again.
+  func releaseStuckLndState() {
+    activeStreams.removeAll { $0 == "SubscribeState" }
+    lndStarted = false
   }
 
   func initWallet(_ seed: [String], password: String, recoveryWindow: Int32, channelsBackupsBase64: String, callback: @escaping Callback) {
@@ -345,5 +359,30 @@ open class Lnd {
   func cancelGossipSync(_ callback: @escaping Callback) {
     LndmobileCancelGossipSync()
     callback(nil, nil)
+  }
+
+  /// Starts the SubscribeState gRPC stream and routes every event to `callback`.
+  /// Adds "SubscribeState" to `activeStreams` so a subsequent JS call to
+  /// `subscribeState()` (streamOnlyOnce: true) is silently ignored, preventing
+  /// a duplicate subscription.  Removes the entry from `activeStreams` when the
+  /// stream closes (EOF or error) so a future restart can subscribe again.
+  /// If the stream is already active this call is a no-op.
+  func subscribeToStateChanges(callback: @escaping StreamCallback) {
+    guard !activeStreams.contains("SubscribeState") else {
+      NSLog("Lnd: SubscribeState already active, skipping native start")
+      return
+    }
+    activeStreams.append("SubscribeState")
+
+    LndmobileSubscribeState(
+      nil,
+      LndmobileReceiveStream(method: "SubscribeState") { [weak self] (data, error) in
+        // Clean up activeStreams entry when the stream closes (error or EOF).
+        if error != nil {
+          self?.activeStreams.removeAll { $0 == "SubscribeState" }
+        }
+        callback(data, error)
+      }
+    )
   }
 }

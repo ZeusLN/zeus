@@ -771,7 +771,6 @@ export default class WalletConfiguration extends React.Component<
                 } catch (error) {
                     console.log('Error stopping LND before deletion:', error);
                 }
-                SettingsStore.embeddedLndStarted = false;
             }
 
             // If deleting active LDK Node wallet, stop it first
@@ -808,6 +807,7 @@ export default class WalletConfiguration extends React.Component<
             }
         } catch (error) {
             console.error('Error deleting wallet:', error);
+        } finally {
             this.setState({ deletingWallet: false });
         }
     };
@@ -3299,7 +3299,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                     onPress={this.handleDeletePress}
                                     warning
-                                    disabled={loading}
+                                    disabled={loading || deletingWallet}
                                 />
                             </View>
                         )}
