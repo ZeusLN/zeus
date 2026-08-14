@@ -143,7 +143,6 @@ import NWCConnectionActivityFilter from './views/Settings/NostrWalletConnect/NWC
 import LightningAddress from './views/LightningAddress';
 import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
 import CreateNWCLightningAddress from './views/LightningAddress/CreateNWCLightningAddress';
-import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
 import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
 import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
@@ -1266,12 +1265,6 @@ export default class App extends React.PureComponent {
                                                             <Stack.Screen
                                                                 name="LSPSettings" // @ts-ignore:next-line
                                                                 component={LSP}
-                                                            />
-                                                            <Stack.Screen
-                                                                name="ZaplockerGetChan" // @ts-ignore:next-line
-                                                                component={
-                                                                    ZaplockerGetChan
-                                                                }
                                                             />
                                                             <Stack.Screen
                                                                 name="LightningAddress" // @ts-ignore:next-line

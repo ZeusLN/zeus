@@ -29,16 +29,16 @@ import Text from '../../components/Text';
 import Header from '../../components/Header';
 import LightningLoadingPattern from '../../components/LightningLoadingPattern';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import Accordion from '../../components/Accordion';
 
-import ChannelsStore from '../../stores/ChannelsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
-import SettingsStore, {
-    DEFAULT_LSPS1_PUBKEY_MAINNET
-} from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -52,7 +52,6 @@ import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
 interface LightningAddressProps {
     navigation: NativeStackNavigationProp<any, any>;
-    ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     route: Route<
@@ -61,15 +60,11 @@ interface LightningAddressProps {
     >;
 }
 
-interface LightningAddressState {
-    hasZeusLspChannel: boolean;
-}
-
-@inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore')
+@inject('LightningAddressStore', 'SettingsStore')
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
-    LightningAddressState
+    {}
 > {
     private pan: Animated.ValueXY;
     private panResponder: PanResponderInstance;
@@ -79,9 +74,6 @@ export default class LightningAddress extends React.Component<
 
     constructor(props: LightningAddressProps) {
         super(props);
-        this.state = {
-            hasZeusLspChannel: false
-        };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -102,23 +94,12 @@ export default class LightningAddress extends React.Component<
     }
 
     async componentDidMount() {
-        const { ChannelsStore, LightningAddressStore, navigation, route } =
-            this.props;
+        const { LightningAddressStore, navigation, route } = this.props;
         const { status } = LightningAddressStore;
 
         const skipStatus = route.params?.skipStatus;
 
         if (!skipStatus) status();
-
-        ChannelsStore.enrichedChannels?.every((channel) => {
-            if (channel.remotePubkey === DEFAULT_LSPS1_PUBKEY_MAINNET) {
-                this.setState({
-                    hasZeusLspChannel: true
-                });
-                return false;
-            }
-            return true;
-        });
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
@@ -150,7 +131,6 @@ export default class LightningAddress extends React.Component<
 
     render() {
         const { navigation, LightningAddressStore, SettingsStore } = this.props;
-        const { hasZeusLspChannel } = this.state;
         const {
             status,
             redeemAllOpenPaymentsZaplocker,
@@ -350,7 +330,6 @@ export default class LightningAddress extends React.Component<
                             lightningAddressHandle && (
                                 <View
                                     style={{
-                                        alignSelf: 'center',
                                         marginTop: 30,
                                         marginBottom: 30
                                     }}
@@ -490,6 +469,35 @@ export default class LightningAddress extends React.Component<
                                                 }${availableHashes})`}
                                             </Text>
                                         </Row>
+                                    )}
+                                    {lightningAddressType === 'zaplocker' && (
+                                        <View
+                                            style={{
+                                                marginTop: 20,
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={localeString(
+                                                    paid && paid.length > 0
+                                                        ? 'zeuspay.zaplocker.retirement.redeemFirst'
+                                                        : 'zeuspay.zaplocker.retirement'
+                                                )}
+                                            />
+                                            {(!paid || paid.length === 0) && (
+                                                <Button
+                                                    title={localeString(
+                                                        'zeuspay.zaplocker.retirement.switch'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'LightningAddressSettings'
+                                                        )
+                                                    }
+                                                    secondary
+                                                />
+                                            )}
+                                        </View>
                                     )}
                                     <Row
                                         style={{
@@ -744,230 +752,6 @@ export default class LightningAddress extends React.Component<
                                                                         cashuEnabled
                                                                             ? 'CreateCashuLightningAddress'
                                                                             : 'EcashSettings'
-                                                                    )
-                                                                }
-                                                            />
-                                                        </View>
-                                                    </Row>
-                                                </View>
-                                            )}
-
-                                            {BackendUtils.supportsCustomPreimages() && (
-                                                <View
-                                                    style={styles.optionBlock}
-                                                >
-                                                    <Row justify="space-between">
-                                                        <Text
-                                                            style={{
-                                                                ...styles.explainer,
-                                                                fontWeight:
-                                                                    'bold',
-                                                                fontSize: 30,
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                        >
-                                                            Zaplocker
-                                                        </Text>
-                                                        <View
-                                                            style={{
-                                                                marginLeft: 15
-                                                            }}
-                                                        >
-                                                            <Pill
-                                                                title={localeString(
-                                                                    'general.selfCustodial'
-                                                                ).toUpperCase()}
-                                                                textColor={themeColor(
-                                                                    'success'
-                                                                )}
-                                                                borderColor={themeColor(
-                                                                    'success'
-                                                                )}
-                                                                width={160}
-                                                                height={25}
-                                                            />
-                                                        </View>
-                                                    </Row>
-
-                                                    <Text
-                                                        style={{
-                                                            ...styles.explainer,
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'zeuspay.intro.zaplocker.overview'
-                                                        )}
-                                                    </Text>
-
-                                                    <Accordion
-                                                        id="lightning-address-pros-cons-zaplocker"
-                                                        title={localeString(
-                                                            'zeuspay.intro.prosAndCons'
-                                                        )}
-                                                        headerLayout="form"
-                                                        embedded
-                                                        scrollRef={
-                                                            this.scrollViewRef
-                                                        }
-                                                        headerStyle={
-                                                            styles.prosConsToggle
-                                                        }
-                                                        renderFormTitle={() => (
-                                                            <Text
-                                                                style={{
-                                                                    ...styles.explainer,
-                                                                    fontWeight:
-                                                                        'bold',
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {localeString(
-                                                                    'zeuspay.intro.prosAndCons'
-                                                                )}
-                                                            </Text>
-                                                        )}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.prosCons
-                                                            }
-                                                        >
-                                                            <Row justify="space-between">
-                                                                <View
-                                                                    style={
-                                                                        styles.prosConsColumn
-                                                                    }
-                                                                >
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🟢 ${localeString(
-                                                                            'general.selfCustodial'
-                                                                        )}`}
-                                                                    </Text>
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🟢 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.nostrVerification'
-                                                                        )}`}
-                                                                    </Text>
-                                                                </View>
-                                                                <View
-                                                                    style={
-                                                                        styles.prosConsColumn
-                                                                    }
-                                                                >
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🔴 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.redeemInApp'
-                                                                        )}`}
-                                                                    </Text>
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🔴 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.settledUponRedemption'
-                                                                        )}`}
-                                                                    </Text>
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🔴 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.24hrs'
-                                                                        )}`}
-                                                                    </Text>
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🔴 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.channelRequired'
-                                                                        )}`}
-                                                                    </Text>
-                                                                </View>
-                                                            </Row>
-                                                        </View>
-                                                    </Accordion>
-
-                                                    <Row>
-                                                        <View
-                                                            style={{
-                                                                margin: 2,
-                                                                width: '50%'
-                                                            }}
-                                                        >
-                                                            <Button
-                                                                title={localeString(
-                                                                    'general.learnMore'
-                                                                )}
-                                                                onPress={() =>
-                                                                    navigation.navigate(
-                                                                        'ZaplockerInfo'
-                                                                    )
-                                                                }
-                                                                secondary
-                                                            />
-                                                        </View>
-                                                        <View
-                                                            style={{
-                                                                margin: 2,
-                                                                width: '50%'
-                                                            }}
-                                                        >
-                                                            <Button
-                                                                title={
-                                                                    hasZeusLspChannel
-                                                                        ? localeString(
-                                                                              'general.getStarted'
-                                                                          )
-                                                                        : localeString(
-                                                                              'zeuspay.getChannel'
-                                                                          )
-                                                                }
-                                                                onPress={() =>
-                                                                    navigation.navigate(
-                                                                        hasZeusLspChannel
-                                                                            ? 'CreateZaplockerLightningAddress'
-                                                                            : 'ZaplockerGetChan'
                                                                     )
                                                                 }
                                                             />
