@@ -1988,7 +1988,16 @@ export default class SettingsStore {
         }
 
         await this.setSettings(newSettings);
-        this.triggerSettingsRefresh = true;
+
+        // Only ask the Wallet screen for a full node refetch when the write
+        // actually changed something. Bookkeeping writes that re-persist an
+        // identical value (authenticationAttempts: 0 after a successful
+        // login, supportedBiometryType on every app start) would otherwise
+        // arm the flag and cost the user a visible reconnect on the next
+        // focus event.
+        if (!isEqual(existingSettings, newSettings)) {
+            this.triggerSettingsRefresh = true;
+        }
 
         // Update store's node properties from latest settings
         this.updateNodeProperties(newSettings);
