@@ -188,7 +188,7 @@ export default class Lockscreen extends React.Component<
 
             if (isVerified) {
                 SettingsStore.setPosStatus('inactive');
-                this.resetAuthenticationAttempts();
+                await this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
                 this.proceed(
                     pendingNavigation?.screen,
@@ -295,7 +295,7 @@ export default class Lockscreen extends React.Component<
 
             // Check if we're modifying security settings first
             if (modifySecurityScreen) {
-                this.resetAuthenticationAttempts();
+                await this.resetAuthenticationAttempts();
                 navigation.popTo(modifySecurityScreen);
                 return;
             } else if (deletePassword) {
@@ -312,7 +312,7 @@ export default class Lockscreen extends React.Component<
                 return;
             } else if (SettingsStore.settings.selectNodeOnStartup) {
                 // Only handle wallet selection when NOT modifying security
-                this.resetAuthenticationAttempts();
+                await this.resetAuthenticationAttempts();
 
                 const shareIntentData = route.params?.shareIntentData;
 
@@ -333,7 +333,7 @@ export default class Lockscreen extends React.Component<
                 ) {
                     setPosStatus('inactive');
                 }
-                this.resetAuthenticationAttempts();
+                await this.resetAuthenticationAttempts();
                 const pendingNavigation = route.params?.pendingNavigation;
                 this.proceed(
                     pendingNavigation?.screen,
@@ -476,11 +476,16 @@ export default class Lockscreen extends React.Component<
         }
     };
 
-    resetAuthenticationAttempts = () => {
+    // Must be awaited before navigating away: updateSettings() persists to
+    // storage before it sets SettingsStore.triggerSettingsRefresh, so a
+    // fire-and-forget call lands that flag *after* the Wallet screen has
+    // regained focus and cleared it. The flag then survives until the next
+    // focus event and forces a needless full node refetch there.
+    resetAuthenticationAttempts = async () => {
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
-        updateSettings({ authenticationAttempts: 0 });
+        await updateSettings({ authenticationAttempts: 0 });
     };
 
     generateErrorMessage = (): string => {
