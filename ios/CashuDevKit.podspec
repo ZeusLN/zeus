@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'CashuDevKit'
-  s.version          = '0.17.3'
+  s.version          = '0.17.4'
   s.summary          = 'Cashu Development Kit - FFI bindings for iOS'
   s.description      = <<-DESC
     CashuDevKit provides Swift bindings to the Cashu Development Kit (CDK),
