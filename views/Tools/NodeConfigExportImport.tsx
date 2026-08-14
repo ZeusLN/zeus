@@ -35,9 +35,11 @@ import { themeColor, isLightTheme } from '../../utils/ThemeUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
     saveNodeConfigs,
-    createExportFileContent as createExportFileContent,
+    createExportFileContent,
     saveNodeConfigExportFile,
-    decryptExportData
+    decryptExportData,
+    EXPORT_FORMAT_VERSION,
+    NodeConfigExport
 } from '../../utils/NodeConfigUtils';
 import KeychainRecoveryUtils, {
     RecoveryResult,
@@ -94,16 +96,6 @@ interface NodeConfigExportImportState {
     selectedRecoveryResult: RecoveryResult | null;
     recoveryNodes: Node[];
     selectedRecoveryNodes: Array<number>;
-}
-
-interface NodeConfigExport {
-    version: number;
-    encrypted: boolean;
-    data:
-        | {
-              nodes: Node[];
-          }
-        | string;
 }
 
 @inject('SettingsStore')
@@ -530,6 +522,7 @@ export default class NodeConfigExportImport extends React.Component<
             useEncryption,
             exportPassword
         } = this.state;
+
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
@@ -539,7 +532,7 @@ export default class NodeConfigExportImport extends React.Component<
             const selectedNodeConfigs = selectedNodeIndices.map(
                 (index) => nodes[index]
             );
-            const exportFileContent = createExportFileContent(
+            const exportFileContent = await createExportFileContent(
                 selectedNodeConfigs,
                 useEncryption,
                 exportPassword
@@ -604,7 +597,10 @@ export default class NodeConfigExportImport extends React.Component<
             const content = await RNFS.readFile(filePath, 'utf8');
             const importData: NodeConfigExport = JSON.parse(content);
 
-            if (!importData.version || importData.version > 1) {
+            if (
+                !importData.version ||
+                importData.version > EXPORT_FORMAT_VERSION
+            ) {
                 this.handleError(
                     undefined,
                     'views.Tools.nodeConfigExportImport.importError'
@@ -621,7 +617,16 @@ export default class NodeConfigExportImport extends React.Component<
                 });
             } else {
                 // Show node selection modal for unencrypted imports
-                const nodes = (importData.data as { nodes: Node[] }).nodes;
+                const nodes = (importData.data as { nodes: Node[] })?.nodes;
+
+                if (!Array.isArray(nodes)) {
+                    this.handleError(
+                        undefined,
+                        'views.Tools.nodeConfigExportImport.importError'
+                    );
+                    return;
+                }
+
                 this.setState({
                     isLoading: false,
                     importNodes: nodes,
@@ -875,10 +880,7 @@ export default class NodeConfigExportImport extends React.Component<
         try {
             this.setState({ isLoading: true });
 
-            const nodes = decryptExportData(
-                importData!.data as string,
-                password
-            );
+            const nodes = await decryptExportData(importData!, password);
 
             // Show node selection modal for encrypted imports
             this.setState({
