@@ -280,6 +280,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // focus event can fire multiple times before the first async
             // call completes, causing duplicate node builds.
             if (this._navigating) {
+                // Leave the flags armed: a settings change that arrived
+                // while this refresh was already in flight is not covered
+                // by it, and clearing here would drop it silently. The next
+                // focus event picks it up instead.
                 console.log(
                     '[Wallet] handleFocus: skipping — getSettingsAndNavigate already in flight'
                 );
@@ -291,13 +295,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 console.log(
                     `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
                 );
+                SettingsStore.posWasEnabled = false;
+                SettingsStore.triggerSettingsRefresh = false;
                 this._navigating = true;
                 this.getSettingsAndNavigate(shareIntentData).finally(() => {
                     this._navigating = false;
                 });
             }
-            SettingsStore.posWasEnabled = false;
-            SettingsStore.triggerSettingsRefresh = false;
         }
 
         if (
