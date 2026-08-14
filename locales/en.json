@@ -2516,6 +2516,7 @@
     "views.RebalancingChannels.rebalanceSummary": "View Rebalance Summary",
     "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Shutdown",
+    "androidNotification.receivingPayment": "Receiving a payment…",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
     "androidNotification.nwcShutdown": "Stop Service"
