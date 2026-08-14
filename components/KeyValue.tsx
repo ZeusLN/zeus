@@ -90,6 +90,10 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
 
+        // lurker mode only redacts sensitive values; copying or opening a
+        // link on a redacted value would expose the real value
+        const valueHidden = lurkerMode && sensitive;
+
         {
             /* TODO: rig up RTL */
         }
@@ -179,7 +183,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
                         ? PrivacyUtils.sensitiveValue({ input: value })
                         : value}
                 </Text>
-                {isCopyable && !lurkerMode && (
+                {isCopyable && !valueHidden && (
                     <Pressable
                         onPress={() => this.copyText()}
                         onPressIn={() => this.setValueOpacity(0.2)}
@@ -205,7 +209,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         );
 
         let Value: any;
-        if (!lurkerMode && (isCopyable || mempoolLink)) {
+        if (!valueHidden && (isCopyable || mempoolLink)) {
             Value = (
                 <Pressable
                     onPress={mempoolLink ? mempoolLink : () => this.copyText()}
