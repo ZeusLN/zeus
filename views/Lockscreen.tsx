@@ -77,6 +77,11 @@ export default class Lockscreen extends React.Component<
 > {
     private subscription: NativeEventSubscription;
     private releaseWipeGuard: (() => void) | null = null;
+    // Set while a verified login awaits the attempt reset: a second submit
+    // in that window would navigate twice, and a second pop() removes
+    // whatever screen is on top. An instance field, not state, so the
+    // guard holds before the next render.
+    private unlocking = false;
 
     constructor(props: any) {
         super(props);
@@ -195,7 +200,7 @@ export default class Lockscreen extends React.Component<
 
             if (isVerified) {
                 SettingsStore.setPosStatus('inactive');
-                this.resetAuthenticationAttempts();
+                await this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
                 this.proceed(
                     pendingNavigation?.screen,
@@ -292,8 +297,9 @@ export default class Lockscreen extends React.Component<
         const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
         // a wipe is already running; a second submit must not start another
-        // wipe or mutate settings mid-wipe
-        if (this.state.wiping) return;
+        // wipe or mutate settings mid-wipe. Likewise while a verified login
+        // is still completing, a second submit would navigate twice.
+        if (this.state.wiping || this.unlocking) return;
 
         this.setState({
             error: false
@@ -303,67 +309,72 @@ export default class Lockscreen extends React.Component<
             (passphraseAttempt && passphraseAttempt === passphrase) ||
             (pinAttempt && pinAttempt === pin)
         ) {
-            SettingsStore.setLoginStatus(true);
+            this.unlocking = true;
+            try {
+                SettingsStore.setLoginStatus(true);
 
-            // Check if we're modifying security settings first
-            if (modifySecurityScreen) {
-                this.resetAuthenticationAttempts();
-                navigation.popTo(modifySecurityScreen);
-                return;
-            } else if (deletePassword) {
-                this.deletePassword();
-                return;
-            } else if (deletePin) {
-                this.deletePin();
-                return;
-            } else if (deleteDuressPassword) {
-                this.deleteDuressPassword();
-                return;
-            } else if (deleteDuressPin) {
-                this.deleteDuressPin();
-                return;
-            } else if (route.params?.pendingNavigation) {
-                // must be handled before selectNodeOnStartup, which would
-                // otherwise drop the re-auth target and land on the wallet
-                // picker
-                if (
-                    (SettingsStore.settings?.pos?.posEnabled ||
-                        PosEnabled.Disabled) !== PosEnabled.Disabled
-                ) {
-                    setPosStatus('inactive');
-                }
-                this.resetAuthenticationAttempts();
-                const { pendingNavigation } = route.params;
-                this.proceed(
-                    pendingNavigation.screen,
-                    pendingNavigation.params
-                );
-                return;
-            } else if (SettingsStore.settings.selectNodeOnStartup) {
-                // Only handle wallet selection when NOT modifying security
-                this.resetAuthenticationAttempts();
+                // Check if we're modifying security settings first
+                if (modifySecurityScreen) {
+                    await this.resetAuthenticationAttempts();
+                    navigation.popTo(modifySecurityScreen);
+                    return;
+                } else if (deletePassword) {
+                    this.deletePassword();
+                    return;
+                } else if (deletePin) {
+                    this.deletePin();
+                    return;
+                } else if (deleteDuressPassword) {
+                    this.deleteDuressPassword();
+                    return;
+                } else if (deleteDuressPin) {
+                    this.deleteDuressPin();
+                    return;
+                } else if (route.params?.pendingNavigation) {
+                    // must be handled before selectNodeOnStartup, which would
+                    // otherwise drop the re-auth target and land on the wallet
+                    // picker
+                    if (
+                        (SettingsStore.settings?.pos?.posEnabled ||
+                            PosEnabled.Disabled) !== PosEnabled.Disabled
+                    ) {
+                        setPosStatus('inactive');
+                    }
+                    await this.resetAuthenticationAttempts();
+                    const { pendingNavigation } = route.params;
+                    this.proceed(
+                        pendingNavigation.screen,
+                        pendingNavigation.params
+                    );
+                    return;
+                } else if (SettingsStore.settings.selectNodeOnStartup) {
+                    // Only handle wallet selection when NOT modifying security
+                    await this.resetAuthenticationAttempts();
 
-                const shareIntentData = route.params?.shareIntentData;
+                    const shareIntentData = route.params?.shareIntentData;
 
-                if (shareIntentData) {
-                    navigation.replace('Wallets', {
-                        fromStartup: true,
-                        shareIntentData
-                    });
-                } else {
-                    navigation.replace('Wallets', { fromStartup: true });
+                    if (shareIntentData) {
+                        navigation.replace('Wallets', {
+                            fromStartup: true,
+                            shareIntentData
+                        });
+                    } else {
+                        navigation.replace('Wallets', { fromStartup: true });
+                    }
+                    return;
                 }
-                return;
-            }
-            if (!SettingsStore.settings.selectNodeOnStartup) {
-                if (
-                    (SettingsStore.settings?.pos?.posEnabled ||
-                        PosEnabled.Disabled) !== PosEnabled.Disabled
-                ) {
-                    setPosStatus('inactive');
+                if (!SettingsStore.settings.selectNodeOnStartup) {
+                    if (
+                        (SettingsStore.settings?.pos?.posEnabled ||
+                            PosEnabled.Disabled) !== PosEnabled.Disabled
+                    ) {
+                        setPosStatus('inactive');
+                    }
+                    await this.resetAuthenticationAttempts();
+                    this.proceed();
                 }
-                this.resetAuthenticationAttempts();
-                this.proceed();
+            } finally {
+                this.unlocking = false;
             }
         } else if (
             // duress creds only trigger the wipe on a genuine login attempt -
@@ -514,11 +525,21 @@ export default class Lockscreen extends React.Component<
         }
     };
 
-    resetAuthenticationAttempts = () => {
+    // Must be awaited before navigating away: updateSettings() persists to
+    // storage before it sets SettingsStore.triggerSettingsRefresh, so a
+    // fire-and-forget call lands that flag *after* the Wallet screen has
+    // regained focus and cleared it. The flag then survives until the next
+    // focus event and forces a needless full node refetch there.
+    // A failed write is logged and swallowed: it must never block unlocking.
+    resetAuthenticationAttempts = async () => {
         const { SettingsStore } = this.props;
         const { updateSettings } = SettingsStore;
 
-        updateSettings({ authenticationAttempts: 0 });
+        try {
+            await updateSettings({ authenticationAttempts: 0 });
+        } catch (error) {
+            console.error('Failed to reset authentication attempts', error);
+        }
     };
 
     generateErrorMessage = (): string => {
