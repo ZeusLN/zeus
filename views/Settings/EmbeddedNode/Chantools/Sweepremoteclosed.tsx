@@ -90,7 +90,7 @@ export default class Sweepremoteclosed extends React.Component<
         sweepAddr: '',
         apiUrl: 'https://api.node-recovery.com',
         customApiUrl: '',
-        feeRate: '21',
+        feeRate: '',
         recoveryWindow: '200',
         sleepSeconds: '0',
         loading: false,
@@ -135,10 +135,16 @@ export default class Sweepremoteclosed extends React.Component<
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }
                             }}
+                            rightComponent={
+                                loading ? (
+                                    <View>
+                                        <LoadingIndicator size={30} />
+                                    </View>
+                                ) : undefined
+                            }
                             navigation={navigation}
                         />
                         {error && <ErrorMessage message={error} dismissable />}
-                        {loading && <LoadingIndicator />}
                         <ScrollView style={{ margin: 10 }}>
                             {isLdkNode && (
                                 <Text
@@ -371,7 +377,7 @@ export default class Sweepremoteclosed extends React.Component<
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start'
                                     )}
-                                    disabled={!sweepAddr}
+                                    disabled={!sweepAddr || loading}
                                     onPress={async () => {
                                         this.setState({
                                             error: '',
@@ -395,6 +401,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 )
                                                         }
                                                     );
+                                                this.setState({
+                                                    loading: false
+                                                });
                                                 navigation.navigate('TxHex', {
                                                     txHex: response,
                                                     hideWarning: true
@@ -430,6 +439,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 ?.nodeInfo
                                                                 ?.isTestNet
                                                     });
+                                                this.setState({
+                                                    loading: false
+                                                });
                                                 navigation.navigate('TxHex', {
                                                     txHex: response,
                                                     hideWarning: true
