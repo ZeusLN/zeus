@@ -1,6 +1,15 @@
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 
+// lnrpc.Payment.PaymentStatus values that mean the payment is still in
+// progress. INITIATED ("created and has not attempted any HTLCs") streams
+// as the first event whenever no_inflight_updates is false, which is the
+// default on LNC (the store only sets it for Tor and AMP). UNKNOWN is
+// deprecated and documented as never returned, but is non-terminal if it
+// ever were. Anything else is treated as terminal so new lnd statuses
+// fail loudly rather than strand the payment.
+const NON_TERMINAL_STATUSES = new Set(['UNKNOWN', 'IN_FLIGHT', 'INITIATED']);
+
 export type LncPayEventDecision =
     | { kind: 'ignore' }
     | { kind: 'terminal'; result: any }
@@ -79,7 +88,7 @@ export const decideLncPayEvent = (
         return { kind: 'error', error: new Error(eventResult) };
     }
 
-    if (result.status === 'IN_FLIGHT') return { kind: 'ignore' };
+    if (NON_TERMINAL_STATUSES.has(result.status)) return { kind: 'ignore' };
 
     if (expectedHashHex) {
         const eventHash = normalizePaymentHash(result.payment_hash);

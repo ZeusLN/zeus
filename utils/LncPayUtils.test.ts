@@ -90,6 +90,23 @@ describe('decideLncPayEvent', () => {
         expect(decideLncPayEvent(event).kind).toBe('ignore');
     });
 
+    it('ignores INITIATED updates, even with a matching hash', () => {
+        // Streamed as the first event when no_inflight_updates is false;
+        // treating it as terminal would report failure for a payment that
+        // goes on to settle.
+        const event = JSON.stringify({
+            status: 'INITIATED',
+            payment_hash: SPEC_HASH_HEX
+        });
+        expect(decideLncPayEvent(event, SPEC_HASH_HEX).kind).toBe('ignore');
+        expect(decideLncPayEvent(event).kind).toBe('ignore');
+    });
+
+    it('ignores deprecated UNKNOWN status updates', () => {
+        const event = JSON.stringify({ status: 'UNKNOWN' });
+        expect(decideLncPayEvent(event, SPEC_HASH_HEX).kind).toBe('ignore');
+    });
+
     it('accepts a terminal event when no hash is expected', () => {
         const decision = decideLncPayEvent(terminalEvent);
         expect(decision.kind).toBe('terminal');

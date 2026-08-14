@@ -401,7 +401,7 @@ export default class LightningNodeConnect {
                     } else if (decision.kind === 'error') {
                         settle(() => reject(decision.error));
                     }
-                    // 'ignore': EOF, IN_FLIGHT, or another payment's event
+                    // 'ignore': EOF, a non-terminal status, or another payment's event
                 }
             );
         });
