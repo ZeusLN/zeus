@@ -2163,7 +2163,23 @@ export default class SettingsStore {
                 // updates that would advertise the unsaved settings.
                 return this.settings;
             }
-            this.triggerSettingsRefresh = true;
+
+            // Only ask the Wallet screen for a full node refetch when the write
+            // actually changed something. Bookkeeping writes that re-persist an
+            // identical value (authenticationAttempts: 0 after a successful
+            // login, supportedBiometryType on every app start) would otherwise
+            // arm the flag and cost the user a noticeable loading time on the
+            // next focus event. Compare what gets persisted: JSON drops
+            // undefined-valued keys, so writing undefined for an absent key is
+            // no change.
+            if (
+                !isEqual(
+                    JSON.parse(JSON.stringify(existingSettings)),
+                    JSON.parse(JSON.stringify(newSettings))
+                )
+            ) {
+                this.triggerSettingsRefresh = true;
+            }
 
             // Update store's node properties from latest settings
             this.updateNodeProperties(newSettings);
