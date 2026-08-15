@@ -351,8 +351,16 @@ export default class NostrKey extends React.Component<
                                                         .nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        sha256Bytes(utf8ToBytes(JSON.stringify(relays))),
-                                                        hexToBytes(nostrPrivateKey)
+                                                        sha256Bytes(
+                                                            utf8ToBytes(
+                                                                JSON.stringify(
+                                                                    relays
+                                                                )
+                                                            )
+                                                        ),
+                                                        hexToBytes(
+                                                            nostrPrivateKey
+                                                        )
                                                     )
                                                 );
                                                 try {

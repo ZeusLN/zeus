@@ -1,7 +1,7 @@
 import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
-import { sha256 } from 'js-sha256';
+import { sha256Hex } from '../utils/HashingUtils';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -84,7 +84,7 @@ export default class Payment extends BaseModel {
         }
 
         if (!this.isIncomplete) {
-            return sha256(Base64Utils.hexToBytes(this.getPreimage));
+            return sha256Hex(Base64Utils.hexToBytes(this.getPreimage));
         }
 
         return undefined;
