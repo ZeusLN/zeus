@@ -26,6 +26,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import {
     buildPaymentAwaitParams,
     isOrderFree,
+    LSPOrderState,
     LSPService
 } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -105,8 +106,28 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             this.setState({
                 token: SettingsStore.settings?.lsps1Token || ''
             });
+            this.resumeFreeOrderPollingIfNeeded();
         });
     }
+
+    // visiting the LSPS1 screen (reachable via LSPS1 Settings) stops the
+    // shared free-order polling; resume it for a pending free order
+    private resumeFreeOrderPollingIfNeeded = () => {
+        const { LSPStore } = this.props;
+        const { createExtensionOrderResponse } = LSPStore;
+        const result =
+            createExtensionOrderResponse?.result ||
+            createExtensionOrderResponse;
+        const orderId = result?.order_id;
+        if (
+            orderId &&
+            isOrderFree(result?.payment) &&
+            result?.order_state !== LSPOrderState.COMPLETED &&
+            result?.order_state !== LSPOrderState.FAILED
+        ) {
+            LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS7);
+        }
+    };
 
     componentWillUnmount() {
         this.props.LSPStore.stopFreeOrderStatusPolling();
