@@ -25,7 +25,6 @@ import {
     NavigationIndependentTree
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
-import RNRestart from 'react-native-restart';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 
@@ -70,7 +69,7 @@ import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
+import { restartApp, restartNeeded } from '../../utils/RestartUtils';
 
 import {
     loadPendingPaymentData,
@@ -1569,7 +1568,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                                 onPress={() => {
                                     if (Platform.OS === 'android') {
-                                        RNRestart.Restart();
+                                        restartApp();
                                     } else {
                                         setConnectingStatus(true);
                                         this.getSettingsAndNavigate();
