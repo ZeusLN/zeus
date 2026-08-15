@@ -33,6 +33,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import {
     buildPaymentAwaitParams,
     isOrderFree,
+    LSPOrderState,
     LSPService
 } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -88,25 +89,60 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     async componentDidMount() {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
+        if (
+            !BackendUtils.supportsLSPS1native() &&
+            !BackendUtils.supportsLSPS1rest() &&
+            BackendUtils.supportsLSPScustomMessage()
+        ) {
+            console.log('connecting');
+            await this.connectPeer();
+            console.log('connected');
+            await this.subscribeToCustomMessages();
+        }
+        this.fetchGetInfo();
+
+        navigation.addListener('focus', () => {
+            this.setState({
+                token: SettingsStore.settings?.lsps1Token || ''
+            });
+            // a stacked duplicate of this screen wipes the shared store
+            // when it unmounts; refetch if the service info is gone
+            if (
+                !LSPStore.loadingLSPS1 &&
+                Object.keys(LSPStore.getInfoData).length === 0
+            ) {
+                this.fetchGetInfo();
+            }
+            this.resumeFreeOrderPollingIfNeeded();
+        });
+    }
+
+    private fetchGetInfo = () => {
+        const { LSPStore } = this.props;
         if (BackendUtils.supportsLSPS1native()) {
             // Native LSPS1 - LSP is configured at node initialization
             LSPStore.lsps1GetInfoNative();
         } else if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.lsps1GetInfoREST();
         } else if (BackendUtils.supportsLSPScustomMessage()) {
-            console.log('connecting');
-            await this.connectPeer();
-            console.log('connected');
-            await this.subscribeToCustomMessages();
             LSPStore.lsps1GetInfoCustomMessage();
         }
+    };
 
-        navigation.addListener('focus', () => {
-            this.setState({
-                token: SettingsStore.settings?.lsps1Token || ''
-            });
-        });
-    }
+    private resumeFreeOrderPollingIfNeeded = () => {
+        const { LSPStore } = this.props;
+        const { createOrderResponse } = LSPStore;
+        const result = createOrderResponse?.result || createOrderResponse;
+        const orderId = result?.order_id;
+        if (
+            orderId &&
+            isOrderFree(result?.payment) &&
+            result?.order_state !== LSPOrderState.COMPLETED &&
+            result?.order_state !== LSPOrderState.FAILED
+        ) {
+            LSPStore.startFreeOrderStatusPolling(orderId, LSPService.LSPS1);
+        }
+    };
     componentWillUnmount() {
         if (this.listener) {
             this.listener.remove();
