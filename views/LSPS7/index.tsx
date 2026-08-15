@@ -498,9 +498,13 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             )}
                                         </Text>
                                         <TextInput
-                                            value={numberWithCommas(
-                                                channelExtensionBlocks
-                                            )}
+                                            value={
+                                                channelExtensionBlocks === ''
+                                                    ? ''
+                                                    : numberWithCommas(
+                                                          channelExtensionBlocks
+                                                      )
+                                            }
                                             onChangeText={(text: any) => {
                                                 let newValue: string | number =
                                                     parseInt(
