@@ -35,7 +35,10 @@ export default class LightningNodeConnect {
     permNewAddress: boolean;
     permImportAccount: boolean;
     permForwardingHistory: boolean;
-    permSignMessage: boolean;
+    // Default true so NWC subscribe-before-checkPerms (app resume) does
+    // not drop sign_message. checkPerms currently forces all perms true
+    // (ZEUS-3642); restore hasPerms there before relying on this flag.
+    permSignMessage: boolean = true;
 
     initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =

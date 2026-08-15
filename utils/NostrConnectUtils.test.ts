@@ -24,7 +24,9 @@ jest.mock('./LocaleUtils', () => ({
 
 jest.mock('./BackendUtils', () => ({
     __esModule: true,
-    default: {}
+    default: {
+        supportsMessageSigning: jest.fn(() => true)
+    }
 }));
 
 jest.mock('react-native-notifications', () => ({
@@ -35,10 +37,12 @@ jest.mock('react-native-notifications', () => ({
 
 import * as nostrTools from 'nostr-tools';
 
+import BackendUtils from './BackendUtils';
 import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Base64Utils from './Base64Utils';
+import { PermissionType } from '../models/NWCConnection';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
 
@@ -1122,6 +1126,129 @@ describe('NostrConnectUtils', () => {
 
             expect(payment.getFee).toBe('3');
             expect(payment.getPreimage).toBe('');
+        });
+    });
+
+    describe('sign_message permission defaults', () => {
+        beforeEach(() => {
+            (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(
+                true
+            );
+        });
+
+        it('omits sign_message from the default full-access grant', () => {
+            expect(NostrConnectUtils.getFullAccessPermissions()).not.toContain(
+                'sign_message'
+            );
+        });
+
+        it('still advertises sign_message as a supported wallet-service method', () => {
+            expect(NostrConnectUtils.getWalletServiceMethods()).toContain(
+                'sign_message'
+            );
+        });
+
+        it('does not advertise sign_message when the backend cannot sign', () => {
+            (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(
+                false
+            );
+            expect(NostrConnectUtils.getWalletServiceMethods()).not.toContain(
+                'sign_message'
+            );
+            expect(
+                NostrConnectUtils.advertisedConnectionMethods([
+                    'get_info',
+                    'sign_message'
+                ])
+            ).toEqual(['get_info']);
+        });
+
+        it('keeps Full Access / Read Only selected when sign_message is also granted', () => {
+            expect(
+                NostrConnectUtils.determinePermissionType(
+                    NostrConnectUtils.getFullAccessPermissions()
+                )
+            ).toBe(PermissionType.FullAccess);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getFullAccessPermissions(),
+                    'sign_message'
+                ])
+            ).toBe(PermissionType.FullAccess);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getReadOnlyPermissions(),
+                    'sign_message'
+                ])
+            ).toBe(PermissionType.ReadOnly);
+            expect(
+                NostrConnectUtils.determinePermissionType(['sign_message'])
+            ).toBe(PermissionType.Custom);
+        });
+
+        it('preserves sign_message when clearing a wallet-access preset', () => {
+            expect(
+                NostrConnectUtils.withPreservedSignMessage(
+                    [],
+                    [
+                        ...NostrConnectUtils.getFullAccessPermissions(),
+                        'sign_message'
+                    ]
+                )
+            ).toEqual(['sign_message']);
+            expect(
+                NostrConnectUtils.withPreservedSignMessage(
+                    [],
+                    NostrConnectUtils.getFullAccessPermissions()
+                )
+            ).toEqual([]);
+            expect(
+                NostrConnectUtils.determinePermissionType(['sign_message'])
+            ).toBe(PermissionType.Custom);
+        });
+
+        it('preserves sign_message when switching wallet-access presets', () => {
+            expect(
+                NostrConnectUtils.getPermissionsForType(
+                    PermissionType.FullAccess,
+                    ['sign_message']
+                ).permissions
+            ).toEqual([
+                ...NostrConnectUtils.getFullAccessPermissions(),
+                'sign_message'
+            ]);
+            expect(
+                NostrConnectUtils.getPermissionsForType(
+                    PermissionType.ReadOnly,
+                    [
+                        ...NostrConnectUtils.getFullAccessPermissions(),
+                        'sign_message'
+                    ]
+                ).permissions
+            ).toEqual([
+                ...NostrConnectUtils.getReadOnlyPermissions(),
+                'sign_message'
+            ]);
+        });
+
+        it('lists sign_message separately from Custom wallet methods', () => {
+            expect(
+                NostrConnectUtils.getWalletPermissionOptions().map(
+                    (permission) => permission.key
+                )
+            ).not.toContain('sign_message');
+            expect(NostrConnectUtils.getSignMessagePermission().key).toBe(
+                'sign_message'
+            );
+        });
+
+        it('accepts only a non-empty string as a sign_message payload', () => {
+            expect(NostrConnectUtils.isValidSignMessage(undefined)).toBe(false);
+            expect(NostrConnectUtils.isValidSignMessage('')).toBe(false);
+            expect(NostrConnectUtils.isValidSignMessage(1)).toBe(false);
+            expect(NostrConnectUtils.isValidSignMessage('challenge')).toBe(
+                true
+            );
         });
     });
 });
