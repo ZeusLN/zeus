@@ -40,7 +40,10 @@ jest.mock('react-native-blob-util', () => ({
 }));
 
 jest.mock('react-native-share', () => ({ open: jest.fn() }));
-jest.mock('react-native-restart', () => ({ Restart: jest.fn() }));
+jest.mock('./RestartUtils', () => ({
+    restartApp: jest.fn(),
+    restartNeeded: jest.fn()
+}));
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
