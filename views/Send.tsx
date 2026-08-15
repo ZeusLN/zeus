@@ -278,7 +278,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         await this.readClipboard();
 
-        if (this.state.destination) {
+        if (
+            this.state.destination &&
+            !(this.state.isValid && this.state.brantaVerification)
+        ) {
             this.validateAddress(this.state.destination);
         }
 
