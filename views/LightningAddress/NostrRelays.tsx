@@ -4,11 +4,10 @@ import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 
-import { sha256Bytes } from '../../utils/HashingUtils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { sha256StringToHex } from '../../utils/HashingUtils';
+import { sha256Bytes } from '../../utils/HashingUtils';
 
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -184,8 +183,16 @@ export default class NostrRelays extends React.Component<
                                             } else {
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        sha256Bytes(utf8ToBytes(JSON.stringify(newNostrRelays))),
-                                                        hexToBytes(nostrPrivateKey)
+                                                        sha256Bytes(
+                                                            utf8ToBytes(
+                                                                JSON.stringify(
+                                                                    newNostrRelays
+                                                                )
+                                                            )
+                                                        ),
+                                                        hexToBytes(
+                                                            nostrPrivateKey
+                                                        )
                                                     )
                                                 );
                                                 try {
@@ -260,8 +267,16 @@ export default class NostrRelays extends React.Component<
                                                             const relays_sig =
                                                                 bytesToHex(
                                                                     schnorr.sign(
-                                                                        sha256Bytes(utf8ToBytes(JSON.stringify(newNostrRelays))),
-                                                                        hexToBytes(nostrPrivateKey)
+                                                                        sha256Bytes(
+                                                                            utf8ToBytes(
+                                                                                JSON.stringify(
+                                                                                    newNostrRelays
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                        hexToBytes(
+                                                                            nostrPrivateKey
+                                                                        )
                                                                     )
                                                                 );
                                                             try {

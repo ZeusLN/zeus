@@ -280,8 +280,16 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     const relays_sig =
                                                         bytesToHex(
                                                             schnorr.sign(
-                                                                sha256Bytes(utf8ToBytes(JSON.stringify(nostrRelays))),
-                                                                hexToBytes(nostrPrivateKey)
+                                                                sha256Bytes(
+                                                                    utf8ToBytes(
+                                                                        JSON.stringify(
+                                                                            nostrRelays
+                                                                        )
+                                                                    )
+                                                                ),
+                                                                hexToBytes(
+                                                                    nostrPrivateKey
+                                                                )
                                                             )
                                                         );
                                                     const response =
