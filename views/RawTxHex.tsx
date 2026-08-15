@@ -98,7 +98,12 @@ export default class RawTxHex extends React.PureComponent<
                     </View>
                     <Button
                         title={localeString(
-                            'views.RawTxHex.broadcastToMempoolSpace'
+                            'views.RawTxHex.broadcastToInstance',
+                            {
+                                instance: UrlUtils.getMempoolInstanceHost(
+                                    nodeInfoStore.nodeInfo
+                                )
+                            }
                         )}
                         onPress={() => broadcastRawTxToMempoolSpace(value)}
                     />

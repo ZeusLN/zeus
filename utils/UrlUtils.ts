@@ -1,5 +1,17 @@
 import { Linking } from 'react-native';
 import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
+import { DEFAULT_MEMPOOL_INSTANCE } from '../stores/SettingsStore';
+
+/**
+ * Bare hosts are treated as https. Zeus has accepted scheme-less hosts
+ * ('mempool.space', '192.168.1.1:8999') in custom server settings since
+ * before those fields required a scheme, so every consumer of a stored host
+ * must apply this same assumption. Keep it in one place.
+ */
+const withScheme = (host: string): string =>
+    host && !host.includes('://')
+        ? `https://${host.replace(/^\/+/, '')}`
+        : host;
 
 /**
  * Get the Esplora-compatible API base URL for the current network.
@@ -9,9 +21,47 @@ const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
 }): string => {
+    const privacy = settingsStore?.settings?.privacy;
+    // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
+    // intentionally covers installs that predate the setting: on upgrade they
+    // move off the previously hardcoded mempool.space onto the ZEUS-operated
+    // instance, without a migration writing anything to settings.
+    const instance = privacy?.mempoolInstance || DEFAULT_MEMPOOL_INSTANCE;
+
+    // Custom instance is used verbatim on every network. '/api' is appended
+    // here, so drop it from the stored URL if the user pasted the full API
+    // base (e.g. 'https://mempool.example.com/api') instead of the site root.
+    if (instance === 'Custom' && privacy?.customMempoolInstance) {
+        const host = withScheme(
+            privacy.customMempoolInstance
+                .trim()
+                .replace(/\/+$/, '')
+                .replace(/\/api$/i, '')
+        );
+        return `${host}/api`;
+    }
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
-    const prefix = nodeInfo.isTestNet ? 'testnet/' : '';
-    return `https://mempool.space/${prefix}api`;
+    // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
+    return `https://${
+        instance === 'mempool.space'
+            ? 'mempool.space'
+            : DEFAULT_MEMPOOL_INSTANCE
+    }/api`;
+};
+
+/**
+ * Hostname of the effective mempool instance, for display purposes.
+ */
+const getMempoolInstanceHost = (nodeInfo: {
+    isMutinynet: boolean;
+    isTestNet: boolean;
+}): string => {
+    try {
+        return new URL(getMempoolApiUrl(nodeInfo)).host;
+    } catch {
+        return DEFAULT_MEMPOOL_INSTANCE;
+    }
 };
 
 const goToBlockExplorer = (
@@ -34,20 +84,18 @@ const goToBlockExplorer = (
             ? 'testnet/'
             : '';
 
+    // Read the convention hint off the raw host, before it is stripped below.
+    // Currently '...#mempool.space' is the only meaningful hint: it tells us
+    // the explorer uses mempool.space's path scheme.
     let path: string = type;
     if (type === 'block-height') {
         path = host.endsWith('mempool.space') ? 'block' : 'block-height';
     }
 
-    let url = `https://${host}/${network}${path}/${value}`;
+    // Host may be <scheme>://<ip|host_name>:<port>[#convention_hint]
+    const base = withScheme(host).split('#')[0];
 
-    // Handle url <scheme>://<ip|host_name>:<port>[#convention_hint] in host
-    // Currently '...#mempool.space' is the only meaningful convention hint
-    if (custom && host.indexOf('://') !== -1) {
-        const hostUrl = host.split('#')[0]; // Strip optional url convention hints
-        url = `${hostUrl}/${network}${path}/${value}`;
-    }
-    goToUrl(url);
+    goToUrl(`${base}/${network}${path}/${value}`);
 };
 
 const isValidUrl = (url: string): boolean => {
@@ -120,7 +168,9 @@ const leaveZeus = (url: string) => {
 
 export default {
     isValidUrl,
+    withScheme,
     getMempoolApiUrl,
+    getMempoolInstanceHost,
     goToBlockExplorerTXID,
     goToBlockExplorerAddress,
     goToBlockExplorerBlockHeight,
