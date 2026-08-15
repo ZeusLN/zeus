@@ -146,6 +146,7 @@ describe('SettingsStore DEFAULT_SETTINGS', () => {
         'swaps',
         'lightningAddress',
         'bolt12Address',
+        'branta',
         'ecash',
         'networking'
     ];
