@@ -433,9 +433,7 @@ export default class CLNRest {
         if (result?.payment_preimage) {
             formatted.payment_hash = Base64Utils.bytesToHex(
                 Array.from(
-                    new sha256Hash()
-                        .update(Base64Utils.hexToBytes(result.payment_preimage))
-                        .digest()
+                    sha256Bytes(Base64Utils.hexToBytes(result.payment_preimage))
                 )
             );
         }
