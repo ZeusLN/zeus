@@ -8,7 +8,8 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         supportsNodeInfo: () => false,
-        supportsCashuWallet: () => false
+        supportsCashuWallet: () => false,
+        supportsMessageSigning: jest.fn(() => true)
     }
 }));
 
@@ -56,6 +57,7 @@ jest.mock('../storage', () => ({
 }));
 
 import Storage from '../storage';
+import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import Base64Utils from '../utils/Base64Utils';
@@ -1313,5 +1315,98 @@ describe('NostrWalletConnectStore activity prune', () => {
         expect((store as any).checkMakeInvoiceLimits(connection)).toBeNull();
         (store as any).pruneConnectionActivity(connection);
         expect(connection.activity.length).toBeLessThanOrEqual(100);
+    });
+});
+
+describe('NostrWalletConnectStore sign_message', () => {
+    afterEach(() => {
+        (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(
+            true
+        );
+    });
+
+    function buildStore(signMessage: jest.Mock) {
+        const settingsStore: any = {
+            connecting: false,
+            implementation: 'lnd',
+            settings: {
+                locale: 'en',
+                ecash: { enableCashu: false },
+                lightningAddress: { enabled: false }
+            }
+        };
+        const store = new NostrWalletConnectStore(
+            settingsStore,
+            {} as any,
+            {
+                nodeInfo: { nodeId: NODE_PUBKEY },
+                getNodeInfo: jest.fn()
+            } as any,
+            {} as any,
+            { invoices: [] } as any,
+            {} as any,
+            { signMessage } as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        return store;
+    }
+
+    it('rejects a missing or empty message without signing', async () => {
+        const signMessage = jest.fn();
+        const store = buildStore(signMessage);
+
+        const missing = await (store as any).handleSignMessage({});
+        const empty = await (store as any).handleSignMessage({
+            message: ''
+        });
+
+        expect(signMessage).not.toHaveBeenCalled();
+        expect(missing).toEqual({
+            result: undefined,
+            error: {
+                code: 'OTHER',
+                message:
+                    'stores.NostrWalletConnectStore.error.invalidSignMessage'
+            }
+        });
+        expect(empty.error.code).toBe('OTHER');
+    });
+
+    it('signs a valid message with the node identity key', async () => {
+        const signMessage = jest.fn().mockResolvedValue('zbase-signature');
+        const store = buildStore(signMessage);
+
+        const response = await (store as any).handleSignMessage({
+            message: 'lnurl-auth-challenge'
+        });
+
+        expect(signMessage).toHaveBeenCalledWith(
+            'lnurl-auth-challenge',
+            'lightning'
+        );
+        expect(response).toEqual({
+            result: {
+                message: 'lnurl-auth-challenge',
+                signature: 'zbase-signature'
+            },
+            error: undefined
+        });
+    });
+
+    it('omits sign_message from get_info when the backend cannot sign', async () => {
+        (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(
+            false
+        );
+        const store = buildStore(jest.fn());
+        const connection = {
+            permissions: ['get_info', 'sign_message'],
+            displayName: 'Test App'
+        };
+
+        const response = await (store as any).handleGetInfo(connection);
+
+        expect(response.result.methods).toEqual(['get_info']);
     });
 });

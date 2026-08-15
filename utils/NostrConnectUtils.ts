@@ -118,7 +118,9 @@ export enum Nip47ErrorCode {
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
     INVOICE_EXPIRED = 'INVOICE_EXPIRED',
     /** NIP-47: pubkey not allowed for this operation (e.g. connection expired). */
-    RESTRICTED = 'RESTRICTED'
+    RESTRICTED = 'RESTRICTED',
+    /** NIP-47: other / invalid request payload (e.g. empty sign_message). */
+    OTHER = 'OTHER'
 }
 
 export default class NostrConnectUtils {
@@ -239,10 +241,10 @@ export default class NostrConnectUtils {
             {
                 key: PermissionType.FullAccess,
                 title: localeString(
-                    'views.Settings.NostrWalletConnect.fullAccess'
+                    'views.Settings.NostrWalletConnect.walletAccess'
                 ),
                 description: localeString(
-                    'views.Settings.NostrWalletConnect.fullAccessDescription'
+                    'views.Settings.NostrWalletConnect.walletAccessDescription'
                 )
             },
             {
@@ -347,6 +349,39 @@ export default class NostrConnectUtils {
         return diffDays > 0 ? diffDays.toString() : '';
     }
 
+    /**
+     * Methods this wallet service implements (NIP-47 info event).
+     * Includes `sign_message`; that method is not part of the default grant.
+     */
+    static getWalletServiceMethods(): Nip47SingleMethod[] {
+        const methods: Nip47SingleMethod[] = [
+            ...NostrConnectUtils.getFullAccessPermissions()
+        ];
+        if (BackendUtils.supportsMessageSigning()) {
+            methods.push('sign_message');
+        }
+        return methods;
+    }
+
+    /**
+     * Methods this connection should advertise on get_info.
+     * Drops `sign_message` when the active backend cannot sign, so
+     * advertised methods match the registered handlers.
+     */
+    static advertisedConnectionMethods(
+        permissions: Nip47SingleMethod[] = []
+    ): Nip47SingleMethod[] {
+        if (BackendUtils.supportsMessageSigning()) {
+            return permissions;
+        }
+        return NostrConnectUtils.withoutSignMessage(permissions);
+    }
+
+    /**
+     * Default wallet-access grant. Omits `sign_message`: that signs
+     * arbitrary text with the Lightning node identity key and must be
+     * opted into per connection, on top of a preset.
+     */
     static getFullAccessPermissions(): Nip47SingleMethod[] {
         return [
             'get_info',
@@ -354,9 +389,12 @@ export default class NostrConnectUtils {
             'pay_invoice',
             'make_invoice',
             'lookup_invoice',
-            'list_transactions',
-            'sign_message'
+            'list_transactions'
         ];
+    }
+
+    static isValidSignMessage(message: unknown): message is string {
+        return typeof message === 'string' && message.length > 0;
     }
 
     static getReadOnlyPermissions(): Nip47SingleMethod[] {
@@ -366,6 +404,56 @@ export default class NostrConnectUtils {
             'lookup_invoice',
             'list_transactions'
         ];
+    }
+
+    /** Wallet methods shown under Custom. Sign Message is a separate opt-in. */
+    static getWalletPermissionOptions(): IndividualPermissionOption[] {
+        return NostrConnectUtils.getAvailablePermissions().filter(
+            (permission) => permission.key !== 'sign_message'
+        );
+    }
+
+    static getSignMessagePermission(): IndividualPermissionOption {
+        return (
+            NostrConnectUtils.getAvailablePermissions().find(
+                (permission) => permission.key === 'sign_message'
+            ) || {
+                key: 'sign_message',
+                title: localeString('views.Settings.signMessage.button'),
+                description: localeString(
+                    'views.Settings.NostrWalletConnect.permissions.signMessageDescription'
+                )
+            }
+        );
+    }
+
+    static withoutSignMessage(
+        permissions: Nip47SingleMethod[]
+    ): Nip47SingleMethod[] {
+        return permissions.filter(
+            (permission) => permission !== 'sign_message'
+        );
+    }
+
+    static withPreservedSignMessage(
+        base: Nip47SingleMethod[],
+        current: Nip47SingleMethod[] = []
+    ): Nip47SingleMethod[] {
+        return current.includes('sign_message')
+            ? [...base, 'sign_message']
+            : base;
+    }
+
+    static samePermissionSet(
+        a: Nip47SingleMethod[],
+        b: Nip47SingleMethod[]
+    ): boolean {
+        if (a.length !== b.length) return false;
+        const sortedA = a.slice().sort();
+        const sortedB = b.slice().sort();
+        return sortedA.every(
+            (permission, index) => permission === sortedB[index]
+        );
     }
 
     static getPermissionShortDescription(
@@ -389,6 +477,9 @@ export default class NostrConnectUtils {
             ),
             list_transactions: localeString(
                 'views.Settings.NostrWalletConnect.permissions.listTransactionsShort'
+            ),
+            sign_message: localeString(
+                'views.Settings.NostrWalletConnect.permissions.signMessageShort'
             )
         };
         return descriptions[permission] || permission.replace(/_/g, ' ');
@@ -401,11 +492,17 @@ export default class NostrConnectUtils {
         switch (permissionType) {
             case PermissionType.FullAccess:
                 return {
-                    permissions: NostrConnectUtils.getFullAccessPermissions()
+                    permissions: NostrConnectUtils.withPreservedSignMessage(
+                        NostrConnectUtils.getFullAccessPermissions(),
+                        currentPermissions
+                    )
                 };
             case PermissionType.ReadOnly:
                 return {
-                    permissions: NostrConnectUtils.getReadOnlyPermissions()
+                    permissions: NostrConnectUtils.withPreservedSignMessage(
+                        NostrConnectUtils.getReadOnlyPermissions(),
+                        currentPermissions
+                    )
                 };
             case PermissionType.Custom:
                 return {
@@ -421,21 +518,21 @@ export default class NostrConnectUtils {
     static determinePermissionType(
         permissions: Nip47SingleMethod[]
     ): PermissionType {
-        const connectionPermissions = permissions.slice().sort();
-        const fullAccessSorted = NostrConnectUtils.getFullAccessPermissions()
-            .slice()
-            .sort();
-        const readOnlySorted = NostrConnectUtils.getReadOnlyPermissions()
-            .slice()
-            .sort();
+        const walletPermissions =
+            NostrConnectUtils.withoutSignMessage(permissions);
         if (
-            JSON.stringify(connectionPermissions) ===
-            JSON.stringify(fullAccessSorted)
+            NostrConnectUtils.samePermissionSet(
+                walletPermissions,
+                NostrConnectUtils.getFullAccessPermissions()
+            )
         ) {
             return PermissionType.FullAccess;
-        } else if (
-            JSON.stringify(connectionPermissions) ===
-            JSON.stringify(readOnlySorted)
+        }
+        if (
+            NostrConnectUtils.samePermissionSet(
+                walletPermissions,
+                NostrConnectUtils.getReadOnlyPermissions()
+            )
         ) {
             return PermissionType.ReadOnly;
         }
@@ -535,43 +632,38 @@ export default class NostrConnectUtils {
         network: string;
         isPaid?: boolean;
     }> {
-        try {
-            const decoded = Bolt11Utils.decode(invoice);
-            const paymentHash = decoded.payment_hash || '';
-            const descriptionHash = decoded.description_hash || '';
-            const description = decoded.description || '';
-            const createdAt = decoded.timestamp || 0;
-            const expireTime = decoded.timeExpireDate || 0;
-            const currentTime = Math.floor(Date.now() / 1000);
-            const isExpired = expireTime > 0 && currentTime > expireTime;
-            let isPaid = false;
-            if (paymentHash && checkForPaidStatus) {
-                try {
-                    const result = await BackendUtils.lookupInvoice({
-                        r_hash: paymentHash
-                    });
-                    isPaid = new Invoice(result).isPaid;
-                } catch (e) {}
-            }
-            return {
-                paymentHash,
-                descriptionHash,
-                description,
-                amount:
-                    decoded.satoshis ||
-                    millisatsToSats(Number(decoded?.millisatoshis)) ||
-                    0,
-                expiryTime: expireTime,
-                createdAt,
-                isExpired,
-                paymentRequest: decoded.paymentRequest,
-                network: decoded.network?.bech32 || 'bitcoin',
-                isPaid
-            };
-        } catch (decodeError) {
-            console.error('Failed to decode invoice:', decodeError);
-            throw decodeError;
+        const decoded = Bolt11Utils.decode(invoice);
+        const paymentHash = decoded.payment_hash || '';
+        const descriptionHash = decoded.description_hash || '';
+        const description = decoded.description || '';
+        const createdAt = decoded.timestamp || 0;
+        const expireTime = decoded.timeExpireDate || 0;
+        const currentTime = Math.floor(Date.now() / 1000);
+        const isExpired = expireTime > 0 && currentTime > expireTime;
+        let isPaid = false;
+        if (paymentHash && checkForPaidStatus) {
+            try {
+                const result = await BackendUtils.lookupInvoice({
+                    r_hash: paymentHash
+                });
+                isPaid = new Invoice(result).isPaid;
+            } catch (e) {}
         }
+        return {
+            paymentHash,
+            descriptionHash,
+            description,
+            amount:
+                decoded.satoshis ||
+                millisatsToSats(Number(decoded?.millisatoshis)) ||
+                0,
+            expiryTime: expireTime,
+            createdAt,
+            isExpired,
+            paymentRequest: decoded.paymentRequest,
+            network: decoded.network?.bech32 || 'bitcoin',
+            isPaid
+        };
     }
 
     static async lookupInvoicePaidFromNode(options: {

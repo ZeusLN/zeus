@@ -26,6 +26,7 @@ import NostrConnectUtils, {
     IndividualPermissionOption
 } from '../../../utils/NostrConnectUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 
 import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
@@ -306,9 +307,15 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     selectPermissionType = (permissionType: PermissionType) => {
         if (this.state.selectedPermissionType === permissionType) {
+            const permissions = NostrConnectUtils.withPreservedSignMessage(
+                [],
+                this.state.selectedPermissions
+            );
             this.updateStateWithChangeTracking({
-                selectedPermissionType: null,
-                selectedPermissions: [],
+                selectedPermissionType: permissions.length
+                    ? NostrConnectUtils.determinePermissionType(permissions)
+                    : null,
+                selectedPermissions: permissions,
                 budgetValue: 0
             });
             return;
@@ -331,24 +338,12 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     togglePermission = (permission: Nip47SingleMethod) => {
-        const { selectedPermissions, selectedPermissionType } = this.state;
+        const { selectedPermissions } = this.state;
         const isAdding = !selectedPermissions.includes(permission);
 
-        let newPermissions: Nip47SingleMethod[];
-        if (isAdding) {
-            if (
-                selectedPermissionType === PermissionType.FullAccess ||
-                selectedPermissionType === PermissionType.ReadOnly
-            ) {
-                newPermissions = [permission];
-            } else {
-                newPermissions = [...selectedPermissions, permission];
-            }
-        } else {
-            newPermissions = selectedPermissions.filter(
-                (p) => p !== permission
-            );
-        }
+        const newPermissions = isAdding
+            ? [...selectedPermissions, permission]
+            : selectedPermissions.filter((p) => p !== permission);
 
         const newPermissionType =
             NostrConnectUtils.determinePermissionType(newPermissions);
@@ -362,6 +357,22 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedPermissions: newPermissions,
             selectedPermissionType: newPermissionType,
             ...(shouldResetBudget && { budgetValue: 0 })
+        });
+    };
+
+    confirmEnableSignMessage = () => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Settings.signMessage.button'),
+            text: localeString(
+                'views.Settings.NostrWalletConnect.permissions.signMessageWarning'
+            ),
+            buttons: [
+                {
+                    title: localeString('general.confirm'),
+                    callback: () => this.togglePermission('sign_message')
+                }
+            ]
         });
     };
 
@@ -615,7 +626,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             return (
                 <Accordion
                     headerLayout="form"
-                    key={`nwc-custom-${String(selectedPermissionType)}`}
+                    key="nwc-custom-permissions"
                     id="nwc-custom-permissions"
                     title={permissionType.title}
                     containerStyle={{ marginTop: 20 }}
@@ -660,7 +671,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </Body>
                         </View>
                         <View>
-                            {NostrConnectUtils.getAvailablePermissions().map(
+                            {NostrConnectUtils.getWalletPermissionOptions().map(
                                 this.renderPermissionItem
                             )}
                         </View>
@@ -751,9 +762,16 @@ export default class AddOrEditNWCConnection extends React.Component<
                 >
                     <Switch
                         value={isSelected}
-                        onValueChange={() =>
-                            this.togglePermission(permission.key)
-                        }
+                        onValueChange={() => {
+                            if (
+                                permission.key === 'sign_message' &&
+                                !isSelected
+                            ) {
+                                this.confirmEnableSignMessage();
+                                return;
+                            }
+                            this.togglePermission(permission.key);
+                        }}
                     />
                 </View>
             </View>
@@ -1005,6 +1023,13 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 {NostrConnectUtils.getPermissionTypes().map(
                                     this.renderPermissionTypeItem
                                 )}
+                                {(BackendUtils.supportsMessageSigning() ||
+                                    selectedPermissions.includes(
+                                        'sign_message'
+                                    )) &&
+                                    this.renderPermissionItem(
+                                        NostrConnectUtils.getSignMessagePermission()
+                                    )}
                             </View>
                         </View>
 

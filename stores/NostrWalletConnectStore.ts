@@ -1388,7 +1388,10 @@ export default class NostrWalletConnectStore {
                     );
             }
 
-            if (connection.hasPermission('sign_message')) {
+            if (
+                connection.hasPermission('sign_message') &&
+                BackendUtils.supportsMessageSigning()
+            ) {
                 handler.signMessage = (request: Nip47SignMessageRequest) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.handleSignMessage(request)
@@ -1543,7 +1546,7 @@ export default class NostrWalletConnectStore {
             fn: async () => {
                 await nwcWalletService.publishWalletServiceInfoEvent(
                     privateKey,
-                    NostrConnectUtils.getFullAccessPermissions(),
+                    NostrConnectUtils.getWalletServiceMethods(),
                     NostrConnectUtils.getNotifications()
                 );
                 runInAction(() => {
@@ -1683,7 +1686,9 @@ export default class NostrWalletConnectStore {
                     network,
                     block_height: nodeInfo?.block_height || 0,
                     block_hash: nodeInfo?.block_hash || '',
-                    methods: connection.permissions || [],
+                    methods: NostrConnectUtils.advertisedConnectionMethods(
+                        connection.permissions
+                    ),
                     notifications: NostrConnectUtils.getNotifications()
                 },
                 error: undefined
@@ -2178,6 +2183,14 @@ export default class NostrWalletConnectStore {
         request: Nip47SignMessageRequest
     ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
         try {
+            if (!NostrConnectUtils.isValidSignMessage(request.message)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidSignMessage'
+                    ),
+                    Nip47ErrorCode.OTHER
+                );
+            }
             if (this.isCashuConfigured) {
                 const selectedMintUrl = this.cashuStore.selectedMintUrl;
                 const wallet = this.cashuStore.cashuWallets[selectedMintUrl];
