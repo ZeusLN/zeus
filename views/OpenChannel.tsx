@@ -81,7 +81,6 @@ interface OpenChannelState {
     account: string;
     additionalChannels: Array<AdditionalChannel>;
     isNodePubkeyValid: boolean;
-    isNodeHostValid: boolean;
     nfcSupported: boolean;
 }
 
@@ -123,7 +122,6 @@ export default class OpenChannel extends React.Component<
             account: 'default',
             additionalChannels: [],
             isNodePubkeyValid: true,
-            isNodeHostValid: true,
             nfcSupported: false
         };
     }
@@ -295,7 +293,6 @@ export default class OpenChannel extends React.Component<
             connectPeerOnly,
             additionalChannels,
             isNodePubkeyValid,
-            isNodeHostValid,
             nfcSupported
         } = this.state;
         const { implementation } = SettingsStore;
@@ -314,6 +311,8 @@ export default class OpenChannel extends React.Component<
 
         const loading = connectingToPeer || openingChannel;
 
+        const isNodeHostValid =
+            host === '' || ValidationUtils.validateNodeHost(host);
         const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
         const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
 
@@ -680,13 +679,15 @@ export default class OpenChannel extends React.Component<
                                                 'Olympus by ZEUS',
                                             node_pubkey_string:
                                                 config.lsps1Pubkey,
-                                            host: config.lsps1Host
+                                            host: config.lsps1Host,
+                                            isNodePubkeyValid: true
                                         });
                                     } else {
                                         this.setState({
                                             channelDestination: 'Custom',
                                             node_pubkey_string: '',
-                                            host: ''
+                                            host: '',
+                                            isNodePubkeyValid: false
                                         });
                                     }
                                 }}
@@ -754,11 +755,7 @@ export default class OpenChannel extends React.Component<
                                             value={host}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    host: text,
-                                                    isNodeHostValid:
-                                                        ValidationUtils.validateNodeHost(
-                                                            text
-                                                        )
+                                                    host: text
                                                 })
                                             }
                                             autoCapitalize="none"
@@ -825,7 +822,8 @@ export default class OpenChannel extends React.Component<
                                                                 implementation ===
                                                                     'cln-rest'
                                                                     ? 'all'
-                                                                    : ''
+                                                                    : '',
+                                                            satAmount: ''
                                                         });
                                                     }}
                                                 />
@@ -1267,12 +1265,15 @@ export default class OpenChannel extends React.Component<
                                             },
                                             false,
                                             connectPeerOnly
-                                        );
+                                        ).catch(() => {});
                                     }}
                                     disabled={
                                         loading ||
                                         (!connectPeerOnly &&
                                             isInvalidFeeRate) ||
+                                        (!connectPeerOnly &&
+                                            !fundMax &&
+                                            !Number(satAmount)) ||
                                         isInvalidPeer
                                     }
                                 />
