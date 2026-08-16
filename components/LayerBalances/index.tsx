@@ -30,6 +30,7 @@ import UTXOsStore from '../../stores/UTXOsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { PaymentMethodLayer } from '../../utils/ChoosePaymentMethodUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
 
@@ -198,9 +199,9 @@ const Row = ({ item }: { item: DataRow }) => {
                     <MatiSvg />
                 ) : isEcash ? (
                     <EcashSvg />
-                ) : item.layer === 'On-chain' ? (
+                ) : item.layer === PaymentMethodLayer.OnChain ? (
                     <OnChainSvg />
-                ) : item.layer === 'Lightning' ? (
+                ) : item.layer === PaymentMethodLayer.Lightning ? (
                     <LightningSvg />
                 ) : moreAccounts ? null : (
                     <OnChainSvg />
@@ -220,9 +221,9 @@ const Row = ({ item }: { item: DataRow }) => {
                                 themeColor('buttonText') || themeColor('text')
                         }}
                     >
-                        {item.layer === 'Lightning'
+                        {item.layer === PaymentMethodLayer.Lightning
                             ? localeString('general.lightning')
-                            : item.layer === 'On-chain'
+                            : item.layer === PaymentMethodLayer.OnChain
                             ? localeString('general.onchain')
                             : item.layer}
                     </Text>
@@ -342,7 +343,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'Lightning') {
+    if (item.layer === PaymentMethodLayer.Lightning) {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -355,7 +356,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'On-chain') {
+    if (item.layer === PaymentMethodLayer.OnChain) {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
@@ -452,13 +453,13 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         let DATA: DataRow[] = [];
 
         DATA.push({
-            layer: 'Lightning',
+            layer: PaymentMethodLayer.Lightning,
             balance: Number(lightningBalance).toFixed(3)
         });
 
         if (BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
-                layer: 'On-chain',
+                layer: PaymentMethodLayer.OnChain,
                 balance: Number(totalBlockchainBalance).toFixed(3)
             });
         }
