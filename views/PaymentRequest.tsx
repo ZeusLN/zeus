@@ -123,8 +123,8 @@ export default class PaymentRequest extends React.Component<
 > {
     listener: any;
     focusListener: any;
-    payReqDisposer: any;
-    paymentRequestDisposer: any;
+    donationDisposer: any;
+    swipeResetDisposer: any;
     donationLockRequest?: string;
     isComponentMounted: boolean = false;
     private scrollViewRef = React.createRef<ScrollView>();
@@ -176,7 +176,7 @@ export default class PaymentRequest extends React.Component<
         // would be shown (and paid) with the old invoice's donation amount
         // and fee mode. Guarded by donationLockRequest so a re-decode of the
         // same request doesn't clobber a donation the user customized.
-        this.payReqDisposer = reaction(
+        this.donationDisposer = reaction(
             () => InvoicesStore.pay_req,
             (pay_req) => {
                 if (!this.isComponentMounted) return;
@@ -247,7 +247,7 @@ export default class PaymentRequest extends React.Component<
         // complete against the swapped-in invoice. The render path notices the
         // mismatch and replaces the pay controls with a warning; the pin is
         // only advanced when the user explicitly accepts the new request.
-        this.paymentRequestDisposer = reaction(
+        this.swipeResetDisposer = reaction(
             () => InvoicesStore.paymentRequest,
             () => {
                 if (!this.isComponentMounted) return;
@@ -275,11 +275,11 @@ export default class PaymentRequest extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
-        if (this.payReqDisposer) {
-            this.payReqDisposer();
+        if (this.donationDisposer) {
+            this.donationDisposer();
         }
-        if (this.paymentRequestDisposer) {
-            this.paymentRequestDisposer();
+        if (this.swipeResetDisposer) {
+            this.swipeResetDisposer();
         }
     }
 

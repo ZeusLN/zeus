@@ -101,8 +101,8 @@ export default class CashuPaymentRequest extends React.Component<
     listener: any;
     isComponentMounted: boolean = false;
     focusListener: any = null;
-    payReqDisposer: any;
-    paymentRequestDisposer: any;
+    donationDisposer: any;
+    swipeResetDisposer: any;
     donationLockRequest?: string;
     state = {
         customAmount: '',
@@ -124,7 +124,7 @@ export default class CashuPaymentRequest extends React.Component<
         const settings = await SettingsStore.getSettings();
         const { defaultDonationPercentage } = settings.payments;
 
-        this.payReqDisposer = reaction(
+        this.donationDisposer = reaction(
             () => CashuStore.payReq,
             (payReq) => {
                 if (payReq?.getRequestAmount) {
@@ -184,7 +184,7 @@ export default class CashuPaymentRequest extends React.Component<
         // complete against the swapped-in invoice. The render path notices
         // the mismatch and replaces the pay controls with a warning; the pin
         // is only advanced when the user explicitly accepts the new request.
-        this.paymentRequestDisposer = reaction(
+        this.swipeResetDisposer = reaction(
             () => CashuStore.paymentRequest,
             () => {
                 if (!this.isComponentMounted) return;
@@ -214,12 +214,12 @@ export default class CashuPaymentRequest extends React.Component<
     componentWillUnmount(): void {
         this.isComponentMounted = false;
 
-        if (this.payReqDisposer) {
-            this.payReqDisposer();
+        if (this.donationDisposer) {
+            this.donationDisposer();
         }
 
-        if (this.paymentRequestDisposer) {
-            this.paymentRequestDisposer();
+        if (this.swipeResetDisposer) {
+            this.swipeResetDisposer();
         }
 
         if (this.focusListener) {
