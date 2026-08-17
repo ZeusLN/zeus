@@ -744,9 +744,8 @@ export default class ChannelView extends React.Component<
                                                   'views.Channel.aliasScid'
                                               )
                                     }
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: aliasScids.join(', ')
-                                    })}
+                                    value={aliasScids.join(', ')}
+                                    sensitive
                                     showCopyIcon
                                 />
                             )}
@@ -755,9 +754,8 @@ export default class ChannelView extends React.Component<
                                     keyValue={localeString(
                                         'views.Channel.peerAliasScid'
                                     )}
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: peerScidAlias
-                                    })}
+                                    value={peerScidAlias}
+                                    sensitive
                                     showCopyIcon
                                 />
                             )}
@@ -766,9 +764,8 @@ export default class ChannelView extends React.Component<
                                     keyValue={localeString(
                                         'views.Channel.zeroConfConfirmedScid'
                                     )}
-                                    value={PrivacyUtils.sensitiveValue({
-                                        input: zeroConfConfirmedScid
-                                    })}
+                                    value={zeroConfConfirmedScid}
+                                    sensitive
                                     showCopyIcon
                                 />
                             )}
