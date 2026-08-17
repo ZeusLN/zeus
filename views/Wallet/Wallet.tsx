@@ -1273,6 +1273,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             'cashu'
                         ) {
                             LightningAddressStore.prepareToAutomaticallyAcceptCashu();
+                        } else if (
+                            LightningAddressStore.lightningAddressType ===
+                                'self' &&
+                            BackendUtils.supportsSelfLightningAddress()
+                        ) {
+                            LightningAddressStore.prepareToAutomaticallyAcceptSelf();
                         }
                     }
 
