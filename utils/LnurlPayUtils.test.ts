@@ -54,7 +54,32 @@ describe('LnurlPayUtils', () => {
             expect(result.reason).toContain('amount mismatch');
         });
 
-        it('rejects when no metadata is available to bind against', () => {
+        it('accepts an invoice without a description_hash (ecash-backed and other non-committing services)', () => {
+            jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+                num_msat: '21000',
+                description: 'ZEUS Pay'
+            } as any);
+            expect(
+                verifyLnurlPayInvoice('lnbc...', METADATA, new BigNumber(21000))
+                    .ok
+            ).toBe(true);
+        });
+
+        it('still enforces the amount on an invoice without a description_hash', () => {
+            jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+                num_msat: '100000',
+                description: 'ZEUS Pay'
+            } as any);
+            const result = verifyLnurlPayInvoice(
+                'lnbc...',
+                METADATA,
+                new BigNumber(21000)
+            );
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('amount mismatch');
+        });
+
+        it('rejects a committing invoice when no metadata is available to bind against', () => {
             jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
                 num_msat: '21000',
                 description_hash: MATCHING_HASH
