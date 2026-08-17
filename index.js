@@ -32,3 +32,10 @@ LogBox.ignoreLogs([
 ]);
 
 AppRegistry.registerComponent(appName, () => App);
+
+// Android killed-state wake for ZEUS Pay self-custodial invoice requests:
+// SelfPayHeadlessService boots this task with the FCM data payload
+AppRegistry.registerHeadlessTask(
+  'ZeusSelfPayRequest',
+  () => require('./utils/selfPayHeadlessTask').default
+);

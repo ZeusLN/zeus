@@ -10,7 +10,10 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore, {
@@ -115,7 +118,8 @@ export default class LightningAddressSettings extends React.Component<
             notifications
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
-        const { loading, update, error_msg } = LightningAddressStore;
+        const { loading, update, error_msg, paid } = LightningAddressStore;
+        const hasOpenPayments = paid && paid.length > 0;
 
         return (
             <Screen>
@@ -482,6 +486,15 @@ export default class LightningAddressSettings extends React.Component<
                             />
                         </ListItem>
                         <ZeusPayPlusSettings navigation={navigation} />
+                        {hasOpenPayments && (
+                            <View style={{ marginTop: 30 }}>
+                                <WarningMessage
+                                    message={localeString(
+                                        'zeuspay.zaplocker.retirement.redeemFirst'
+                                    )}
+                                />
+                            </View>
+                        )}
                         {BackendUtils.supportsCashuWallet() &&
                             settings?.ecash?.enableCashu && (
                                 <ListItem
@@ -490,6 +503,7 @@ export default class LightningAddressSettings extends React.Component<
                                         padding: 0,
                                         marginTop: 30
                                     }}
+                                    disabled={hasOpenPayments}
                                     onPress={() =>
                                         navigation.navigate(
                                             'CreateCashuLightningAddress',
@@ -500,7 +514,11 @@ export default class LightningAddressSettings extends React.Component<
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text'),
+                                                color: hasOpenPayments
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('text'),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book'
                                             }}
@@ -512,7 +530,11 @@ export default class LightningAddressSettings extends React.Component<
                                     </ListItem.Content>
                                     <Icon
                                         name="keyboard-arrow-right"
-                                        color={themeColor('text')}
+                                        color={
+                                            hasOpenPayments
+                                                ? themeColor('secondaryText')
+                                                : themeColor('text')
+                                        }
                                     />
                                 </ListItem>
                             )}
@@ -522,6 +544,7 @@ export default class LightningAddressSettings extends React.Component<
                                 padding: 0,
                                 marginTop: 30
                             }}
+                            disabled={hasOpenPayments}
                             onPress={() =>
                                 navigation.navigate(
                                     'CreateNWCLightningAddress',
@@ -532,7 +555,9 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text'),
+                                        color: hasOpenPayments
+                                            ? themeColor('secondaryText')
+                                            : themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -543,7 +568,11 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('text')}
+                                color={
+                                    hasOpenPayments
+                                        ? themeColor('secondaryText')
+                                        : themeColor('text')
+                                }
                             />
                         </ListItem>
                         <View style={{ marginTop: 40, marginBottom: 20 }}>

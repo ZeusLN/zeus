@@ -5,7 +5,6 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
-import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
@@ -13,9 +12,7 @@ import Text from '../../components/Text';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import SettingsStore, {
-    NOTIFICATIONS_PREF_KEYS
-} from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -24,42 +21,35 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import ZeusPayPlusSettings from '../../views/LightningAddress/ZeusPayPlusSettings';
 
-interface NWCAddressSettingsProps {
+interface SelfAddressSettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
 }
 
-interface NWCAddressSettingsState {
-    routeHints: boolean | undefined;
+interface SelfAddressSettingsState {
     allowComments: boolean | undefined;
     zapReceiptsEnabled: boolean;
-    notifications: number;
 }
 
 @inject('SettingsStore', 'LightningAddressStore')
 @observer
-export default class NWCAddressSettings extends React.Component<
-    NWCAddressSettingsProps,
-    NWCAddressSettingsState
+export default class SelfAddressSettings extends React.Component<
+    SelfAddressSettingsProps,
+    SelfAddressSettingsState
 > {
-    constructor(props: NWCAddressSettingsProps) {
+    constructor(props: SelfAddressSettingsProps) {
         super(props);
 
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
         this.state = {
-            routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
             zapReceiptsEnabled:
-                settings.lightningAddress?.zapReceiptsEnabled !== false,
-            notifications:
-                settings.lightningAddress?.notifications !== undefined
-                    ? settings.lightningAddress.notifications
-                    : 1
+                settings.lightningAddress?.zapReceiptsEnabled !== false
         };
     }
 
@@ -90,7 +80,7 @@ export default class NWCAddressSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
-        const { allowComments, zapReceiptsEnabled, notifications } = this.state;
+        const { allowComments, zapReceiptsEnabled } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { loading, update, error_msg } = LightningAddressStore;
 
@@ -232,74 +222,23 @@ export default class NWCAddressSettings extends React.Component<
                             </View>
                         </View>
                         <View style={{ marginTop: 20 }}>
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.LightningAddressSettings.notifications'
-                                )}
-                                titleColor={themeColor('text')}
-                                selectedValue={notifications}
-                                onValueChange={async (value: number) => {
-                                    const prev = notifications;
-                                    this.setState({ notifications: value });
-                                    try {
-                                        await update({
-                                            notifications: value
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                notifications: value
-                                            }
-                                        });
-                                        if (value === 1) {
-                                            LightningAddressStore.updatePushCredentials().catch(
-                                                (e) =>
-                                                    console.log(
-                                                        'Failed to update push credentials',
-                                                        e
-                                                    )
-                                            );
-                                        }
-                                    } catch (e) {
-                                        this.setState({ notifications: prev });
-                                    }
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 15
                                 }}
-                                values={NOTIFICATIONS_PREF_KEYS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                            />
+                                infoModalText={[
+                                    localeString(
+                                        'views.Settings.LightningAddressSettings.self.pushRequiredExplainer'
+                                    )
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.LightningAddressSettings.self.pushRequired'
+                                )}
+                            </Text>
                         </View>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 30
-                            }}
-                            onPress={() =>
-                                navigation.navigate(
-                                    'CreateNWCLightningAddress',
-                                    { updateConnection: true }
-                                )
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.changeConnectionString'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
                         <ZeusPayPlusSettings navigation={navigation} />
                         {BackendUtils.supportsCashuWallet() &&
                             settings?.ecash?.enableCashu && (
