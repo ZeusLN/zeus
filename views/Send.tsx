@@ -3,8 +3,6 @@ import {
     AppState,
     FlatList,
     Image,
-    NativeModules,
-    NativeEventEmitter,
     StyleSheet,
     Text,
     View,
@@ -129,7 +127,6 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
-    listener: any;
     private backPressSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
@@ -274,7 +271,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
-        if (this.listener && this.listener.stop) this.listener.stop();
     }
 
     readClipboard = async () => {
@@ -290,30 +286,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         this.setState({ clipboard });
-    };
-
-    subscribePayment = (streamingCall: string) => {
-        const { handlePayment, handlePaymentError } =
-            this.props.TransactionsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    try {
-                        const result = JSON.parse(event.result);
-                        if (result && result.status !== 'IN_FLIGHT') {
-                            handlePayment(result);
-                            this.listener = null;
-                        }
-                    } catch (error: any) {
-                        handlePaymentError(event.result);
-                        this.listener = null;
-                    }
-                }
-            }
-        );
     };
 
     scanNfc = async () => {
@@ -472,8 +444,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
-        const { TransactionsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
+        const { TransactionsStore, navigation } = this.props;
         const {
             destination,
             maxParts,
@@ -489,9 +460,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         // flight so a rapid double-tap can't dispatch a second keysend.
         if (TransactionsStore.paymentInFlight) return;
 
-        let streamingCall;
         if (enableAtomicMultiPathPayment) {
-            streamingCall = TransactionsStore.sendPayment({
+            TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message,
@@ -501,7 +471,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            streamingCall = TransactionsStore.sendPayment({
+            TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 fee_limit_sat: feeLimitSat,
@@ -511,10 +481,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                     feeOption === 'percent' ? maxFeePercent : undefined,
                 message
             });
-        }
-
-        if (implementation === 'lightning-node-connect') {
-            this.subscribePayment(streamingCall);
         }
 
         navigation.navigate('SendingLightning');

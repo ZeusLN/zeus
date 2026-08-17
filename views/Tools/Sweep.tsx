@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-    NativeModules,
-    NativeEventEmitter,
-    StyleSheet,
-    Text,
-    View,
-    ScrollView
-} from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -60,7 +53,6 @@ interface SweepState {
 )
 @observer
 export default class Sweep extends React.Component<SweepProps, SweepState> {
-    listener: any;
     constructor(props: SweepProps) {
         super(props);
         const { route } = props;
@@ -73,12 +65,6 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         };
     }
 
-    componentWillUnmount() {
-        if (this.listener && this.listener.stop) {
-            this.listener.stop();
-        }
-    }
-
     componentDidUpdate(prevProps: SweepProps) {
         if (
             this.props.route.params?.destination !==
@@ -89,30 +75,6 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             });
         }
     }
-
-    subscribePayment = (streamingCall: string) => {
-        const { handlePayment, handlePaymentError } =
-            this.props.TransactionsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    try {
-                        const result = JSON.parse(event.result);
-                        if (result && result.status !== 'IN_FLIGHT') {
-                            handlePayment(result);
-                            this.listener = null;
-                        }
-                    } catch (error: any) {
-                        handlePaymentError(event.result);
-                        this.listener = null;
-                    }
-                }
-            }
-        );
-    };
 
     sendCoins = () => {
         const { SettingsStore, TransactionsStore, navigation } = this.props;

@@ -1,4 +1,8 @@
-import { NativeModules, NativeEventEmitter } from 'react-native';
+import {
+    NativeModules,
+    NativeEventEmitter,
+    EmitterSubscription
+} from 'react-native';
 
 import LNC from '../zeus_modules/@lightninglabs/lnc-rn';
 import { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-core';
@@ -10,6 +14,11 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 
 import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
+import {
+    decideLncPayEvent,
+    deriveExpectedPaymentHash
+} from '../utils/LncPayUtils';
+import { localeString } from '../utils/LocaleUtils';
 import { toLnrpcAddressType } from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
 
@@ -336,10 +345,68 @@ export default class LightningNodeConnect {
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
             .then((data: lnrpc.PayReq) => snakeize(data));
     payLightningInvoice = (data: any) => {
+        // sendPaymentV2 is a streaming RPC: the call returns the event name
+        // ('routerrpc.Router.SendPaymentV2') and results arrive on a channel
+        // shared by every concurrent payment, with no request correlation.
+        // Resolve with this payment's terminal result so callers get the
+        // same promise contract as every other backend. The expected hash
+        // must be derived before pubkey is stripped.
+        const expectedHash = deriveExpectedPaymentHash(data);
         if (data.pubkey) delete data.pubkey;
-        return this.lnc.lnd.router.sendPaymentV2({
+
+        const streamingCall = this.lnc.lnd.router.sendPaymentV2({
             ...data,
             allow_self_payment: true
+        });
+
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            let subscription: EmitterSubscription;
+
+            const settle = (fn: () => void) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                subscription.remove();
+                fn();
+            };
+
+            // If the stream dies without a terminal event, resolve with the
+            // designed in-transit shape rather than rejecting: the payment
+            // may still settle node-side, and a hard failure here invites a
+            // retry (a double-send on keysend, where every attempt carries
+            // a fresh preimage).
+            const timeoutMs =
+                ((Number(data.timeout_seconds) || 60) + 60) * 1000;
+            const timer = setTimeout(
+                () =>
+                    settle(() =>
+                        resolve({
+                            payment_error: localeString(
+                                'views.SendingLightning.paymentTimedOut'
+                            )
+                        })
+                    ),
+                timeoutMs
+            );
+
+            subscription = eventEmitter.addListener(
+                streamingCall,
+                (event: any) => {
+                    const decision = decideLncPayEvent(
+                        event?.result,
+                        expectedHash
+                    );
+                    if (decision.kind === 'terminal') {
+                        settle(() => resolve(decision.result));
+                    } else if (decision.kind === 'error') {
+                        settle(() => reject(decision.error));
+                    }
+                    // 'ignore': EOF, a non-terminal status, or another payment's event
+                }
+            );
         });
     };
     closeChannel = async (urlParams?: Array<string>) => {
