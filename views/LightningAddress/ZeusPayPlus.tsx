@@ -27,6 +27,7 @@ import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
 import ZeusPayPlusSettings from './ZeusPayPlusSettings';
 import ZeusPayPlusPerksList from './ZeusPayPlusPerksList';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 interface ZeusPayPlusProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -45,7 +46,9 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
             lightningAddressType,
             zeusPlusExpiresAt,
             zeusPlusAnnualFeeSats,
-            loading
+            loading,
+            error,
+            error_msg
         } = LightningAddressStore;
 
         const zeusPayPlus = !!zeusPlusExpiresAt;
@@ -88,6 +91,7 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                         navigation={navigation}
                     />
                     <View style={{ flex: 1, margin: 5 }}>
+                        {error && <ErrorMessage message={error_msg} />}
                         <Row style={{ alignSelf: 'center', marginTop: 10 }}>
                             <Text
                                 style={{
