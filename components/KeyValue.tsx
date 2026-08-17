@@ -90,17 +90,23 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
 
-        // lurker mode only redacts sensitive values; copying or opening a
-        // link on a redacted value would expose the real value
+        // lurker mode only redacts sensitive values; copying a redacted
+        // value would put the real value on the clipboard, so copy actions
+        // are disabled for redacted values. mempoolLink stays active:
+        // navigation is an explicit act and remains available elsewhere in
+        // lurker mode (e.g. the note edit button, custom explorer links)
         const valueHidden = lurkerMode && sensitive;
 
         {
             /* TODO: rig up RTL */
         }
+        // long press copies any copyable value; the icon and tap-to-copy
+        // are opt-in per call site
         const isCopyable =
             !disableCopy &&
-            !!showCopyIcon &&
+            !valueHidden &&
             (typeof value === 'string' || typeof value === 'number');
+        const showIcon = isCopyable && !!showCopyIcon;
         const rtl = false;
         const KeyBase = (
             <Body>
@@ -183,7 +189,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
                         ? PrivacyUtils.sensitiveValue({ input: value })
                         : value}
                 </Text>
-                {isCopyable && !valueHidden && (
+                {showIcon && (
                     <Pressable
                         onPress={() => this.copyText()}
                         onPressIn={() => this.setValueOpacity(0.2)}
@@ -209,15 +215,17 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         );
 
         let Value: any;
-        if (!valueHidden && (isCopyable || mempoolLink)) {
+        if (isCopyable || mempoolLink) {
             Value = (
                 <Pressable
-                    onPress={mempoolLink ? mempoolLink : () => this.copyText()}
-                    onLongPress={
-                        mempoolLink && isCopyable
+                    onPress={
+                        mempoolLink
+                            ? mempoolLink
+                            : showIcon
                             ? () => this.copyText()
                             : undefined
                     }
+                    onLongPress={isCopyable ? () => this.copyText() : undefined}
                     onPressIn={() => this.setValueOpacity(0.2)}
                     onPressOut={() => this.setValueOpacity(1)}
                 >
