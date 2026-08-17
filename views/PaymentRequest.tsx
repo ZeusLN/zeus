@@ -124,6 +124,8 @@ export default class PaymentRequest extends React.Component<
     listener: any;
     focusListener: any;
     payReqDisposer: any;
+    paymentRequestDisposer: any;
+    donationLockRequest?: string;
     isComponentMounted: boolean = false;
     private scrollViewRef = React.createRef<ScrollView>();
     state = {
@@ -167,37 +169,58 @@ export default class PaymentRequest extends React.Component<
 
         const { defaultDonationPercentage } = settings.payments;
 
-        let feeOption = 'fixed';
-        const { pay_req } = InvoicesStore;
-        const requestAmount = pay_req && pay_req.getRequestAmount;
+        // Derive donation and fee-mode state from the decoded invoice, and
+        // re-derive whenever a different invoice lands in the store: the
+        // screen live-renders whatever InvoicesStore holds, so state computed
+        // from the invoice must track it or a swapped-in payment request
+        // would be shown (and paid) with the old invoice's donation amount
+        // and fee mode. Guarded by donationLockRequest so a re-decode of the
+        // same request doesn't clobber a donation the user customized.
+        this.payReqDisposer = reaction(
+            () => InvoicesStore.pay_req,
+            (pay_req) => {
+                if (!this.isComponentMounted) return;
+                // getPayReq nulls pay_req before decoding a replacement
+                // invoice; wait for the decoded result
+                if (!pay_req) return;
 
-        if (requestAmount && requestAmount != 0) {
-            if (requestAmount > 1000) {
-                feeOption = 'percent';
-            }
-        }
+                const currentRequest = InvoicesStore.paymentRequest;
+                if (
+                    currentRequest &&
+                    this.donationLockRequest === currentRequest
+                ) {
+                    return;
+                }
 
-        const donationPercentageOptions = [5, 10, 20];
+                const defaultPct = Number(defaultDonationPercentage) || 0;
+                const requestAmount = pay_req.getRequestAmount ?? 0;
 
-        const donationAmount = calculateDonationAmount(
-            requestAmount ?? 0,
-            Number(defaultDonationPercentage) || 0
-        );
-        const index = findDonationPercentageIndex(
-            Number(defaultDonationPercentage) || 0,
-            donationPercentageOptions
+                this.setState({
+                    feeOption:
+                        requestAmount && requestAmount > 1000
+                            ? 'percent'
+                            : 'fixed',
+                    donationAmount: calculateDonationAmount(
+                        requestAmount,
+                        defaultPct
+                    ),
+                    selectedIndex: findDonationPercentageIndex(
+                        defaultPct,
+                        [5, 10, 20]
+                    ),
+                    donationPercentage: defaultPct
+                });
+
+                this.donationLockRequest = currentRequest;
+            },
+            { fireImmediately: true }
         );
 
         this.setState({
-            feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
-            slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            donationPercentage:
-                settings?.payments?.defaultDonationPercentage || 0,
-            donationAmount,
-            selectedIndex: index
+            slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
         if (implementation === 'embedded-lnd') {
@@ -224,7 +247,7 @@ export default class PaymentRequest extends React.Component<
         // complete against the swapped-in invoice. The render path notices the
         // mismatch and replaces the pay controls with a warning; the pin is
         // only advanced when the user explicitly accepts the new request.
-        this.payReqDisposer = reaction(
+        this.paymentRequestDisposer = reaction(
             () => InvoicesStore.paymentRequest,
             () => {
                 if (!this.isComponentMounted) return;
@@ -254,6 +277,9 @@ export default class PaymentRequest extends React.Component<
         }
         if (this.payReqDisposer) {
             this.payReqDisposer();
+        }
+        if (this.paymentRequestDisposer) {
+            this.paymentRequestDisposer();
         }
     }
 
@@ -559,6 +585,7 @@ export default class PaymentRequest extends React.Component<
                 requestAmount ?? 0,
                 percentage
             );
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: percentage,
                 donationAmount,
@@ -576,6 +603,7 @@ export default class PaymentRequest extends React.Component<
                 donationPercentageOptions
             );
 
+            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: value,
                 donationAmount,
