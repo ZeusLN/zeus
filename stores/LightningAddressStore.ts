@@ -1380,6 +1380,200 @@ export default class LightningAddressStore {
         this.subscribeUpdatesCashu();
     };
 
+    // Self-custodial
+
+    @action
+    public createSelf = async () => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            if (!this.currentDeviceToken) {
+                throw localeString(
+                    'views.Settings.LightningAddress.self.deviceTokenRequired'
+                );
+            }
+
+            const { verification, signature } = await this.getAuthData();
+
+            const createResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/api/lnurl/create`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature,
+                    device_token: this.currentDeviceToken,
+                    device_platform: Platform.OS,
+                    address_type: 'self'
+                })
+            );
+
+            const createData = createResponse.json();
+            if (createResponse.info().status !== 200 || !createData.success) {
+                throw createData.error;
+            }
+
+            const { handle: responseHandle, domain, success } = createData;
+
+            if (responseHandle) {
+                this.setLightningAddress(responseHandle, domain);
+            }
+
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true,
+                    allowComments: true,
+                    // 'self' is push-driven: the server can only reach an
+                    // offline phone through a notification
+                    notifications: 1
+                }
+            });
+
+            runInAction(() => {
+                this.loading = false;
+            });
+
+            return { success };
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.error_msg = error_msg;
+                this.error = true;
+                this.loading = false;
+            });
+            throw error;
+        }
+    };
+
+    // Return a generated invoice for a held server-side request. 410 means
+    // the request already expired or resolved — the caller must stop.
+    public submitSelfInvoice = async (request_id: string, pr: string) => {
+        const { verification, signature } = await this.getAuthData();
+
+        const response = await ReactNativeBlobUtil.fetch(
+            'POST',
+            `${LNURL_HOST}/api/lnurl/self/invoice`,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                message: verification,
+                signature,
+                request_id,
+                pr
+            })
+        );
+
+        const status = response.info().status;
+        const data = response.json();
+        if (status === 410) {
+            return { expired: true };
+        }
+        if (status !== 200 || !data.success) {
+            throw data.error;
+        }
+        return { success: true };
+    };
+
+    // Prove settlement to the server with the preimage so it can serve
+    // LUD-21 verify and fire zap receipts.
+    public reportSelfSettlement = async (
+        payment_hash: string,
+        preimage: string
+    ) => {
+        const { verification, signature } = await this.getAuthData();
+
+        const response = await ReactNativeBlobUtil.fetch(
+            'POST',
+            `${LNURL_HOST}/api/lnurl/self/settled`,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                message: verification,
+                signature,
+                payment_hash,
+                preimage
+            })
+        );
+
+        const data = response.json();
+        if (response.info().status !== 200 || !data.success) {
+            throw data.error;
+        }
+        return { success: true };
+    };
+
+    // Served invoices the server never saw settle: check them against the
+    // node's own payment store and report any that actually settled (the
+    // phone may have died between claiming a payment and reporting it).
+    public reconcileSelfPayments = async () => {
+        try {
+            const { verification, signature } = await this.getAuthData();
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/api/lnurl/self/unresolved`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature
+                })
+            );
+
+            const data = response.json();
+            if (response.info().status !== 200 || !data.success) return;
+
+            for (const request of data.requests || []) {
+                try {
+                    const invoice = await BackendUtils.lookupInvoice({
+                        r_hash: request.payment_hash
+                    });
+                    const settled = invoice?.settled || invoice?.is_paid;
+                    const preimage = invoice?.r_preimage;
+                    if (settled && preimage) {
+                        await this.reportSelfSettlement(
+                            request.payment_hash,
+                            preimage
+                        );
+                    }
+                } catch (e) {
+                    console.log('reconcileSelfPayments lookup error', e);
+                }
+            }
+        } catch (e) {
+            console.log('reconcileSelfPayments error', e);
+        }
+    };
+
+    private subscribeUpdatesSelf = async () => {
+        const { verification, signature } = await this.getAuthData();
+
+        this.socket = io(LNURL_HOST, {
+            path: LNURL_SOCKET_PATH
+        }).connect();
+        this.socket.emit('auth', {
+            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+            message: verification,
+            signature
+        });
+
+        this.socket.on('invoice_request', (data: any) => {
+            // Lazy require to avoid a store <-> util import cycle
+            const { handleInvoiceRequest } = require('../utils/SelfPayUtils');
+            handleInvoiceRequest(data);
+        });
+    };
+
+    public prepareToAutomaticallyAcceptSelf = () => {
+        if (this.socket && this.socket.connected) return;
+        this.reconcileSelfPayments();
+        this.subscribeUpdatesSelf();
+    };
+
     @action
     public reset = () => {
         this.loading = false;

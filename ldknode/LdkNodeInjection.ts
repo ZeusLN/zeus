@@ -426,6 +426,25 @@ const receiveBolt11 = async ({
     return result.invoice;
 };
 
+// Invoice committing to a description hash instead of a plain description
+// (LUD-06 metadata / NIP-57 zap request commitments).
+const receiveBolt11WithDescriptionHash = async ({
+    amountMsat,
+    descriptionHash,
+    expirySecs
+}: {
+    amountMsat: number;
+    descriptionHash: string;
+    expirySecs: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveBolt11WithDescriptionHash(
+        amountMsat,
+        descriptionHash,
+        expirySecs
+    );
+    return result.invoice;
+};
+
 const receiveVariableAmountBolt11 = async ({
     description,
     expirySecs
@@ -1139,6 +1158,11 @@ export interface ILdkNodeInjections {
             description: string;
             expirySecs: number;
         }) => Promise<string>;
+        receiveBolt11WithDescriptionHash: (params: {
+            amountMsat: number;
+            descriptionHash: string;
+            expirySecs: number;
+        }) => Promise<string>;
         receiveVariableAmountBolt11: (params: {
             description: string;
             expirySecs: number;
@@ -1349,6 +1373,7 @@ const LdkNodeInjection: ILdkNodeInjections = {
     },
     bolt11: {
         receiveBolt11,
+        receiveBolt11WithDescriptionHash,
         receiveVariableAmountBolt11,
         sendBolt11,
         sendBolt11UsingAmount,

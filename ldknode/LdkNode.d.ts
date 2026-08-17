@@ -556,6 +556,11 @@ export interface ILdkNodeModule {
         description: string,
         expirySecs: number
     ): Promise<{ invoice: string }>;
+    receiveBolt11WithDescriptionHash(
+        amountMsat: number,
+        descriptionHash: string,
+        expirySecs: number
+    ): Promise<{ invoice: string }>;
     receiveVariableAmountBolt11(
         description: string,
         expirySecs: number

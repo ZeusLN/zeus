@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Headless wake for ZEUS Pay self-custodial invoice requests -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
 
@@ -188,6 +190,26 @@
         <property
           android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
           android:value="Maintain Nostr Wallet Connect connections to enable background payments from external apps"
+        />
+      </service>
+      <!-- Receives FCM messages ahead of the react-native-notifications
+           service so ZEUS Pay self-custodial invoice requests can wake the
+           app from a killed state; all other messages are passed through. -->
+      <service
+        android:name="app.zeusln.zeus.ZeusFcmService"
+        android:exported="false">
+        <intent-filter android:priority="1">
+          <action android:name="com.google.firebase.MESSAGING_EVENT" />
+        </intent-filter>
+      </service>
+      <service
+        android:name="app.zeusln.zeus.SelfPayHeadlessService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse"
+      >
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Briefly run the user's Lightning node to generate an invoice when a payment to their lightning address arrives"
         />
       </service>
       <service
