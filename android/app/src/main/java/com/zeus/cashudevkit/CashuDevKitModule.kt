@@ -802,7 +802,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         state: String,
         expiry: Double,
         secretKey: String?,
-        useSeedPrefixMarker: Boolean,
         promise: Promise
     ) {
         if (!isInitialized || db == null) {
@@ -824,32 +823,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     else -> QuoteState.PAID // Default to PAID for external quotes
                 }
 
-                // For v2-bip39 wallets, ZEUS Pay locks quotes to the seed-
-                // prefix key (seed[0..32]), which is byte-identical to cdk's
-                // "legacy NpubCash" key. Storing that key on the quote makes
-                // cdk's mint saga scrub it mid-flight (a version bump), and
-                // the saga's post-mint write then dies with ConcurrentUpdate
-                // AFTER the mint has issued the signatures. For those quotes
-                // (useSeedPrefixMarker, decided by JS via byte comparison),
-                // store the quote with no key and write cdk's NpubCash
-                // quote-key marker: at signing time cdk re-derives the
-                // identical seed-prefix key from the marker, with no mid-saga
-                // write. v1 wallets sign with a different key (LND seed
-                // bytes [32:64]), so the marker would derive the wrong key
-                // for them; their key is stored on the quote instead, which
-                // is safe because the scrub only triggers on byte equality
-                // with the seed prefix.
-                // Upstream bug: https://github.com/cashubtc/cdk/issues/2335
-                // Remove when fixed: https://github.com/ZeusLN/zeus/issues/4402
+                // Storing a key equal to cdk's seed prefix on the quote
+                // requires cdk >= 0.17.4: earlier versions claim it as a
+                // legacy NpubCash key and scrub it mid-mint-saga, stranding
+                // the minted funds (cashubtc/cdk#2335).
                 val storedSecretKey = secretKey?.takeIf { it.isNotEmpty() }
-                if (storedSecretKey != null && useSeedPrefixMarker) {
-                    db!!.kvWrite(
-                        primaryNamespace = "npubcash",
-                        secondaryNamespace = "quotes",
-                        key = quoteId,
-                        value = "legacy-seed-prefix".toByteArray(Charsets.UTF_8)
-                    )
-                }
 
                 // Create the MintQuote object
                 // For external quotes that are PAID, we set amountPaid = amount
@@ -866,7 +844,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
-                    secretKey = if (useSeedPrefixMarker) null else storedSecretKey,
+                    secretKey = storedSecretKey,
                     usedByOperation = null,
                     version = version
                 )
