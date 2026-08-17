@@ -1808,6 +1808,7 @@
     "error.nodeConnectError": "Unable to connect to node. Please verify the host and port are correct and the service is running.",
     "error.torBootstrap": "Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.",
     "error.sendingPayment": "Error sending payment",
+    "error.unexpectedResponse": "Received an unexpected response",
     "error.failureReasonTimeout": "There are more routes to try, but the payment timeout was exceeded.",
     "error.failureReasonNoRoute": "No route found",
     "error.failureReasonError": "A non-recoverable error has occured",

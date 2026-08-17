@@ -502,6 +502,43 @@ describe('ErrorUtils', () => {
                 )
             ).toEqual('Insufficient inputs provided');
         });
+
+        it('drops a large JSON body and keeps the readable prefix', () => {
+            const mintInfo = JSON.stringify({
+                contact: [{ info: 'support@mint.example', method: 'email' }],
+                description: 'Example mint. Use at your own risk.',
+                name: 'Example mint',
+                nuts: { '10': { supported: true }, '11': { supported: true } }
+            });
+            expect(
+                parseCashuDevKitError(
+                    `uniffi.cdk_ffi.FfiException$Generic: CDK Error: Unknown error response: \`${mintInfo}\``
+                )
+            ).toEqual('Unknown error response');
+        });
+
+        it('prefers a readable detail field inside a large JSON body', () => {
+            const body = JSON.stringify({
+                code: 'oops',
+                detail: 'mint is temporarily unavailable, try again later',
+                padding: 'x'.repeat(100)
+            });
+            expect(
+                parseCashuDevKitError(
+                    `uniffi.cdk_ffi.FfiException$Generic: Unknown error response: ${body}`
+                )
+            ).toEqual('mint is temporarily unavailable, try again later');
+        });
+
+        it('falls back to a generic message when a bare JSON body has nothing readable', () => {
+            const body = JSON.stringify({
+                nuts: { '10': { supported: true } },
+                padding: 'x'.repeat(100)
+            });
+            expect(parseCashuDevKitError(body)).toEqual(
+                'Received an unexpected response'
+            );
+        });
     });
 
     describe('cashuErrorForDisplay', () => {
@@ -513,14 +550,21 @@ describe('ErrorUtils', () => {
             ).toEqual('Quote not paid');
         });
 
-        it('truncates oversized error bodies so raw dumps cannot fill the screen', () => {
+        it('truncates oversized error text so it cannot fill the screen', () => {
+            const longText = `Error creating invoice: ${'x'.repeat(400)}`;
+            const result = cashuErrorForDisplay(longText);
+            expect(result.length).toBeLessThanOrEqual(301);
+            expect(result.endsWith('…')).toBe(true);
+        });
+
+        it('strips an embedded JSON dump entirely rather than truncating it', () => {
             const jsonDump = `Error creating invoice: ${JSON.stringify({
                 contact: [{ info: 'npub…', method: 'nostr' }],
                 description: 'x'.repeat(400)
             })}`;
-            const result = cashuErrorForDisplay(jsonDump);
-            expect(result.length).toBeLessThanOrEqual(301);
-            expect(result.endsWith('…')).toBe(true);
+            expect(cashuErrorForDisplay(jsonDump)).toEqual(
+                'Error creating invoice'
+            );
         });
     });
 });

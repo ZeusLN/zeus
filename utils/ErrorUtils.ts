@@ -76,7 +76,9 @@ const parseCashuDevKitError = (error: any): string => {
     const iosWithAssoc = str.match(
         /CashuDevKit\.FfiError\.\w+\((?:code:\s*\d+,\s*)?(?:message|errorMessage):\s*"([\s\S]+?)"\)/
     );
-    if (iosWithAssoc) return extractMintDetail(iosWithAssoc[1].trim());
+    if (iosWithAssoc) {
+        return stripJsonBlob(extractMintDetail(iosWithAssoc[1].trim()));
+    }
 
     const iosBare = str.match(/CashuDevKit\.FfiError\.(\w+)/);
     if (iosBare) return humanizeVariantName(iosBare[1]);
@@ -89,11 +91,11 @@ const parseCashuDevKitError = (error: any): string => {
         // "errorMessage=<text>" with no code prefix; strip the envelope
         const inner = androidMatch[2]?.trim().replace(/^errorMessage=\s*/, '');
         return inner
-            ? extractMintDetail(inner)
+            ? stripJsonBlob(extractMintDetail(inner))
             : humanizeVariantName(androidMatch[1]);
     }
 
-    return extractMintDetail(str);
+    return stripJsonBlob(extractMintDetail(str));
 };
 
 // Hard cap on Cashu error text bound for direct display. Mint failures can
@@ -133,6 +135,42 @@ const extractMintDetail = (msg: string): string => {
     }
     if (!detail) return msg;
     return detail.charAt(0).toUpperCase() + detail.slice(1);
+};
+
+// Some failure paths embed an entire JSON body in the error string, e.g. a
+// mint answering a CDK request with its /v1/info document leaves the FFI
+// with "Unknown error response: `{...}`" carrying kilobytes of JSON. That is
+// never fit to show a user. When the message carries a sizeable JSON blob,
+// prefer a human-readable detail/error/message/reason field from inside it;
+// otherwise drop the blob and keep the readable prefix, falling back to a
+// generic message when nothing readable remains.
+const stripJsonBlob = (msg: string): string => {
+    const blobStart = msg.search(/[{[]/);
+    if (blobStart === -1) return msg;
+    const blob = msg.slice(blobStart).replace(/[`"'\s]+$/, '');
+    // short inline JSON (e.g. a compact error object) is left alone
+    if (blob.length < 80) return msg;
+    let extracted: string | undefined;
+    try {
+        const parsed = JSON.parse(blob);
+        extracted = [
+            parsed?.detail,
+            parsed?.error,
+            parsed?.message,
+            parsed?.reason
+        ].find((v: any) => typeof v === 'string' && v.length > 0);
+    } catch {
+        // unparseable (possibly truncated) blob: nothing to extract
+    }
+    if (extracted) return extracted;
+    const prefix = msg
+        .slice(0, blobStart)
+        .replace(/^CDK Error:\s*/i, '')
+        .replace(/[`:\s]+$/, '')
+        .trim();
+    if (/[a-zA-Z]/.test(prefix)) return prefix;
+    const localeString = require('./LocaleUtils').localeString;
+    return localeString('error.unexpectedResponse');
 };
 
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
