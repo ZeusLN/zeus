@@ -1584,7 +1584,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <LayerBalances
                                 navigation={navigation}
                                 onRefresh={() => this.getSettingsAndNavigate()}
-                                refreshing={this.state.loading}
                                 consolidated
                             />
 
