@@ -81,7 +81,10 @@ export default class CLNRest {
                     // self-signed certs can't match anyway).
                     // Clearnet-over-Tor: keep strict TLS because exit
                     // nodes can MITM.
-                    isOnionHttpsUrl(url)
+                    isOnionHttpsUrl(url),
+                    // undefined keeps doTorRequest's own default; only
+                    // request-scoped deadlines (payments) override it
+                    timeout
                 ).then((response: any) => {
                     calls.delete(id);
                     return response;
@@ -96,7 +99,11 @@ export default class CLNRest {
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
+                trusty: !certVerification,
+                // RNBlobUtil's native default is 60s; without this a
+                // payment request holding the connection open longer than
+                // that dies natively no matter what the race below allows
+                timeout: timeout || this.defaultTimeout
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
                 .then((response: any) => {
@@ -435,6 +442,45 @@ export default class CLNRest {
         return formatted;
     };
 
+    // cln blocks on /v1/pay, /v1/xpay, /v1/keysend, and /v1/xkeysend for
+    // up to retry_for seconds, so the request timeout needs headroom past
+    // that deadline or the definitive response is discarded as a generic
+    // transport timeout. Mirror LND's payLightningInvoice: race the call
+    // against the payment-timed-out shape so a slow payment surfaces as
+    // "may be in transit, check Activity" instead of a retryable-looking
+    // error (dangerous on keysend, where a retry double-sends).
+    // formatResult runs on the real response only, inside the race, so
+    // the timed-out shape is never marked status complete.
+    private payWithTimeout = (
+        route: string,
+        request: any,
+        data: any,
+        formatResult?: (result: any) => any
+    ) => {
+        const timeoutSeconds = Number(data.timeout_seconds) || 60;
+
+        const forcedTimeout = async (time_ms: number, response: any) => {
+            await new Promise((res) => setTimeout(res, time_ms));
+            return response;
+        };
+
+        let call = this.postRequest(
+            route,
+            request,
+            (timeoutSeconds + 5) * 1000
+        );
+        if (formatResult) call = call.then(formatResult);
+
+        return Promise.race([
+            forcedTimeout((timeoutSeconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            }),
+            call
+        ]);
+    };
+
     payLightningInvoice = async (data: any) => {
         // pay is deprecated in CLN v26.06 and removed in v27.03; use xpay
         // (available since v24.11) when the node has it
@@ -453,11 +499,7 @@ export default class CLNRest {
             } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
             }
-            return this.postRequest(
-                '/v1/pay',
-                legacyRequest,
-                data.timeout_seconds * 1000
-            );
+            return this.payWithTimeout('/v1/pay', legacyRequest, data);
         }
 
         const request: any = {
@@ -468,11 +510,12 @@ export default class CLNRest {
         const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
-        return this.postRequest(
+        return this.payWithTimeout(
             '/v1/xpay',
             request,
-            data.timeout_seconds * 1000
-        ).then(this.formatXpayResult);
+            data,
+            this.formatXpayResult
+        );
     };
     sendKeysend = async (data: any) => {
         // keysend is deprecated in CLN v26.06 and removed in v27.03; use
@@ -502,11 +545,7 @@ export default class CLNRest {
                     ).toNumber();
                 }
             }
-            return this.postRequest(
-                '/v1/keysend',
-                legacyRequest,
-                data.timeout_seconds * 1000
-            );
+            return this.payWithTimeout('/v1/keysend', legacyRequest, data);
         }
 
         const request: any = {
@@ -517,11 +556,12 @@ export default class CLNRest {
         const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
-        return this.postRequest(
+        return this.payWithTimeout(
             '/v1/xkeysend',
             request,
-            data.timeout_seconds * 1000
-        ).then(this.formatXpayResult);
+            data,
+            this.formatXpayResult
+        );
     };
     closeChannel = (urlParams?: Array<string>) => {
         const request = {

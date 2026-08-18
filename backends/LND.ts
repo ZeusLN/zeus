@@ -58,7 +58,10 @@ export default class LND {
                     // self-signed certs can't match anyway).
                     // Clearnet-over-Tor: keep strict TLS because exit
                     // nodes can MITM.
-                    isOnionHttpsUrl(url)
+                    isOnionHttpsUrl(url),
+                    // undefined keeps doTorRequest's own default; only
+                    // request-scoped deadlines (payments) override it
+                    timeout
                 )
                     .then((response: any) => {
                         calls.delete(id);
@@ -81,7 +84,11 @@ export default class LND {
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
+                trusty: !certVerification,
+                // RNBlobUtil's native default is 60s; without this a
+                // payment request holding the connection open longer than
+                // that dies natively no matter what the race below allows
+                timeout: timeout || this.defaultTimeout
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
                 .then((response: any) => {
@@ -517,11 +524,17 @@ export default class LND {
     payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
 
+        const timeoutSeconds = Number(data.timeout_seconds) || 60;
+
         const forcedTimeout = async (time_ms: number, response: any) => {
             await new Promise((res) => setTimeout(res, time_ms));
             return response;
         };
 
+        // The request timeout must exceed the forcedTimeout below, or the
+        // generic transport rejection wins the race and the user sees a
+        // retryable-looking error instead of the payment-timed-out shape
+        // (dangerous on keysend, where a retry double-sends).
         const call = () =>
             this.postRequest(
                 '/v2/router/send',
@@ -529,11 +542,11 @@ export default class LND {
                     ...data,
                     allow_self_payment: true
                 },
-                data.timeout_seconds * 1000
+                (timeoutSeconds + 5) * 1000
             );
 
         const result: any = await Promise.race([
-            forcedTimeout((data.timeout_seconds + 1) * 1000, {
+            forcedTimeout((timeoutSeconds + 1) * 1000, {
                 payment_error: localeString(
                     'views.SendingLightning.paymentTimedOut'
                 )
