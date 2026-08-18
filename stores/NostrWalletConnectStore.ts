@@ -88,6 +88,14 @@ const PAYMENT_PROCESSING_DELAY_MS = 100;
  * already given up on the request.
  */
 const MAX_PAYMENT_QUEUE_WAIT_MS = 30_000;
+/**
+ * Outstanding pay_invoice slots per connection on the global queue
+ * (in-flight + waiting). The backend still runs one pay at a time
+ * (shared TransactionsStore / CashuStore), but a flood from one
+ * connection cannot occupy every slot and starve the others into
+ * RATE_LIMITED.
+ */
+const MAX_QUEUED_PAYMENTS_PER_CONNECTION = 1;
 const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 /** Min time a pay_invoice must stay pending before getActivities polls the node */
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
@@ -161,6 +169,7 @@ export default class NostrWalletConnectStore {
     @observable public iosAudioKeepAliveDisconnects: number = 0;
     // Tail of the payment-handler queue; see enqueuePayment
     private paymentQueue: Promise<unknown> = Promise.resolve();
+    private paymentQueueDepthByConnection = new Map<string, number>();
     private iosAudioUptimeInterval: ReturnType<typeof setInterval> | null =
         null;
     private iosAudioInterruptedUnsub: (() => void) | null = null;
@@ -646,6 +655,7 @@ export default class NostrWalletConnectStore {
             this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
             this.lastPendingInvoiceStatusFetchByConnection.delete(connectionId);
             this.makeInvoiceTimestampsByConnection.delete(connectionId);
+            this.paymentQueueDepthByConnection.delete(connectionId);
             runInAction(() => {
                 this.connections.splice(index, 1);
             });
@@ -1353,11 +1363,19 @@ export default class NostrWalletConnectStore {
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.enqueuePayment(
+                            connection.id,
                             () => payHandler(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
                                     localeString(
                                         'stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded'
+                                    ),
+                                    Nip47ErrorCode.RATE_LIMITED
+                                ),
+                            () =>
+                                NostrConnectUtils.createNip47Error(
+                                    localeString(
+                                        'stores.NostrWalletConnectStore.error.paymentQueueConnectionBusy'
                                     ),
                                     Nip47ErrorCode.RATE_LIMITED
                                 )
@@ -1636,16 +1654,41 @@ export default class NostrWalletConnectStore {
     // its client has likely timed out already, and paying late would spend
     // sats against a request the client reported as failed. `onStale`
     // supplies the response for that case (RATE_LIMITED).
+    // Per-connection depth is capped so one client cannot fill the FIFO
+    // and starve every other connection into that same stale reject.
     private enqueuePayment<T>(
+        connectionId: string,
         task: () => Promise<T>,
-        onStale: () => T
+        onStale: () => T,
+        onBusy: () => T = onStale
     ): Promise<T> {
+        const depth = this.paymentQueueDepthByConnection.get(connectionId) ?? 0;
+        if (depth >= MAX_QUEUED_PAYMENTS_PER_CONNECTION) {
+            return Promise.resolve(onBusy());
+        }
+
+        this.paymentQueueDepthByConnection.set(connectionId, depth + 1);
         const enqueuedAt = Date.now();
-        const result = this.paymentQueue.then(() =>
-            Date.now() - enqueuedAt > MAX_PAYMENT_QUEUE_WAIT_MS
-                ? onStale()
-                : task()
-        );
+        const result = this.paymentQueue.then(async () => {
+            try {
+                if (Date.now() - enqueuedAt > MAX_PAYMENT_QUEUE_WAIT_MS) {
+                    return onStale();
+                }
+                return await task();
+            } finally {
+                const remaining =
+                    (this.paymentQueueDepthByConnection.get(connectionId) ??
+                        1) - 1;
+                if (remaining <= 0) {
+                    this.paymentQueueDepthByConnection.delete(connectionId);
+                } else {
+                    this.paymentQueueDepthByConnection.set(
+                        connectionId,
+                        remaining
+                    );
+                }
+            }
+        });
         this.paymentQueue = result.then(
             () => undefined,
             () => undefined

@@ -1318,6 +1318,111 @@ describe('NostrWalletConnectStore activity prune', () => {
     });
 });
 
+describe('NostrWalletConnectStore payment queue fairness', () => {
+    function deferred<T>() {
+        let resolve!: (value: T) => void;
+        const promise = new Promise<T>((res) => {
+            resolve = res;
+        });
+        return { promise, resolve };
+    }
+
+    it('rejects a second pay from the same connection while one is outstanding', async () => {
+        const store = buildPayInvoiceTestStore();
+        const first = deferred<string>();
+        const p1 = (store as any).enqueuePayment(
+            'conn-a',
+            () => first.promise,
+            () => 'stale',
+            () => 'busy'
+        );
+        const p2 = (store as any).enqueuePayment(
+            'conn-a',
+            () => Promise.resolve('second'),
+            () => 'stale',
+            () => 'busy'
+        );
+
+        await expect(p2).resolves.toBe('busy');
+        first.resolve('first');
+        await expect(p1).resolves.toBe('first');
+    });
+
+    it('lets another connection enqueue behind an in-flight pay', async () => {
+        const store = buildPayInvoiceTestStore();
+        const first = deferred<string>();
+        const p1 = (store as any).enqueuePayment(
+            'conn-a',
+            () => first.promise,
+            () => 'stale',
+            () => 'busy'
+        );
+        const p2 = (store as any).enqueuePayment(
+            'conn-b',
+            () => Promise.resolve('victim'),
+            () => 'stale',
+            () => 'busy'
+        );
+
+        first.resolve('attacker');
+        await expect(p1).resolves.toBe('attacker');
+        await expect(p2).resolves.toBe('victim');
+    });
+
+    it('releases the per-connection slot after the outstanding pay finishes', async () => {
+        const store = buildPayInvoiceTestStore();
+        const first = deferred<string>();
+        const p1 = (store as any).enqueuePayment(
+            'conn-a',
+            () => first.promise,
+            () => 'stale',
+            () => 'busy'
+        );
+        first.resolve('first');
+        await expect(p1).resolves.toBe('first');
+
+        const p2 = (store as any).enqueuePayment(
+            'conn-a',
+            () => Promise.resolve('again'),
+            () => 'stale',
+            () => 'busy'
+        );
+        await expect(p2).resolves.toBe('again');
+    });
+
+    it('does not starve a second connection when the first floods the queue', async () => {
+        const store = buildPayInvoiceTestStore();
+        const first = deferred<string>();
+        const attackerFirst = (store as any).enqueuePayment(
+            'conn-a',
+            () => first.promise,
+            () => 'stale',
+            () => 'busy'
+        );
+        const attackerFlood = await Promise.all(
+            Array.from({ length: 6 }, () =>
+                (store as any).enqueuePayment(
+                    'conn-a',
+                    () => Promise.resolve('extra'),
+                    () => 'stale',
+                    () => 'busy'
+                )
+            )
+        );
+        const victim = (store as any).enqueuePayment(
+            'conn-b',
+            () => Promise.resolve('victim'),
+            () => 'stale',
+            () => 'busy'
+        );
+
+        expect(attackerFlood.every((result) => result === 'busy')).toBe(true);
+        first.resolve('attacker');
+        await expect(attackerFirst).resolves.toBe('attacker');
+        await expect(victim).resolves.toBe('victim');
+    });
+});
+
 describe('NostrWalletConnectStore sign_message', () => {
     afterEach(() => {
         (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(
