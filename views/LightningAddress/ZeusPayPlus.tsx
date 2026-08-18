@@ -60,6 +60,8 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                         navigation.navigate('LightningAddressSettings');
                     } else if (lightningAddressType === 'cashu') {
                         navigation.navigate('CashuLightningAddressSettings');
+                    } else if (lightningAddressType === 'nwc') {
+                        navigation.navigate('NWCAddressSettings');
                     }
                 }}
             >
