@@ -2267,6 +2267,11 @@ export default class NostrWalletConnectStore {
             }
         }
 
+        // Late-settling pays can be recorded failed when the 125s wait
+        // expires; debit them before enforcing budget so a replay cannot
+        // spend the same sats twice.
+        await this.reconcilePendingPayInvoiceActivities(connection);
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
@@ -2339,28 +2344,6 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        const paymentError = this.checkPaymentErrors(
-            Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
-            localeString('views.SendingLightning.paymentTimedOut'),
-            localeString(
-                'stores.NostrWalletConnectStore.error.noPreimageReceived'
-            )
-        );
-        if (
-            paymentError &&
-            paymentError.error &&
-            paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
-        ) {
-            await this.recordFailedPayment({
-                rawInvoice: request.invoice,
-                connection,
-                amountSats,
-                payment_source: 'lightning',
-                errorMessage: paymentError.error?.message
-            });
-            return paymentError;
-        }
-
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
@@ -2371,6 +2354,34 @@ export default class NostrWalletConnectStore {
                 payments,
                 paymentHash
             );
+
+        const settledEvidence =
+            !!preimage ||
+            (!!payment && NostrConnectUtils.isSettledPayment(payment));
+
+        if (!settledEvidence) {
+            const paymentError = this.checkPaymentErrors(
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
+                localeString('views.SendingLightning.paymentTimedOut'),
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                )
+            );
+            if (
+                paymentError &&
+                paymentError.error &&
+                paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            ) {
+                await this.recordFailedPayment({
+                    rawInvoice: request.invoice,
+                    connection,
+                    amountSats,
+                    payment_source: 'lightning',
+                    errorMessage: paymentError.error?.message
+                });
+                return paymentError;
+            }
+        }
 
         const feeSats = Number(payment?.getFee) || Number(fees_paid) || 0;
 
@@ -2683,10 +2694,11 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Promotes pending pay_invoice activities that have since settled or failed.
-     * Used by the activity screen and by list_transactions — without the latter,
-     * an NWC client sees a settled payment as pending until someone opens the
-     * screen. Node fetches are rate limited by the helper below.
+     * Promotes pending (and timeout-failed) pay_invoice activities that have
+     * since settled or failed. Used by the activity screen, list_transactions,
+     * and pay_invoice budget checks. A payment recorded failed after the store
+     * wait can still settle; without this, that spend never hits the budget.
+     * Node fetches are rate limited by the helper below.
      */
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
@@ -2694,8 +2706,11 @@ export default class NostrWalletConnectStore {
         const pending = connection.activity.filter(
             (a) =>
                 a.type === 'pay_invoice' &&
-                a.status === 'pending' &&
-                a.payment_source !== 'cashu'
+                a.payment_source !== 'cashu' &&
+                !a.isBudgetDebited &&
+                (a.status === 'pending' ||
+                    (a.status === 'failed' &&
+                        NostrConnectUtils.isPaymentTimedOutMessage(a.error)))
         );
         if (pending.length === 0) return false;
 
@@ -2716,7 +2731,13 @@ export default class NostrWalletConnectStore {
             if (!payment) continue;
 
             runInAction(() => {
-                if (activity.status !== 'pending') return;
+                if (activity.isBudgetDebited) return;
+                if (
+                    activity.status !== 'pending' &&
+                    activity.status !== 'failed'
+                ) {
+                    return;
+                }
 
                 activity.payment = new Payment(payment);
                 changed = true;
@@ -2725,9 +2746,14 @@ export default class NostrWalletConnectStore {
                     activity.status = 'failed';
                     return;
                 }
-                if (payment.isIncomplete) return;
+                if (payment.isIncomplete) {
+                    activity.status = 'pending';
+                    activity.error = undefined;
+                    return;
+                }
 
                 activity.status = 'success';
+                activity.error = undefined;
                 const amountSats =
                     Math.floor(Number(activity.satAmount)) ||
                     Math.floor(Number(payment.getAmount) || 0);

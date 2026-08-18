@@ -1170,13 +1170,25 @@ export default class NostrConnectUtils {
             ) || paymentState.loading;
 
         if (timedOutOrStillLoading || paymentState.isIncomplete) {
-            const payment = NostrConnectUtils.findInTransitPaymentForInvoice(
+            const listed = NostrConnectUtils.findPaymentForInvoice(
                 invoice,
                 payments,
                 paymentHash
             );
-            if (payment) {
-                return { inTransit: true, payment };
+            if (listed && NostrConnectUtils.isSettledPayment(listed)) {
+                return { inTransit: false, payment: listed };
+            }
+            if (listed && listed.isFailed) {
+                return { inTransit: false, payment: listed };
+            }
+            // Timeout / still-loading with no listed outcome: the HTLC may
+            // still settle. Treat as in-flight so budget is held via
+            // pendingSpendSats instead of recording a terminal failure.
+            if (timedOutOrStillLoading) {
+                return { inTransit: true, payment: listed };
+            }
+            if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
+                return { inTransit: true, payment: listed };
             }
         }
 

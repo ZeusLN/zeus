@@ -748,24 +748,66 @@ describe('NostrConnectUtils', () => {
                     });
                 });
 
-                it('returns not inTransit when timeout fired but nothing is in flight', () => {
+                it('returns settled payment when timeout fired after the list already shows success', () => {
+                    const settled = paymentFixtures.settled();
                     const result = resolve({
-                        payments: [paymentFixtures.settled()],
+                        payments: [settled],
                         paymentState: storeState.timedOut()
                     });
 
-                    expect(result).toEqual({ inTransit: false });
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(settled);
+                });
+
+                it('holds budget when timeout fired and the payment is not listed yet', () => {
+                    const result = resolve({
+                        payments: [],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('holds budget when send is still loading and the payment is not listed yet', () => {
+                    const result = resolve({
+                        payments: [],
+                        paymentState: storeState.stillLoading()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('does not treat an unrelated in-flight payment as this invoice', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.otherInvoiceInFlight()],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('returns not inTransit when timeout fired and the listed payment failed', () => {
+                    const failed = paymentFixtures.failed();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
                 });
             });
 
             describe('when store shows settled failure (no false positive)', () => {
                 it('does not treat a genuine failure as in-transit', () => {
+                    const failed = paymentFixtures.failed();
                     const result = resolve({
-                        payments: [paymentFixtures.failed()],
+                        payments: [failed],
                         paymentState: storeState.failed()
                     });
 
-                    expect(result).toEqual({ inTransit: false });
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
                 });
             });
         });
