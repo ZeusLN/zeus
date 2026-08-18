@@ -39,8 +39,10 @@ interface OnchainSwipeableRowProps {
 @observer
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
-    {}
+    { expanded: boolean }
 > {
+    state = { expanded: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -181,6 +183,7 @@ export default class OnchainSwipeableRow extends Component<
     render() {
         const { children, value, locked, hidden, disabled, SyncStore } =
             this.props;
+        const { expanded } = this.state;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -222,10 +225,14 @@ export default class OnchainSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
                 containerStyle={{ width: '100%' }}
+                onSwipeableWillOpen={() => this.setState({ expanded: true })}
+                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
                     onPress={() => (value ? this.sendToAddress() : this.open())}
                     activeOpacity={1}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
                 >
                     {children}
                 </TouchableOpacity>

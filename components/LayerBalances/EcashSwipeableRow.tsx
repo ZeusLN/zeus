@@ -43,8 +43,10 @@ interface EcashSwipeableRowProps {
 @observer
 export default class EcashSwipeableRow extends Component<
     EcashSwipeableRowProps,
-    {}
+    { expanded: boolean }
 > {
+    state = { expanded: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -249,6 +251,7 @@ export default class EcashSwipeableRow extends Component<
             needsConfig,
             navigation
         } = this.props;
+        const { expanded } = this.state;
 
         if (locked && lightning) {
             return (
@@ -277,6 +280,8 @@ export default class EcashSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
                 containerStyle={{ width: '100%' }}
+                onSwipeableWillOpen={() => this.setState({ expanded: true })}
+                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
                     onPress={() =>
@@ -288,6 +293,8 @@ export default class EcashSwipeableRow extends Component<
                     }
                     activeOpacity={1}
                     style={{ opacity: needsConfig ? 0.4 : 1 }}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
                 >
                     {children}
                 </TouchableOpacity>

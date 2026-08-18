@@ -49,8 +49,10 @@ interface LightningSwipeableRowProps {
 @observer
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
-    {}
+    { expanded: boolean }
 > {
+    state = { expanded: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -366,6 +368,7 @@ export default class LightningSwipeableRow extends Component<
             lnurlParams,
             SyncStore
         } = this.props;
+        const { expanded } = this.state;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -406,6 +409,8 @@ export default class LightningSwipeableRow extends Component<
                 leftThreshold={30}
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
+                onSwipeableWillOpen={() => this.setState({ expanded: true })}
+                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
                     onPress={() =>
@@ -414,6 +419,8 @@ export default class LightningSwipeableRow extends Component<
                             : this.open()
                     }
                     activeOpacity={1}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
                 >
                     {children}
                 </TouchableOpacity>
