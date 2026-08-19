@@ -92,7 +92,8 @@ export default class CashuTokenView extends React.Component<
             markTokenSpent,
             clearToken,
             initializeWallet,
-            cashuWallets
+            cashuWallets,
+            mintUrls
         } = CashuStore!!;
 
         clearToken();
@@ -116,7 +117,19 @@ export default class CashuTokenView extends React.Component<
             return;
         }
 
-        if (!spent) {
+        // Only contact the mint for an unspent token when the user already
+        // trusts it (it is in their added mints). A token is a bearer
+        // instrument whose mint field is attacker-chosen, so merely viewing a
+        // scanned/pasted token from an unknown mint must not add that mint,
+        // initialize a wallet for it, or poll it for proof state: doing so
+        // would leak the viewer's IP/timing and the receipt-correlating proof
+        // Y values to an attacker-controlled server without consent. Contact
+        // is deferred to the explicit Add Mint / Receive actions. This mirrors
+        // the cashu.me wallet, which decodes tokens offline and only reaches an
+        // untrusted mint on an explicit user action.
+        const haveMint = mintUrls.includes(mint);
+
+        if (!spent && haveMint) {
             if (__DEV__) {
                 console.log('token not spent last time checked, checking...', {
                     decoded
