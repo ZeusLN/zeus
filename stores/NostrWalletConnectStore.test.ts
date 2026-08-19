@@ -1058,6 +1058,84 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         });
         expect(connection.lastUsed).toBeInstanceOf(Date);
     });
+
+    it('returns UNAUTHORIZED instead of throwing when the connection is deleted before handler entry', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
+            async () => {
+                store.connections = [];
+                return false;
+            }
+        );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'UNAUTHORIZED',
+                message:
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+            }
+        });
+    });
+
+    it('lets an in-flight handler finish before deleteConnection removes the record', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        let enteredHandler = false;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    enteredHandler = true;
+                    releaseHandler = resolve;
+                })
+        );
+
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(enteredHandler).toBe(true);
+
+        let deleted = false;
+        const deleteDone = store.deleteConnection(connection.id).then(() => {
+            deleted = true;
+        });
+
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(deleted).toBe(false);
+        expect(store.connections).toHaveLength(1);
+
+        const lateResponse = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+        expect(lateResponse.error?.code).toBe('UNAUTHORIZED');
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        await deleteDone;
+
+        expect(deleted).toBe(true);
+        expect(store.connections).toHaveLength(0);
+    });
 });
 
 function buildMakeInvoiceTestStore(invoices: Invoice[] = []) {
