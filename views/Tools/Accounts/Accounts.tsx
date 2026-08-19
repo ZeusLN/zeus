@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,6 +46,7 @@ interface AccountsState {
     offer: string;
     locked: boolean;
     editMode: boolean;
+    refreshing: boolean;
 }
 
 @inject('BalanceStore', 'UTXOsStore', 'UnitsStore')
@@ -60,7 +61,8 @@ export default class Accounts extends React.Component<
         lightning: '',
         offer: '',
         locked: false,
-        editMode: false
+        editMode: false,
+        refreshing: false
     };
 
     componentDidMount() {
@@ -92,10 +94,38 @@ export default class Accounts extends React.Component<
         }
     }
 
+    handleRefresh = async () => {
+        const { BalanceStore, UTXOsStore } = this.props;
+        this.setState({ refreshing: true });
+        try {
+            await Promise.all(
+                BackendUtils.supportsAccounts()
+                    ? [
+                          BalanceStore.getBlockchainBalance(true, false),
+                          BalanceStore.getLightningBalance(true),
+                          UTXOsStore.listAccounts()
+                      ]
+                    : [
+                          BalanceStore.getBlockchainBalance(true, false),
+                          BalanceStore.getLightningBalance(true)
+                      ]
+            );
+        } finally {
+            this.setState({ refreshing: false });
+        }
+    };
+
     render() {
         const { BalanceStore, UnitsStore, UTXOsStore, navigation } = this.props;
-        const { value, satAmount, lightning, offer, locked, editMode } =
-            this.state;
+        const {
+            value,
+            satAmount,
+            lightning,
+            offer,
+            locked,
+            editMode,
+            refreshing
+        } = this.state;
         const { loadingAccounts, accounts } = UTXOsStore;
 
         const FilterButton = () => (
@@ -138,50 +168,29 @@ export default class Accounts extends React.Component<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={
-                        value ? (
-                            <></>
-                        ) : (
-                            <Row>
-                                {accounts.length > 0 && <FilterButton />}
-                                <AddButton />
-                            </Row>
-                        )
+                        <Row>
+                            {refreshing && (
+                                <View style={{ marginRight: 10 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
+                            {!value && (
+                                <>
+                                    {accounts.length > 0 && <FilterButton />}
+                                    <AddButton />
+                                </>
+                            )}
+                        </Row>
                     }
                     navigation={navigation}
                 />
-                {loadingAccounts && <LoadingIndicator />}
-                {!loadingAccounts && (
+                {loadingAccounts && !refreshing && <LoadingIndicator />}
+                {(!loadingAccounts || refreshing) && (
                     <LayerBalances
                         navigation={navigation}
                         BalanceStore={BalanceStore}
                         UnitsStore={UnitsStore}
-                        onRefresh={async () =>
-                            await Promise.all(
-                                BackendUtils.supportsAccounts()
-                                    ? [
-                                          BalanceStore.getBlockchainBalance(
-                                              true,
-                                              false
-                                          ),
-                                          BalanceStore.getLightningBalance(
-                                              true
-                                          ),
-                                          UTXOsStore.listAccounts()
-                                      ]
-                                    : [
-                                          BalanceStore.getBlockchainBalance(
-                                              true,
-                                              false
-                                          ),
-                                          BalanceStore.getLightningBalance(true)
-                                      ]
-                            )
-                        }
-                        refreshing={
-                            BalanceStore?.loadingLightningBalance ||
-                            BalanceStore?.loadingBlockchainBalance ||
-                            UTXOsStore?.loadingAccounts
-                        }
+                        onRefresh={this.handleRefresh}
                         // for payment method selection
                         value={value}
                         satAmount={satAmount}
@@ -191,7 +200,7 @@ export default class Accounts extends React.Component<
                         editMode={editMode}
                     />
                 )}
-                {!loadingAccounts && !!value && !!lightning && (
+                {(!loadingAccounts || refreshing) && !!value && !!lightning && (
                     <Button
                         title={localeString('views.Accounts.fetchTxFees')}
                         containerStyle={{

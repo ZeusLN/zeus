@@ -57,7 +57,6 @@ interface LayerBalancesProps {
     consolidated?: boolean;
     editMode?: boolean;
     needsConfig?: boolean;
-    refreshing?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -435,8 +434,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             onRefresh,
             locked,
             consolidated,
-            editMode,
-            refreshing
+            editMode
         } = this.props;
 
         const { settings } = SettingsStore!;
@@ -556,7 +554,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     keyExtractor={(_item, index) => `message ${index}`}
                     style={{ marginTop: 20 }}
                     onRefresh={() => onRefresh()}
-                    refreshing={refreshing ? refreshing : false}
+                    refreshing={false}
                 />
             </View>
         );
