@@ -138,6 +138,7 @@ interface CollapsedQRState {
     tempQRRef: React.RefObject<QRCodeElement | null> | null;
     qrReady: boolean;
     showSpeedOptions: boolean;
+    qrError: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -152,7 +153,31 @@ export default class CollapsedQR extends React.Component<
         tempQRRef: null,
         qrReady: false,
         qrAnimationSpeed: this.props.qrAnimationSpeed,
-        showSpeedOptions: false
+        showSpeedOptions: false,
+        qrError: false
+    };
+
+    private unmounted = false;
+
+    componentDidUpdate(prevProps: CollapsedQRProps) {
+        if (prevProps.value !== this.props.value && this.state.qrError) {
+            this.setState({ qrError: false });
+        }
+    }
+
+    componentWillUnmount() {
+        this.unmounted = true;
+    }
+
+    // react-native-qrcode-svg calls onError during its own render (the QR
+    // matrix is built in a useMemo), so defer the state update to avoid
+    // updating this component while a child is rendering
+    handleQRError = () => {
+        setTimeout(() => {
+            if (!this.unmounted && !this.state.qrError) {
+                this.setState({ qrError: true });
+            }
+        }, 0);
     };
 
     toggleCollapse = () => {
@@ -166,7 +191,7 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, enlargeQR, tempQRRef, showSpeedOptions } =
+        const { collapsed, enlargeQR, tempQRRef, showSpeedOptions, qrError } =
             this.state;
         const {
             value,
@@ -212,7 +237,10 @@ export default class CollapsedQR extends React.Component<
                 const tempRef = React.createRef<QRCodeElement>();
                 this.setState({ tempQRRef: tempRef, qrReady: false }, () => {
                     const checkReady = () => {
-                        if (this.state.qrReady) {
+                        // resolve on qrError too: the temp QR never becomes
+                        // ready when the value cannot be encoded, and sharing
+                        // as text still works
+                        if (this.state.qrReady || this.state.qrError) {
                             resolve();
                         } else {
                             requestAnimationFrame(checkReady);
@@ -255,6 +283,7 @@ export default class CollapsedQR extends React.Component<
                             logoMargin={10}
                             quietZone={40}
                             parent={this}
+                            onError={this.handleQRError}
                         />
                     </View>
                 )}
@@ -266,7 +295,7 @@ export default class CollapsedQR extends React.Component<
                         valueStyle={valueStyle}
                     />
                 )}
-                {!collapsed && value && (
+                {!collapsed && value && !qrError && (
                     <View>
                         <TouchableOpacity
                             style={{
@@ -320,6 +349,7 @@ export default class CollapsedQR extends React.Component<
                                                     }
                                                     logoMargin={10}
                                                     quietZone={width / 20}
+                                                    onError={this.handleQRError}
                                                 />
                                             </View>
                                         </View>
@@ -345,6 +375,7 @@ export default class CollapsedQR extends React.Component<
                                 }
                                 logoMargin={10}
                                 quietZone={width / 40}
+                                onError={this.handleQRError}
                             />
                         </TouchableOpacity>
                         {satAmount != null &&

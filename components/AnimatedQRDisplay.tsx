@@ -9,6 +9,7 @@ import {
     QREncoderType,
     BBQrFileType
 } from '../hooks/useQRAnimation';
+import { SINGLE_FRAME_QR_MAX_LEN } from '../utils/QRAnimationUtils';
 
 interface AnimatedQRDisplayProps {
     data: string;
@@ -31,6 +32,10 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
 }) => {
     const [selectedIndex, setSelectedIndex] = React.useState(0);
 
+    // Payloads beyond single-QR capacity can only be shown as animated frames;
+    // rendering them as one QR throws in react-native-qrcode-svg
+    const hideSingle = hideSingleFrame || data.length > SINGLE_FRAME_QR_MAX_LEN;
+
     const {
         frameIndex,
         bbqrParts,
@@ -44,10 +49,10 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
         fileType
     });
 
-    const bcurIndex = hideSingleFrame ? 0 : 1;
-    const bbqrIndex = hideSingleFrame ? 1 : 2;
+    const bcurIndex = hideSingle ? 0 : 1;
+    const bbqrIndex = hideSingle ? 1 : 2;
 
-    const isSingleFrameSelected = !hideSingleFrame && selectedIndex === 0;
+    const isSingleFrameSelected = !hideSingle && selectedIndex === 0;
     const isBcurSelected = selectedIndex === bcurIndex;
     const isBbqrSelected = selectedIndex === bbqrIndex;
 
@@ -71,7 +76,7 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
             <QRFormatSelector
                 selectedIndex={selectedIndex}
                 onSelect={setSelectedIndex}
-                hideSingleFrame={hideSingleFrame}
+                hideSingleFrame={hideSingle}
             />
             <View style={{ margin: 10 }}>
                 <CollapsedQR

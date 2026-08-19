@@ -51,57 +51,69 @@ export const useQRAnimation = ({
     const generateInfo = useCallback(() => {
         if (!data) return;
 
-        // BBQr encoding
-        const input = Base64Utils.base64ToBytes(data);
-        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
-        setBbqrParts(splitResult.parts);
-
-        // BC-UR encoding
-        const maxFragmentLength = 200;
-        const firstSeqNum = 0;
-
-        if (encoderType === 'psbt') {
-            const messageBuffer = Buffer.from(data, 'base64');
-            const cryptoPSBT = new CryptoPSBT(messageBuffer);
-            bcurEncoderRef.current = cryptoPSBT.toUREncoder(
-                maxFragmentLength,
-                firstSeqNum
+        // this runs from a render effect with no error boundary above it;
+        // a throw on malformed data would take down the whole app
+        try {
+            // BBQr encoding
+            const input = Base64Utils.base64ToBytes(data);
+            const splitResult = splitQRs(
+                input,
+                fileType,
+                DEFAULT_SPLIT_OPTIONS
             );
-        } else {
-            const messageBuffer =
-                encoderType === 'generic'
-                    ? Buffer.from(data, 'utf-8')
-                    : Buffer.from(data, 'hex');
-            const ur = UR.fromBuffer(messageBuffer);
-            bcurEncoderRef.current = new UREncoder(
-                ur,
-                maxFragmentLength,
-                firstSeqNum
-            );
-        }
+            setBbqrParts(splitResult.parts);
 
-        // Set initial bcurPart
-        if (bcurEncoderRef.current) {
-            const part = bcurEncoderRef.current.nextPart();
-            setBcurPart(encoderType === 'psbt' ? part.toUpperCase() : part);
-        }
+            // BC-UR encoding
+            const maxFragmentLength = 200;
+            const firstSeqNum = 0;
 
-        // Clear any existing interval
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
+            if (encoderType === 'psbt') {
+                const messageBuffer = Buffer.from(data, 'base64');
+                const cryptoPSBT = new CryptoPSBT(messageBuffer);
+                bcurEncoderRef.current = cryptoPSBT.toUREncoder(
+                    maxFragmentLength,
+                    firstSeqNum
+                );
+            } else {
+                const messageBuffer =
+                    encoderType === 'generic'
+                        ? Buffer.from(data, 'utf-8')
+                        : Buffer.from(data, 'hex');
+                const ur = UR.fromBuffer(messageBuffer);
+                bcurEncoderRef.current = new UREncoder(
+                    ur,
+                    maxFragmentLength,
+                    firstSeqNum
+                );
+            }
 
-        // Start animation interval
-        const length = splitResult.parts.length;
-        const interval = getQRAnimationInterval(qrAnimationSpeed);
-
-        intervalRef.current = setInterval(() => {
-            setFrameIndex((prev) => (prev === length - 1 ? 0 : prev + 1));
+            // Set initial bcurPart
             if (bcurEncoderRef.current) {
                 const part = bcurEncoderRef.current.nextPart();
                 setBcurPart(encoderType === 'psbt' ? part.toUpperCase() : part);
             }
-        }, interval);
+
+            // Clear any existing interval
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+
+            // Start animation interval
+            const length = splitResult.parts.length;
+            const interval = getQRAnimationInterval(qrAnimationSpeed);
+
+            intervalRef.current = setInterval(() => {
+                setFrameIndex((prev) => (prev === length - 1 ? 0 : prev + 1));
+                if (bcurEncoderRef.current) {
+                    const part = bcurEncoderRef.current.nextPart();
+                    setBcurPart(
+                        encoderType === 'psbt' ? part.toUpperCase() : part
+                    );
+                }
+            }, interval);
+        } catch (e) {
+            console.log('useQRAnimation: failed to generate QR frames', e);
+        }
     }, [data, encoderType, fileType, qrAnimationSpeed]);
 
     // Generate info when data or speed changes
