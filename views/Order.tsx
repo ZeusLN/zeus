@@ -1227,6 +1227,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                           )
                                 }
                                 value={order.payment.tx}
+                                showCopyIcon
                             />
                         </>
                     )}

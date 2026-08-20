@@ -225,6 +225,7 @@ export default class WatchtowerDetails extends React.Component<
                                     displayData.pubkey
                                 )}
                                 sensitive
+                                showCopyIcon
                             />
 
                             <KeyValue
@@ -245,6 +246,7 @@ export default class WatchtowerDetails extends React.Component<
                                 )}
                                 value={displayData.addresses.join('\n')}
                                 sensitive
+                                showCopyIcon
                             />
 
                             <KeyValue

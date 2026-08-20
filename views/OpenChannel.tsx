@@ -431,6 +431,7 @@ export default class OpenChannel extends React.Component<
                                                 'views.OpenChannel.nodePubkey'
                                             )}
                                             value={channel.node_pubkey_string}
+                                            showCopyIcon
                                         />
                                         {/* Host is intentionally not shown: Lightning backends treat the entered
                                             address as a hint only and may connect via a gossip-discovered address
@@ -529,6 +530,7 @@ export default class OpenChannel extends React.Component<
                                     'views.OpenChannel.nodePubkey'
                                 )}
                                 value={node_pubkey_string}
+                                showCopyIcon
                             />
                             {/* Host is intentionally not shown: Lightning backends treat the entered
                                 address as a hint only and may connect via a gossip-discovered address

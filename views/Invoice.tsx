@@ -410,6 +410,7 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={fallback_addr}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -429,6 +430,7 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString('views.Invoice.rHash')}
                                 value={getRHash}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -439,6 +441,7 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={getRPreimage}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -449,6 +452,7 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={getDescriptionHash}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -459,6 +463,7 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={payment_hash}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -469,6 +474,7 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={payment_preimage}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -477,6 +483,7 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString('views.PayCode.bolt12')}
                                 value={bolt12}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -485,6 +492,7 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString('general.note')}
                                 value={storedNote}
                                 sensitive
+                                showCopyIcon
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
                                         noteKey: getNoteKey

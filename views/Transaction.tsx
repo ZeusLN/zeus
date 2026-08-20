@@ -390,19 +390,17 @@ export default class TransactionView extends React.Component<
                     )}
 
                     {storedNote && (
-                        <TouchableOpacity
-                            onPress={() =>
+                        <KeyValue
+                            keyValue={localeString('general.note')}
+                            value={storedNote}
+                            sensitive
+                            showCopyIcon
+                            mempoolLink={() =>
                                 navigation.navigate('AddNotes', {
                                     noteKey: getNoteKey
                                 })
                             }
-                        >
-                            <KeyValue
-                                keyValue={localeString('general.note')}
-                                value={storedNote}
-                                sensitive
-                            />
-                        </TouchableOpacity>
+                        />
                     )}
                 </ScrollView>
                 <View style={{ bottom: 15 }}>

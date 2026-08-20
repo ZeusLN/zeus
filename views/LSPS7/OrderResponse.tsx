@@ -44,6 +44,7 @@ export default class LSPS7OrderResponse extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.LSPS1.orderId')}
                         value={orderResponse?.order_id}
+                        showCopyIcon
                     />
                 )}
 
@@ -101,6 +102,7 @@ export default class LSPS7OrderResponse extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.scid')}
                             value={channel.short_channel_id}
+                            showCopyIcon
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -127,6 +129,7 @@ export default class LSPS7OrderResponse extends React.Component<
                                         'views.LSPS7.originalOrderId'
                                     )}
                                     value={channel.original_order.id}
+                                    showCopyIcon
                                 />
                                 <KeyValue
                                     keyValue={localeString(
@@ -145,6 +148,7 @@ export default class LSPS7OrderResponse extends React.Component<
                                     value={channel.extension_order_ids.join(
                                         ', '
                                     )}
+                                    showCopyIcon
                                 />
                             )}
                     </>
@@ -209,6 +213,7 @@ export default class LSPS7OrderResponse extends React.Component<
                             <KeyValue
                                 keyValue={localeString('views.Invoice.title')}
                                 value={payment?.bolt11.invoice}
+                                showCopyIcon
                             />
                         )}
                     </>
@@ -263,6 +268,7 @@ export default class LSPS7OrderResponse extends React.Component<
                             <KeyValue
                                 keyValue={localeString('general.address')}
                                 value={payment?.onchain.address}
+                                showCopyIcon
                             />
                         )}
                         {payment?.onchain.min_fee_for_0conf && (

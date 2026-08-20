@@ -358,6 +358,7 @@ export default class CashuTokenView extends React.Component<
                                     keyValue={localeString('cashu.mintUrl')}
                                     value={mint}
                                     sensitive
+                                    showCopyIcon
                                 />
                             )}
 
@@ -401,6 +402,7 @@ export default class CashuTokenView extends React.Component<
                                         decoded.getLockPubkey
                                     }
                                     sensitive
+                                    showCopyIcon
                                 />
                             )}
 

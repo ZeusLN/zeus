@@ -63,6 +63,7 @@ export default class LSPS1OrderResponse extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.LSPS1.orderId')}
                         value={orderResponse?.order_id}
+                        showCopyIcon
                     />
                 )}
                 {orderResponse?.lsp_balance_sat &&
@@ -203,6 +204,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                     payment?.lightning_invoice ||
                                     payment?.bolt11_invoice
                                 }
+                                showCopyIcon
                             />
                         )}
                         {payment?.min_fee_for_0conf && (
@@ -229,6 +231,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                     'views.Settings.AddContact.onchainAddress'
                                 )}
                                 value={payment?.onchain_address}
+                                showCopyIcon
                             />
                         )}
                         {payment?.onchain_payment && (
@@ -297,6 +300,7 @@ export default class LSPS1OrderResponse extends React.Component<
                             <KeyValue
                                 keyValue={localeString('views.Invoice.title')}
                                 value={payment?.bolt11.invoice}
+                                showCopyIcon
                             />
                         )}
                     </>
@@ -349,6 +353,7 @@ export default class LSPS1OrderResponse extends React.Component<
                             <KeyValue
                                 keyValue={localeString('general.address')}
                                 value={payment?.onchain.address}
+                                showCopyIcon
                             />
                         )}
                         {payment?.onchain.min_fee_for_0conf && (
@@ -383,6 +388,7 @@ export default class LSPS1OrderResponse extends React.Component<
                             )}
                             value={channel?.funding_outpoint}
                             sensitive
+                            showCopyIcon
                             color={themeColor('highlight')}
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(

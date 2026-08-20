@@ -200,7 +200,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                                 : localeString('general.destination')
                         }
                         value={destination}
-                        disableCopy={false}
+                        showCopyIcon
                     />
                     {hasAdditional && (
                         <TouchableOpacity onPress={this.toggleBitcoinUnits}>
@@ -232,7 +232,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                                     'general.destination'
                                 )} #${idx + 2}`}
                                 value={o?.address}
-                                disableCopy={false}
+                                showCopyIcon
                             />
                             <TouchableOpacity onPress={this.toggleBitcoinUnits}>
                                 <KeyValue
@@ -284,7 +284,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                             idx + 1
                         }`}
                         value={u}
-                        disableCopy={false}
+                        showCopyIcon
                     />
                 ))}
             </View>

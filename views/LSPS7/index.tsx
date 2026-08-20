@@ -450,6 +450,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                             <KeyValue
                                                 keyValue="LSP"
                                                 value={lspDisplay}
+                                                showCopyIcon
                                             />
 
                                             <KeyValue
@@ -471,6 +472,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 'views.Channel.scid'
                                             )}
                                             value={chanId}
+                                            showCopyIcon
                                         />
 
                                         <KeyValue

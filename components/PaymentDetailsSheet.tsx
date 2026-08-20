@@ -418,6 +418,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                                 )}
                                                 value={paymentHash}
                                                 sensitive
+                                                showCopyIcon
                                             />
                                         ) : null}
 
@@ -428,6 +429,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                                 )}
                                                 value={paymentPreimage}
                                                 sensitive
+                                                showCopyIcon
                                             />
                                         ) : null}
 

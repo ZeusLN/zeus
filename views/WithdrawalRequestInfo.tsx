@@ -158,6 +158,7 @@ export default class WithdrawalRequestInfo extends React.Component<
                                     keyValue={localeString('general.signature')}
                                     value={withdrawalReqResult?.signature}
                                     sensitive
+                                    showCopyIcon
                                     color={themeColor('text')}
                                 />
                             </View>
@@ -169,6 +170,7 @@ export default class WithdrawalRequestInfo extends React.Component<
                                     )}
                                     value={bolt12}
                                     sensitive
+                                    showCopyIcon
                                     color={themeColor('text')}
                                 />
                             </View>

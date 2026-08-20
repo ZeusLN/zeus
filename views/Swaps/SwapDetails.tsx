@@ -900,6 +900,7 @@ export default class SwapDetails extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.SwapDetails.swapId')}
                         value={swapData.id}
+                        showCopyIcon
                     />
 
                     {swapData.isSubmarineSwap && (
@@ -922,12 +923,14 @@ export default class SwapDetails extends React.Component<
                         <KeyValue
                             keyValue={localeString('general.address')}
                             value={swapData.effectiveLockupAddress}
+                            showCopyIcon
                         />
                     )}
                     {swapData?.txid && (
                         <KeyValue
                             keyValue={localeString('views.SendingOnChain.txid')}
                             value={swapData.txid}
+                            showCopyIcon
                             mempoolLink={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     swapData?.txid!,
@@ -945,6 +948,7 @@ export default class SwapDetails extends React.Component<
                                         'views.Invoice.title'
                                     )}
                                     value={swapData.invoice}
+                                    showCopyIcon
                                 />
                             )}
                             <KeyValue
@@ -972,6 +976,7 @@ export default class SwapDetails extends React.Component<
                                 'views.SwapDetails.lockupAddress'
                             )}
                             value={swapData.lockupAddress}
+                            showCopyIcon
                         />
                     )}
 
@@ -992,6 +997,7 @@ export default class SwapDetails extends React.Component<
                                 'views.SwapDetails.claimPublicKey'
                             )}
                             value={swapData?.servicePubKey}
+                            showCopyIcon
                         />
                     )}
                     {swapData.isReverseSwap && swapData.refundPubKey && (
@@ -1000,6 +1006,7 @@ export default class SwapDetails extends React.Component<
                                 'views.SwapDetails.refundPublicKey'
                             )}
                             value={swapData.refundPubKey}
+                            showCopyIcon
                         />
                     )}
                     {swapData.isReverseSwap && swapData?.preimageHash && (
@@ -1008,6 +1015,7 @@ export default class SwapDetails extends React.Component<
                                 'views.SwapDetails.preimageHash'
                             )}
                             value={swapData?.preimageHash}
+                            showCopyIcon
                         />
                     )}
 

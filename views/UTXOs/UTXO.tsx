@@ -94,6 +94,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                         <KeyValue
                             keyValue={localeString('general.outpoint')}
                             value={getOutpoint}
+                            showCopyIcon
                         />
 
                         {!!address && (
@@ -174,20 +175,18 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                         )}
 
                         {this.state.storedLabel && (
-                            <TouchableOpacity
-                                onPress={() =>
+                            <KeyValue
+                                keyValue={localeString('views.UTXOs.label')}
+                                value={this.state.storedLabel}
+                                sensitive
+                                showCopyIcon
+                                mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
                                         noteKey: utxo.getOutpoint,
                                         context: 'label'
                                     })
                                 }
-                            >
-                                <KeyValue
-                                    keyValue={localeString('views.UTXOs.label')}
-                                    value={this.state.storedLabel}
-                                    sensitive
-                                />
-                            </TouchableOpacity>
+                            />
                         )}
                     </ScrollView>
 

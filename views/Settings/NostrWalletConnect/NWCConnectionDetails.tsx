@@ -564,6 +564,7 @@ export default class NWCConnectionDetails extends React.Component<
                                             'views.Settings.NostrWalletConnect.connectionId'
                                         )}
                                         value={connection.id}
+                                        showCopyIcon
                                     />
 
                                     <KeyValue
@@ -571,12 +572,14 @@ export default class NWCConnectionDetails extends React.Component<
                                             'views.Settings.NostrWalletConnect.publicKey'
                                         )}
                                         value={connection.pubkey}
+                                        showCopyIcon
                                     />
                                     <KeyValue
                                         keyValue={localeString(
                                             'nostr.relayUrl'
                                         )}
                                         value={connection.relayUrl}
+                                        showCopyIcon
                                     />
 
                                     {connection.description && (

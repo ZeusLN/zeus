@@ -240,6 +240,7 @@ export default class CashuPayment extends React.Component<
                                 keyValue={localeString('cashu.mintUrl')}
                                 value={getMintUrl}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -267,6 +268,7 @@ export default class CashuPayment extends React.Component<
                                 value={getDestination}
                                 sensitive
                                 color={themeColor('highlight')}
+                                showCopyIcon
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerPubkey(
                                         getDestination,
@@ -283,6 +285,7 @@ export default class CashuPayment extends React.Component<
                                 )}
                                 value={paymentHash}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -293,6 +296,7 @@ export default class CashuPayment extends React.Component<
                                 )}
                                 value={getPreimage}
                                 sensitive
+                                showCopyIcon
                             />
                         )}
 
@@ -357,6 +361,7 @@ export default class CashuPayment extends React.Component<
                                 keyValue={localeString('general.note')}
                                 value={storedNote}
                                 sensitive
+                                showCopyIcon
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
                                         noteKey: getNoteKey

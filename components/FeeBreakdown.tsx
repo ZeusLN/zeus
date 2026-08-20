@@ -454,6 +454,7 @@ export default class FeeBreakdown extends React.Component<
                                 value={channelId}
                                 color={themeColor('chain')}
                                 sensitive
+                                showCopyIcon
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerChannelId(
                                         channelId,
@@ -470,6 +471,7 @@ export default class FeeBreakdown extends React.Component<
                                 value={channelPoint}
                                 color={themeColor('highlight')}
                                 sensitive
+                                showCopyIcon
                                 mempoolLink={() =>
                                     UrlUtils.goToBlockExplorerTXID(
                                         channelPoint,

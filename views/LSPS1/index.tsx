@@ -623,6 +623,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 value={
                                                                     lspDisplay
                                                                 }
+                                                                showCopyIcon
                                                             />
 
                                                             {info?.max_channel_balance_sat &&
