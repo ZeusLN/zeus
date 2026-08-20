@@ -243,7 +243,8 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsCashuWallet: false,
     supportsAddressMessageSigning: false,
     supportsSettingInvoiceExpiration: false,
-    supportsNostrWalletConnectService: true
+    supportsNostrWalletConnectService: true,
+    supportsPaymentsCreationDateFilter: false
 };
 
 // `supports` itself is LND's version-gate helper, not a flag
