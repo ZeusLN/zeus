@@ -1,4 +1,11 @@
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-fs', () => ({
+    DownloadDirectoryPath: '/public-downloads',
+    DocumentDirectoryPath: '/docs',
+    CachesDirectoryPath: '/cache',
+    exists: jest.fn().mockResolvedValue(false),
+    unlink: jest.fn().mockResolvedValue(undefined)
+}));
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()

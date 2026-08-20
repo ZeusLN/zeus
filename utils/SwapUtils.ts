@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { Platform } from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNFS from 'react-native-fs';
 import { validateMnemonic } from '@scure/bip39';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
@@ -66,17 +66,20 @@ export const RESCUE_KEY_FILENAME = 'rescue_key.json';
 // Older builds' rescue-key download wrote the mnemonic as plaintext JSON to
 // shared storage: the public Downloads dir on Android and the Files-app
 // visible Documents dir on iOS. Those files outlive the app, so they must be
-// purged wherever the rescue key itself is deleted. Best-effort only: under
+// purged wherever the rescue key itself is deleted. The paths must stay in
+// sync with the legacy writer, which used RNFS.DownloadDirectoryPath (public
+// /sdcard/Download) and RNFS.DocumentDirectoryPath. Best-effort only: under
 // Android scoped storage the file can only be removed by the install that
 // created it, and a failed unlink can never succeed on a later retry.
 export const purgeLegacyRescueKeyFiles = async (): Promise<void> => {
-    const { fs } = ReactNativeBlobUtil;
     const dir =
-        Platform.OS === 'android' ? fs.dirs.DownloadDir : fs.dirs.DocumentDir;
+        Platform.OS === 'android'
+            ? RNFS.DownloadDirectoryPath
+            : RNFS.DocumentDirectoryPath;
     const path = `${dir}/${RESCUE_KEY_FILENAME}`;
     try {
-        if (await fs.exists(path)) {
-            await fs.unlink(path);
+        if (await RNFS.exists(path)) {
+            await RNFS.unlink(path);
             console.log('[SwapUtils] Legacy rescue key file deleted:', path);
         }
     } catch (e) {
@@ -84,6 +87,23 @@ export const purgeLegacyRescueKeyFiles = async (): Promise<void> => {
             `[SwapUtils] Error deleting legacy rescue key file ${path}:`,
             e
         );
+    }
+};
+
+// Share-sheet staging file for the rescue-key export. App-private cache on
+// both platforms. On Android the file must outlive the Share.open call
+// (react-native-share resolves when the user picks a target, while the
+// receiving app reads the FileProvider URI afterwards), so cleanup happens
+// on the next launch and in the wipe paths rather than right after sharing.
+export const rescueKeyStagingPath = `${RNFS.CachesDirectoryPath}/${RESCUE_KEY_FILENAME}`;
+
+export const unlinkRescueKeyStagingFile = async (): Promise<void> => {
+    try {
+        if (await RNFS.exists(rescueKeyStagingPath)) {
+            await RNFS.unlink(rescueKeyStagingPath);
+        }
+    } catch (e) {
+        console.warn('[SwapUtils] Error deleting rescue key staging file:', e);
     }
 };
 

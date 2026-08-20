@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
     Alert,
     Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -36,7 +37,9 @@ import {
     SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY,
     RESCUE_KEY_FILENAME,
-    purgeLegacyRescueKeyFiles
+    purgeLegacyRescueKeyFiles,
+    rescueKeyStagingPath,
+    unlinkRescueKeyStagingFile
 } from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -77,20 +80,6 @@ interface SeedState {
     isChannelExporting: boolean;
     channelExportMessage: string;
 }
-
-// Share-sheet staging file. App-private cache on both platforms; unlinked
-// after every share attempt so no plaintext copy lingers.
-const rescueKeyStagingPath = `${RNFS.CachesDirectoryPath}/${RESCUE_KEY_FILENAME}`;
-
-const unlinkRescueKeyStagingFile = async () => {
-    try {
-        if (await RNFS.exists(rescueKeyStagingPath)) {
-            await RNFS.unlink(rescueKeyStagingPath);
-        }
-    } catch (e) {
-        console.warn('Error deleting rescue key staging file:', e);
-    }
-};
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     const [isRevealed, setRevealed] = useState(false);
@@ -336,16 +325,26 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         'utf8'
                     );
 
-                    await Share.open({
+                    const result = await Share.open({
                         title: localeString('views.Swaps.rescueKey.share'),
                         url: `file://${rescueKeyStagingPath}`,
                         type: 'application/json',
                         filename: RESCUE_KEY_FILENAME,
                         failOnCancel: false
                     });
+
+                    // On Android, Share.open resolves when the user picks a
+                    // target, while the receiving app reads the FileProvider
+                    // URI afterwards - deleting the file here would race the
+                    // read. Unlink immediately only when no receiver ever got
+                    // the URI (iOS resolves after the share completes; a
+                    // dismissed chooser has no receiver). Otherwise the file
+                    // is cleaned up on the next launch and in the wipe paths.
+                    if (Platform.OS === 'ios' || result.dismissedAction) {
+                        await unlinkRescueKeyStagingFile();
+                    }
                 } catch (error) {
                     console.error('Rescue key share failed:', error);
-                } finally {
                     await unlinkRescueKeyStagingFile();
                 }
             };

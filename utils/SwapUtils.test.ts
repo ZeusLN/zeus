@@ -1,14 +1,22 @@
 import BigNumber from 'bignumber.js';
 
-jest.mock('react-native-blob-util', () => ({
-    fs: {
-        dirs: { DownloadDir: '/downloads', DocumentDir: '/docs' },
-        exists: jest.fn().mockResolvedValue(false),
-        unlink: jest.fn().mockResolvedValue(undefined)
-    }
+jest.mock('react-native', () => ({
+    Platform: { OS: 'ios' }
 }));
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+// Paths must mirror the real constants' asymmetry: the legacy Android writer
+// used the PUBLIC Downloads dir (RNFS.DownloadDirectoryPath), not the
+// app-scoped one, so the purge must read the same constant.
+jest.mock('react-native-fs', () => ({
+    DownloadDirectoryPath: '/public-downloads',
+    DocumentDirectoryPath: '/docs',
+    CachesDirectoryPath: '/cache',
+    exists: jest.fn().mockResolvedValue(false),
+    unlink: jest.fn().mockResolvedValue(undefined)
+}));
+
+import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
 import {
     bigCeil,
     bigFloor,
@@ -19,6 +27,7 @@ import {
     isValidRescueKey,
     verifyReverseSwapInvoice,
     purgeLegacyRescueKeyFiles,
+    unlinkRescueKeyStagingFile,
     RESCUE_KEY_FILENAME
 } from './SwapUtils';
 
@@ -256,33 +265,75 @@ describe('SwapUtils', () => {
     });
 
     describe('purgeLegacyRescueKeyFiles', () => {
-        const fs = (ReactNativeBlobUtil as any).fs;
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
 
         beforeEach(() => {
-            fs.exists.mockReset().mockResolvedValue(false);
-            fs.unlink.mockReset().mockResolvedValue(undefined);
+            Platform.OS = 'ios';
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
         });
 
         it('does nothing when no legacy file exists', async () => {
             await purgeLegacyRescueKeyFiles();
-            expect(fs.exists).toHaveBeenCalledWith(
-                `/docs/${RESCUE_KEY_FILENAME}`
-            );
-            expect(fs.unlink).not.toHaveBeenCalled();
+            expect(exists).toHaveBeenCalledWith(`/docs/${RESCUE_KEY_FILENAME}`);
+            expect(unlink).not.toHaveBeenCalled();
         });
 
-        it('unlinks the legacy file when present', async () => {
-            fs.exists.mockResolvedValue(true);
+        it('unlinks the legacy iOS Documents file when present', async () => {
+            exists.mockResolvedValue(true);
             await purgeLegacyRescueKeyFiles();
-            expect(fs.unlink).toHaveBeenCalledWith(
-                `/docs/${RESCUE_KEY_FILENAME}`
+            expect(unlink).toHaveBeenCalledWith(`/docs/${RESCUE_KEY_FILENAME}`);
+        });
+
+        it('unlinks from public Downloads on Android, matching the legacy writer', async () => {
+            Platform.OS = 'android';
+            exists.mockResolvedValue(true);
+            await purgeLegacyRescueKeyFiles();
+            expect(exists).toHaveBeenCalledWith(
+                `/public-downloads/${RESCUE_KEY_FILENAME}`
+            );
+            expect(unlink).toHaveBeenCalledWith(
+                `/public-downloads/${RESCUE_KEY_FILENAME}`
             );
         });
 
         it('swallows unlink errors (scoped storage may deny deletion)', async () => {
-            fs.exists.mockResolvedValue(true);
-            fs.unlink.mockRejectedValue(new Error('EACCES'));
+            exists.mockResolvedValue(true);
+            unlink.mockRejectedValue(new Error('EACCES'));
             await expect(purgeLegacyRescueKeyFiles()).resolves.toBeUndefined();
+        });
+    });
+
+    describe('unlinkRescueKeyStagingFile', () => {
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
+
+        beforeEach(() => {
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
+        });
+
+        it('does nothing when no staging file exists', async () => {
+            await unlinkRescueKeyStagingFile();
+            expect(exists).toHaveBeenCalledWith(
+                `/cache/${RESCUE_KEY_FILENAME}`
+            );
+            expect(unlink).not.toHaveBeenCalled();
+        });
+
+        it('unlinks the staging file when present', async () => {
+            exists.mockResolvedValue(true);
+            await unlinkRescueKeyStagingFile();
+            expect(unlink).toHaveBeenCalledWith(
+                `/cache/${RESCUE_KEY_FILENAME}`
+            );
+        });
+
+        it('swallows unlink errors', async () => {
+            exists.mockResolvedValue(true);
+            unlink.mockRejectedValue(new Error('EBUSY'));
+            await expect(unlinkRescueKeyStagingFile()).resolves.toBeUndefined();
         });
     });
 });

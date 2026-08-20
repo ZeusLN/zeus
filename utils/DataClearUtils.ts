@@ -53,7 +53,8 @@ import {
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
-    purgeLegacyRescueKeyFiles
+    purgeLegacyRescueKeyFiles,
+    unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 import {
     NWC_CONNECTIONS_KEY,
@@ -671,11 +672,12 @@ export async function clearAllData(): Promise<void> {
     // clears above, so they must be unlinked explicitly.
     await clearNodeDataDirectories(settings);
 
-    // 2d. Delete any legacy plaintext rescue-key export from shared storage.
-    // These files live outside the app sandbox (public Downloads on Android,
-    // Files-visible Documents on iOS) so nothing else in this flow touches
-    // them.
+    // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
+    // the app sandbox (public Downloads on Android, Files-visible Documents
+    // on iOS); the share-sheet staging copy lives in app cache, which
+    // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
+    await unlinkRescueKeyStagingFile();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');

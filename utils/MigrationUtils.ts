@@ -75,7 +75,8 @@ import {
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
-    purgeLegacyRescueKeyFiles
+    purgeLegacyRescueKeyFiles,
+    unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 
 import {
@@ -635,16 +636,26 @@ class MigrationsUtils {
         return settings;
     }
 
-    // Older builds' rescue-key download wrote the swap rescue mnemonic as
-    // plaintext JSON into shared storage (Android public Downloads, iOS
-    // Files-visible Documents), with nothing ever deleting it. The export
-    // now goes through the share sheet, but files written by older builds
-    // persist until removed. One-shot best-effort cleanup; the flag is set
-    // regardless of outcome because a failed unlink (scoped storage, file
-    // owned by a previous install) can never succeed on a later retry.
+    // Rescue-key export file cleanup, in two parts with different cadences.
+    //
+    // Staging file: the share-sheet export stages the mnemonic in app cache,
+    // and on Android the file must outlive Share.open (receivers read the
+    // FileProvider URI after the promise resolves), so it is deleted here on
+    // the NEXT launch instead - every launch, never one-shot, since a new
+    // staging file can appear after any share.
+    //
+    // Legacy shared-storage files: older builds' download wrote the mnemonic
+    // as plaintext JSON into shared storage (Android public Downloads, iOS
+    // Files-visible Documents), with nothing ever deleting it. One-shot
+    // best-effort cleanup; the flag is set regardless of outcome because a
+    // failed unlink (scoped storage, file owned by a previous install) can
+    // never succeed on a later retry.
+    //
     // Runs before the settings blob is even read, so it covers both the
     // legacy and modern (zeus-settings-v2) paths.
-    public async purgeLegacyRescueKeyFile() {
+    public async purgeRescueKeyFiles() {
+        await unlinkRescueKeyStagingFile();
+
         const MOD_KEY_RESCUE_FILE = 'rescue-key-file-cleanup';
         const modRescueFile = await EncryptedStorage.getItem(
             MOD_KEY_RESCUE_FILE
