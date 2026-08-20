@@ -276,6 +276,35 @@ export default class LnurlPay extends React.Component<
 
                 const pr = data.pr;
 
+                // A response without an invoice is a service-side failure,
+                // even when it doesn't use the LNURL error envelope (e.g.
+                // LNbits answers a deleted paylink with
+                // {"detail": "Pay link does not exist."}). Surface it as the
+                // service's error rather than letting the binding check below
+                // misreport it as an invoice mismatch.
+                if (typeof pr !== 'string' || pr.length === 0) {
+                    this.setState({ loading: false });
+                    const serviceReason = [
+                        data.reason,
+                        data.detail,
+                        data.error,
+                        data.message
+                    ].find((v: any) => typeof v === 'string' && v.length > 0);
+                    Alert.alert(
+                        `[error] ${domain} says:`,
+                        serviceReason ||
+                            localeString('error.unexpectedResponse'),
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                    return;
+                }
+
                 // Bind the invoice we are about to pay to the identity and
                 // amount the user reviewed: the description_hash must commit to
                 // the displayed metadata and the amount must match the request
