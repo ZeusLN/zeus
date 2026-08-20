@@ -374,7 +374,11 @@ export default class LND {
             route_hints: data.route_hints
         });
     getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+            creationDateStart?: number;
+        } = {
             maxPayments: 500,
             reversed: true
         }
@@ -384,6 +388,10 @@ export default class LND {
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
+            }${
+                params?.creationDateStart
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
             }`
         );
 
@@ -963,4 +971,5 @@ export default class LND {
     supportsAddressMessageSigning = () => true;
     supportsSettingInvoiceExpiration = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsPaymentsCreationDateFilter = () => this.supports('v0.15.1');
 }
