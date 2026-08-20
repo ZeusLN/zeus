@@ -74,13 +74,17 @@ jest.mock('./ZipUtils', () => ({
 }));
 
 let capturedEnvelope: string | undefined;
-const mockShareOpen = jest.fn().mockImplementation(async ({ url }: any) => {
-    // Capture the file exactly as a share target would read it.
-    capturedEnvelope = mockFiles[url.replace('file://', '')]?.toString('utf8');
-    return { success: true };
-});
-jest.mock('react-native-share', () => ({
-    open: (...args: any[]) => mockShareOpen(...args)
+const mockSaveDocuments = jest
+    .fn()
+    .mockImplementation(async ({ sourceUris }: any) => {
+        // Capture the file exactly as the save dialog copies it into the
+        // user-chosen destination.
+        capturedEnvelope =
+            mockFiles[sourceUris[0].replace('file://', '')]?.toString('utf8');
+        return [{ uri: 'content://saved', name: null, error: null }];
+    });
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: (...args: any[]) => mockSaveDocuments(...args)
 }));
 
 const mockUpdateSettings = jest.fn().mockResolvedValue(undefined);
@@ -147,14 +151,19 @@ describe('NodeConfigUtils', () => {
     });
 
     describe('exportNodeConfigs', () => {
-        it('produces a v2 encrypted envelope and shares it', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+        it('produces a v2 encrypted envelope and saves it via the system save dialog', async () => {
+            await exportNodeConfigs(testNodes, 'hunter2');
 
-            expect(mockShareOpen).toHaveBeenCalledTimes(1);
-            const shareArg = mockShareOpen.mock.calls[0][0];
-            expect(shareArg.type).toBe('application/json');
-            expect(shareArg.url).toContain('file:///cache/');
-            expect(shareArg.url).toContain('.zeus-wallet-config-backup');
+            expect(mockSaveDocuments).toHaveBeenCalledTimes(1);
+            const saveArg = mockSaveDocuments.mock.calls[0][0];
+            expect(saveArg.mimeType).toBe('application/json');
+            expect(saveArg.copy).toBe(true);
+            expect(saveArg.sourceUris).toHaveLength(1);
+            expect(saveArg.sourceUris[0]).toContain('file:///cache/');
+            expect(saveArg.sourceUris[0]).toContain(
+                '.zeus-wallet-config-backup'
+            );
+            expect(saveArg.fileName).toMatch(/\.zeus-wallet-config-backup$/);
 
             const envelope = JSON.parse(capturedEnvelope as string);
             expect(envelope.version).toBe(EXPORT_FORMAT_VERSION);
@@ -163,62 +172,67 @@ describe('NodeConfigUtils', () => {
         });
 
         it('never writes the export to shared Downloads', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+            await exportNodeConfigs(testNodes, 'hunter2');
             const wroteToDownloads = Object.keys(mockFiles).some((p) =>
                 p.startsWith('/downloads')
             );
             expect(wroteToDownloads).toBe(false);
         });
 
-        it('leaves only the encrypted envelope behind, no plaintext temps', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+        it('cleans up all staged files after a successful export', async () => {
+            await exportNodeConfigs(testNodes, 'hunter2');
 
-            // The plaintext and raw-blob temps are unlinked; only the
-            // encrypted envelope survives for lazy share-target reads.
-            const remaining = Object.keys(mockFiles);
-            expect(remaining).toHaveLength(1);
-            expect(remaining[0]).toMatch(
-                /^\/cache\/nodeconfig-exports\/.*\.zeus-wallet-config-backup$/
-            );
-            expect(mockFiles[remaining[0]].toString('utf8')).not.toContain(
-                'deadbeefcafe'
-            );
+            // saveDocuments copies the envelope to the destination before
+            // resolving, so nothing needs to survive in cache.
+            expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
-        it('keeps the shared file readable after the share sheet resolves', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
-
-            // Android share targets may read the content URI after Share.open
-            // resolves; the staged envelope must still be on disk.
-            const sharedPath = mockShareOpen.mock.calls[0][0].url.replace(
-                'file://',
-                ''
+        it('cleans up staged files when the user cancels the save dialog', async () => {
+            mockSaveDocuments.mockRejectedValueOnce(
+                Object.assign(new Error('user canceled'), {
+                    code: 'OPERATION_CANCELED'
+                })
             );
-            expect(mockFiles[sharedPath]).toBeDefined();
+
+            await expect(
+                exportNodeConfigs(testNodes, 'hunter2')
+            ).rejects.toThrow();
+
+            expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
-        it('sweeps envelopes left by previous exports', async () => {
+        it('surfaces a write error reported by the save dialog', async () => {
+            mockSaveDocuments.mockResolvedValueOnce([
+                { uri: 'content://saved', name: null, error: 'write failed' }
+            ]);
+
+            await expect(
+                exportNodeConfigs(testNodes, 'hunter2')
+            ).rejects.toThrow('write failed');
+
+            expect(Object.keys(mockFiles)).toHaveLength(0);
+        });
+
+        it('sweeps envelopes left by earlier share-sheet builds', async () => {
             const stale =
                 '/cache/nodeconfig-exports/20200101-000000.zeus-wallet-config-backup';
             mockFiles[stale] = Buffer.from('old export', 'utf8');
 
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+            await exportNodeConfigs(testNodes, 'hunter2');
 
             expect(mockFiles[stale]).toBeUndefined();
-            expect(Object.keys(mockFiles)).toHaveLength(1);
+            expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
         it('refuses to export without a password', async () => {
-            await expect(
-                exportNodeConfigs(testNodes, '', 'Export')
-            ).rejects.toThrow();
+            await expect(exportNodeConfigs(testNodes, '')).rejects.toThrow();
 
-            expect(mockShareOpen).not.toHaveBeenCalled();
+            expect(mockSaveDocuments).not.toHaveBeenCalled();
             expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
         it('does not emit any node credential in cleartext', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+            await exportNodeConfigs(testNodes, 'hunter2');
             const envelope = JSON.parse(capturedEnvelope as string);
             expect(JSON.stringify(envelope)).not.toContain('deadbeefcafe');
         });
@@ -226,7 +240,7 @@ describe('NodeConfigUtils', () => {
 
     describe('decryptExportDataV2', () => {
         it('round-trips an exported v2 backup with the correct password', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+            await exportNodeConfigs(testNodes, 'hunter2');
             const envelope = JSON.parse(capturedEnvelope as string);
 
             const nodes = await decryptExportDataV2(envelope.data, 'hunter2');
@@ -234,7 +248,7 @@ describe('NodeConfigUtils', () => {
         });
 
         it('rejects a wrong password', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2', 'Export');
+            await exportNodeConfigs(testNodes, 'hunter2');
             const envelope = JSON.parse(capturedEnvelope as string);
 
             await expect(

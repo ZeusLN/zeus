@@ -1,5 +1,5 @@
 import RNFS from 'react-native-fs';
-import Share from 'react-native-share';
+import { saveDocuments } from '@react-native-documents/picker';
 import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
@@ -44,13 +44,16 @@ export const saveNodeConfigs = async (
 };
 
 // Encrypts the selected node configs with the user's password using the native
-// AES-256-GCM primitive (ZipUtils, PBKDF2-HMAC-SHA256), then hands the file to
-// the system share sheet from app-private cache. Nothing is written to shared
-// storage, and the export is never produced in plaintext.
+// AES-256-GCM primitive (ZipUtils, PBKDF2-HMAC-SHA256), then prompts the user
+// for a destination via the system save dialog (SAF on Android, the Files
+// exporter on iOS), staged from app-private cache. Nothing is written to
+// shared storage unprompted, and the export is never produced in plaintext.
+// Resolves once the encrypted file has been written to the chosen
+// destination; rejects with OPERATION_CANCELED if the user dismisses the
+// dialog.
 export const exportNodeConfigs = async (
     nodes: Node[],
-    password: string,
-    shareTitle: string
+    password: string
 ): Promise<void> => {
     // The UI enforces a confirmed password, but guard here too so this API
     // can never produce an unencrypted export.
@@ -62,20 +65,17 @@ export const exportNodeConfigs = async (
     const filename = `${timestamp}.zeus-wallet-config-backup`;
 
     const cacheDir = RNFS.CachesDirectoryPath;
-    const stagingDir = `${cacheDir}/nodeconfig-exports`;
     const plainPath = `${cacheDir}/zeus-nodeconfig-plain.tmp`;
     const encPath = `${cacheDir}/zeus-nodeconfig-enc.tmp`;
-    const stagingPath = `${stagingDir}/${filename}`;
+    const stagingPath = `${cacheDir}/${filename}`;
 
     try {
         await safeUnlink(plainPath);
         await safeUnlink(encPath);
 
-        // Sweep envelopes staged by previous exports. The current export's
-        // envelope is deliberately left in place after sharing (see step 4),
-        // so clean-up happens here, at the start of the next export.
-        await safeUnlink(stagingDir);
-        await RNFS.mkdir(stagingDir);
+        // Sweep the share-sheet staging dir used by earlier builds of this
+        // flow, in case a ciphertext envelope is still lingering in cache.
+        await safeUnlink(`${cacheDir}/nodeconfig-exports`);
 
         // 1. Stage the plaintext payload (the native crypto API is file-based).
         const payload = JSON.stringify({ nodes });
@@ -100,20 +100,23 @@ export const exportNodeConfigs = async (
         };
         await RNFS.writeFile(stagingPath, JSON.stringify(envelope), 'utf8');
 
-        // 4. Present the system share sheet from app-private cache. Share
-        //    targets may read the content URI lazily, after this promise
-        //    resolves, so the envelope is NOT unlinked afterwards. It is
-        //    ciphertext in app-private cache; the next export sweeps it.
-        await Share.open({
-            title: shareTitle,
-            url: `file://${stagingPath}`,
-            type: 'application/json',
-            filename,
-            failOnCancel: false
+        // 4. Present the system save dialog. saveDocuments copies the staged
+        //    envelope into the user-chosen destination before resolving, so
+        //    unlike a share sheet there are no lazy readers and the staging
+        //    file can be removed in finally.
+        const [result] = await saveDocuments({
+            sourceUris: [`file://${stagingPath}`],
+            fileName: filename,
+            mimeType: 'application/json',
+            copy: true
         });
+        if (result?.error) {
+            throw new Error(result.error);
+        }
     } finally {
         await safeUnlink(plainPath);
         await safeUnlink(encPath);
+        await safeUnlink(stagingPath);
     }
 };
 

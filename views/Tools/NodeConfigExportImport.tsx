@@ -30,6 +30,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import { suppressBackgroundLockDuring } from '../../utils/BackgroundLockUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor, isLightTheme } from '../../utils/ThemeUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
@@ -509,30 +510,46 @@ export default class NodeConfigExportImport extends React.Component<
                 (index) => nodes[index]
             );
 
-            // Encrypts (native AES-256-GCM) and hands the file to the system
-            // share sheet from app-private cache. Nothing is written to shared
-            // storage and no plaintext export is produced.
-            await exportNodeConfigs(
-                selectedNodeConfigs,
-                exportPassword,
-                localeString('views.Tools.nodeConfigExportImport.exportConfigs')
+            // Encrypts (native AES-256-GCM) and prompts for a destination
+            // via the system save dialog, staged from app-private cache.
+            // Nothing is written to shared storage unprompted and no
+            // plaintext export is produced.
+            await suppressBackgroundLockDuring(SettingsStore, () =>
+                exportNodeConfigs(selectedNodeConfigs, exportPassword)
             );
             this.setState({ isLoading: false });
             this.resetExportState();
-        } catch (error) {
-            this.handleError(
-                error,
-                'views.Tools.nodeConfigExportImport.exportError'
+            Alert.alert(
+                localeString('general.success'),
+                localeString('views.Tools.nodeConfigExportImport.exportSuccess')
             );
+        } catch (error) {
+            if (
+                isErrorWithCode(error) &&
+                error.code === errorCodes.OPERATION_CANCELED
+            ) {
+                // not really an error, user just dismissed the save dialog
+                this.setState({ isLoading: false });
+                this.resetExportState();
+            } else {
+                this.handleError(
+                    error,
+                    'views.Tools.nodeConfigExportImport.exportError'
+                );
+            }
         }
     };
 
     private handleImport = async () => {
         try {
             this.setState({ isLoading: true });
-            const [result] = await pick({
-                type: [types.allFiles]
-            });
+            const [result] = await suppressBackgroundLockDuring(
+                this.props.SettingsStore,
+                () =>
+                    pick({
+                        type: [types.allFiles]
+                    })
+            );
 
             const filePath = result.uri;
             if (!filePath) {
