@@ -503,41 +503,21 @@ describe('ErrorUtils', () => {
             ).toEqual('Insufficient inputs provided');
         });
 
-        it('drops a large JSON body and keeps the readable prefix', () => {
-            const mintInfo = JSON.stringify({
-                contact: [{ info: 'support@mint.example', method: 'email' }],
-                description: 'Example mint. Use at your own risk.',
-                name: 'Example mint',
-                nuts: { '10': { supported: true }, '11': { supported: true } }
-            });
-            expect(
-                parseCashuDevKitError(
-                    `uniffi.cdk_ffi.FfiException$Generic: CDK Error: Unknown error response: \`${mintInfo}\``
-                )
-            ).toEqual('Unknown error response');
-        });
-
-        it('prefers a readable detail field inside a large JSON body', () => {
+        it('retains embedded JSON bodies so programmatic matching still works', () => {
+            // mapCDKError classifies MultiMintQuoteRejected by matching both
+            // the 11000 code and the detail text in the parsed message;
+            // stripping the blob here would break that (display-side
+            // stripping lives in cashuErrorForDisplay instead)
             const body = JSON.stringify({
-                code: 'oops',
-                detail: 'mint is temporarily unavailable, try again later',
+                code: 11000,
+                detail: 'Quote amount not as requested',
                 padding: 'x'.repeat(100)
             });
-            expect(
-                parseCashuDevKitError(
-                    `uniffi.cdk_ffi.FfiException$Generic: Unknown error response: ${body}`
-                )
-            ).toEqual('mint is temporarily unavailable, try again later');
-        });
-
-        it('falls back to a generic message when a bare JSON body has nothing readable', () => {
-            const body = JSON.stringify({
-                nuts: { '10': { supported: true } },
-                padding: 'x'.repeat(100)
-            });
-            expect(parseCashuDevKitError(body)).toEqual(
-                'Received an unexpected response'
+            const parsed = parseCashuDevKitError(
+                `CDK Error: Unknown error response: ${body}`
             );
+            expect(parsed).toContain('11000');
+            expect(parsed).toContain('Quote amount not as requested');
         });
     });
 
@@ -565,6 +545,62 @@ describe('ErrorUtils', () => {
             expect(cashuErrorForDisplay(jsonDump)).toEqual(
                 'Error creating invoice'
             );
+        });
+
+        it('drops a large JSON body and keeps the readable prefix', () => {
+            const mintInfo = JSON.stringify({
+                contact: [{ info: 'support@mint.example', method: 'email' }],
+                description: 'Example mint. Use at your own risk.',
+                name: 'Example mint',
+                nuts: { '10': { supported: true }, '11': { supported: true } }
+            });
+            expect(
+                cashuErrorForDisplay(
+                    `uniffi.cdk_ffi.FfiException$Generic: CDK Error: Unknown error response: \`${mintInfo}\``
+                )
+            ).toEqual('Unknown error response');
+        });
+
+        it('prefers a readable detail field inside a large JSON body', () => {
+            const body = JSON.stringify({
+                code: 'oops',
+                detail: 'mint is temporarily unavailable, try again later',
+                padding: 'x'.repeat(100)
+            });
+            expect(
+                cashuErrorForDisplay(
+                    `uniffi.cdk_ffi.FfiException$Generic: Unknown error response: ${body}`
+                )
+            ).toEqual('mint is temporarily unavailable, try again later');
+        });
+
+        it('falls back to a generic message when a bare JSON body has nothing readable', () => {
+            const body = JSON.stringify({
+                nuts: { '10': { supported: true } },
+                padding: 'x'.repeat(100)
+            });
+            expect(cashuErrorForDisplay(body)).toEqual(
+                'Received an unexpected response'
+            );
+        });
+
+        it('leaves prose containing brackets intact', () => {
+            const prose =
+                'Melt failed [quote 7f3a] the mint could not complete the melt because the payment attempt timed out upstream';
+            expect(cashuErrorForDisplay(prose)).toEqual(prose);
+        });
+
+        it('extracts the detail field from a mint error JSON body', () => {
+            const body = JSON.stringify({
+                code: 11000,
+                detail: 'Quote amount not as requested',
+                padding: 'x'.repeat(100)
+            });
+            expect(
+                cashuErrorForDisplay(
+                    `CDK Error: Unknown error response: ${body}`
+                )
+            ).toEqual('Quote amount not as requested');
         });
     });
 });

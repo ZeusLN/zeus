@@ -76,9 +76,7 @@ const parseCashuDevKitError = (error: any): string => {
     const iosWithAssoc = str.match(
         /CashuDevKit\.FfiError\.\w+\((?:code:\s*\d+,\s*)?(?:message|errorMessage):\s*"([\s\S]+?)"\)/
     );
-    if (iosWithAssoc) {
-        return stripJsonBlob(extractMintDetail(iosWithAssoc[1].trim()));
-    }
+    if (iosWithAssoc) return extractMintDetail(iosWithAssoc[1].trim());
 
     const iosBare = str.match(/CashuDevKit\.FfiError\.(\w+)/);
     if (iosBare) return humanizeVariantName(iosBare[1]);
@@ -91,11 +89,11 @@ const parseCashuDevKitError = (error: any): string => {
         // "errorMessage=<text>" with no code prefix; strip the envelope
         const inner = androidMatch[2]?.trim().replace(/^errorMessage=\s*/, '');
         return inner
-            ? stripJsonBlob(extractMintDetail(inner))
+            ? extractMintDetail(inner)
             : humanizeVariantName(androidMatch[1]);
     }
 
-    return stripJsonBlob(extractMintDetail(str));
+    return extractMintDetail(str);
 };
 
 // Hard cap on Cashu error text bound for direct display. Mint failures can
@@ -105,7 +103,7 @@ const parseCashuDevKitError = (error: any): string => {
 const CASHU_ERROR_DISPLAY_LIMIT = 300;
 
 const cashuErrorForDisplay = (error: any): string => {
-    const parsed = parseCashuDevKitError(error);
+    const parsed = stripJsonBlob(parseCashuDevKitError(error));
     if (parsed.length <= CASHU_ERROR_DISPLAY_LIMIT) return parsed;
     return `${parsed.slice(0, CASHU_ERROR_DISPLAY_LIMIT).trimEnd()}…`;
 };
@@ -144,12 +142,21 @@ const extractMintDetail = (msg: string): string => {
 // prefer a human-readable detail/error/message/reason field from inside it;
 // otherwise drop the blob and keep the readable prefix, falling back to a
 // generic message when nothing readable remains.
+//
+// Display-only: this runs in cashuErrorForDisplay, never inside
+// parseCashuDevKitError, because mapCDKError classifies errors by matching
+// substrings of the parsed message (e.g. the mint error code) and stripping
+// the blob there would change classification.
 const stripJsonBlob = (msg: string): string => {
     const blobStart = msg.search(/[{[]/);
     if (blobStart === -1) return msg;
     const blob = msg.slice(blobStart).replace(/[`"'\s]+$/, '');
     // short inline JSON (e.g. a compact error object) is left alone
     if (blob.length < 80) return msg;
+    // only treat the tail as a JSON document when it looks like one; prose
+    // that happens to contain a bracket ("Melt failed [quote 7f3a] ...") is
+    // left intact and bounded by the display cap instead
+    if (!/^[{[]\s*["{[]/.test(blob)) return msg;
     let extracted: string | undefined;
     try {
         const parsed = JSON.parse(blob);
