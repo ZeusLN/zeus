@@ -44,6 +44,7 @@ import Screen from '../../components/Screen';
 import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { shouldSkipBackgroundLock } from '../../utils/BackgroundLockUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import {
@@ -356,7 +357,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
-            SettingsStore.setLoginStatus(false);
+            // System dialogs (share sheet, SAF save/open pickers) background
+            // the Android activity without the user leaving the app; skip the
+            // lock while one is up (BackgroundLockUtils re-arms it if the
+            // user actually left).
+            if (!shouldSkipBackgroundLock()) {
+                SettingsStore.setLoginStatus(false);
+            }
         } else if (nextAppState === 'inactive') {
             NostrWalletConnectStore.reset();
         } else if (nextAppState === 'active') {
