@@ -1,9 +1,13 @@
 import * as React from 'react';
-import { Text, View, StyleSheet, ScrollView } from 'react-native';
+import { Platform, Text, View, StyleSheet, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { ButtonGroup } from '@rneui/themed';
+import NfcManager from 'react-native-nfc-manager';
+
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Button from '../../components/Button';
+import CollapsedQR from '../../components/CollapsedQR';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
@@ -12,6 +16,7 @@ import TextInput from '../../components/TextInput';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -23,6 +28,9 @@ interface Bolt12AddressSettingsProps {
 interface Bolt12AddressSettingsState {
     newLocalPart: string;
     existingLocalPart: string;
+    existingOffer: string;
+    selectedIndex: number;
+    nfcSupported: boolean;
     loading: boolean;
     error: string;
 }
@@ -47,6 +55,9 @@ export default class Bolt12AddressSettings extends React.Component<
     state = {
         newLocalPart: '',
         existingLocalPart: '',
+        existingOffer: '',
+        selectedIndex: 0,
+        nfcSupported: false,
         loading: false,
         error: ''
     };
@@ -56,10 +67,55 @@ export default class Bolt12AddressSettings extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
+        const existingLocalPart = settings?.bolt12Address?.localPart || '';
+        const existingOffer = settings?.bolt12Address?.offer || '';
+
         this.setState({
             newLocalPart: '',
-            existingLocalPart: settings?.bolt12Address?.localPart || ''
+            existingLocalPart,
+            existingOffer
         });
+
+        if (existingLocalPart && !existingOffer) {
+            this.lookupOffer(existingLocalPart);
+        }
+
+        if (Platform.OS === 'android') {
+            try {
+                const nfcSupported = await NfcManager.isSupported();
+                this.setState({ nfcSupported });
+            } catch {
+                this.setState({ nfcSupported: false });
+            }
+        }
+    }
+
+    // addresses created before the offer string was persisted in settings:
+    // recover it from the node's active offers by the label set at creation
+    async lookupOffer(localPart: string) {
+        const { SettingsStore } = this.props;
+        const { updateSettings } = SettingsStore;
+
+        const address = `${localPart}@${HOST}`;
+
+        try {
+            const data = await BackendUtils.listOffers();
+            const match = (data?.offers || []).find(
+                (offer: any) => offer.label === address && offer.bolt12
+            );
+            if (!match) return;
+            if (this.state.existingLocalPart !== localPart) return;
+
+            await updateSettings({
+                bolt12Address: {
+                    localPart,
+                    offer: match.bolt12
+                }
+            });
+            this.setState({ existingOffer: match.bolt12 });
+        } catch (e) {
+            console.error('Failed to look up BOLT 12 address offer:', e);
+        }
     }
 
     async requestPaymentAddress() {
@@ -105,6 +161,7 @@ export default class Bolt12AddressSettings extends React.Component<
 
             if (res.status === 409) {
                 this.setState({
+                    loading: false,
                     error: localeString(
                         'views.Settings.Bolt12Address.error.handleTaken'
                     )
@@ -112,6 +169,7 @@ export default class Bolt12AddressSettings extends React.Component<
                 return;
             } else if (res.status !== 201) {
                 this.setState({
+                    loading: false,
                     error: localeString(
                         'views.Settings.Bolt12Address.error.failedToCreate'
                     )
@@ -121,17 +179,21 @@ export default class Bolt12AddressSettings extends React.Component<
 
             await updateSettings({
                 bolt12Address: {
-                    localPart: this.state.newLocalPart
+                    localPart: this.state.newLocalPart,
+                    offer: data.bolt12
                 }
             });
             this.setState({
                 newLocalPart: '',
                 existingLocalPart: this.state.newLocalPart,
+                existingOffer: data.bolt12,
+                selectedIndex: 0,
                 loading: false
             });
         } catch (e) {
             console.error(e);
             this.setState({
+                loading: false,
                 error: localeString(
                     'views.Settings.Bolt12Address.error.failedToCreate'
                 )
@@ -142,7 +204,56 @@ export default class Bolt12AddressSettings extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { newLocalPart, existingLocalPart, loading, error } = this.state;
+        const {
+            newLocalPart,
+            existingLocalPart,
+            existingOffer,
+            selectedIndex,
+            nfcSupported,
+            loading,
+            error
+        } = this.state;
+
+        const address = `${existingLocalPart}@${HOST}`;
+
+        const tabs = [
+            {
+                title: localeString('general.address'),
+                value: `lightning:${address}`,
+                copyValue: address,
+                label: address
+            },
+            ...(existingOffer
+                ? [
+                      {
+                          title: localeString(
+                              'views.Settings.Bolt12Address.offer'
+                          ),
+                          value: `lightning:${existingOffer}`,
+                          copyValue: existingOffer,
+                          label: existingOffer
+                      }
+                  ]
+                : [])
+        ];
+        const active = tabs[selectedIndex] || tabs[0];
+
+        const groupStyles = getButtonGroupStyles();
+        const tabButtons = tabs.map((tab, idx) => ({
+            element: () => (
+                <Text
+                    style={{
+                        ...styles.tabText,
+                        color:
+                            selectedIndex === idx
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {tab.title}
+                </Text>
+            )
+        }));
 
         return (
             <Screen>
@@ -164,16 +275,33 @@ export default class Bolt12AddressSettings extends React.Component<
                 <ScrollView style={{ flex: 1 }}>
                     {error && <ErrorMessage message={error} />}
                     {existingLocalPart ? (
-                        <View style={{ padding: 20 }}>
-                            <Text
-                                style={{
-                                    ...styles.handle,
-                                    color: themeColor('text'),
-                                    paddingBottom: 10
-                                }}
-                            >
-                                {`${existingLocalPart}@${HOST}`}
-                            </Text>
+                        <View style={{ paddingHorizontal: 15 }}>
+                            {existingOffer && (
+                                <ButtonGroup
+                                    onPress={(index) =>
+                                        this.setState({ selectedIndex: index })
+                                    }
+                                    selectedIndex={selectedIndex}
+                                    buttons={tabButtons}
+                                    selectedButtonStyle={
+                                        groupStyles.selectedButtonStyle
+                                    }
+                                    containerStyle={groupStyles.containerStyle}
+                                    innerBorderStyle={
+                                        groupStyles.innerBorderStyle
+                                    }
+                                />
+                            )}
+                            <CollapsedQR
+                                value={active.value}
+                                copyValue={active.copyValue}
+                                expanded
+                                textBottom
+                                truncateLongValue
+                                hideText
+                                labelBottom={active.label}
+                                nfcSupported={nfcSupported}
+                            />
                             <View style={styles.button}>
                                 <Button
                                     title={localeString(
@@ -182,7 +310,9 @@ export default class Bolt12AddressSettings extends React.Component<
                                     onPress={() => {
                                         this.setState({
                                             existingLocalPart: '',
-                                            newLocalPart: ''
+                                            existingOffer: '',
+                                            newLocalPart: '',
+                                            selectedIndex: 0
                                         });
                                     }}
                                 />
@@ -254,12 +384,10 @@ export default class Bolt12AddressSettings extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    handle: {
-        fontSize: 20,
-        alignSelf: 'center',
+    secondaryText: {
         fontFamily: 'PPNeueMontreal-Book'
     },
-    secondaryText: {
+    tabText: {
         fontFamily: 'PPNeueMontreal-Book'
     },
     button: {
