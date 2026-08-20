@@ -84,40 +84,6 @@ export default class AddMint extends React.Component<
         CashuStore.error = false;
     }
 
-    // Returns true when an explicit http:// scheme would carry mint traffic
-    // (invoices, ecash proofs, quote state) to a host that is neither loopback
-    // nor a Tor onion service, i.e. it would cross the network in cleartext.
-    private isCleartextHttpMint = (urlString?: string): boolean => {
-        if (!urlString) return false;
-        const trimmed = urlString.trim().toLowerCase();
-        if (!trimmed.startsWith('http://')) return false;
-
-        // Isolate the host: strip scheme, then any path/query, then a
-        // trailing :port (handling IPv6 bracket notation).
-        let hostPart = trimmed
-            .slice('http://'.length)
-            .split('/')[0]
-            .split('?')[0];
-        if (hostPart.startsWith('[')) {
-            hostPart = hostPart.slice(1).split(']')[0];
-        } else {
-            hostPart = hostPart.split(':')[0];
-        }
-
-        // Onion services are authenticated at the Tor layer and loopback
-        // never leaves the device, so neither exposes mint traffic.
-        if (hostPart.endsWith('.onion')) return false;
-        if (
-            hostPart === 'localhost' ||
-            hostPart === '::1' ||
-            hostPart.startsWith('127.')
-        ) {
-            return false;
-        }
-
-        return true;
-    };
-
     getMintInfo = async () => {
         const { mintUrl } = this.state;
         if (!mintUrl.trim()) {
@@ -154,7 +120,7 @@ export default class AddMint extends React.Component<
         // A cleartext http:// mint exposes invoices, proofs, and quote state
         // to any network observer and lets a MITM fabricate quote/melt
         // outcomes, so require an explicit confirmation before contacting it.
-        if (this.isCleartextHttpMint(mintUrl)) {
+        if (UrlUtils.isCleartextHttpTransport(mintUrl)) {
             confirmAction(
                 localeString('general.warning'),
                 localeString('views.Cashu.AddMint.cleartextHttpWarning'),

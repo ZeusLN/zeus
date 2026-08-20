@@ -318,4 +318,90 @@ describe('UrlUtils', () => {
             expect(UrlUtils.isValidUrl(undefined as any)).toBe(false);
         });
     });
+
+    describe('isCleartextHttpTransport', () => {
+        it('flags http:// to a public host', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://example.com')
+            ).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://192.168.1.5:3338')
+            ).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport(
+                    'http://mint.example.com/path?q=1'
+                )
+            ).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport('HTTP://EXAMPLE.COM')
+            ).toBe(true);
+        });
+
+        it('does not flag https:// or scheme-less input', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport('https://example.com')
+            ).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport('example.com')).toBe(
+                false
+            );
+            expect(UrlUtils.isCleartextHttpTransport('')).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport(undefined)).toBe(false);
+        });
+
+        it('exempts loopback hosts', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://localhost:3338')
+            ).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport('http://LOCALHOST')).toBe(
+                false
+            );
+            expect(UrlUtils.isCleartextHttpTransport('http://127.0.0.1')).toBe(
+                false
+            );
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://127.8.9.10:8080')
+            ).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport('http://[::1]:3338')).toBe(
+                false
+            );
+            // URL parser canonicalizes IPv4 shorthand to dotted-quad form
+            expect(UrlUtils.isCleartextHttpTransport('http://127.1')).toBe(
+                false
+            );
+            expect(UrlUtils.isCleartextHttpTransport('http://0x7f.1')).toBe(
+                false
+            );
+        });
+
+        it('exempts Tor onion services', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport(
+                    'http://someonionaddress.onion'
+                )
+            ).toBe(false);
+            expect(
+                UrlUtils.isCleartextHttpTransport(
+                    'http://someonionaddress.onion:3338/path'
+                )
+            ).toBe(false);
+        });
+
+        it('is not fooled by hosts that impersonate exempt hosts', () => {
+            // loopback-looking subdomain of an attacker domain
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://127.0.0.1.evil.com')
+            ).toBe(true);
+            // exempt-looking userinfo in front of the real host
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://127.0.0.1@evil.com')
+            ).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://foo.onion@evil.com')
+            ).toBe(true);
+            // exempt-looking fragment after the real host
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://evil.com#foo.onion')
+            ).toBe(true);
+        });
+    });
 });
