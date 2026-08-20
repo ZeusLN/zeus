@@ -96,6 +96,8 @@ class BackendUtils {
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     lookupPayment = (...args: any[]) => this.call('lookupPayment', args);
+    lookupPaymentByHash = (...args: any[]) =>
+        this.call('lookupPaymentByHash', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     getNewChangeAddress = (...args: any[]) =>
         this.call('getNewChangeAddress', args);
@@ -210,6 +212,10 @@ class BackendUtils {
     // services
     supportsNostrWalletConnectService = () =>
         this.call('supportsNostrWalletConnectService');
+    supportsPaymentLookupByHash = () =>
+        this.call('supportsPaymentLookupByHash');
+    supportsPaymentsCreationDateFilter = () =>
+        this.call('supportsPaymentsCreationDateFilter');
     supportsWatchtowerClient = () => this.call('supportsWatchtowerClient');
     supportsPeers = () => this.call('supportsPeers');
     supportsFlowLSP = () => this.call('supportsFlowLSP');

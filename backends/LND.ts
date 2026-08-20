@@ -1144,4 +1144,5 @@ export default class LND {
     supportsAddressMessageSigning = () => true;
     supportsSettingInvoiceExpiration = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsPaymentsCreationDateFilter = () => this.supports('v0.15.1');
 }
