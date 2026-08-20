@@ -162,7 +162,6 @@ export default class RoutingEvent extends React.Component<
                         value={
                             channel.chan_id || channel.channelId || channelId
                         }
-                        sensitive
                         showCopyIcon
                     />
                 </>
@@ -352,9 +351,9 @@ export default class RoutingEvent extends React.Component<
                                                           { channel: chanIn }
                                                       )
                                               )
-                                            : chanInLabel
+                                            : inChannelId
                                     }
-                                    sensitive
+                                    showCopyIcon
                                 />
                             )}
 
@@ -373,9 +372,9 @@ export default class RoutingEvent extends React.Component<
                                                           { channel: chanOut }
                                                       )
                                               )
-                                            : chanOutLabel
+                                            : outChannelId
                                     }
-                                    sensitive
+                                    showCopyIcon
                                 />
                             )}
 
