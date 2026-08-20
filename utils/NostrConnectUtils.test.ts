@@ -1405,4 +1405,49 @@ describe('NostrConnectUtils', () => {
             ).toBe(false);
         });
     });
+
+    describe('getExpiryCheckCreationDateStart', () => {
+        const now = 1_700_000_000_000;
+        const days = (n: number) => n * 24 * 60 * 60 * 1000;
+
+        it('covers the oldest candidate minus the clock-skew margin', () => {
+            const start = NostrConnectUtils.getExpiryCheckCreationDateStart([
+                { createdAt: new Date(now - days(14)) },
+                { createdAt: new Date(now - days(20)) }
+            ]);
+            expect(start).toBe(
+                Math.floor(
+                    (now -
+                        days(20) -
+                        NostrConnectUtils.EXPIRY_CHECK_DATE_MARGIN_MS) /
+                        1000
+                )
+            );
+        });
+
+        it('returns null with no candidates', () => {
+            expect(NostrConnectUtils.getExpiryCheckCreationDateStart([])).toBe(
+                null
+            );
+        });
+
+        it('returns null when any candidate age is unknown', () => {
+            // A window that cannot provably contain every candidate must
+            // not be used as evidence of absence.
+            expect(
+                NostrConnectUtils.getExpiryCheckCreationDateStart([
+                    { createdAt: new Date(now - days(20)) },
+                    {}
+                ])
+            ).toBe(null);
+        });
+
+        it('never returns a negative timestamp', () => {
+            expect(
+                NostrConnectUtils.getExpiryCheckCreationDateStart([
+                    { createdAt: new Date(1000) }
+                ])
+            ).toBe(0);
+        });
+    });
 });

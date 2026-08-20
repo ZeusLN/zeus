@@ -1151,6 +1151,35 @@ export default class NostrConnectUtils {
         );
     }
 
+    // Window parameters for the expiry check's date-bounded payments fetch
+    // on backends without a per-hash lookup. A response that fills the whole
+    // window may have been truncated, so the caller must treat it as
+    // inconclusive; the margin absorbs clock skew between the device
+    // timestamps on activities and the node's payment creation dates.
+    static readonly EXPIRY_CHECK_MAX_PAYMENTS = 2000;
+    static readonly EXPIRY_CHECK_DATE_MARGIN_MS = 24 * 60 * 60 * 1000;
+
+    // Unix-seconds creation_date_start covering every candidate, or null
+    // when any candidate's age is unknown (nothing may expire without a
+    // window that provably contains it).
+    static getExpiryCheckCreationDateStart(
+        candidates: { createdAt?: Date }[]
+    ): number | null {
+        if (!candidates.length) return null;
+        const times: number[] = [];
+        for (const candidate of candidates) {
+            if (!candidate.createdAt) return null;
+            times.push(candidate.createdAt.getTime());
+        }
+        const oldest = Math.min(...times);
+        return Math.max(
+            0,
+            Math.floor(
+                (oldest - NostrConnectUtils.EXPIRY_CHECK_DATE_MARGIN_MS) / 1000
+            )
+        );
+    }
+
     // Builds a settled payment record from request-side state, for when a
     // payment verifiably succeeded (preimage in hand) but cannot be found
     // in the node's refreshed payments list (pagination window, indexing
