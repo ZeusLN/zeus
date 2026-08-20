@@ -160,6 +160,66 @@ describe('LnurlPayUtils', () => {
             expect(isLnurlCallbackAllowed('http://[::1]/x').ok).toBe(false);
         });
 
+        it('rejects non-canonical IPv4 loopback spellings (inet_aton forms)', () => {
+            // platform resolvers dial all of these as 127.0.0.1
+            expect(isLnurlCallbackAllowed('https://2130706433/x').ok).toBe(
+                false
+            ); // decimal integer
+            expect(isLnurlCallbackAllowed('https://0177.0.0.1/x').ok).toBe(
+                false
+            ); // octal
+            expect(isLnurlCallbackAllowed('https://0x7f.0.0.1/x').ok).toBe(
+                false
+            ); // hex
+            expect(isLnurlCallbackAllowed('https://0x7f000001/x').ok).toBe(
+                false
+            ); // hex integer
+            expect(isLnurlCallbackAllowed('https://127.1/x').ok).toBe(false); // short form
+            expect(isLnurlCallbackAllowed('https://127.0.0.1./x').ok).toBe(
+                false
+            ); // trailing dot
+        });
+
+        it('rejects non-canonical spellings of other private ranges', () => {
+            expect(
+                isLnurlCallbackAllowed('https://0xa9.0xfe.0xa9.0xfe/x').ok
+            ).toBe(false); // 169.254.169.254 in hex
+            expect(isLnurlCallbackAllowed('https://012.1.2.3/x').ok).toBe(
+                false
+            ); // 10.1.2.3 in octal
+            expect(isLnurlCallbackAllowed('https://192.168.1/x').ok).toBe(
+                false
+            ); // 192.168.0.1 short form
+        });
+
+        it('rejects non-canonical IPv6 loopback spellings', () => {
+            expect(
+                isLnurlCallbackAllowed('https://[0:0:0:0:0:0:0:1]/x').ok
+            ).toBe(false); // long form
+            expect(isLnurlCallbackAllowed('https://[::ffff:7f00:1]/x').ok).toBe(
+                false
+            ); // hex-mapped IPv4 loopback
+            expect(
+                isLnurlCallbackAllowed('https://[::ffff:127.0.0.1]/x').ok
+            ).toBe(false); // dotted-mapped IPv4 loopback
+            expect(
+                isLnurlCallbackAllowed('https://[0:0:0:0:0:ffff:c0a8:1]/x').ok
+            ).toBe(false); // mapped 192.168.0.1, long form
+        });
+
+        it('still allows public IP literals in any spelling', () => {
+            expect(isLnurlCallbackAllowed('https://8.8.8.8/x').ok).toBe(true);
+            expect(isLnurlCallbackAllowed('https://0x8.0x8.0x8.0x8/x').ok).toBe(
+                true
+            );
+            expect(isLnurlCallbackAllowed('https://[2001:db8::1]/x').ok).toBe(
+                true
+            );
+            expect(isLnurlCallbackAllowed('https://example.com./x').ok).toBe(
+                true
+            ); // root-anchored public hostname
+        });
+
         it('rejects an empty or missing callback', () => {
             expect(isLnurlCallbackAllowed('').ok).toBe(false);
             expect(isLnurlCallbackAllowed(undefined as any).ok).toBe(false);

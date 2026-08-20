@@ -71,11 +71,42 @@ export const verifyLnurlPayInvoice = (
     return { ok: true };
 };
 
+/**
+ * Parse an IPv4 literal the way inet_aton does: 1 to 4 dot-separated parts,
+ * each decimal, octal (leading 0), or hex (0x), with the final part filling
+ * the remaining bytes. Platform resolvers dial hosts like "2130706433",
+ * "0177.0.0.1", "0x7f.0.0.1", and "127.1" as loopback, so the private-range
+ * check must see the same address the socket will. Returns the four octets,
+ * or null when the host is not an IPv4 literal.
+ */
+const parseIPv4Literal = (host: string): number[] | null => {
+    if (!host) return null;
+    const parts = host.split('.');
+    if (parts.length > 4) return null;
+    const values: number[] = [];
+    for (const part of parts) {
+        let value: number;
+        if (/^0x[0-9a-f]+$/i.test(part)) value = parseInt(part, 16);
+        else if (/^0[0-7]*$/.test(part)) value = parseInt(part, 8);
+        else if (/^[1-9][0-9]*$/.test(part)) value = parseInt(part, 10);
+        else return null;
+        values.push(value);
+    }
+    const last = values[values.length - 1];
+    const prefix = values.slice(0, -1);
+    if (prefix.some((v) => v > 255)) return null;
+    const lastBytes = 4 - prefix.length;
+    if (last >= Math.pow(256, lastBytes)) return null;
+    const octets = [...prefix];
+    for (let i = lastBytes - 1; i >= 0; i--) {
+        octets.push(Math.floor(last / Math.pow(256, i)) % 256);
+    }
+    return octets;
+};
+
 const isPrivateIPv4 = (host: string): boolean => {
-    const match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-    if (!match) return false;
-    const octets = match.slice(1).map(Number);
-    if (octets.some((n) => n > 255)) return false;
+    const octets = parseIPv4Literal(host);
+    if (!octets) return false;
     const [a, b] = octets;
     if (a === 0) return true; // "this network"
     if (a === 10) return true; // RFC1918
@@ -87,23 +118,92 @@ const isPrivateIPv4 = (host: string): boolean => {
     return false;
 };
 
-const isPrivateIPv6 = (host: string): boolean => {
+/**
+ * Expand an IPv6 literal into its eight 16-bit groups, handling brackets,
+ * zone IDs, "::" compression, and an embedded dotted-quad tail, so that
+ * long-form loopback ("[0:0:0:0:0:0:0:1]") and hex-mapped IPv4
+ * ("[::ffff:7f00:1]") classify the same as their canonical spellings.
+ * Returns null when the host is not a valid IPv6 literal.
+ */
+const parseIPv6Literal = (host: string): number[] | null => {
     let h = host;
     if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1);
-    if (h.indexOf(':') === -1) return false;
-    const lower = h.toLowerCase();
-    if (lower === '::1' || lower === '::') return true; // loopback / unspecified
-    const mapped = lower.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-    if (mapped) return isPrivateIPv4(mapped[1]);
-    const first = lower.split(':')[0];
-    if (first.startsWith('fc') || first.startsWith('fd')) return true; // fc00::/7 unique-local
-    if (['fe8', 'fe9', 'fea', 'feb'].some((p) => first.startsWith(p))) {
-        return true; // fe80::/10 link-local
+    const zone = h.indexOf('%');
+    if (zone !== -1) h = h.slice(0, zone);
+    if (h.indexOf(':') === -1) return null;
+    const halves = h.split('::');
+    if (halves.length > 2) return null;
+    const parseGroups = (
+        side: string,
+        allowV4Tail: boolean
+    ): number[] | null => {
+        if (side === '') return [];
+        const parts = side.split(':');
+        const groups: number[] = [];
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const isLast = i === parts.length - 1;
+            if (allowV4Tail && isLast && part.indexOf('.') !== -1) {
+                // the embedded IPv4 tail must be a plain dotted quad
+                const m = part.match(
+                    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+                );
+                if (!m) return null;
+                const octets = m.slice(1).map(Number);
+                if (octets.some((o) => o > 255)) return null;
+                groups.push(
+                    (octets[0] << 8) | octets[1],
+                    (octets[2] << 8) | octets[3]
+                );
+            } else {
+                if (!/^[0-9a-f]{1,4}$/i.test(part)) return null;
+                groups.push(parseInt(part, 16));
+            }
+        }
+        return groups;
+    };
+    if (halves.length === 1) {
+        const groups = parseGroups(h, true);
+        return groups && groups.length === 8 ? groups : null;
     }
+    const left = parseGroups(halves[0], false);
+    const right = parseGroups(halves[1], true);
+    if (left === null || right === null) return null;
+    const missing = 8 - left.length - right.length;
+    if (missing < 1) return null;
+    return [...left, ...new Array(missing).fill(0), ...right];
+};
+
+const isPrivateIPv6 = (host: string): boolean => {
+    const groups = parseIPv6Literal(host);
+    if (!groups) return false;
+    // loopback (::1) and unspecified (::)
+    if (groups.slice(0, 7).every((g) => g === 0) && groups[7] <= 1) {
+        return true;
+    }
+    // IPv4-mapped (::ffff:a.b.c.d, however spelled) and the deprecated
+    // IPv4-compatible ::a.b.c.d form classify as the embedded IPv4 address
+    if (
+        groups.slice(0, 5).every((g) => g === 0) &&
+        (groups[5] === 0xffff || groups[5] === 0)
+    ) {
+        const v4 = [
+            groups[6] >> 8,
+            groups[6] & 0xff,
+            groups[7] >> 8,
+            groups[7] & 0xff
+        ].join('.');
+        return isPrivateIPv4(v4);
+    }
+    if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7 unique-local
+    if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
     return false;
 };
 
-const isPrivateOrReservedHost = (hostname: string): boolean => {
+const isPrivateOrReservedHost = (hostnameRaw: string): boolean => {
+    // a trailing dot is the root-anchored form of the same name
+    let hostname = hostnameRaw;
+    while (hostname.endsWith('.')) hostname = hostname.slice(0, -1);
     if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
         return true;
     }
