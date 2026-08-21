@@ -4,10 +4,22 @@ For the most up-to-date guides on connecting ZEUS to your node, please visit our
 
 ## Connecting ZEUS to your node
 
-You can connect ZEUS to a remote Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [Core Lightning](https://github.com/ElementsProject/lightning).
+You can connect ZEUS to a remote Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [Core Lightning](https://github.com/ElementsProject/lightning), or LDK Server.
 
 You must provide ZEUS with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
+
+### LDK Server
+
+LDK Server connections use the remote connection fields in ZEUS:
+
+* **Host**: the host name or full `https://` URL for your LDK Server.
+* **Port**: the LDK Server API port. ZEUS defaults to `3536` if no port is set.
+* **Access key**: the LDK Server API key used to generate the `x-auth` HMAC request header.
+
+LDK Server uses gRPC over HTTPS. If your server uses its generated self-signed TLS certificate, disable certificate verification for that node unless the certificate is trusted by your device.
+
+Current ZEUS support covers node info, balances, invoices, payments, on-chain receive/send, Lightning sends, keysend, BOLT 12 offers and offer payments, peers, message signing and verification, channel open/close, pending channels, and basic network graph counts. Features that depend on APIs not exposed by LDK Server, or data not currently present in its responses, remain unavailable in ZEUS for this backend. These include closed channel history, forwarding history time windows, coin control, batch opens, fee bumping, LSP/LSPS flows, Nostr Wallet Connect service hosting, and watchtower client management.
 
 ### Tor Connection Guides
 

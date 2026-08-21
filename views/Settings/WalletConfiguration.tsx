@@ -119,6 +119,7 @@ interface WalletConfigurationState {
     port: string; // lnd
     macaroonHex: string; // lnd
     rune: string; // CLN-rest
+    accessKey: string; // ldk-server
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub
@@ -204,6 +205,7 @@ export default class WalletConfiguration extends React.Component<
         port: '',
         macaroonHex: '',
         rune: '',
+        accessKey: '',
         saved: false,
         index: null as number | null,
         active: false,
@@ -440,6 +442,7 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
+                accessKey,
                 implementation,
                 certVerification,
                 enableTor,
@@ -481,6 +484,7 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
+                accessKey,
                 implementation: implementation || 'lnd',
                 certVerification,
                 index,
@@ -543,6 +547,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            accessKey,
             username,
             password,
             implementation,
@@ -591,6 +596,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            accessKey,
             username,
             password,
             implementation,
@@ -714,6 +720,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            accessKey,
             username,
             password,
             implementation,
@@ -734,6 +741,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            accessKey,
             username,
             password,
             implementation,
@@ -1312,6 +1320,7 @@ export default class WalletConfiguration extends React.Component<
             lndhubUrl,
             macaroonHex,
             rune,
+            accessKey,
             username,
             password,
             saved,
@@ -2251,7 +2260,8 @@ export default class WalletConfiguration extends React.Component<
                                 </>
                             )}
                             {(implementation === 'lnd' ||
-                                implementation === 'cln-rest') && (
+                                implementation === 'cln-rest' ||
+                                implementation === 'ldk-server') && (
                                 <>
                                     <Text
                                         style={{
@@ -2491,6 +2501,60 @@ export default class WalletConfiguration extends React.Component<
                                                             saved: false
                                                         });
                                                     }}
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
+                                                    }
+                                                />
+                                            </View>
+                                        </>
+                                    ) : implementation === 'ldk-server' ? (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.accessKey'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'views.Settings.AddEditNode.ldkServerApiKey'
+                                                    )}
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={accessKey}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            accessKey:
+                                                                text.trim(),
+                                                            saved: false
+                                                        })
+                                                    }
                                                     locked={loading}
                                                 />
                                                 <ShowHideToggle
@@ -3332,6 +3396,8 @@ export default class WalletConfiguration extends React.Component<
                                                 !(host && macaroonHex)) ||
                                             (implementation === 'cln-rest' &&
                                                 !(host && rune)) ||
+                                            (implementation === 'ldk-server' &&
+                                                !(host && accessKey)) ||
                                             (implementation ===
                                                 'lightning-node-connect' &&
                                                 (!pairingPhrase ||

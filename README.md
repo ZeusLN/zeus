@@ -2,7 +2,7 @@
 <p align="center"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1878621/282360800-579c1156-1fc6-45b6-86f2-7b3424502160.png"></p>
 <p align="center"><img width="2250" height="1406" alt="screenshots3" src="https://github.com/user-attachments/assets/3e6e5a34-ee1b-4b8d-876d-f6f64d5d7c38" /></p>
 
-ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND and Core Lightning. ⚡️
+ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND, Core Lightning, and LDK Server. ⚡️
 
 ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
@@ -40,7 +40,7 @@ and
 - [x] Self-custodial
 - [x] No KYC
 - [x] Fully open source (AGPLv3)
-- [x] [Connect to LND or Core Lightning remote node](https://docs.zeusln.app/category/remote-connections)
+- [x] [Connect to LND, Core Lightning, or LDK Server remote node](https://docs.zeusln.app/category/remote-connections)
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts

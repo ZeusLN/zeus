@@ -1,0 +1,45 @@
+syntax = "proto3";
+package error;
+
+// When HttpStatusCode is not ok (200), the response `content` contains a serialized `ErrorResponse`
+// with the relevant ErrorCode and `message`
+message ErrorResponse {
+
+  // The error message containing a generic description of the error condition in English.
+  // It is intended for a human audience only and should not be parsed to extract any information
+  // programmatically. Client-side code may use it for logging only.
+  string message = 1;
+
+  // The error code uniquely identifying an error condition.
+  // It is meant to be read and understood programmatically by code that detects/handles errors by
+  // type.
+  //
+  // **Caution**: If a new type of `error_code` is introduced in the `ErrorCode` enum, `error_code` field will be set to
+  // `UnknownError`.
+  ErrorCode error_code = 2;
+}
+
+enum ErrorCode {
+
+  // Will never be used as `error_code` by server.
+  //
+  // **Caution**: If a new type of `error_code` is introduced in the `ErrorCode` enum, `error_code` field will be set to
+  // `UnknownError`.
+  UNKNOWN_ERROR = 0;
+
+  // Used in the following cases:
+  //   - The request was missing a required argument.
+  //   - The specified argument was invalid, incomplete or in the wrong format.
+  //   - The request body of api cannot be deserialized into corresponding protobuf object.
+  //   - The request does not follow api contract.
+  INVALID_REQUEST_ERROR = 1;
+
+  // Used when authentication fails or in case of an unauthorized request.
+  AUTH_ERROR = 2;
+
+  // Used to represent an error while doing a Lightning operation.
+  LIGHTNING_ERROR = 3;
+
+  // Used when an internal server error occurred. The client is probably at no fault.
+  INTERNAL_SERVER_ERROR = 4;
+}
