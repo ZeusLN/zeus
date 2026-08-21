@@ -75,6 +75,7 @@ interface SweepremoteclosedState {
     sleepSeconds: string;
     recoveryWindow: string;
     loading: boolean;
+    feeLoadingError: boolean;
     error: string;
 }
 
@@ -90,10 +91,11 @@ export default class Sweepremoteclosed extends React.Component<
         sweepAddr: '',
         apiUrl: 'https://api.node-recovery.com',
         customApiUrl: '',
-        feeRate: '21',
+        feeRate: '',
         recoveryWindow: '200',
         sleepSeconds: '0',
         loading: false,
+        feeLoadingError: false,
         error: ''
     };
 
@@ -109,6 +111,7 @@ export default class Sweepremoteclosed extends React.Component<
             recoveryWindow,
             sleepSeconds,
             loading,
+            feeLoadingError,
             error
         } = this.state;
 
@@ -135,10 +138,16 @@ export default class Sweepremoteclosed extends React.Component<
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }
                             }}
+                            rightComponent={
+                                loading ? (
+                                    <View>
+                                        <LoadingIndicator size={30} />
+                                    </View>
+                                ) : undefined
+                            }
                             navigation={navigation}
                         />
                         {error && <ErrorMessage message={error} dismissable />}
-                        {loading && <LoadingIndicator />}
                         <ScrollView style={{ margin: 10 }}>
                             {isLdkNode && (
                                 <Text
@@ -235,7 +244,13 @@ export default class Sweepremoteclosed extends React.Component<
                                     fee={feeRate}
                                     onChangeFee={(text: string) => {
                                         this.setState({
-                                            feeRate: text
+                                            feeRate: text,
+                                            feeLoadingError: false
+                                        });
+                                    }}
+                                    onFeeError={(error: boolean) => {
+                                        this.setState({
+                                            feeLoadingError: error
                                         });
                                     }}
                                     navigation={navigation}
@@ -371,7 +386,12 @@ export default class Sweepremoteclosed extends React.Component<
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start'
                                     )}
-                                    disabled={!sweepAddr}
+                                    disabled={
+                                        !sweepAddr ||
+                                        loading ||
+                                        feeLoadingError ||
+                                        !(Number(feeRate) > 0)
+                                    }
                                     onPress={async () => {
                                         this.setState({
                                             error: '',
@@ -386,8 +406,8 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 sweepAddr,
                                                             feeRateSatsPerVbyte:
                                                                 Number(
-                                                                    feeRate || 2
-                                                                ),
+                                                                    feeRate
+                                                                ) || 2,
                                                             sleepSeconds:
                                                                 Number(
                                                                     sleepSeconds ||
@@ -395,6 +415,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 )
                                                         }
                                                     );
+                                                this.setState({
+                                                    loading: false
+                                                });
                                                 navigation.navigate('TxHex', {
                                                     txHex: response,
                                                     hideWarning: true
@@ -418,9 +441,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                             recoveryWindow ||
                                                                 200
                                                         ),
-                                                        feeRate: Number(
-                                                            feeRate || 2
-                                                        ),
+                                                        feeRate:
+                                                            Number(feeRate) ||
+                                                            2,
                                                         sleepSeconds: Number(
                                                             sleepSeconds || 0
                                                         ),
@@ -430,6 +453,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 ?.nodeInfo
                                                                 ?.isTestNet
                                                     });
+                                                this.setState({
+                                                    loading: false
+                                                });
                                                 navigation.navigate('TxHex', {
                                                     txHex: response,
                                                     hideWarning: true
