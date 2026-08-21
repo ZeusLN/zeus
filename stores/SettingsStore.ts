@@ -1676,6 +1676,11 @@ export default class SettingsStore {
     @observable public lndDir?: string;
     @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
+    // Set while startup hands the user the wallet list because of
+    // Display > Select wallet on startup, and cleared once a wallet is
+    // picked. Node credentials still point at the previously used
+    // wallet during that window, so nothing may reach a node.
+    @observable public walletSelectionPending: boolean = false;
     @observable public embeddedLndStarted: boolean = false;
     @observable public walletJustCreated: boolean = false;
     @observable public lndFolderMissing: boolean = false;
@@ -1726,6 +1731,10 @@ export default class SettingsStore {
 
     public setInitialStart = (status: boolean) => {
         this.initialStart = status;
+    };
+
+    public setWalletSelectionPending = (status: boolean) => {
+        this.walletSelectionPending = status;
     };
 
     public setLndFolderMissing = (status: boolean) => {
@@ -1861,6 +1870,12 @@ export default class SettingsStore {
 
     @action
     private updateNodeProperties = (settings: Settings) => {
+        // The credentials loaded below belong to the previously used wallet.
+        // If the user asked to pick a wallet on startup, nothing may reach a
+        // node with them until a wallet is actually activated.
+        if (this.initialStart && settings?.selectNodeOnStartup) {
+            this.walletSelectionPending = true;
+        }
         const node: any =
             settings?.nodes?.length &&
             settings?.nodes[settings.selectedNode || 0];
@@ -2303,6 +2318,8 @@ export default class SettingsStore {
             this.error = false;
             this.errorMsg = '';
             this.lndFolderMissing = false;
+            // A wallet is being activated, so startup selection is over
+            this.walletSelectionPending = false;
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;
