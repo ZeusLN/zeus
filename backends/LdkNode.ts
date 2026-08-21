@@ -1440,6 +1440,27 @@ export default class LdkNode {
     };
 
     /**
+     * Definitive point query: LDK Node's payment store holds the node's
+     * complete, never-auto-pruned payment history, so an empty result
+     * proves the payment was never dispatched.
+     */
+    lookupPaymentByHash = async (data: {
+        paymentHash: string;
+    }): Promise<any> => {
+        const payments = await LdkNodeInjection.payments.listPayments();
+        const matches = payments.filter(
+            (p) =>
+                p.direction === 'outbound' &&
+                p.kind.type !== 'onchain' &&
+                (p.kind.hash === data.paymentHash || p.id === data.paymentHash)
+        );
+
+        return {
+            payments: matches.map((payment) => this.formatPayment(payment))
+        };
+    };
+
+    /**
      * List all payments (raw)
      */
     listPayments = async (): Promise<PaymentDetails[]> => {
@@ -2200,4 +2221,5 @@ export default class LdkNode {
     supportsWatchtowerClient = () => false;
     supportsPeers = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsPaymentLookupByHash = () => true;
 }

@@ -1770,6 +1770,7 @@
     "stores.NostrWalletConnectStore.error.connectionNotFound": "Connection not found",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Too many invoice requests from this connection. Please wait before trying again.",
+    "stores.NostrWalletConnectStore.error.pendingPaymentExpired": "Payment was unresolved for 14 days and could not be found on the node; it was marked failed and its reserved budget was released.",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Failed to Connect {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Failed to load connections",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Failed to save connections",

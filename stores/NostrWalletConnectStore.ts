@@ -2707,40 +2707,71 @@ export default class NostrWalletConnectStore {
         let changed = false;
 
         for (const activity of pending) {
-            const payment = payments.find(
-                (p) =>
-                    p.getPaymentRequest === activity.id ||
-                    (!!activity.paymentHash &&
-                        p.paymentHash === activity.paymentHash)
+            const payment = NostrConnectUtils.findPaymentForInvoice(
+                activity.id,
+                payments,
+                activity.paymentHash
             );
             if (!payment) continue;
 
-            runInAction(() => {
-                if (activity.status !== 'pending') return;
-
-                activity.payment = new Payment(payment);
+            if (
+                this.applyPendingPayInvoiceResolution(
+                    connection,
+                    activity,
+                    payment
+                )
+            ) {
                 changed = true;
+            }
+        }
 
-                if (payment.isFailed) {
-                    activity.status = 'failed';
-                    return;
+        // Expiry pass: a pending older than the HTLC-lifetime bound cannot
+        // still be in flight. Confirm with a definitive backend-aware fetch
+        // (the regular refresh may be a throttled cached list); resolve it
+        // if the payment turns up, otherwise mark it failed so its budget
+        // reservation is released. An inconclusive fetch skips the pass
+        // entirely: only a real look at the node may expire a reservation.
+        const expiryCandidates = pending.filter(
+            (activity) =>
+                activity.status === 'pending' &&
+                NostrConnectUtils.isPendingPayInvoiceExpired(activity)
+        );
+        if (expiryCandidates.length > 0) {
+            const definitive = await this.getPaymentsForPendingExpiryCheck(
+                expiryCandidates
+            );
+            if (definitive) {
+                for (const activity of expiryCandidates) {
+                    const payment = NostrConnectUtils.findPaymentForInvoice(
+                        activity.id,
+                        definitive,
+                        activity.paymentHash
+                    );
+                    if (payment) {
+                        // Note: if the node still reports it in flight
+                        // (zombie payment), the node is the authority — the
+                        // reservation stays.
+                        if (
+                            this.applyPendingPayInvoiceResolution(
+                                connection,
+                                activity,
+                                payment
+                            )
+                        ) {
+                            changed = true;
+                        }
+                        continue;
+                    }
+                    runInAction(() => {
+                        if (activity.status !== 'pending') return;
+                        activity.status = 'failed';
+                        activity.error = localeString(
+                            'stores.NostrWalletConnectStore.error.pendingPaymentExpired'
+                        );
+                        changed = true;
+                    });
                 }
-                if (payment.isIncomplete) return;
-
-                activity.status = 'success';
-                const amountSats =
-                    Math.floor(Number(activity.satAmount)) ||
-                    Math.floor(Number(payment.getAmount) || 0);
-                const feeSats = Number(payment.getFee) || 0;
-                activity.fees_paid = feeSats;
-
-                const spendSats =
-                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                if (spendSats > 0 && !activity.isBudgetDebited) {
-                    connection.trackSpending(spendSats, this.maxBudgetLimit);
-                    activity.isBudgetDebited = true;
-                }
-            });
+            }
         }
 
         if (changed) {
@@ -2748,6 +2779,109 @@ export default class NostrWalletConnectStore {
             this.findAndUpdateConnection(connection);
         }
         return changed;
+    }
+
+    // Flips a pending pay_invoice activity to its terminal state based on a
+    // payment record from the node, debiting the budget on success.
+    // Returns true when the activity changed. A payment the node still
+    // reports in flight leaves the activity pending.
+    private applyPendingPayInvoiceResolution(
+        connection: NWCConnection,
+        activity: ConnectionActivity,
+        payment: Payment
+    ): boolean {
+        let reconciled = false;
+        runInAction(() => {
+            if (activity.status !== 'pending') return;
+            reconciled = true;
+            activity.payment = new Payment(payment);
+
+            if (payment.isFailed) {
+                activity.status = 'failed';
+                return;
+            }
+            if (payment.isIncomplete) return;
+
+            activity.status = 'success';
+            const amountSats =
+                Math.floor(Number(activity.satAmount)) ||
+                Math.floor(Number(payment.getAmount) || 0);
+            const feeSats = Number(payment.getFee) || 0;
+            activity.fees_paid = feeSats;
+
+            const spendSats =
+                amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+            if (spendSats > 0 && !activity.isBudgetDebited) {
+                connection.trackSpending(spendSats, this.maxBudgetLimit);
+                activity.isBudgetDebited = true;
+            }
+        });
+        return reconciled;
+    }
+
+    // Definitive payments fetch for the pending-expiry pass, direct from
+    // the backend (paymentsStore.getPayments would overwrite the wallet
+    // activity list and toggle its loading flag). Backend-aware, because
+    // not every backend can prove a payment's absence from a plain list
+    // fetch: point lookups by payment hash where supported (CLN listpays,
+    // LDK Node's complete payment store), otherwise a creation-date-bounded
+    // window on LND-family backends, treated as inconclusive when it fills
+    // to the cap. Backends with no reliable strategy (LndHub's success-only
+    // /gettxs) fall through to null, so their pendings are never expired.
+    // Returns null on any failure so the caller cannot expire anything
+    // without a real look.
+    private async getPaymentsForPendingExpiryCheck(
+        expiryCandidates: ConnectionActivity[]
+    ): Promise<Payment[] | null> {
+        try {
+            if (BackendUtils.supportsPaymentLookupByHash()) {
+                const results: Payment[] = [];
+                for (const activity of expiryCandidates) {
+                    const paymentHash =
+                        NostrConnectUtils.normalizePaymentHash(
+                            activity.paymentHash
+                        ) ||
+                        (await NostrConnectUtils.decodeInvoiceTags(activity.id))
+                            .paymentHash;
+                    if (!paymentHash) return null;
+                    const data = await BackendUtils.lookupPaymentByHash({
+                        paymentHash
+                    });
+                    if (!data || !Array.isArray(data.payments)) return null;
+                    for (const p of data.payments) {
+                        results.push(new Payment(p));
+                    }
+                }
+                return results;
+            }
+
+            if (BackendUtils.supportsPaymentsCreationDateFilter()) {
+                const creationDateStart =
+                    NostrConnectUtils.getExpiryCheckCreationDateStart(
+                        expiryCandidates
+                    );
+                if (creationDateStart === null) return null;
+                const data = await BackendUtils.getPayments({
+                    maxPayments: NostrConnectUtils.EXPIRY_CHECK_MAX_PAYMENTS,
+                    reversed: true,
+                    creationDateStart
+                });
+                if (!data?.payments) return null;
+                // A window filled to the cap may have been truncated; only
+                // a complete range proves absence.
+                if (
+                    data.payments.length >=
+                    NostrConnectUtils.EXPIRY_CHECK_MAX_PAYMENTS
+                ) {
+                    return null;
+                }
+                return data.payments.map((p: any) => new Payment(p));
+            }
+
+            return null;
+        } catch {
+            return null;
+        }
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(
