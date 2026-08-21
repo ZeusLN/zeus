@@ -5,12 +5,16 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
 import { sleep } from '../utils/SleepUtils';
+import SyncUtils from '../utils/SyncUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfo from '../models/NodeInfo';
 
 import ConnectivityStore from './ConnectivityStore';
 import SettingsStore from './SettingsStore';
+
+const TIP_FETCH_MAX_ATTEMPTS = 3;
+const TIP_FETCH_RETRY_DELAY_MS = 3000;
 
 export default class SyncStore {
     @observable public isSyncing: boolean = false;
@@ -85,16 +89,28 @@ export default class SyncStore {
             this.currentBlockHeight = nodeInfo?.block_height || 0;
 
             // if current block exceeds or equals best block height, query mempool for new tip
-            // if mempool call fails, set best block height to current height, then proceed
+            // if the mempool instance is unreachable, estimate the tip from
+            // the node's own best header instead
             if (this.currentBlockHeight >= this.bestBlockHeight) {
-                await this.getBestBlockHeight();
-                if (this.error) this.bestBlockHeight = this.currentBlockHeight;
+                await this.getBestBlockHeight().catch(() => {});
+                if (this.error) {
+                    this.bestBlockHeight = SyncUtils.estimateBestBlockHeight(
+                        this.currentBlockHeight,
+                        nodeInfo?.best_header_timestamp
+                    );
+                }
             }
 
             this.updateProgress();
         }
 
-        if (nodeInfo?.synced_to_chain || this.numBlocksUntilSynced <= 0) {
+        // An estimated tip can undershoot the real one, so while the mempool
+        // instance is unreachable only the node's synced_to_chain may declare
+        // the sync complete
+        if (
+            nodeInfo?.synced_to_chain ||
+            (!this.error && this.numBlocksUntilSynced <= 0)
+        ) {
             this.isSyncing = false;
         }
 
@@ -132,12 +148,11 @@ export default class SyncStore {
             )
                 .then(async (response: any) => {
                     const status = response.info().status;
-                    if (status == 200) {
-                        this.bestBlockHeight = Number.parseInt(response.json());
-                        if (
-                            typeof this.bestBlockHeight === 'number' &&
-                            this.currentBlockHeight
-                        ) {
+                    const height = Number.parseInt(response.json());
+                    if (status == 200 && Number.isFinite(height)) {
+                        this.bestBlockHeight = height;
+                        this.error = false;
+                        if (this.currentBlockHeight) {
                             this.updateProgress();
                         }
                         resolve(this.bestBlockHeight);
@@ -160,13 +175,16 @@ export default class SyncStore {
         this.bestBlockHeight = 0;
         this.numBlocksUntilSynced = 1;
 
-        // Fetch best block height, retrying until successful
-        while (!this.bestBlockHeight) {
+        // Fetch best block height with bounded retries; an unreachable
+        // mempool instance must not wedge the sync UI, since the tip can
+        // be estimated from the node's own best header while it is down
+        for (let attempt = 0; attempt < TIP_FETCH_MAX_ATTEMPTS; attempt++) {
             if (!this.isSyncing) return;
             try {
                 await this.getBestBlockHeight();
+                break;
             } catch {
-                await sleep(3000);
+                await sleep(TIP_FETCH_RETRY_DELAY_MS);
             }
         }
 
@@ -182,12 +200,14 @@ export default class SyncStore {
         await this.setSyncInfo();
 
         let i = 0;
-        while (this.numBlocksUntilSynced > 0) {
-            if (!this.isSyncing) break; // Abort when reset() called (e.g. LND stopped for wallet creation)
+        while (this.isSyncing) {
+            // Loops until setSyncInfo declares the sync complete or reset()
+            // is called (e.g. LND stopped for wallet creation)
             await sleep(2000);
             this.getNodeInfo().then(() => this.setSyncInfo());
 
             // only query Mempool instance every 30 seconds
+            // a success here swaps an estimated tip back to a real one
             const queryMempool = i === 14;
             if (queryMempool) {
                 i = 0;
