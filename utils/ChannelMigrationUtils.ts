@@ -1,10 +1,10 @@
 import { Alert, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
-import RNRestart from 'react-native-restart';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { localeString } from './LocaleUtils';
+import { restartApp } from './RestartUtils';
 import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
@@ -309,7 +309,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => restartApp()
                             }
                         ],
                         { cancelable: false }
@@ -324,7 +324,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => restartApp()
                             }
                         ],
                         { cancelable: false }
@@ -339,7 +339,7 @@ export const uploadChannelBackupToOlympus = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => restartApp()
                         }
                     ],
                     { cancelable: false }
@@ -681,7 +681,7 @@ export const exportChannelDb = async (
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => restartApp()
                     }
                 ],
                 { cancelable: false }
@@ -716,7 +716,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => restartApp()
                         }
                     ],
                     { cancelable: false }
@@ -742,7 +742,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => restartApp()
                         }
                     ],
                     { cancelable: false }
@@ -761,7 +761,7 @@ export const exportChannelDb = async (
             [
                 {
                     text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
+                    onPress: () => restartApp()
                 }
             ],
             { cancelable: false }
