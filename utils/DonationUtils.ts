@@ -1,10 +1,8 @@
 // DonationUtils.ts
 import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { sha256 } from '@noble/hashes/sha256';
 
-import Base64Utils from './Base64Utils';
-import Bolt11Utils from './Bolt11Utils';
+import { verifyLnurlPayInvoice } from './LnurlPayUtils';
 
 const DONATION_ADDRESS = 'tips@pay.zeusln.app';
 
@@ -90,30 +88,13 @@ export const loadDonationLnurl = async (
         // not be able to name its own price: enforce LUD-06 client-side by
         // requiring an exact amount match and a description_hash committing
         // to the served metadata
-        const decoded = Bolt11Utils.decode(pr);
-        if (!new BigNumber(decoded.num_msat).isEqualTo(amountMsat)) {
-            console.error(
-                'loadLnurl error: invoice amount mismatch:',
-                decoded.num_msat,
-                'msat !==',
-                amountMsat.toString(),
-                'msat'
-            );
-            return null;
-        }
-
-        const metadata = lnurlData?.metadata;
-        const expectedDescriptionHash =
-            typeof metadata === 'string'
-                ? Base64Utils.bytesToHex(
-                      Array.from(sha256(Base64Utils.utf8ToBytes(metadata)))
-                  )
-                : null;
-        if (
-            !expectedDescriptionHash ||
-            decoded.description_hash !== expectedDescriptionHash
-        ) {
-            console.error('loadLnurl error: description hash mismatch');
+        const check = verifyLnurlPayInvoice(
+            pr,
+            lnurlData?.metadata,
+            amountMsat
+        );
+        if (!check.ok) {
+            console.error('loadLnurl error:', check.reason);
             return null;
         }
 

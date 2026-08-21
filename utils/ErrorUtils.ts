@@ -103,7 +103,7 @@ const parseCashuDevKitError = (error: any): string => {
 const CASHU_ERROR_DISPLAY_LIMIT = 300;
 
 const cashuErrorForDisplay = (error: any): string => {
-    const parsed = parseCashuDevKitError(error);
+    const parsed = stripJsonBlob(parseCashuDevKitError(error));
     if (parsed.length <= CASHU_ERROR_DISPLAY_LIMIT) return parsed;
     return `${parsed.slice(0, CASHU_ERROR_DISPLAY_LIMIT).trimEnd()}…`;
 };
@@ -133,6 +133,51 @@ const extractMintDetail = (msg: string): string => {
     }
     if (!detail) return msg;
     return detail.charAt(0).toUpperCase() + detail.slice(1);
+};
+
+// Some failure paths embed an entire JSON body in the error string, e.g. a
+// mint answering a CDK request with its /v1/info document leaves the FFI
+// with "Unknown error response: `{...}`" carrying kilobytes of JSON. That is
+// never fit to show a user. When the message carries a sizeable JSON blob,
+// prefer a human-readable detail/error/message/reason field from inside it;
+// otherwise drop the blob and keep the readable prefix, falling back to a
+// generic message when nothing readable remains.
+//
+// Display-only: this runs in cashuErrorForDisplay, never inside
+// parseCashuDevKitError, because mapCDKError classifies errors by matching
+// substrings of the parsed message (e.g. the mint error code) and stripping
+// the blob there would change classification.
+const stripJsonBlob = (msg: string): string => {
+    const blobStart = msg.search(/[{[]/);
+    if (blobStart === -1) return msg;
+    const blob = msg.slice(blobStart).replace(/[`"'\s]+$/, '');
+    // short inline JSON (e.g. a compact error object) is left alone
+    if (blob.length < 80) return msg;
+    // only treat the tail as a JSON document when it looks like one; prose
+    // that happens to contain a bracket ("Melt failed [quote 7f3a] ...") is
+    // left intact and bounded by the display cap instead
+    if (!/^[{[]\s*["{[]/.test(blob)) return msg;
+    let extracted: string | undefined;
+    try {
+        const parsed = JSON.parse(blob);
+        extracted = [
+            parsed?.detail,
+            parsed?.error,
+            parsed?.message,
+            parsed?.reason
+        ].find((v: any) => typeof v === 'string' && v.length > 0);
+    } catch {
+        // unparseable (possibly truncated) blob: nothing to extract
+    }
+    if (extracted) return extracted;
+    const prefix = msg
+        .slice(0, blobStart)
+        .replace(/^CDK Error:\s*/i, '')
+        .replace(/[`:\s]+$/, '')
+        .trim();
+    if (/[a-zA-Z]/.test(prefix)) return prefix;
+    const localeString = require('./LocaleUtils').localeString;
+    return localeString('error.unexpectedResponse');
 };
 
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
