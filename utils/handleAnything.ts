@@ -38,46 +38,89 @@ const isAmountlessInvoice = (bolt11: string): boolean => {
     }
 };
 
+// Loopback hosts resolve to the device itself; a cleartext fetch to one never
+// leaves the phone, so it needs neither an unencrypted-transport warning nor
+// Tor routing.
+const isLoopbackHost = (host: string): boolean =>
+    host === 'localhost' || host === '::1' || /^127\./.test(host);
+
+// Private / non-routable hosts (loopback, RFC 1918, link-local, IPv6 ULA,
+// mDNS .local). The Tor SOCKS proxy cannot reach these, so a BTCPay server on
+// one must be contacted directly rather than routed over Tor.
+const isPrivateHost = (host: string): boolean =>
+    isLoopbackHost(host) ||
+    host === '0.0.0.0' ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^f[cd][0-9a-f]{2}:/.test(host) || // IPv6 unique-local fc00::/7
+    /^fe[89ab][0-9a-f]:/.test(host) || // IPv6 link-local fe80::/10
+    host.endsWith('.local');
+
 // Classifies the URL embedded in a scanned BTCPay pairing QR before ZEUS
-// contacts it. `valid` is true only for a well-formed http(s) URL with a host;
-// `isCleartext` flags an http:// host that is neither a Tor onion service nor
-// loopback, i.e. one that would carry the fetch over the network unencrypted.
+// contacts it, using the WHATWG URL parser (react-native-url-polyfill) so the
+// host ZEUS displays is exactly the host it will fetch. `valid` is true only
+// for a well-formed, credential-free http(s) URL with a host; `url` is the
+// canonicalized URL to fetch; `isCleartext` flags an http:// host that is
+// neither a Tor onion service nor loopback, i.e. one carried over the network
+// unencrypted.
 const classifyBtcPayConfigUrl = (
     urlString?: string
-): { valid: boolean; host: string; isOnion: boolean; isCleartext: boolean } => {
+): {
+    valid: boolean;
+    url: string;
+    host: string;
+    isOnion: boolean;
+    isLoopback: boolean;
+    isPrivate: boolean;
+    isCleartext: boolean;
+} => {
     const invalid = {
         valid: false,
+        url: '',
         host: '',
         isOnion: false,
+        isLoopback: false,
+        isPrivate: false,
         isCleartext: false
     };
     if (!urlString) return invalid;
 
-    const trimmed = urlString.trim();
-    const lower = trimmed.toLowerCase();
-    const isHttp = lower.startsWith('http://');
-    const isHttps = lower.startsWith('https://');
+    let parsed: URL;
+    try {
+        parsed = new URL(urlString.trim());
+    } catch {
+        return invalid;
+    }
+
+    const protocol = parsed.protocol.toLowerCase();
+    const isHttp = protocol === 'http:';
+    const isHttps = protocol === 'https:';
     if (!isHttp && !isHttps) return invalid;
 
-    // Isolate the host: strip scheme, then any path/query, then a trailing
-    // :port (handling IPv6 bracket notation).
-    const scheme = isHttp ? 'http://' : 'https://';
-    let host = lower.slice(scheme.length).split('/')[0].split('?')[0];
-    if (host.startsWith('[')) {
-        host = host.slice(1).split(']')[0];
-    } else {
-        host = host.split(':')[0];
-    }
+    // Embedded credentials let the host ZEUS displays diverge from the host it
+    // actually contacts (https://btcpay.trusted.com@evil.example), so refuse
+    // them outright instead of trying to render a "safe" host string.
+    if (parsed.username || parsed.password) return invalid;
+
+    // IPv6 hostnames come back bracketed ([::1]); strip so range checks match.
+    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (!host) return invalid;
 
     const isOnion = host.endsWith('.onion');
-    const isLoopback =
-        host === 'localhost' || host === '::1' || host.startsWith('127.');
+    const isLoopback = isLoopbackHost(host);
+    const isPrivate = isPrivateHost(host);
 
     return {
         valid: true,
+        // The canonicalized, credential-free URL is what gets fetched, so one
+        // parser decides both what the user sees and what ZEUS contacts.
+        url: parsed.href,
         host,
         isOnion,
+        isLoopback,
+        isPrivate,
         isCleartext: isHttp && !isOnion && !isLoopback
     };
 };
@@ -87,18 +130,25 @@ const classifyBtcPayConfigUrl = (
 // when the user proceeds, false when they cancel.
 const confirmBtcPayFetch = (
     host: string,
-    isCleartext: boolean
+    { isCleartext, isLan }: { isCleartext: boolean; isLan: boolean }
 ): Promise<boolean> =>
     new Promise((resolve) => {
-        const message = isCleartext
-            ? `${localeString(
-                  'stores.SettingsStore.btcPayFetchConfirmMessage'
-              ).replace('{host}', host)}\n\n${localeString(
-                  'stores.SettingsStore.btcPayFetchCleartextWarning'
-              )}`
-            : localeString(
-                  'stores.SettingsStore.btcPayFetchConfirmMessage'
-              ).replace('{host}', host);
+        const base = localeString(
+            'stores.SettingsStore.btcPayFetchConfirmMessage'
+        ).replace('{host}', host);
+        const notes: string[] = [];
+        if (isCleartext) {
+            notes.push(
+                localeString('stores.SettingsStore.btcPayFetchCleartextWarning')
+            );
+        }
+        if (isLan) {
+            notes.push(
+                localeString('stores.SettingsStore.btcPayFetchLocalNetworkNote')
+            );
+        }
+        const message =
+            notes.length > 0 ? `${base}\n\n${notes.join('\n\n')}` : base;
 
         const proceedButton = {
             text: localeString('general.proceed'),
@@ -824,8 +874,15 @@ const handleAnything = async (
         // validate it locally and require explicit consent BEFORE any network
         // request (prevents a scan-time IP/timing beacon to an attacker URL).
         const configRoute = value.split('config=')[1];
-        const { valid, host, isCleartext } =
-            classifyBtcPayConfigUrl(configRoute);
+        const {
+            valid,
+            url,
+            host,
+            isOnion,
+            isLoopback,
+            isPrivate,
+            isCleartext
+        } = classifyBtcPayConfigUrl(configRoute);
         if (!valid) {
             Alert.alert(
                 localeString('general.error'),
@@ -841,11 +898,14 @@ const handleAnything = async (
             return false;
         }
 
-        const confirmed = await confirmBtcPayFetch(host, isCleartext);
+        const confirmed = await confirmBtcPayFetch(host, {
+            isCleartext,
+            isLan: isPrivate && !isLoopback
+        });
         if (!confirmed) return false;
 
         return settingsStore
-            .fetchBTCPayConfig(value)
+            .fetchBTCPayConfig(url, isOnion, isPrivate)
             .then((node: any) => {
                 if (settingsStore.btcPayError) {
                     Alert.alert(

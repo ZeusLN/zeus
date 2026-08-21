@@ -1747,13 +1747,20 @@ export default class SettingsStore {
         this.isChannelMigrating = status;
     };
 
-    public fetchBTCPayConfig = (data: string) => {
-        const configRoute = data.split('config=')[1];
+    public fetchBTCPayConfig = (
+        configRoute: string,
+        isOnion: boolean = false,
+        isPrivateHost: boolean = false
+    ) => {
         this.btcPayError = null;
 
-        // Route over Tor for onion services and whenever Tor is enabled, so the
-        // config fetch does not leak the user's IP on a clearnet connection.
-        if (configRoute.includes('.onion') || this.enableTor) {
+        // Route over Tor for onion services, and for clearnet whenever Tor is
+        // enabled, so the config fetch does not leak the user's IP. Private/LAN
+        // hosts are excluded: the Tor SOCKS proxy cannot reach RFC 1918 or
+        // link-local addresses, so a local BTCPay must be contacted directly.
+        // `configRoute` is the pre-validated, credential-free URL from
+        // classifyBtcPayConfigUrl (handleAnything), so it is fetched verbatim.
+        if (isOnion || (this.enableTor && !isPrivateHost)) {
             return doTorRequest(configRoute, RequestMethod.GET)
                 .then((response: any) => this.parseBTCPayConfig(response))
                 .catch((err: any) => {
@@ -1762,7 +1769,11 @@ export default class SettingsStore {
                     )}: ${err.toString()}`;
                 });
         } else {
-            return ReactNativeBlobUtil.fetch('get', configRoute)
+            // followRedirect: false so a clean-looking host cannot 302 the
+            // fetch to an unapproved endpoint (LAN address, attacker beacon)
+            // after the user has consented to the displayed host.
+            return ReactNativeBlobUtil.config({ followRedirect: false })
+                .fetch('get', configRoute)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
