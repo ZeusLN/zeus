@@ -801,6 +801,13 @@ export default class LightningAddressStore {
         }
     };
 
+    // Normalize a mint URL for equality comparison: strip surrounding
+    // whitespace, any trailing slash, and lower-case it so cosmetic
+    // differences do not cause a false mismatch. Kept local so the security
+    // check below does not depend on another store's private helper.
+    private normalizeMintUrl = (url?: string): string =>
+        url ? url.trim().replace(/\/+$/, '').toLowerCase() : '';
+
     @action
     public redeemCashu = async (
         quote_id: string,
@@ -812,6 +819,32 @@ export default class LightningAddressStore {
     ) => {
         this.error = false;
         this.error_msg = '';
+
+        // Security: the ZEUS Pay socket is a hint channel, not a command
+        // channel. A `paid` event (and the server-supplied open-payments
+        // list) names the mint URL to redeem from, but the wallet must only
+        // ever mint from the mint this lightning address was created with
+        // (settings.lightningAddress.mintUrl, set in createCashu). Binding
+        // here, at the single chokepoint every caller passes through, stops a
+        // malicious or compromised backend from steering the wallet to an
+        // arbitrary mint (fake-deposit injection, unapproved mint trust,
+        // raw-HTTP fetch of an attacker URL).
+        const configuredMintUrl =
+            this.settingsStore?.settings?.lightningAddress?.mintUrl;
+        if (
+            !configuredMintUrl ||
+            this.normalizeMintUrl(mint_url) !==
+                this.normalizeMintUrl(configuredMintUrl)
+        ) {
+            console.warn(
+                'LightningAddressStore.redeemCashu: refusing to redeem against a mint that does not match the configured lightning address mint'
+            );
+            runInAction(() => {
+                this.redeeming = false;
+            });
+            return false;
+        }
+
         this.redeeming = true;
 
         const fireLocalNotification = () => {
