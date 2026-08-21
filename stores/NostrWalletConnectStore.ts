@@ -98,6 +98,8 @@ const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
 const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
+/** Grace before closing an unused relay after delete awaited in-flight handlers. */
+export const RELAY_RELEASE_GRACE_MS = 5000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -187,6 +189,10 @@ export default class NostrWalletConnectStore {
     private inFlightHandlersByConnection = new Map<
         string,
         Set<Promise<unknown>>
+    >();
+    private scheduledRelayReleases = new Map<
+        string,
+        ReturnType<typeof setTimeout>
     >();
 
     settingsStore: SettingsStore;
@@ -433,6 +439,7 @@ export default class NostrWalletConnectStore {
                 this.connectionJustSucceeded = false;
                 this.lastConnectionAttempt = 0;
                 this.cashuEnabled = false;
+                this.cancelAllScheduledRelayReleases();
                 this.nwcWalletServices.clear();
                 this.publishedRelays.clear();
                 await this.unsubscribeFromAllConnections();
@@ -656,7 +663,9 @@ export default class NostrWalletConnectStore {
                     connectionId
                 );
                 this.makeInvoiceTimestampsByConnection.delete(connectionId);
-                await this.awaitInFlightHandlers(connectionId);
+                const hadInFlight = await this.awaitInFlightHandlers(
+                    connectionId
+                );
                 await this.deleteClientKeys(connection.pubkey);
                 const { index: liveIndex } = this.getConnection({
                     connectionId
@@ -666,7 +675,11 @@ export default class NostrWalletConnectStore {
                         this.connections.splice(liveIndex, 1);
                     }
                 });
-                this.releaseUnusedRelayService(relayUrl);
+                if (hadInFlight) {
+                    this.scheduleReleaseUnusedRelayService(relayUrl);
+                } else {
+                    this.releaseUnusedRelayService(relayUrl);
+                }
                 await this.saveConnections();
             } finally {
                 this.pendingDeleteConnectionIds.delete(connectionId);
@@ -1335,6 +1348,7 @@ export default class NostrWalletConnectStore {
             return;
         }
         try {
+            this.cancelScheduledRelayRelease(connection.relayUrl);
             this.unsubscribeFromConnection(connection.id);
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
@@ -1539,6 +1553,33 @@ export default class NostrWalletConnectStore {
         });
     }
 
+    private scheduleReleaseUnusedRelayService(relayUrl: string): void {
+        if (!relayUrl) return;
+        const existing = this.scheduledRelayReleases.get(relayUrl);
+        if (existing) {
+            clearTimeout(existing);
+        }
+        const timeoutId = setTimeout(() => {
+            this.scheduledRelayReleases.delete(relayUrl);
+            this.releaseUnusedRelayService(relayUrl);
+        }, RELAY_RELEASE_GRACE_MS);
+        this.scheduledRelayReleases.set(relayUrl, timeoutId);
+    }
+
+    private cancelScheduledRelayRelease(relayUrl: string): void {
+        const existing = this.scheduledRelayReleases.get(relayUrl);
+        if (!existing) return;
+        clearTimeout(existing);
+        this.scheduledRelayReleases.delete(relayUrl);
+    }
+
+    private cancelAllScheduledRelayReleases(): void {
+        for (const timeoutId of this.scheduledRelayReleases.values()) {
+            clearTimeout(timeoutId);
+        }
+        this.scheduledRelayReleases.clear();
+    }
+
     private async unsubscribeFromAllConnections(): Promise<void> {
         const connectionIds = Array.from(this.activeSubscriptions.keys());
         for (const connectionId of connectionIds) {
@@ -1628,10 +1669,13 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async awaitInFlightHandlers(connectionId: string): Promise<void> {
+    private async awaitInFlightHandlers(
+        connectionId: string
+    ): Promise<boolean> {
         const set = this.inFlightHandlersByConnection.get(connectionId);
-        if (!set?.size) return;
+        if (!set?.size) return false;
         await Promise.allSettled([...set]);
+        return true;
     }
 
     private unauthorizedConnectionResponse<T>(): T {

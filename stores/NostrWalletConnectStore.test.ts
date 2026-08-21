@@ -63,7 +63,8 @@ import Invoice from '../models/Invoice';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
-    NWC_CLIENT_KEYS
+    NWC_CLIENT_KEYS,
+    RELAY_RELEASE_GRACE_MS
 } from './NostrWalletConnectStore';
 
 const hex64 = (c: string) => c.repeat(64);
@@ -1135,6 +1136,51 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         expect(deleted).toBe(true);
         expect(store.connections).toHaveLength(0);
+    });
+
+    it('defers relay release when delete awaited in-flight handlers', async () => {
+        jest.useFakeTimers();
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        (store as any).nwcWalletServices.set(OLD_RELAY, { close: jest.fn() });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    releaseHandler = resolve;
+                })
+        );
+
+        await Promise.resolve();
+
+        const releaseSpy = jest.spyOn(
+            store as any,
+            'releaseUnusedRelayService'
+        );
+        const deleteDone = store.deleteConnection(connection.id);
+
+        await Promise.resolve();
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        await deleteDone;
+
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(RELAY_RELEASE_GRACE_MS - 1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(1);
+        expect(releaseSpy).toHaveBeenCalledWith(OLD_RELAY);
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
     });
 });
 
