@@ -22,7 +22,10 @@ jest.mock('react-native-encrypted-storage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined)
 }));
 
-jest.mock('../utils/BackendUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: { clearCachedCalls: jest.fn() }
+}));
 jest.mock('../utils/BiometricUtils', () => ({
     getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
 }));
@@ -33,7 +36,9 @@ jest.mock('../utils/MigrationUtils', () => ({
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
+    migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
+    migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -91,6 +96,65 @@ beforeEach(() => {
 
 afterEach(() => {
     logSpy.mockRestore();
+});
+
+describe('SettingsStore startup wallet selection', () => {
+    const nodeSettings = (selectNodeOnStartup: boolean) => ({
+        selectNodeOnStartup,
+        selectedNode: 0,
+        nodes: [{ implementation: 'lnd', macaroonHex: 'abcd' }]
+    });
+
+    it('holds off node access while a wallet is still to be picked', async () => {
+        seedSettings(nodeSettings(true));
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        // credentials of the previously used wallet are loaded, so the
+        // latch is what keeps anything from reaching it
+        expect(store.hasCredentials()).toBe(true);
+        expect(store.walletSelectionPending).toBe(true);
+    });
+
+    it('holds nothing off when the setting is disabled', async () => {
+        seedSettings(nodeSettings(false));
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(store.walletSelectionPending).toBe(false);
+    });
+
+    it('does not raise the latch once startup has handed over', async () => {
+        seedSettings(nodeSettings(true));
+        const store = new SettingsStore();
+        store.setInitialStart(false);
+
+        await store.getSettings();
+
+        expect(store.walletSelectionPending).toBe(false);
+    });
+});
+
+describe('SettingsStore.setConnectingStatus', () => {
+    it('ends a pending startup wallet selection when a wallet is activated', () => {
+        const store = new SettingsStore();
+        store.walletSelectionPending = true;
+
+        store.setConnectingStatus(true);
+
+        expect(store.walletSelectionPending).toBe(false);
+    });
+
+    it('leaves the pending flag alone when connecting is turned off', () => {
+        const store = new SettingsStore();
+        store.walletSelectionPending = true;
+
+        store.setConnectingStatus(false);
+
+        expect(store.walletSelectionPending).toBe(true);
+    });
 });
 
 describe('SettingsStore.updateSettings', () => {
