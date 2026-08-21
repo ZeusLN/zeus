@@ -1,10 +1,108 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
-import { getPublicKey, nip19 } from 'nostr-tools';
+import { getEventHash, getPublicKey, getSignature, nip19 } from 'nostr-tools';
 import * as bip39 from '@scure/bip39';
+import * as nip44 from '@nostr/tools/nip44';
 
-import { deriveMintBackupKeypair } from './NostrMintBackup';
+import {
+    backupMintsToNostr,
+    deriveMintBackupKeypair,
+    restoreMintsFromNostr
+} from './NostrMintBackup';
 import Base64Utils from './Base64Utils';
+
+let mockRelayInitImpl: ((url: string) => any) | null = null;
+
+jest.mock('nostr-tools', () => ({
+    ...jest.requireActual('nostr-tools'),
+    relayInit: (url: string) =>
+        mockRelayInitImpl
+            ? mockRelayInitImpl(url)
+            : jest.requireActual('nostr-tools').relayInit(url)
+}));
+
+interface RelayScript {
+    events?: any[];
+    neverRespond?: boolean;
+    failConnect?: boolean;
+}
+
+function installFakeRelays(scripts: Record<string, RelayScript>) {
+    const relays: Record<string, any> = {};
+    mockRelayInitImpl = (url: string) => {
+        const script = scripts[url] ?? {};
+        const handlers: Record<string, Function[]> = { event: [], eose: [] };
+        const relay = {
+            url,
+            connect: () =>
+                script.failConnect
+                    ? Promise.reject(new Error('connect failed'))
+                    : Promise.resolve(),
+            sub: () => {
+                const sub = {
+                    on: (name: string, cb: Function) => handlers[name].push(cb),
+                    unsub: jest.fn()
+                };
+                if (!script.neverRespond) {
+                    // Fires after the caller has attached its handlers,
+                    // under both real and fake timers
+                    queueMicrotask(() => {
+                        for (const ev of script.events ?? []) {
+                            handlers.event.forEach((h) => h(ev));
+                        }
+                        handlers.eose.forEach((h) => h());
+                    });
+                }
+                return sub;
+            },
+            publish: jest.fn(() => Promise.resolve()),
+            close: jest.fn()
+        };
+        relays[url] = relay;
+        return relay;
+    };
+    return relays;
+}
+
+function makeBackupEvent(
+    signerPrivHex: string,
+    conversationKey: Uint8Array,
+    mints: string[],
+    timestamp: number,
+    opts: {
+        tamperSig?: boolean;
+        rawPayload?: string;
+        plainContent?: string;
+    } = {}
+) {
+    const plaintext =
+        opts.rawPayload !== undefined
+            ? opts.rawPayload
+            : JSON.stringify({ mints, timestamp });
+    const content =
+        opts.plainContent !== undefined
+            ? opts.plainContent
+            : nip44.encrypt(plaintext, conversationKey);
+    const unsigned = {
+        kind: 30078,
+        content,
+        tags: [
+            ['d', 'mint-list'],
+            ['client', 'zeus']
+        ],
+        created_at: timestamp,
+        pubkey: getPublicKey(signerPrivHex)
+    };
+    const event: any = {
+        ...unsigned,
+        id: getEventHash(unsigned as any),
+        sig: getSignature(unsigned as any, signerPrivHex)
+    };
+    if (opts.tamperSig) {
+        event.sig = (event.sig[0] === '0' ? '1' : '0') + event.sig.slice(1);
+    }
+    return event;
+}
 
 describe('NostrMintBackup', () => {
     // A fixed test mnemonic (DO NOT use in production)
@@ -99,6 +197,316 @@ describe('NostrMintBackup', () => {
             expect(publicKeyHex).toBe(
                 'e1c971f6a291628471291a266ab85c6ffd7116c7aab6299a6801ae502f56d69b'
             );
+        });
+    });
+
+    describe('restoreMintsFromNostr', () => {
+        const { privateKey, privateKeyHex, publicKeyHex } =
+            deriveMintBackupKeypair(testSeed);
+        const conversationKey = nip44.getConversationKey(
+            privateKey,
+            publicKeyHex
+        );
+
+        afterEach(() => {
+            mockRelayInitImpl = null;
+            jest.useRealTimers();
+        });
+
+        it('returns the freshest backup across relays, not the first to answer', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://old-mint'],
+                            1000
+                        )
+                    ]
+                },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://new-mint'],
+                            2000
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b']
+            );
+
+            expect(result).toEqual({
+                mints: ['https://new-mint'],
+                timestamp: 2000
+            });
+        });
+
+        it('lets a newer empty backup beat an older non-empty one', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://old-mint'],
+                            1000
+                        )
+                    ]
+                },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            [],
+                            2000
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b']
+            );
+
+            expect(result).toEqual({ mints: [], timestamp: 2000 });
+        });
+
+        it('drops backups older than minTimestamp', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://old-mint'],
+                            1000
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a'],
+                1500
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('accepts a backup whose timestamp equals minTimestamp', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://mint'],
+                            1000
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a'],
+                1000
+            );
+
+            expect(result).toEqual({
+                mints: ['https://mint'],
+                timestamp: 1000
+            });
+        });
+
+        it('rejects events signed by a different pubkey', async () => {
+            // Valid signature from another key, but content encrypted
+            // with our conversation key — the pubkey check must fire
+            // independently of decryptability
+            const attackerPrivHex = bytesToHex(
+                sha256(Base64Utils.utf8ToBytes('attacker'))
+            );
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            attackerPrivHex,
+                            conversationKey,
+                            ['https://evil-mint'],
+                            9999
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a']
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('rejects events with a tampered signature', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://mint'],
+                            1000,
+                            { tamperSig: true }
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a']
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('rejects malformed backup payloads', async () => {
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(privateKeyHex, conversationKey, [], 0, {
+                            rawPayload: JSON.stringify({
+                                mints: [1, 2],
+                                timestamp: 1000
+                            })
+                        })
+                    ]
+                },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(privateKeyHex, conversationKey, [], 0, {
+                            rawPayload: JSON.stringify({
+                                mints: 'not-an-array',
+                                timestamp: 1000
+                            })
+                        })
+                    ]
+                },
+                'wss://relay-c': {
+                    events: [
+                        makeBackupEvent(privateKeyHex, conversationKey, [], 0, {
+                            plainContent: 'not-nip44-ciphertext'
+                        })
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b', 'wss://relay-c']
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('times out a hung relay without losing other relays', async () => {
+            jest.useFakeTimers();
+            const relays = installFakeRelays({
+                'wss://relay-a': { neverRespond: true },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://mint'],
+                            2000
+                        )
+                    ]
+                }
+            });
+
+            const promise = restoreMintsFromNostr(privateKeyHex, publicKeyHex, [
+                'wss://relay-a',
+                'wss://relay-b'
+            ]);
+            await jest.advanceTimersByTimeAsync(10000);
+            const result = await promise;
+
+            expect(result).toEqual({
+                mints: ['https://mint'],
+                timestamp: 2000
+            });
+            expect(relays['wss://relay-a'].close).toHaveBeenCalled();
+        });
+
+        it('returns null when all relays fail or have no backup', async () => {
+            installFakeRelays({
+                'wss://relay-a': { failConnect: true },
+                'wss://relay-b': { events: [] }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b']
+            );
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('backupMintsToNostr', () => {
+        const { privateKey, privateKeyHex, publicKeyHex } =
+            deriveMintBackupKeypair(testSeed);
+        const conversationKey = nip44.getConversationKey(
+            privateKey,
+            publicKeyHex
+        );
+
+        afterEach(() => {
+            mockRelayInitImpl = null;
+        });
+
+        it('publishes a valid signed event for an empty mint list', async () => {
+            // Removing the last mint must propagate an empty backup,
+            // otherwise the stale non-empty list stays latest forever
+            const relays = installFakeRelays({ 'wss://relay-a': {} });
+
+            const timestamp = await backupMintsToNostr(
+                privateKeyHex,
+                publicKeyHex,
+                [],
+                ['wss://relay-a']
+            );
+
+            const publishMock = relays['wss://relay-a'].publish;
+            expect(publishMock).toHaveBeenCalledTimes(1);
+            const event = publishMock.mock.calls[0][0];
+            expect(
+                jest.requireActual('nostr-tools').verifySignature(event)
+            ).toBe(true);
+            expect(event.pubkey).toBe(publicKeyHex);
+            const decrypted = JSON.parse(
+                nip44.decrypt(event.content, conversationKey)
+            );
+            expect(decrypted).toEqual({ mints: [], timestamp });
         });
     });
 });
