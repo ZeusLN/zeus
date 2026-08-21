@@ -1182,6 +1182,37 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         jest.clearAllTimers();
         jest.useRealTimers();
     });
+
+    it('defers relay release when delete follows a subscribed connection even without in-flight handlers', async () => {
+        jest.useFakeTimers();
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        (store as any).nwcWalletServices.set(OLD_RELAY, { close: jest.fn() });
+        (store as any).activeSubscriptions.set(connection.id, jest.fn());
+
+        await (store as any).withGlobalHandler(connection.id, async () => ({
+            result: { ok: true },
+            error: undefined
+        }));
+
+        jest.spyOn(store as any, 'unsubscribeFromConnection').mockRestore();
+
+        const releaseSpy = jest.spyOn(
+            store as any,
+            'releaseUnusedRelayService'
+        );
+        await store.deleteConnection(connection.id);
+
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(RELAY_RELEASE_GRACE_MS);
+        expect(releaseSpy).toHaveBeenCalledWith(OLD_RELAY);
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
+    });
 });
 
 function buildMakeInvoiceTestStore(invoices: Invoice[] = []) {

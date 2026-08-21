@@ -655,6 +655,8 @@ export default class NostrWalletConnectStore {
             this.pendingDeleteConnectionIds.add(connectionId);
             try {
                 const relayUrl = connection.relayUrl;
+                const hadActiveSubscription =
+                    this.activeSubscriptions.has(connectionId);
                 this.unsubscribeFromConnection(connectionId);
                 this.lastPendingPaymentStatusFetchByConnection.delete(
                     connectionId
@@ -675,7 +677,9 @@ export default class NostrWalletConnectStore {
                         this.connections.splice(liveIndex, 1);
                     }
                 });
-                if (hadInFlight) {
+                // Defer when a handler was in flight or the connection had been
+                // subscribed: the SDK may still be flushing the NIP-47 response.
+                if (hadInFlight || hadActiveSubscription) {
                     this.scheduleReleaseUnusedRelayService(relayUrl);
                 } else {
                     this.releaseUnusedRelayService(relayUrl);
