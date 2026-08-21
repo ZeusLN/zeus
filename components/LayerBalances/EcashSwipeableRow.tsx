@@ -2,14 +2,11 @@ import React, { Component } from 'react';
 import {
     Alert,
     Animated,
-    StyleSheet,
-    Text,
     View,
     I18nManager,
     TouchableOpacity
 } from 'react-native';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
@@ -21,6 +18,9 @@ import { cashuStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import MintToken from '../../assets/images/SVG/MintToken.svg';
+import SwipeableRowAction from './SwipeableRowAction';
+import SwipeableRowContainer from './SwipeableRowContainer';
+
 import Mint from '../../assets/images/SVG/Mint.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';
@@ -43,143 +43,66 @@ interface EcashSwipeableRowProps {
 @observer
 export default class EcashSwipeableRow extends Component<
     EcashSwipeableRowProps,
-    { expanded: boolean }
+    {}
 > {
-    state = { expanded: false };
-
-    private renderAction = (
-        text: string,
-        x: number,
-        progress: Animated.AnimatedInterpolation<number>
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>,
+        close: () => void
     ) => {
         const { account, navigation } = this.props;
-        const transTranslateX = progress.interpolate({
-            inputRange: [0.25, 1],
-            outputRange: [x, 0]
-        });
-        const transOpacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-        });
-        const pressHandler = () => {
-            this.close();
-
-            if (text === localeString('general.receive')) {
-                navigation.navigate('ReceiveEcash');
-            } else if (text === localeString('cashu.mints')) {
-                navigation.navigate('Mints', { account });
-            } else if (text === localeString('cashu.sendEcash')) {
-                navigation.navigate('SendEcash');
-            } else if (text === localeString('general.send')) {
-                navigation.navigate('Send');
-            }
+        const wideWidth = BackendUtils.supportsCoinControl() ? 210 : 140;
+        const iconProps = {
+            fill: themeColor('action') || themeColor('highlight'),
+            width: 30,
+            height: 30
+        };
+        const closeThen = (go: () => void) => () => {
+            close();
+            go();
         };
 
         return (
-            <Animated.View
+            <View
                 style={{
-                    flex: 1,
-                    transform: [{ translateX: transTranslateX }],
-                    opacity: transOpacity
+                    marginLeft: 15,
+                    width: 280,
+                    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
                 }}
             >
-                <RectButton style={[styles.action]} onPress={pressHandler}>
-                    <View
-                        style={[styles.view]}
-                        accessible
-                        accessibilityRole="button"
-                    >
-                        {text === localeString('cashu.mints') && (
-                            <Mint
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('cashu.sendEcash') && (
-                            <MintToken
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.receive') && (
-                            <Receive
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.send') && (
-                            <Send
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                ...styles.actionText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {text}
-                        </Text>
-                    </View>
-                </RectButton>
-            </Animated.View>
+                <SwipeableRowAction
+                    text={localeString('general.receive')}
+                    x={wideWidth}
+                    progress={progress}
+                    icon={<Receive {...iconProps} />}
+                    onPress={closeThen(() =>
+                        navigation.navigate('ReceiveEcash')
+                    )}
+                />
+                <SwipeableRowAction
+                    text={localeString('cashu.mints')}
+                    x={200}
+                    progress={progress}
+                    icon={<Mint {...iconProps} />}
+                    onPress={closeThen(() =>
+                        navigation.navigate('Mints', { account })
+                    )}
+                />
+                <SwipeableRowAction
+                    text={localeString('cashu.sendEcash')}
+                    x={200}
+                    progress={progress}
+                    icon={<MintToken {...iconProps} />}
+                    onPress={closeThen(() => navigation.navigate('SendEcash'))}
+                />
+                <SwipeableRowAction
+                    text={localeString('general.send')}
+                    x={wideWidth}
+                    progress={progress}
+                    icon={<Send {...iconProps} />}
+                    onPress={closeThen(() => navigation.navigate('Send'))}
+                />
+            </View>
         );
-    };
-
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>
-    ) => (
-        <View
-            style={{
-                marginLeft: 15,
-                width: 280,
-                flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
-            }}
-        >
-            {this.renderAction(
-                localeString('general.receive'),
-                BackendUtils.supportsCoinControl() ? 210 : 140,
-                progress
-            )}
-            {this.renderAction(localeString('cashu.mints'), 200, progress)}
-            {this.renderAction(localeString('cashu.sendEcash'), 200, progress)}
-            {this.renderAction(
-                localeString('general.send'),
-                BackendUtils.supportsCoinControl() ? 210 : 140,
-                progress
-            )}
-        </View>
-    );
-
-    private swipeableRow?: Swipeable;
-
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
-    };
-
-    private close = () => {
-        if (this.swipeableRow) this.swipeableRow.close();
-    };
-
-    private open = () => {
-        if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
     private handleLnurlRequest = async (
@@ -251,7 +174,6 @@ export default class EcashSwipeableRow extends Component<
             needsConfig,
             navigation
         } = this.props;
-        const { expanded } = this.state;
 
         if (locked && lightning) {
             return (
@@ -273,60 +195,20 @@ export default class EcashSwipeableRow extends Component<
             );
 
         return (
-            <Swipeable
-                ref={this.updateRef}
-                friction={2}
-                enableTrackpadTwoFingerGesture
-                leftThreshold={30}
-                rightThreshold={40}
+            <SwipeableRowContainer
                 renderLeftActions={this.renderActions}
+                onPress={(open) =>
+                    needsConfig
+                        ? navigation.navigate('Mints')
+                        : value
+                        ? this.fetchLnInvoice()
+                        : open()
+                }
                 containerStyle={{ width: '100%' }}
-                onSwipeableWillOpen={() => this.setState({ expanded: true })}
-                onSwipeableWillClose={() => this.setState({ expanded: false })}
+                touchableStyle={{ opacity: needsConfig ? 0.4 : 1 }}
             >
-                <TouchableOpacity
-                    onPress={() =>
-                        needsConfig
-                            ? navigation.navigate('Mints')
-                            : value
-                            ? this.fetchLnInvoice()
-                            : this.open()
-                    }
-                    activeOpacity={1}
-                    style={{ opacity: needsConfig ? 0.4 : 1 }}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded }}
-                    accessibilityActions={[
-                        { name: 'expand' },
-                        { name: 'collapse' }
-                    ]}
-                    onAccessibilityAction={({
-                        nativeEvent: { actionName }
-                    }) => {
-                        if (actionName === 'expand') this.open();
-                        else if (actionName === 'collapse') this.close();
-                    }}
-                >
-                    {children}
-                </TouchableOpacity>
-            </Swipeable>
+                {children}
+            </SwipeableRowContainer>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    actionText: {
-        fontSize: 12,
-        backgroundColor: 'transparent',
-        paddingTop: 10,
-        paddingHorizontal: 4,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    action: {
-        flex: 1,
-        justifyContent: 'center'
-    },
-    view: {
-        alignItems: 'center'
-    }
-});

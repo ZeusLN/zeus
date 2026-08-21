@@ -1,13 +1,5 @@
 import React, { Component } from 'react';
-import {
-    Animated,
-    StyleSheet,
-    Text,
-    View,
-    I18nManager,
-    TouchableOpacity
-} from 'react-native';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import { Animated, View, I18nManager, TouchableOpacity } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
@@ -17,6 +9,9 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import { modalStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
+
+import SwipeableRowAction from './SwipeableRowAction';
+import SwipeableRowContainer from './SwipeableRowContainer';
 
 import Coins from './../../assets/images/SVG/Coins.svg';
 import Receive from './../../assets/images/SVG/Receive.svg';
@@ -39,135 +34,67 @@ interface OnchainSwipeableRowProps {
 @observer
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
-    { expanded: boolean }
+    {}
 > {
-    state = { expanded: false };
-
-    private renderAction = (
-        text: string,
-        x: number,
-        progress: Animated.AnimatedInterpolation<number>
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>,
+        close: () => void
     ) => {
         const { account, navigation } = this.props;
-        const transTranslateX = progress.interpolate({
-            inputRange: [0.25, 1],
-            outputRange: [x, 0]
-        });
-        const transOpacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-        });
-        const pressHandler = () => {
-            this.close();
-
-            if (text === localeString('general.receive')) {
-                navigation.navigate('Receive', {
-                    account: account === 'On-chain' ? 'default' : account,
-                    autoGenerateOnChain: true,
-                    forceOnChain: true
-                });
-            } else if (text === localeString('general.coins')) {
-                navigation.navigate('CoinControl', { account });
-            } else if (text === localeString('general.send')) {
-                navigation.navigate('Send');
-            }
+        const supportsCoinControl = BackendUtils.supportsCoinControl();
+        const width = supportsCoinControl ? 210 : 140;
+        const iconProps = {
+            fill: themeColor('action') || themeColor('highlight'),
+            width: 30,
+            height: 30
+        };
+        const closeThen = (go: () => void) => () => {
+            close();
+            go();
         };
 
         return (
-            <Animated.View
+            <View
                 style={{
-                    flex: 1,
-                    transform: [{ translateX: transTranslateX }],
-                    opacity: transOpacity
+                    marginLeft: 15,
+                    width,
+                    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
                 }}
             >
-                <RectButton style={[styles.action]} onPress={pressHandler}>
-                    <View
-                        style={[styles.view]}
-                        accessible
-                        accessibilityRole="button"
-                    >
-                        {text === localeString('general.coins') && (
-                            <Coins
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
+                <SwipeableRowAction
+                    text={localeString('general.receive')}
+                    x={width}
+                    progress={progress}
+                    icon={<Receive {...iconProps} />}
+                    onPress={closeThen(() =>
+                        navigation.navigate('Receive', {
+                            account:
+                                account === 'On-chain' ? 'default' : account,
+                            autoGenerateOnChain: true,
+                            forceOnChain: true
+                        })
+                    )}
+                />
+                {supportsCoinControl && (
+                    <SwipeableRowAction
+                        text={localeString('general.coins')}
+                        x={200}
+                        progress={progress}
+                        icon={<Coins {...iconProps} />}
+                        onPress={closeThen(() =>
+                            navigation.navigate('CoinControl', { account })
                         )}
-                        {text === localeString('general.receive') && (
-                            <Receive
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.send') && (
-                            <Send
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                ...styles.actionText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {text}
-                        </Text>
-                    </View>
-                </RectButton>
-            </Animated.View>
+                    />
+                )}
+                <SwipeableRowAction
+                    text={localeString('general.send')}
+                    x={width}
+                    progress={progress}
+                    icon={<Send {...iconProps} />}
+                    onPress={closeThen(() => navigation.navigate('Send'))}
+                />
+            </View>
         );
-    };
-
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>
-    ) => (
-        <View
-            style={{
-                marginLeft: 15,
-                width: BackendUtils.supportsCoinControl() ? 210 : 140,
-                flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
-            }}
-        >
-            {this.renderAction(
-                localeString('general.receive'),
-                BackendUtils.supportsCoinControl() ? 210 : 140,
-                progress
-            )}
-            {BackendUtils.supportsCoinControl() &&
-                this.renderAction(localeString('general.coins'), 200, progress)}
-            {this.renderAction(
-                localeString('general.send'),
-                BackendUtils.supportsCoinControl() ? 210 : 140,
-                progress
-            )}
-        </View>
-    );
-
-    private swipeableRow?: Swipeable;
-
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
-    };
-
-    private close = () => {
-        if (this.swipeableRow) this.swipeableRow.close();
-    };
-
-    private open = () => {
-        if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
     private sendToAddress = () => {
@@ -183,7 +110,6 @@ export default class OnchainSwipeableRow extends Component<
     render() {
         const { children, value, locked, hidden, disabled, SyncStore } =
             this.props;
-        const { expanded } = this.state;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -219,53 +145,13 @@ export default class OnchainSwipeableRow extends Component<
                 </View>
             );
         return (
-            <Swipeable
-                ref={this.updateRef}
-                friction={2}
-                enableTrackpadTwoFingerGesture
-                leftThreshold={30}
-                rightThreshold={40}
+            <SwipeableRowContainer
                 renderLeftActions={this.renderActions}
+                onPress={(open) => (value ? this.sendToAddress() : open())}
                 containerStyle={{ width: '100%' }}
-                onSwipeableWillOpen={() => this.setState({ expanded: true })}
-                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
-                <TouchableOpacity
-                    onPress={() => (value ? this.sendToAddress() : this.open())}
-                    activeOpacity={1}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded }}
-                    accessibilityActions={[
-                        { name: 'expand' },
-                        { name: 'collapse' }
-                    ]}
-                    onAccessibilityAction={({
-                        nativeEvent: { actionName }
-                    }) => {
-                        if (actionName === 'expand') this.open();
-                        else if (actionName === 'collapse') this.close();
-                    }}
-                >
-                    {children}
-                </TouchableOpacity>
-            </Swipeable>
+                {children}
+            </SwipeableRowContainer>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    actionText: {
-        fontSize: 12,
-        backgroundColor: 'transparent',
-        paddingTop: 10,
-        paddingHorizontal: 4,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    action: {
-        flex: 1,
-        justifyContent: 'center'
-    },
-    view: {
-        alignItems: 'center'
-    }
-});
