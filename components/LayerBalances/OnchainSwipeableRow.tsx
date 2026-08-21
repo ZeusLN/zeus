@@ -235,6 +235,16 @@ export default class OnchainSwipeableRow extends Component<
                     activeOpacity={1}
                     accessibilityRole="button"
                     accessibilityState={{ expanded }}
+                    accessibilityActions={[
+                        { name: 'expand' },
+                        { name: 'collapse' }
+                    ]}
+                    onAccessibilityAction={({
+                        nativeEvent: { actionName }
+                    }) => {
+                        if (actionName === 'expand') this.open();
+                        else if (actionName === 'collapse') this.close();
+                    }}
                 >
                     {children}
                 </TouchableOpacity>

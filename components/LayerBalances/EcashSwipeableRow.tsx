@@ -296,6 +296,16 @@ export default class EcashSwipeableRow extends Component<
                     style={{ opacity: needsConfig ? 0.4 : 1 }}
                     accessibilityRole="button"
                     accessibilityState={{ expanded }}
+                    accessibilityActions={[
+                        { name: 'expand' },
+                        { name: 'collapse' }
+                    ]}
+                    onAccessibilityAction={({
+                        nativeEvent: { actionName }
+                    }) => {
+                        if (actionName === 'expand') this.open();
+                        else if (actionName === 'collapse') this.close();
+                    }}
                 >
                     {children}
                 </TouchableOpacity>
