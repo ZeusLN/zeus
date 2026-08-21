@@ -6,8 +6,17 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
-    isValidRescueKey
+    isValidRescueKey,
+    verifyReverseSwapInvoice
 } from './SwapUtils';
+
+// regtest BOLT11 vector: 123 sats,
+// payment_hash f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d
+const REVERSE_INVOICE =
+    'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+const REVERSE_INVOICE_HASH =
+    'f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d';
+const REVERSE_INVOICE_SATS = 123;
 
 describe('SwapUtils', () => {
     describe('bigCeil', () => {
@@ -181,6 +190,56 @@ describe('SwapUtils', () => {
                     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art'
                 )
             ).toBe(false);
+        });
+    });
+
+    describe('verifyReverseSwapInvoice', () => {
+        it('accepts an invoice whose hash and amount match', () => {
+            const result = verifyReverseSwapInvoice(
+                REVERSE_INVOICE,
+                REVERSE_INVOICE_HASH,
+                REVERSE_INVOICE_SATS
+            );
+            expect(result.valid).toBe(true);
+        });
+
+        it('accepts a hash regardless of casing', () => {
+            const result = verifyReverseSwapInvoice(
+                REVERSE_INVOICE,
+                REVERSE_INVOICE_HASH.toUpperCase(),
+                REVERSE_INVOICE_SATS
+            );
+            expect(result.valid).toBe(true);
+        });
+
+        it('rejects a payment-hash mismatch (malicious host)', () => {
+            const result = verifyReverseSwapInvoice(
+                REVERSE_INVOICE,
+                'f'.repeat(64),
+                REVERSE_INVOICE_SATS
+            );
+            expect(result.valid).toBe(false);
+            expect(result.reason).toBe('payment-hash-mismatch');
+        });
+
+        it('rejects an amount mismatch even when the hash matches', () => {
+            const result = verifyReverseSwapInvoice(
+                REVERSE_INVOICE,
+                REVERSE_INVOICE_HASH,
+                REVERSE_INVOICE_SATS + 1
+            );
+            expect(result.valid).toBe(false);
+            expect(result.reason).toBe('amount-mismatch');
+        });
+
+        it('rejects an undecodable invoice', () => {
+            const result = verifyReverseSwapInvoice(
+                'not-a-real-invoice',
+                REVERSE_INVOICE_HASH,
+                REVERSE_INVOICE_SATS
+            );
+            expect(result.valid).toBe(false);
+            expect(result.reason).toBe('undecodable');
         });
     });
 });
