@@ -23,6 +23,7 @@ import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -115,6 +116,33 @@ export default class AddMint extends React.Component<
             });
             return;
         }
+
+        // A cleartext http:// mint exposes invoices, proofs, and quote state
+        // to any network observer and lets a MITM fabricate quote/melt
+        // outcomes, so require an explicit confirmation before contacting it.
+        if (UrlUtils.isCleartextHttpTransport(mintUrl)) {
+            confirmAction(
+                localeString('general.warning'),
+                localeString('views.Cashu.AddMint.cleartextHttpWarning'),
+                {
+                    text: localeString('general.proceed'),
+                    style: 'destructive',
+                    onPress: () => this.performGetMintInfo()
+                },
+                {
+                    text: localeString('general.cancel'),
+                    onPress: () => void 0,
+                    isPreferred: true
+                }
+            );
+            return;
+        }
+
+        this.performGetMintInfo();
+    };
+
+    private performGetMintInfo = async () => {
+        const { mintUrl } = this.state;
         this.setState({
             loading: true,
             error: false,

@@ -125,6 +125,43 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
+// Returns true when an explicit http:// scheme would carry traffic across
+// the network in cleartext. Onion services are authenticated and encrypted
+// at the Tor layer and loopback never leaves the device, so neither counts.
+// Parses with URL so hosts hidden behind userinfo (http://127.0.0.1@evil.com),
+// fragments (http://evil.com#foo.onion), or spoofed prefixes
+// (http://127.0.0.1.evil.com) are not mistaken for exempt hosts.
+const isCleartextHttpTransport = (urlString?: string): boolean => {
+    if (!urlString) return false;
+    const trimmed = urlString.trim();
+    if (!trimmed.toLowerCase().startsWith('http://')) return false;
+
+    let hostname: string;
+    try {
+        hostname = new URL(trimmed).hostname;
+    } catch {
+        // Unparseable http:// input: fail closed and warn.
+        return true;
+    }
+
+    if (hostname.endsWith('.onion')) return false;
+
+    // Loopback: localhost, ::1 (URL serializes IPv6 hosts in brackets), or
+    // an IPv4 address in 127.0.0.0/8. The URL parser canonicalizes IPv4
+    // shorthand (127.1, 0x7f.1) to dotted-quad form before this check.
+    if (hostname === 'localhost' || hostname === '[::1]') return false;
+    const octets = hostname.split('.');
+    if (
+        octets.length === 4 &&
+        octets.every((o) => /^\d{1,3}$/.test(o) && Number(o) <= 255) &&
+        octets[0] === '127'
+    ) {
+        return false;
+    }
+
+    return true;
+};
+
 const goToBlockExplorerTXID = (txid: string, testnet?: boolean) =>
     goToBlockExplorer('tx', txid, testnet);
 const goToBlockExplorerAddress = (address: string, testnet?: boolean) =>
@@ -169,6 +206,7 @@ const leaveZeus = (url: string) => {
 export default {
     isValidUrl,
     withScheme,
+    isCleartextHttpTransport,
     getMempoolApiUrl,
     getMempoolInstanceHost,
     goToBlockExplorerTXID,
