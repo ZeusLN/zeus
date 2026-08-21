@@ -314,6 +314,7 @@ export default class LightningSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled }}
                 >
                     {children}
                 </TouchableOpacity>

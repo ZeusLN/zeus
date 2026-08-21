@@ -133,6 +133,7 @@ export default class OnchainSwipeableRow extends Component<
                     activeOpacity={1}
                     style={{ width: '100%' }}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled }}
                 >
                     {children}
                 </TouchableOpacity>
