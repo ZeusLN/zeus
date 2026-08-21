@@ -4,7 +4,11 @@ jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/docs',
     CachesDirectoryPath: '/cache',
     exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined)
+    unlink: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: jest.fn()
 }));
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),

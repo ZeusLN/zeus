@@ -12,7 +12,13 @@ jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/docs',
     CachesDirectoryPath: '/cache',
     exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined)
+    unlink: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined)
+}));
+
+const mockSaveDocuments = jest.fn();
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: (...args: any[]) => mockSaveDocuments(...args)
 }));
 
 import { Platform } from 'react-native';
@@ -27,6 +33,7 @@ import {
     isValidRescueKey,
     verifyReverseSwapInvoice,
     purgeLegacyRescueKeyFiles,
+    saveRescueKeyFile,
     unlinkRescueKeyStagingFile,
     RESCUE_KEY_FILENAME
 } from './SwapUtils';
@@ -334,6 +341,79 @@ describe('SwapUtils', () => {
             exists.mockResolvedValue(true);
             unlink.mockRejectedValue(new Error('EBUSY'));
             await expect(unlinkRescueKeyStagingFile()).resolves.toBeUndefined();
+        });
+    });
+
+    describe('saveRescueKeyFile', () => {
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
+        const writeFile = RNFS.writeFile as jest.Mock;
+        const stagingPath = `/cache/${RESCUE_KEY_FILENAME}`;
+        const mnemonic = 'abandon ability able about above absent';
+
+        beforeEach(() => {
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
+            writeFile.mockReset().mockResolvedValue(undefined);
+            mockSaveDocuments
+                .mockReset()
+                .mockResolvedValue([
+                    { uri: 'content://saved', name: null, error: null }
+                ]);
+        });
+
+        it('stages the mnemonic JSON and presents the system save dialog', async () => {
+            await saveRescueKeyFile(mnemonic);
+
+            expect(writeFile).toHaveBeenCalledWith(
+                stagingPath,
+                JSON.stringify({ mnemonic }, null, 2),
+                'utf8'
+            );
+            expect(mockSaveDocuments).toHaveBeenCalledWith({
+                sourceUris: [`file://${stagingPath}`],
+                fileName: RESCUE_KEY_FILENAME,
+                mimeType: 'application/json',
+                copy: true
+            });
+        });
+
+        it('removes the staging file after a successful save', async () => {
+            // The staging file exists once written; the finally-unlink must
+            // see and delete it.
+            writeFile.mockImplementation(async () => {
+                exists.mockResolvedValue(true);
+            });
+
+            await saveRescueKeyFile(mnemonic);
+
+            expect(unlink).toHaveBeenCalledWith(stagingPath);
+        });
+
+        it('removes the staging file and rethrows when the user cancels the dialog', async () => {
+            writeFile.mockImplementation(async () => {
+                exists.mockResolvedValue(true);
+            });
+            mockSaveDocuments.mockRejectedValue(
+                Object.assign(new Error('user canceled'), {
+                    code: 'OPERATION_CANCELED'
+                })
+            );
+
+            await expect(saveRescueKeyFile(mnemonic)).rejects.toMatchObject({
+                code: 'OPERATION_CANCELED'
+            });
+            expect(unlink).toHaveBeenCalledWith(stagingPath);
+        });
+
+        it('throws when the save dialog reports a write error', async () => {
+            mockSaveDocuments.mockResolvedValue([
+                { uri: 'content://saved', name: null, error: 'write failed' }
+            ]);
+
+            await expect(saveRescueKeyFile(mnemonic)).rejects.toThrow(
+                'write failed'
+            );
         });
     });
 });

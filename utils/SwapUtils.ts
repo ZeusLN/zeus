@@ -1,6 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
+import { saveDocuments } from '@react-native-documents/picker';
 import { validateMnemonic } from '@scure/bip39';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
@@ -90,11 +91,10 @@ export const purgeLegacyRescueKeyFiles = async (): Promise<void> => {
     }
 };
 
-// Share-sheet staging file for the rescue-key export. App-private cache on
-// both platforms. On Android the file must outlive the Share.open call
-// (react-native-share resolves when the user picks a target, while the
-// receiving app reads the FileProvider URI afterwards), so cleanup happens
-// on the next launch and in the wipe paths rather than right after sharing.
+// Staging file for the rescue-key export, in app-private cache on both
+// platforms. saveRescueKeyFile removes it before returning; the launch-time
+// and wipe-path unlinks are belt-and-braces for saves interrupted by a
+// crash and for files staged by earlier share-sheet builds of this flow.
 export const rescueKeyStagingPath = `${RNFS.CachesDirectoryPath}/${RESCUE_KEY_FILENAME}`;
 
 export const unlinkRescueKeyStagingFile = async (): Promise<void> => {
@@ -104,6 +104,36 @@ export const unlinkRescueKeyStagingFile = async (): Promise<void> => {
         }
     } catch (e) {
         console.warn('[SwapUtils] Error deleting rescue key staging file:', e);
+    }
+};
+
+// Exports the rescue key as plaintext JSON through the system save dialog,
+// staged from app-private cache. Unlike a share sheet, saveDocuments copies
+// the staged file into the user-chosen destination before resolving - there
+// are no lazy readers, so the staging copy is always removed before this
+// returns. The dialog is also the only Android path that can write to local
+// device storage (the share sheet offers no save-to-device target). Rejects
+// with code OPERATION_CANCELED when the user dismisses the dialog.
+export const saveRescueKeyFile = async (mnemonic: string): Promise<void> => {
+    try {
+        await unlinkRescueKeyStagingFile();
+        await RNFS.writeFile(
+            rescueKeyStagingPath,
+            JSON.stringify({ mnemonic }, null, 2),
+            'utf8'
+        );
+
+        const [result] = await saveDocuments({
+            sourceUris: [`file://${rescueKeyStagingPath}`],
+            fileName: RESCUE_KEY_FILENAME,
+            mimeType: 'application/json',
+            copy: true
+        });
+        if (result?.error) {
+            throw new Error(result.error);
+        }
+    } finally {
+        await unlinkRescueKeyStagingFile();
     }
 };
 

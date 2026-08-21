@@ -674,7 +674,7 @@ export async function clearAllData(): Promise<void> {
 
     // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
     // the app sandbox (public Downloads on Android, Files-visible Documents
-    // on iOS); the share-sheet staging copy lives in app cache, which
+    // on iOS); the save-dialog staging copy lives in app cache, which
     // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();

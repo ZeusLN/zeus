@@ -638,11 +638,11 @@ class MigrationsUtils {
 
     // Rescue-key export file cleanup, in two parts with different cadences.
     //
-    // Staging file: the share-sheet export stages the mnemonic in app cache,
-    // and on Android the file must outlive Share.open (receivers read the
-    // FileProvider URI after the promise resolves), so it is deleted here on
-    // the NEXT launch instead - every launch, never one-shot, since a new
-    // staging file can appear after any share.
+    // Staging file: the save-dialog export stages the mnemonic in app cache
+    // and removes it before returning, so this launch-time unlink is
+    // belt-and-braces for saves interrupted by a crash and for files staged
+    // by earlier share-sheet builds of this flow - every launch, never
+    // one-shot, since a new staging file can appear after any export.
     //
     // Legacy shared-storage files: older builds' download wrote the mnemonic
     // as plaintext JSON into shared storage (Android public Downloads, iOS

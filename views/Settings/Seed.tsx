@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import {
     Alert,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import RNFS from 'react-native-fs';
-import Share from 'react-native-share';
+import { errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,9 +34,8 @@ import {
     REVERSE_SWAPS_KEY,
     SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY,
-    RESCUE_KEY_FILENAME,
     purgeLegacyRescueKeyFiles,
-    rescueKeyStagingPath,
+    saveRescueKeyFile,
     unlinkRescueKeyStagingFile
 } from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -307,52 +304,38 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             </TouchableOpacity>
         );
 
-        const ShareRescueKey = ({ seedPhrase }: { seedPhrase: string[] }) => {
+        const SaveRescueKey = ({ seedPhrase }: { seedPhrase: string[] }) => {
             // Stage the rescue file in app-private cache and hand it to the
-            // system share sheet so the user explicitly picks the
+            // system save dialog so the user explicitly picks the
             // destination. Never write it to shared storage directly: files
             // dropped in Downloads/Documents are readable by other tooling
             // and outlive the app.
-            const shareRescueKeyFile = async () => {
+            const saveRescueKey = async () => {
                 try {
-                    const mnemonic = seedPhrase.join(' ');
-                    const jsonData = JSON.stringify({ mnemonic }, null, 2);
-
-                    await unlinkRescueKeyStagingFile();
-                    await RNFS.writeFile(
-                        rescueKeyStagingPath,
-                        jsonData,
-                        'utf8'
+                    await saveRescueKeyFile(seedPhrase.join(' '));
+                    Alert.alert(
+                        localeString('general.success'),
+                        localeString('views.Swaps.rescueKey.saveSuccess')
                     );
-
-                    const result = await Share.open({
-                        title: localeString('views.Swaps.rescueKey.share'),
-                        url: `file://${rescueKeyStagingPath}`,
-                        type: 'application/json',
-                        filename: RESCUE_KEY_FILENAME,
-                        failOnCancel: false
-                    });
-
-                    // On Android, Share.open resolves when the user picks a
-                    // target, while the receiving app reads the FileProvider
-                    // URI afterwards - deleting the file here would race the
-                    // read. Unlink immediately only when no receiver ever got
-                    // the URI (iOS resolves after the share completes; a
-                    // dismissed chooser has no receiver). Otherwise the file
-                    // is cleaned up on the next launch and in the wipe paths.
-                    if (Platform.OS === 'ios' || result.dismissedAction) {
-                        await unlinkRescueKeyStagingFile();
-                    }
                 } catch (error) {
-                    console.error('Rescue key share failed:', error);
-                    await unlinkRescueKeyStagingFile();
+                    if (
+                        isErrorWithCode(error) &&
+                        error.code === errorCodes.OPERATION_CANCELED
+                    ) {
+                        return;
+                    }
+                    console.error('Rescue key save failed:', error);
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString('views.Swaps.rescueKey.saveError')
+                    );
                 }
             };
 
-            const handleShare = () => {
+            const handleSave = () => {
                 Alert.alert(
                     localeString('general.warning'),
-                    localeString('views.Swaps.rescueKey.shareWarning'),
+                    localeString('views.Swaps.rescueKey.saveWarning'),
                     [
                         {
                             text: localeString('general.cancel'),
@@ -360,16 +343,16 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         },
                         {
                             text: localeString('general.proceed'),
-                            onPress: () => shareRescueKeyFile()
+                            onPress: () => saveRescueKey()
                         }
                     ]
                 );
             };
 
             return (
-                <TouchableOpacity onPress={handleShare}>
+                <TouchableOpacity onPress={handleSave}>
                     <Icon
-                        name="share"
+                        name="save"
                         type="feather"
                         color={themeColor('text')}
                         underlayColor="transparent"
@@ -401,7 +384,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         understood && seedPhrase ? (
                             <Row>
                                 {isRefundRescueKey ? (
-                                    <ShareRescueKey seedPhrase={seedPhrase} />
+                                    <SaveRescueKey seedPhrase={seedPhrase} />
                                 ) : (
                                     <></>
                                 )}
