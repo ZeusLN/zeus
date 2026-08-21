@@ -1219,9 +1219,10 @@ describe('handleAnything', () => {
         });
 
         it('should handle BTCPay config URL with digit sequences (matches \\d{10} pattern)', async () => {
-            // BTCPay config URL containing 10+ digit sequence in port
+            // BTCPay config URL containing a 10+ digit sequence; kept in the
+            // query so the URL stays well-formed (a >65535 port is rejected).
             const btcPayUrl =
-                'config=https://btcpay.example.com:12345678901/lnd.config';
+                'config=https://btcpay.example.com:8080/lnd.config?token=12345678901';
             mockProcessBIP21Uri.mockImplementation((input: string) => ({
                 value: input
             }));
@@ -1242,8 +1243,63 @@ describe('handleAnything', () => {
             expect(mockProcessBIP21Uri).toHaveBeenCalledWith(btcPayUrl);
             // Should be handled as BTCPay config, NOT converted to merchant QR
             expect(result[0]).toBe('WalletConfiguration');
+            // Fetches the canonicalized URL (not the raw QR string), with a
+            // public clearnet host (not onion, not private).
             expect(settingsStore.fetchBTCPayConfig).toHaveBeenCalledWith(
-                btcPayUrl
+                'https://btcpay.example.com:8080/lnd.config?token=12345678901',
+                false,
+                false
+            );
+        });
+
+        it('should reject a BTCPay config QR whose URL embeds credentials', async () => {
+            // The displayed host (btcpay.trusted.com) differs from the host
+            // actually contacted (evil.example); classify must refuse this.
+            const btcPayUrl =
+                'config=https://btcpay.trusted.com@evil.example/lnd.config';
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+
+            const { settingsStore } = require('../stores/Stores');
+            settingsStore.fetchBTCPayConfig = jest.fn();
+            settingsStore.btcPayError = null;
+
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            const result = await handleAnything(btcPayUrl);
+
+            expect(alertSpy).toHaveBeenCalled();
+            expect(settingsStore.fetchBTCPayConfig).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+            alertSpy.mockRestore();
+        });
+
+        it('should mark a private-range BTCPay host so the fetch skips Tor', async () => {
+            const btcPayUrl = 'config=http://192.168.1.5:8080/lnd.config';
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+
+            const { settingsStore } = require('../stores/Stores');
+            settingsStore.fetchBTCPayConfig = jest.fn().mockResolvedValue({
+                host: 'http://192.168.1.5',
+                port: '8080',
+                macaroonHex: 'abc123'
+            });
+            settingsStore.btcPayError = null;
+
+            const alertSpy = answerBtcPayConfirm('proceed');
+            const result = await handleAnything(btcPayUrl);
+            alertSpy.mockRestore();
+
+            expect(result[0]).toBe('WalletConfiguration');
+            // isOnion=false, isPrivate=true -> caller can keep the fetch off Tor.
+            expect(settingsStore.fetchBTCPayConfig).toHaveBeenCalledWith(
+                'http://192.168.1.5:8080/lnd.config',
+                false,
+                true
             );
         });
 
