@@ -74,6 +74,11 @@ export default class CurrencyConverterContent extends React.Component<
     CurrencyConverterContentState
 > {
     private blurListener: (() => void) | undefined;
+    // react-native-draglist suffixes every row key with a generation counter
+    // that increments whenever `data` changes identity, remounting all rows
+    // and dismissing the keyboard mid-typing. Reuse the same array while the
+    // currency set is unchanged so value edits never remount the inputs.
+    private currencyKeys: string[] = [];
     constructor(props: CurrencyConverterContentProps) {
         super(props);
         this.state = {
@@ -384,6 +389,17 @@ export default class CurrencyConverterContent extends React.Component<
         ]).start();
     };
 
+    getStableCurrencyKeys = (): string[] => {
+        const keys = Object.keys(this.state.inputValues);
+        if (
+            keys.length !== this.currencyKeys.length ||
+            keys.some((key, index) => key !== this.currencyKeys[index])
+        ) {
+            this.currencyKeys = keys;
+        }
+        return this.currencyKeys;
+    };
+
     handleAddPress = () => {
         const { navigation, fromModal, onNavigateAway } = this.props;
         if (onNavigateAway) onNavigateAway();
@@ -526,7 +542,7 @@ export default class CurrencyConverterContent extends React.Component<
                     >
                         <TypedDragList
                             onReordered={this.onReordered}
-                            data={Object.keys(inputValues)}
+                            data={this.getStableCurrencyKeys()}
                             keyExtractor={(item) => String(item)}
                             scrollEnabled={false}
                             renderItem={({
