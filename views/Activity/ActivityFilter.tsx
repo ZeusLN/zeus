@@ -118,7 +118,17 @@ export default class ActivityFilter extends React.Component<
         const { filters, setFilters } = ActivityStore;
         const locale = SettingsStore.settings.locale;
 
-        const newFilters = JSON.parse(JSON.stringify(filters));
+        // The JSON round-trip deep-clones the filters but turns the
+        // startDate/endDate Date instances into ISO strings, which throws
+        // downstream (getFullYear in ActivityFilterUtils, toLocaleDateString
+        // in render). Revive them like ActivityStore.getFilters does.
+        const newFilters: Filter = JSON.parse(
+            JSON.stringify(filters),
+            (key, value) =>
+                (key === 'startDate' || key === 'endDate') && value
+                    ? new Date(value)
+                    : value
+        );
 
         const toggleAllSwapFilters = (shouldTurnOn: boolean) => {
             newFilters.swaps = shouldTurnOn;
