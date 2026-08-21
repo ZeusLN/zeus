@@ -106,19 +106,35 @@ export default class SelectCurrency extends React.Component<
                 }}
                 onPress={async () => {
                     if (currencyConverter && fromModal) {
-                        const inputValuesString = await Storage.getItem(
-                            CURRENCY_CODES_KEY
-                        );
-                        const inputValues = inputValuesString
-                            ? JSON.parse(inputValuesString)
-                            : {};
-                        if (!inputValues.hasOwnProperty(item.value)) {
-                            inputValues[item.value] = '';
-                            await Storage.setItem(
-                                CURRENCY_CODES_KEY,
-                                inputValues
+                        try {
+                            const inputValuesString = await Storage.getItem(
+                                CURRENCY_CODES_KEY
+                            );
+                            let inputValues: { [key: string]: string } = {};
+                            if (inputValuesString) {
+                                try {
+                                    inputValues = JSON.parse(inputValuesString);
+                                } catch {
+                                    // Unreadable blob: rebuild it below so
+                                    // adding a currency self-heals instead
+                                    // of dead-ending the tap.
+                                }
+                            }
+                            if (!inputValues.hasOwnProperty(item.value)) {
+                                inputValues[item.value] = '';
+                                await Storage.setItem(
+                                    CURRENCY_CODES_KEY,
+                                    inputValues
+                                );
+                            }
+                        } catch (error) {
+                            console.error(
+                                'Error adding currency to converter:',
+                                error
                             );
                         }
+                        // Always return to the converter modal, even if
+                        // storage failed, so the tap never appears dead.
                         navigation.goBack();
                     } else if (currencyConverter) {
                         navigation.popTo('CurrencyConverter', {
