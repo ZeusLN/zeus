@@ -13,7 +13,12 @@ jest.mock('../stores/Stores', () => ({
         setSettings: jest.fn()
     }
 }));
-jest.mock('../stores/ChannelBackupStore', () => ({}));
+jest.mock('../stores/ChannelBackupStore', () => ({
+    LEGACY_LAST_CHANNEL_BACKUP_STATUS: 'LAST_CHANNEL_BACKUP_STATUS',
+    LEGACY_LAST_CHANNEL_BACKUP_TIME: 'LAST_CHANNEL_BACKUP_TIME',
+    LAST_CHANNEL_BACKUP_STATUS: 'zeus-last-channel-backup-status',
+    LAST_CHANNEL_BACKUP_TIME: 'zeus-last-channel-backup-time'
+}));
 jest.mock('../stores/LightningAddressStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
@@ -806,6 +811,43 @@ describe('MigrationUtils', () => {
                 'Error saving migrated Cashu seed version:',
                 expect.any(Error)
             );
+        });
+    });
+
+    describe('migrateScbBackupFormat', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const Storage = require('../storage');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            Storage.removeItem.mockReset();
+        });
+
+        it('clears backup status/time markers and sets the flag on first run', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+
+            await MigrationUtils.migrateScbBackupFormat();
+
+            expect(Storage.removeItem).toHaveBeenCalledWith(
+                'zeus-last-channel-backup-status'
+            );
+            expect(Storage.removeItem).toHaveBeenCalledWith(
+                'zeus-last-channel-backup-time'
+            );
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'scb-gcm-reupload',
+                'true'
+            );
+        });
+
+        it('is a no-op when the flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.migrateScbBackupFormat();
+
+            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 });

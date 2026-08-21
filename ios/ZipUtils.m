@@ -361,4 +361,56 @@ RCT_EXPORT_METHOD(decryptFile:(NSString *)inputPath
     });
 }
 
+#pragma mark - Encrypt (string)
+
+RCT_EXPORT_METHOD(encryptString:(NSString *)plaintextBase64
+                  passphrase:(NSString *)passphrase
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSData *plaintext = [[NSData alloc] initWithBase64EncodedString:plaintextBase64
+                                                                options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        if (!plaintext) {
+            reject(@"ERR_ENCRYPT", @"Invalid base64 input", nil);
+            return;
+        }
+
+        NSError *error = nil;
+        NSData *output = [CryptoHelper encryptData:plaintext passphrase:passphrase error:&error];
+        if (!output) {
+            reject(@"ERR_ENCRYPT", error.localizedDescription ?: @"Encryption failed", error);
+            return;
+        }
+
+        resolve([output base64EncodedStringWithOptions:0]);
+    });
+}
+
+#pragma mark - Decrypt (string)
+
+RCT_EXPORT_METHOD(decryptString:(NSString *)dataBase64
+                  passphrase:(NSString *)passphrase
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSData *fileData = [[NSData alloc] initWithBase64EncodedString:dataBase64
+                                                               options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        if (!fileData) {
+            reject(@"ERR_DECRYPT", @"Invalid base64 input", nil);
+            return;
+        }
+
+        NSError *error = nil;
+        NSData *plaintext = [CryptoHelper decryptData:fileData passphrase:passphrase error:&error];
+        if (!plaintext) {
+            reject(@"ERR_DECRYPT", error.localizedDescription ?: @"Decryption failed. Incorrect seed or corrupted file.", error);
+            return;
+        }
+
+        resolve([plaintext base64EncodedStringWithOptions:0]);
+    });
+}
+
 @end
