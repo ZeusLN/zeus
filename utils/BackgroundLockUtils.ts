@@ -1,4 +1,4 @@
-import { AppState } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 
 import type SettingsStore from '../stores/SettingsStore';
 
@@ -12,12 +12,20 @@ import type SettingsStore from '../stores/SettingsStore';
 // This module lets such flows suppress that one lock without weakening the
 // lock's intent:
 // - Only the lock fired while the dialog is up is skipped.
-// - If the flow settles while the app is genuinely backgrounded (the user
+// - If the app does not foreground shortly after the flow settles (the user
 //   left to another app), or the dialog was up longer than
 //   BACKGROUND_LOCK_SUPPRESSION_MAX_MS, the lock is re-armed so returning
 //   still requires login, matching the previous behavior.
+//
+// The "left the app" check must be deferred, not read off AppState at settle
+// time: on Android a canceled or completed picker delivers its result via
+// onActivityResult, which runs BEFORE onResume, so the flow's promise settles
+// while AppState still reads 'background' even though the user is returning
+// to the app. Only the absence of the imminent 'active' transition within
+// BACKGROUND_LOCK_REARM_GRACE_MS means the user actually left.
 
 export const BACKGROUND_LOCK_SUPPRESSION_MAX_MS = 60 * 1000;
+export const BACKGROUND_LOCK_REARM_GRACE_MS = 2 * 1000;
 
 let suppressionActive = false;
 let lockWasSkipped = false;
@@ -29,6 +37,27 @@ export const shouldSkipBackgroundLock = (): boolean => {
     lockWasSkipped = true;
     return true;
 };
+
+// Resolves true if the app foregrounds within the re-arm grace window,
+// false if it is still backgrounded when the window closes.
+const returnsToForeground = (): Promise<boolean> =>
+    new Promise((resolve) => {
+        const settle = (returned: boolean) => {
+            clearTimeout(timer);
+            subscription.remove();
+            resolve(returned);
+        };
+        const subscription = AppState.addEventListener(
+            'change',
+            (status: AppStateStatus) => {
+                if (status === 'active') settle(true);
+            }
+        );
+        const timer = setTimeout(
+            () => settle(false),
+            BACKGROUND_LOCK_REARM_GRACE_MS
+        );
+    });
 
 // Runs a flow that presents a system dialog (share sheet, document picker,
 // save dialog) with background-lock suppression, restoring normal lock
@@ -48,18 +77,23 @@ export const suppressBackgroundLockDuring = async <T>(
         suppressionActive = false;
         lockWasSkipped = false;
 
-        // Re-arm the lock if the user actually left the app (the flow
-        // settled while backgrounded, e.g. a share target was opened or the
-        // dialog was dismissed from the app switcher) or the dialog was up
-        // long enough that skipping the lock is no longer defensible.
-        const leftApp = AppState.currentState === 'background';
         if (
             skipped &&
-            (leftApp || elapsed > BACKGROUND_LOCK_SUPPRESSION_MAX_MS) &&
             settingsStore.settings?.loginBackground &&
             settingsStore.loginMethodConfigured()
         ) {
-            settingsStore.setLoginStatus(false);
+            // Re-arm the lock if the dialog was up long enough that skipping
+            // the lock is no longer defensible, or the user actually left
+            // the app (it never foregrounded after the flow settled, e.g. a
+            // share target was opened or the dialog was dismissed from the
+            // app switcher).
+            const overdue = elapsed > BACKGROUND_LOCK_SUPPRESSION_MAX_MS;
+            const leftApp = async () =>
+                AppState.currentState !== 'active' &&
+                !(await returnsToForeground());
+            if (overdue || (await leftApp())) {
+                settingsStore.setLoginStatus(false);
+            }
         }
     }
 };
