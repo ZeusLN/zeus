@@ -83,9 +83,18 @@ export default class CurrencySelectorModal extends React.Component<
         this.close();
     };
 
-    handleConverterNavigateAway = () => {
+    handleConverterNavigateAway = (navigate: () => void) => {
         this.pendingReopen = true;
-        this.close();
+        // Skip the slide-down animation: its completion is what dismisses
+        // the underlying dialog window, and Android stops driving it once a
+        // pushed screen occludes the window, leaving an invisible dialog
+        // that eats every tap on Select Currency (#4451). Dismiss
+        // immediately and only navigate once the closed state is committed.
+        if (this.modalRef.current) {
+            this.modalRef.current.closeImmediate(navigate);
+        } else {
+            navigate();
+        }
     };
 
     render() {
