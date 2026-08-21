@@ -1967,7 +1967,7 @@
     "views.Settings.Bolt12Address.requestButton": "Vyžádat platební kód",
     "views.Settings.Bolt12Address.changeButton": "Změnit platební kód",
     "views.Settings.Bolt12Address.handle": "Vaše ovládání",
-    "views.Settings.Bolt12Address.offer": "Offer",
+    "views.Settings.Bolt12Address.offer": "Nabídka",
     "views.Settings.Bolt12Address.error.noBolt12": "Nebyla nalezena žádná BOLT 12 nabídka",
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Získání nabídky selhalo",
     "views.Settings.Bolt12Address.error.handleTaken": "Ovládání je převzato",
