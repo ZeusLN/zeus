@@ -75,6 +75,7 @@ interface SweepremoteclosedState {
     sleepSeconds: string;
     recoveryWindow: string;
     loading: boolean;
+    feeLoadingError: boolean;
     error: string;
 }
 
@@ -94,6 +95,7 @@ export default class Sweepremoteclosed extends React.Component<
         recoveryWindow: '200',
         sleepSeconds: '0',
         loading: false,
+        feeLoadingError: false,
         error: ''
     };
 
@@ -109,6 +111,7 @@ export default class Sweepremoteclosed extends React.Component<
             recoveryWindow,
             sleepSeconds,
             loading,
+            feeLoadingError,
             error
         } = this.state;
 
@@ -241,7 +244,13 @@ export default class Sweepremoteclosed extends React.Component<
                                     fee={feeRate}
                                     onChangeFee={(text: string) => {
                                         this.setState({
-                                            feeRate: text
+                                            feeRate: text,
+                                            feeLoadingError: false
+                                        });
+                                    }}
+                                    onFeeError={(error: boolean) => {
+                                        this.setState({
+                                            feeLoadingError: error
                                         });
                                     }}
                                     navigation={navigation}
@@ -377,7 +386,12 @@ export default class Sweepremoteclosed extends React.Component<
                                     title={localeString(
                                         'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start'
                                     )}
-                                    disabled={!sweepAddr || loading}
+                                    disabled={
+                                        !sweepAddr ||
+                                        loading ||
+                                        feeLoadingError ||
+                                        !(Number(feeRate) > 0)
+                                    }
                                     onPress={async () => {
                                         this.setState({
                                             error: '',
@@ -392,8 +406,8 @@ export default class Sweepremoteclosed extends React.Component<
                                                                 sweepAddr,
                                                             feeRateSatsPerVbyte:
                                                                 Number(
-                                                                    feeRate || 2
-                                                                ),
+                                                                    feeRate
+                                                                ) || 2,
                                                             sleepSeconds:
                                                                 Number(
                                                                     sleepSeconds ||
@@ -427,9 +441,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                             recoveryWindow ||
                                                                 200
                                                         ),
-                                                        feeRate: Number(
-                                                            feeRate || 2
-                                                        ),
+                                                        feeRate:
+                                                            Number(feeRate) ||
+                                                            2,
                                                         sleepSeconds: Number(
                                                             sleepSeconds || 0
                                                         ),
