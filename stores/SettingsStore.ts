@@ -169,6 +169,7 @@ interface LightningAddressSettings {
 
 interface Bolt12AddressSettings {
     localPart: string;
+    offer?: string;
 }
 
 interface EcashSettings {

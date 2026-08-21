@@ -1967,6 +1967,7 @@
     "views.Settings.Bolt12Address.requestButton": "Request Paycode",
     "views.Settings.Bolt12Address.changeButton": "Change Paycode",
     "views.Settings.Bolt12Address.handle": "Your handle",
+    "views.Settings.Bolt12Address.offer": "Offer",
     "views.Settings.Bolt12Address.error.noBolt12": "No BOLT 12 offer found",
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Failed to get offer",
     "views.Settings.Bolt12Address.error.handleTaken": "Handle is taken",
