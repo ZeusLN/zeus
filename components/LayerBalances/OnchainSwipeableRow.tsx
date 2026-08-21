@@ -194,6 +194,7 @@ export default class OnchainSwipeableRow extends Component<
                         })
                     }
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     <View style={{ opacity: 0.25 }}>{children}</View>
                 </TouchableOpacity>
@@ -205,6 +206,7 @@ export default class OnchainSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.sendToAddress())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     {children}
                 </TouchableOpacity>

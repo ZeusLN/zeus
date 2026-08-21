@@ -259,6 +259,7 @@ export default class EcashSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     {children}
                 </TouchableOpacity>

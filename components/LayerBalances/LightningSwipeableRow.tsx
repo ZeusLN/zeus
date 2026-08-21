@@ -378,6 +378,7 @@ export default class LightningSwipeableRow extends Component<
                             text: localeString('views.Wallet.waitForSync')
                         })
                     }
+                    accessibilityRole="button"
                 >
                     <View style={{ opacity: 0.25 }}>{children}</View>
                 </TouchableOpacity>
@@ -395,6 +396,7 @@ export default class LightningSwipeableRow extends Component<
                 <TouchableOpacity
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
+                    accessibilityRole="button"
                 >
                     {children}
                 </TouchableOpacity>
