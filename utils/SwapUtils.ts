@@ -1,4 +1,7 @@
 import BigNumber from 'bignumber.js';
+import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
+import { saveDocuments } from '@react-native-documents/picker';
 import { validateMnemonic } from '@scure/bip39';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
@@ -58,6 +61,81 @@ export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
 
 export const RESCUE_KEY_WORD_COUNT = 12;
+
+export const RESCUE_KEY_FILENAME = 'rescue_key.json';
+
+// Older builds' rescue-key download wrote the mnemonic as plaintext JSON to
+// shared storage: the public Downloads dir on Android and the Files-app
+// visible Documents dir on iOS. Those files outlive the app, so they must be
+// purged wherever the rescue key itself is deleted. The paths must stay in
+// sync with the legacy writer, which used RNFS.DownloadDirectoryPath (public
+// /sdcard/Download) and RNFS.DocumentDirectoryPath. Best-effort only: under
+// Android scoped storage the file can only be removed by the install that
+// created it, and a failed unlink can never succeed on a later retry.
+export const purgeLegacyRescueKeyFiles = async (): Promise<void> => {
+    const dir =
+        Platform.OS === 'android'
+            ? RNFS.DownloadDirectoryPath
+            : RNFS.DocumentDirectoryPath;
+    const path = `${dir}/${RESCUE_KEY_FILENAME}`;
+    try {
+        if (await RNFS.exists(path)) {
+            await RNFS.unlink(path);
+            console.log('[SwapUtils] Legacy rescue key file deleted:', path);
+        }
+    } catch (e) {
+        console.warn(
+            `[SwapUtils] Error deleting legacy rescue key file ${path}:`,
+            e
+        );
+    }
+};
+
+// Staging file for the rescue-key export, in app-private cache on both
+// platforms. saveRescueKeyFile removes it before returning; the launch-time
+// and wipe-path unlinks are belt-and-braces for saves interrupted by a
+// crash and for files staged by earlier share-sheet builds of this flow.
+export const rescueKeyStagingPath = `${RNFS.CachesDirectoryPath}/${RESCUE_KEY_FILENAME}`;
+
+export const unlinkRescueKeyStagingFile = async (): Promise<void> => {
+    try {
+        if (await RNFS.exists(rescueKeyStagingPath)) {
+            await RNFS.unlink(rescueKeyStagingPath);
+        }
+    } catch (e) {
+        console.warn('[SwapUtils] Error deleting rescue key staging file:', e);
+    }
+};
+
+// Exports the rescue key as plaintext JSON through the system save dialog,
+// staged from app-private cache. Unlike a share sheet, saveDocuments copies
+// the staged file into the user-chosen destination before resolving - there
+// are no lazy readers, so the staging copy is always removed before this
+// returns. The dialog is also the only Android path that can write to local
+// device storage (the share sheet offers no save-to-device target). Rejects
+// with code OPERATION_CANCELED when the user dismisses the dialog.
+export const saveRescueKeyFile = async (mnemonic: string): Promise<void> => {
+    try {
+        await unlinkRescueKeyStagingFile();
+        await RNFS.writeFile(
+            rescueKeyStagingPath,
+            JSON.stringify({ mnemonic }, null, 2),
+            'utf8'
+        );
+
+        const [result] = await saveDocuments({
+            sourceUris: [`file://${rescueKeyStagingPath}`],
+            fileName: RESCUE_KEY_FILENAME,
+            mimeType: 'application/json',
+            copy: true
+        });
+        if (result?.error) {
+            throw new Error(result.error);
+        }
+    } finally {
+        await unlinkRescueKeyStagingFile();
+    }
+};
 
 // Swap rescue keys are 12-word BIP39 mnemonics; the checksum must be
 // enforced before persisting, since refund keys derived from a corrupted

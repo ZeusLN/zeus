@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import {
     Alert,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import RNFS from 'react-native-fs';
+import { errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -34,7 +33,10 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_LAST_USED_KEY,
-    SWAPS_RESCUE_KEY
+    SWAPS_RESCUE_KEY,
+    purgeLegacyRescueKeyFiles,
+    saveRescueKeyFile,
+    unlinkRescueKeyStagingFile
 } from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -189,6 +191,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 await Storage.removeItem(SWAPS_KEY);
                                 await Storage.removeItem(REVERSE_SWAPS_KEY);
                                 await Storage.removeItem(SWAPS_LAST_USED_KEY);
+                                await purgeLegacyRescueKeyFiles();
+                                await unlinkRescueKeyStagingFile();
                                 this.setState({ isDeleteModalVisible: false });
                                 navigation.popTo('Swaps');
                             }}
@@ -300,42 +304,55 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             </TouchableOpacity>
         );
 
-        const DownloadRescueKey = ({
-            seedPhrase
-        }: {
-            seedPhrase: string[];
-        }) => {
-            const handleDownload = async () => {
+        const SaveRescueKey = ({ seedPhrase }: { seedPhrase: string[] }) => {
+            // Stage the rescue file in app-private cache and hand it to the
+            // system save dialog so the user explicitly picks the
+            // destination. Never write it to shared storage directly: files
+            // dropped in Downloads/Documents are readable by other tooling
+            // and outlive the app.
+            const saveRescueKey = async () => {
                 try {
-                    const mnemonic = seedPhrase.join(' ');
-                    const jsonData = JSON.stringify({ mnemonic }, null, 2);
-
-                    const path =
-                        Platform.OS === 'android'
-                            ? `${RNFS.DownloadDirectoryPath}/rescue_key.json`
-                            : `${RNFS.DocumentDirectoryPath}/rescue_key.json`;
-
-                    await RNFS.writeFile(path, jsonData, 'utf8');
-
+                    await saveRescueKeyFile(seedPhrase.join(' '));
                     Alert.alert(
                         localeString('general.success'),
-                        `${localeString('views.Swaps.rescueKey.download')}\n\n${
-                            Platform.OS === 'android'
-                                ? localeString('views.Swaps.rescueKey.android')
-                                : localeString('views.Swaps.rescueKey.ios')
-                        }`
+                        localeString('views.Swaps.rescueKey.saveSuccess')
                     );
-
-                    console.log('File written to:', path);
                 } catch (error) {
-                    console.error('Download failed:', error);
+                    if (
+                        isErrorWithCode(error) &&
+                        error.code === errorCodes.OPERATION_CANCELED
+                    ) {
+                        return;
+                    }
+                    console.error('Rescue key save failed:', error);
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString('views.Swaps.rescueKey.saveError')
+                    );
                 }
             };
 
+            const handleSave = () => {
+                Alert.alert(
+                    localeString('general.warning'),
+                    localeString('views.Swaps.rescueKey.saveWarning'),
+                    [
+                        {
+                            text: localeString('general.cancel'),
+                            style: 'cancel'
+                        },
+                        {
+                            text: localeString('general.proceed'),
+                            onPress: () => saveRescueKey()
+                        }
+                    ]
+                );
+            };
+
             return (
-                <TouchableOpacity onPress={handleDownload}>
+                <TouchableOpacity onPress={handleSave}>
                     <Icon
-                        name="download"
+                        name="save"
                         type="feather"
                         color={themeColor('text')}
                         underlayColor="transparent"
@@ -367,9 +384,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         understood && seedPhrase ? (
                             <Row>
                                 {isRefundRescueKey ? (
-                                    <DownloadRescueKey
-                                        seedPhrase={seedPhrase}
-                                    />
+                                    <SaveRescueKey seedPhrase={seedPhrase} />
                                 ) : (
                                     <></>
                                 )}
