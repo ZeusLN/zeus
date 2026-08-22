@@ -1,11 +1,10 @@
 import Storage from '../../storage';
 import { CredentialStore } from '../../zeus_modules/@lightninglabs/lnc-rn';
-import hashjs from 'hash.js';
+import { sha256StringToHex } from '../../utils/HashingUtils';
 
 const LNC_STORAGE_KEY = 'lnc-rn';
 
-const hash = (stringToHash: string) =>
-    hashjs.sha256().update(stringToHash).digest('hex');
+const hash = (stringToHash: string) => sha256StringToHex(stringToHash);
 
 /**
  * A wrapper around `Storage` used to store sensitive data required

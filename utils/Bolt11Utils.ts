@@ -2,7 +2,7 @@
 
 import { bech32 } from 'bech32';
 import BigNumber from 'bignumber.js';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import * as secp from '@noble/secp256k1';
 import base64Utils from './Base64Utils';
 

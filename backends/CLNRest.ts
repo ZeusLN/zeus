@@ -4,7 +4,7 @@ import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes } from '../utils/HashingUtils';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
@@ -470,9 +470,7 @@ export default class CLNRest {
         if (result?.payment_preimage) {
             formatted.payment_hash = Base64Utils.bytesToHex(
                 Array.from(
-                    new sha256Hash()
-                        .update(Base64Utils.hexToBytes(result.payment_preimage))
-                        .digest()
+                    sha256Bytes(Base64Utils.hexToBytes(result.payment_preimage))
                 )
             );
         }
@@ -630,9 +628,9 @@ export default class CLNRest {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
 

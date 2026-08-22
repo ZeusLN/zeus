@@ -8,10 +8,10 @@ import {
 import Invoice from './../models/Invoice';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { sha256Bytes } from './../utils/HashingUtils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
-import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
 interface Headers {
@@ -742,9 +742,9 @@ export default class LND {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
     lookupInvoice = (data: any) =>

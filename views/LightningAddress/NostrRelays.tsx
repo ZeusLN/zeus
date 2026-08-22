@@ -3,9 +3,10 @@ import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
-import hashjs from 'hash.js';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { sha256StringToHex } from '../../utils/HashingUtils';
 
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -186,14 +187,11 @@ export default class NostrRelays extends React.Component<
                                             } else {
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        hashjs
-                                                            .sha256()
-                                                            .update(
-                                                                JSON.stringify(
-                                                                    newNostrRelays
-                                                                )
+                                                        sha256StringToHex(
+                                                            JSON.stringify(
+                                                                newNostrRelays
                                                             )
-                                                            .digest('hex'),
+                                                        ),
                                                         nostrPrivateKey
                                                     )
                                                 );
@@ -269,16 +267,11 @@ export default class NostrRelays extends React.Component<
                                                             const relays_sig =
                                                                 bytesToHex(
                                                                     schnorr.sign(
-                                                                        hashjs
-                                                                            .sha256()
-                                                                            .update(
-                                                                                JSON.stringify(
-                                                                                    newNostrRelays
-                                                                                )
+                                                                        sha256StringToHex(
+                                                                            JSON.stringify(
+                                                                                newNostrRelays
                                                                             )
-                                                                            .digest(
-                                                                                'hex'
-                                                                            ),
+                                                                        ),
                                                                         nostrPrivateKey
                                                                     )
                                                                 );
