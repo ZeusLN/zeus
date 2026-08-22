@@ -13,7 +13,8 @@ import { invoicesStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
-    isMerchantQR
+    isMerchantQR,
+    classifyBtcPayConfigUrl
 } from './handleAnything';
 
 // The BTCPay pairing path now gates its network fetch behind a confirmation
@@ -2169,5 +2170,122 @@ describe('handleAnything', () => {
 
             expect(result).toBe(true);
         });
+    });
+});
+
+describe('classifyBtcPayConfigUrl', () => {
+    it('should classify a public https host with no warnings', () => {
+        const result = classifyBtcPayConfigUrl(
+            'https://btcpay.example.com:8080/lnd.config?token=12345678901'
+        );
+        expect(result).toEqual({
+            valid: true,
+            url: 'https://btcpay.example.com:8080/lnd.config?token=12345678901',
+            host: 'btcpay.example.com',
+            isOnion: false,
+            isLoopback: false,
+            isPrivate: false,
+            isCleartext: false
+        });
+    });
+
+    it('should flag a public http host as cleartext', () => {
+        const result = classifyBtcPayConfigUrl(
+            'http://btcpay.example.com/lnd.config'
+        );
+        expect(result.valid).toBe(true);
+        expect(result.isCleartext).toBe(true);
+        expect(result.isPrivate).toBe(false);
+    });
+
+    it('should classify loopback hosts, including IPv4 shorthand and IPv6', () => {
+        for (const url of [
+            'http://127.0.0.1:8080/lnd.config',
+            'http://127.1/lnd.config', // WHATWG canonicalizes to 127.0.0.1
+            'http://localhost:8080/lnd.config',
+            'http://[::1]:8080/lnd.config'
+        ]) {
+            const result = classifyBtcPayConfigUrl(url);
+            expect(result.valid).toBe(true);
+            expect(result.isLoopback).toBe(true);
+            expect(result.isPrivate).toBe(true);
+            expect(result.isCleartext).toBe(false);
+        }
+    });
+
+    it('should NOT classify DNS names with numeric labels as loopback or private', () => {
+        // 127.evil.com is a legal subdomain; treating it as loopback would
+        // suppress the cleartext warning and skip Tor for an attacker host.
+        for (const host of [
+            '127.evil.com',
+            '10.evil.com',
+            '192.168.evil.com',
+            '172.16.evil.com',
+            '169.254.evil.com'
+        ]) {
+            const result = classifyBtcPayConfigUrl(`http://${host}/lnd.config`);
+            expect(result.valid).toBe(true);
+            expect(result.isLoopback).toBe(false);
+            expect(result.isPrivate).toBe(false);
+            expect(result.isCleartext).toBe(true);
+        }
+    });
+
+    it('should classify literal private-range hosts as private but not loopback', () => {
+        for (const host of [
+            '10.0.0.1',
+            '192.168.1.5',
+            '172.31.255.254',
+            '169.254.10.10',
+            'btcpay.local',
+            '[fe80::1]'
+        ]) {
+            const result = classifyBtcPayConfigUrl(`http://${host}/lnd.config`);
+            expect(result.valid).toBe(true);
+            expect(result.isPrivate).toBe(true);
+            expect(result.isLoopback).toBe(false);
+            expect(result.isCleartext).toBe(true);
+        }
+    });
+
+    it('should classify onion services as onion, never cleartext', () => {
+        const result = classifyBtcPayConfigUrl(
+            'http://btcpayjyzu7pbeqm2u2rq2vauwzrb3jyxnf2yzr35gij7qcdyxl7qd.onion/lnd.config'
+        );
+        expect(result.valid).toBe(true);
+        expect(result.isOnion).toBe(true);
+        expect(result.isCleartext).toBe(false);
+    });
+
+    it('should return the canonicalized URL with the host lowercased', () => {
+        const result = classifyBtcPayConfigUrl(
+            '  https://BTCPay.Example.COM/lnd.config '
+        );
+        expect(result.valid).toBe(true);
+        expect(result.host).toBe('btcpay.example.com');
+        expect(result.url).toBe('https://btcpay.example.com/lnd.config');
+    });
+
+    it('should reject URLs with embedded credentials', () => {
+        for (const url of [
+            'https://btcpay.trusted.com@evil.example/lnd.config',
+            'https://btcpay.trusted.com:x@evil.example/lnd.config',
+            'https://:hunter2@btcpay.example.com/lnd.config'
+        ]) {
+            expect(classifyBtcPayConfigUrl(url).valid).toBe(false);
+        }
+    });
+
+    it('should reject malformed, empty, and non-http(s) URLs', () => {
+        for (const url of [
+            undefined,
+            '',
+            'not-a-valid-url/lnd.config',
+            'ftp://btcpay.example.com/lnd.config',
+            'file:///etc/passwd',
+            'ws://btcpay.example.com/lnd.config'
+        ]) {
+            expect(classifyBtcPayConfigUrl(url).valid).toBe(false);
+        }
     });
 });
