@@ -55,11 +55,11 @@ RCT_EXTERN_METHOD(forceCloseChannel:(NSString *)userChannelId counterpartyNodeId
 
 // On-chain Methods
 RCT_EXTERN_METHOD(newOnchainAddress:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendToOnchainAddress:(NSString *)address amountSats:(nonnull NSNumber *)amountSats resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendAllToOnchainAddress:(NSString *)address retainReserve:(BOOL)retainReserve resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendToOnchainAddress:(NSString *)address amountSats:(nonnull NSNumber *)amountSats satPerVbyte:(nonnull NSNumber *)satPerVbyte resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendAllToOnchainAddress:(NSString *)address retainReserve:(BOOL)retainReserve satPerVbyte:(nonnull NSNumber *)satPerVbyte resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(listUtxos:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendToOnchainAddressWithUtxos:(NSString *)address amountSats:(nonnull NSNumber *)amountSats utxos:(NSArray *)utxos resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(sendAllToOnchainAddressWithUtxos:(NSString *)address retainReserve:(BOOL)retainReserve utxos:(NSArray *)utxos resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendToOnchainAddressWithUtxos:(NSString *)address amountSats:(nonnull NSNumber *)amountSats utxos:(NSArray *)utxos satPerVbyte:(nonnull NSNumber *)satPerVbyte resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(sendAllToOnchainAddressWithUtxos:(NSString *)address retainReserve:(BOOL)retainReserve utxos:(NSArray *)utxos satPerVbyte:(nonnull NSNumber *)satPerVbyte resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // BOLT11 Payment Methods
 RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
