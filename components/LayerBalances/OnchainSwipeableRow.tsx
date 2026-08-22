@@ -39,8 +39,10 @@ interface OnchainSwipeableRowProps {
 @observer
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
-    {}
+    { expanded: boolean }
 > {
+    state = { expanded: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -181,6 +183,7 @@ export default class OnchainSwipeableRow extends Component<
     render() {
         const { children, value, locked, hidden, disabled, SyncStore } =
             this.props;
+        const { expanded } = this.state;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -191,6 +194,7 @@ export default class OnchainSwipeableRow extends Component<
                         })
                     }
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     <View style={{ opacity: 0.25 }}>{children}</View>
                 </TouchableOpacity>
@@ -202,6 +206,7 @@ export default class OnchainSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.sendToAddress())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     {children}
                 </TouchableOpacity>
@@ -222,10 +227,24 @@ export default class OnchainSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
                 containerStyle={{ width: '100%' }}
+                onSwipeableWillOpen={() => this.setState({ expanded: true })}
+                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
                     onPress={() => (value ? this.sendToAddress() : this.open())}
                     activeOpacity={1}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
+                    accessibilityActions={[
+                        { name: 'expand' },
+                        { name: 'collapse' }
+                    ]}
+                    onAccessibilityAction={({
+                        nativeEvent: { actionName }
+                    }) => {
+                        if (actionName === 'expand') this.open();
+                        else if (actionName === 'collapse') this.close();
+                    }}
                 >
                     {children}
                 </TouchableOpacity>

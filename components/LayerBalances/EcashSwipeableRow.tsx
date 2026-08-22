@@ -43,8 +43,10 @@ interface EcashSwipeableRowProps {
 @observer
 export default class EcashSwipeableRow extends Component<
     EcashSwipeableRowProps,
-    {}
+    { expanded: boolean }
 > {
+    state = { expanded: false };
+
     private renderAction = (
         text: string,
         x: number,
@@ -249,6 +251,7 @@ export default class EcashSwipeableRow extends Component<
             needsConfig,
             navigation
         } = this.props;
+        const { expanded } = this.state;
 
         if (locked && lightning) {
             return (
@@ -256,6 +259,7 @@ export default class EcashSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
+                    accessibilityRole="button"
                 >
                     {children}
                 </TouchableOpacity>
@@ -277,6 +281,8 @@ export default class EcashSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
                 containerStyle={{ width: '100%' }}
+                onSwipeableWillOpen={() => this.setState({ expanded: true })}
+                onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
                     onPress={() =>
@@ -288,6 +294,18 @@ export default class EcashSwipeableRow extends Component<
                     }
                     activeOpacity={1}
                     style={{ opacity: needsConfig ? 0.4 : 1 }}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
+                    accessibilityActions={[
+                        { name: 'expand' },
+                        { name: 'collapse' }
+                    ]}
+                    onAccessibilityAction={({
+                        nativeEvent: { actionName }
+                    }) => {
+                        if (actionName === 'expand') this.open();
+                        else if (actionName === 'collapse') this.close();
+                    }}
                 >
                     {children}
                 </TouchableOpacity>
