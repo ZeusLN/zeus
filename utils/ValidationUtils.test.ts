@@ -326,6 +326,134 @@ describe('hasValidPairingPhraseCharsAndWordcount', () => {
     });
 });
 
+describe('isValidNostrWalletConnectUrl', () => {
+    const walletPubKeyHex =
+        'b889ff5b1513b641e2a139f661a661364979c5beee91842f8f0ef42ab558e9d4';
+    const secret =
+        '71a8c14c1407c113601079c4302dab36460f0ccd0ad506f1f2dc73b5100e4f3c';
+
+    it('accepts a complete nostr wallet connect URI', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss%3A%2F%2Frelay.damus.io&secret=${secret}`
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('accepts optional query params such as lud16', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}&lud16=alice@domain.com`
+            )
+        ).toBe(true);
+    });
+
+    it('accepts multiple relay parameters', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.one.com&relay=wss://relay.two.com&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('accepts URLs with surrounding whitespace', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `  nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}  `
+            )
+        ).toBe(true);
+    });
+
+    it('accepts relay URLs with literal percent characters', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com/50%25_discount&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('rejects empty, whitespace-only, null, and undefined URLs', () => {
+        expect(ValidationUtils.isValidNostrWalletConnectUrl('')).toBe(false);
+        expect(ValidationUtils.isValidNostrWalletConnectUrl('   ')).toBe(false);
+        expect(ValidationUtils.isValidNostrWalletConnectUrl(null as any)).toBe(
+            false
+        );
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(undefined as any)
+        ).toBe(false);
+    });
+
+    it('rejects URIs missing required query params', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects malformed pubkeys, secrets, and relays', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                'nostr+walletconnect://'
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                'nostr+walletconnect://:'
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://abc123?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=tooshort`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=https://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects non-nwc URLs', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl('https://example.com')
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl('nostr+walletconnect')
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                'nostr+walletconnect:/abc123'
+            )
+        ).toBe(false);
+    });
+});
+
 describe('validateNodePubkey', () => {
     it('accepts valid 66-character hex pubkeys', () => {
         expect(
