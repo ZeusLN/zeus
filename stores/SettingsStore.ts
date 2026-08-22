@@ -38,6 +38,10 @@ export interface Node {
     accessKey?: string;
     implementation?: string;
     certVerification: boolean;
+    // TLS certificates (base64 DER) pinned at import time, e.g. from the
+    // lndconnect cert= or clnrest certs= connection-string parameters.
+    // When present they take precedence over CA validation / trust-all.
+    pinnedCerts?: string[];
     enableTor?: boolean;
     nickname?: string;
     dismissCustodialWarning: boolean;
@@ -1642,7 +1646,10 @@ export default class SettingsStore {
     @observable rune: string;
     @observable accessKey: string;
     @observable implementation: Implementations;
-    @observable certVerification: boolean = false;
+    // TLS certificate verification for remote node connections.
+    // Defaults to true: trust-all is an explicit per-node opt-in.
+    @observable certVerification: boolean = true;
+    @observable pinnedCerts?: string[];
     @observable public loggedIn = false;
     @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
@@ -1877,7 +1884,8 @@ export default class SettingsStore {
             this.accessKey = node.accessKey;
             this.dismissCustodialWarning = node.dismissCustodialWarning;
             this.implementation = node.implementation || 'lnd';
-            this.certVerification = node.certVerification || false;
+            this.certVerification = node.certVerification ?? true;
+            this.pinnedCerts = node.pinnedCerts;
             this.enableTor = node.enableTor;
             // LNC
             this.pairingPhrase = node.pairingPhrase;
@@ -1915,7 +1923,8 @@ export default class SettingsStore {
             // No node selected — clear all node properties to prevent
             // stale references to deleted wallets
             this.implementation = 'lnd';
-            this.certVerification = false;
+            this.certVerification = true;
+            this.pinnedCerts = undefined;
             this.ldkNodeDir = undefined;
             this.ldkMnemonic = undefined;
             this.ldkPassphrase = undefined;
@@ -1944,6 +1953,9 @@ export default class SettingsStore {
                     parsedSettings
                 );
                 await MigrationsUtils.migrateOlympusHostsToZeusLsp(
+                    parsedSettings
+                );
+                await MigrationsUtils.migrateCertVerificationDefault(
                     parsedSettings
                 );
                 this.settings = parsedSettings;

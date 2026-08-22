@@ -714,6 +714,83 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('migrateCertVerificationDefault', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('normalizes nodes missing certVerification to explicit false, leaving set values untouched', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd', host: 'a' },
+                    { implementation: 'lnd', certVerification: true },
+                    { implementation: 'cln-rest', certVerification: false },
+                    { implementation: 'embedded-lnd' }
+                ]
+            };
+
+            await MigrationUtils.migrateCertVerificationDefault(settings);
+
+            expect(settings.nodes[0].certVerification).toBe(false);
+            expect(settings.nodes[1].certVerification).toBe(true);
+            expect(settings.nodes[2].certVerification).toBe(false);
+            expect(settings.nodes[3].certVerification).toBe(false);
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(settingsStore.setSettings).toHaveBeenCalledWith(settings);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'cert-verification-default-v1',
+                'true'
+            );
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = { nodes: [{ implementation: 'lnd' }] };
+
+            await MigrationUtils.migrateCertVerificationDefault(settings);
+
+            expect(settings.nodes[0].certVerification).toBeUndefined();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is idempotent: a repeat run after flag loss mutates nothing further', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd' },
+                    { implementation: 'lnd', certVerification: true }
+                ]
+            };
+
+            await MigrationUtils.migrateCertVerificationDefault(settings);
+            const afterFirst = JSON.parse(JSON.stringify(settings));
+            await MigrationUtils.migrateCertVerificationDefault(settings);
+
+            expect(settings).toEqual(afterFirst);
+        });
+
+        it('handles settings without nodes', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { fiat: 'USD' };
+
+            await MigrationUtils.migrateCertVerificationDefault(settings);
+
+            expect(settings).toEqual({ fiat: 'USD' });
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'cert-verification-default-v1',
+                'true'
+            );
+        });
+    });
+
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
             // Clear mock history before each test
