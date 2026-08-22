@@ -285,7 +285,9 @@ export const getChainTransactions = async () => {
                 return {
                     amount: -Math.abs(withdrawal[3]) / 1000,
                     block_height: withdrawal[6],
-                    num_confirmations: getinfo.blockheight - withdrawal[6],
+                    num_confirmations: withdrawal[6]
+                        ? getinfo.blockheight - withdrawal[6] + 1
+                        : 0,
                     time_stamp: withdrawal[5],
                     txid: tx.hash,
                     dest_addresses: tx.dest_addresses
@@ -296,7 +298,9 @@ export const getChainTransactions = async () => {
                 return {
                     amount: deposit[3] / 1000,
                     block_height: deposit[6],
-                    num_confirmations: getinfo.blockheight - deposit[6],
+                    num_confirmations: deposit[6]
+                        ? getinfo.blockheight - deposit[6] + 1
+                        : 0,
                     time_stamp: deposit[5],
                     txid: tx.hash,
                     dest_addresses: tx.dest_addresses
