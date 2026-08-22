@@ -96,6 +96,7 @@ const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
+import { deriveVerifier, hasVerifier } from './LockVerifierUtils';
 
 class MigrationsUtils {
     /**
@@ -469,7 +470,56 @@ class MigrationsUtils {
         // migrate retired ZEUS swap server hosts to Boltz
         await this.migrateSwapHostsToBoltz(newSettings);
 
+        // hash any plaintext PIN/passphrase (and duress) into salted verifiers
+        await this.migrateLockCredentialsToVerifiers(newSettings);
+
         return newSettings;
+    }
+
+    // Replace plaintext app-lock credentials with salted scrypt verifiers and
+    // strip the plaintext fields. Historically the PIN, passphrase and their
+    // duress variants were stored verbatim in the settings blob alongside every
+    // wallet secret, and login was a direct string compare - so anyone who
+    // could read the blob (root/jailbreak dump, or an iOS backup migration)
+    // recovered the credentials and could tell which one was the duress
+    // trigger. Runs once (MOD-gated) on both the legacy and modern
+    // (zeus-settings-v2) load paths.
+    public async migrateLockCredentialsToVerifiers(settings: any) {
+        const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
+        const modLockVerifier = await EncryptedStorage.getItem(
+            MOD_KEY_LOCK_VERIFIER
+        );
+        if (modLockVerifier) return settings;
+        if (!settings) return settings;
+
+        const pairs: Array<{ plain: string; verifier: string }> = [
+            { plain: 'pin', verifier: 'pinVerifier' },
+            { plain: 'duressPin', verifier: 'duressPinVerifier' },
+            { plain: 'passphrase', verifier: 'passphraseVerifier' },
+            { plain: 'duressPassphrase', verifier: 'duressPassphraseVerifier' }
+        ];
+
+        let changed = false;
+        for (const { plain, verifier } of pairs) {
+            const value = settings[plain];
+            if (typeof value === 'string' && value.length > 0) {
+                // don't clobber a verifier that already exists
+                if (!hasVerifier(settings[verifier])) {
+                    settings[verifier] = await deriveVerifier(value);
+                }
+                changed = true;
+            }
+            if (settings[plain] !== undefined) {
+                delete settings[plain];
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await settingsStore.setSettings(settings);
+        }
+        await EncryptedStorage.setItem(MOD_KEY_LOCK_VERIFIER, 'true');
+        return settings;
     }
 
     public async migrateRgsDefaultToZeus(settings: any) {
