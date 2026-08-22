@@ -37,15 +37,7 @@ function getAD(salt: Buffer) {
     return ad;
 }
 
-/**
- * Decrypts an aezeed cipher seed mnemonic (with the default passphrase) and
- * returns the 16 bytes of wallet entropy, which lnd uses directly as the
- * BIP32 master seed. Throws when the mnemonic is not a valid aezeed or was
- * enciphered with a non-default passphrase.
- */
-export async function decodeAezeedEntropy(
-    seedPhrase: string[]
-): Promise<Buffer> {
+function seedBytesFromWords(seedPhrase: string[]): Buffer {
     const bits = seedPhrase
         .map((word: string) => {
             const index = BIP39_WORD_LIST.indexOf(word);
@@ -56,21 +48,43 @@ export async function decodeAezeedEntropy(
     const seedBytes = (bits.match(/(.{1,8})/g) || []).map((bin: string) =>
         parseInt(bin, 2)
     );
-    const seed = Buffer.from(seedBytes);
+    return Buffer.from(seedBytes);
+}
+
+/**
+ * Validates an aezeed mnemonic's version byte and CRC32 checksum without
+ * paying the scrypt cost of a full decipher. Throws when the mnemonic is
+ * not a valid aezeed.
+ */
+export function validateAezeedChecksum(seedPhrase: string[]): void {
+    const seed = seedBytesFromWords(seedPhrase);
 
     if (!seed || seed.length === 0 || seed[0] !== AEZEED_VERSION) {
         throw new Error('Invalid seed or version!');
     }
 
-    const salt = seed.slice(SALT_OFFSET, SALT_OFFSET + SALT_LENGTH);
-    const password = Buffer.from(AEZEED_DEFAULT_PASSPHRASE, 'utf8');
-    const cipherSeed = seed.slice(1, SALT_OFFSET);
     const checksum = seed.slice(CHECKSUM_OFFSET);
-
     const newChecksum = crc32.calculate(seed.slice(0, CHECKSUM_OFFSET));
     if (newChecksum !== checksum.readUInt32BE(0)) {
         throw new Error('Invalid seed checksum!');
     }
+}
+
+/**
+ * Decrypts an aezeed cipher seed mnemonic (with the default passphrase) and
+ * returns the 16 bytes of wallet entropy, which lnd uses directly as the
+ * BIP32 master seed. Throws when the mnemonic is not a valid aezeed or was
+ * enciphered with a non-default passphrase.
+ */
+export async function decodeAezeedEntropy(
+    seedPhrase: string[]
+): Promise<Buffer> {
+    validateAezeedChecksum(seedPhrase);
+
+    const seed = seedBytesFromWords(seedPhrase);
+    const salt = seed.slice(SALT_OFFSET, SALT_OFFSET + SALT_LENGTH);
+    const password = Buffer.from(AEZEED_DEFAULT_PASSPHRASE, 'utf8');
+    const cipherSeed = seed.slice(1, SALT_OFFSET);
 
     const key = await scrypt(
         password,
