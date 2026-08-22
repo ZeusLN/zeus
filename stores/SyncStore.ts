@@ -1,9 +1,9 @@
 import { action, observable, when, runInAction, computed } from 'mobx';
 import { EmitterSubscription, NativeModules } from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import BackendUtils from '../utils/BackendUtils';
 import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 
@@ -116,20 +116,21 @@ export default class SyncStore {
 
     private getBestBlockHeight = async () => {
         await new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'get',
+            networkFetch({
+                method: 'get',
                 // nodeInfoStore.nodeInfo isn't populated during initial sync,
                 // so the network comes from settings instead. SyncStore only
                 // runs for embedded LND, which is restricted to
                 // 'Mainnet'/'Testnet' (mutinynet is LDK Node-only, tracked
                 // separately as ldkNetwork), so isMutinynet is always false
                 // here.
-                `${UrlUtils.getMempoolApiUrl({
+                url: `${UrlUtils.getMempoolApiUrl({
                     isMutinynet: false,
                     isTestNet:
                         this.settingsStore.embeddedLndNetwork === 'Testnet'
-                })}/blocks/tip/height`
-            )
+                })}/blocks/tip/height`,
+                enableTor: this.settingsStore.enableTor
+            })
                 .then(async (response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
