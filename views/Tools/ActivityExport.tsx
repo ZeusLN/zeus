@@ -25,7 +25,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import {
     getFormattedDateTime,
     convertActivityToCsv,
-    saveCsvFile,
+    shareCsvFiles,
     CSV_KEYS
 } from '../.././utils/ActivityCsvUtils';
 
@@ -180,18 +180,13 @@ export default class ActivityExport extends React.Component<
                     ? `${this.state.customFileName}.csv`
                     : `zeus_${dateTime}_${type}.csv`;
 
-                await saveCsvFile(baseFileName, csvData);
+                await shareCsvFiles([{ fileName: baseFileName, csvData }]);
 
                 this.setState({ isModalVisible: false });
 
                 this.closeAndClearInput();
-
-                Alert.alert(
-                    localeString('general.success'),
-                    localeString('views.ActivityToCsv.csvDownloaded')
-                );
             } catch (err) {
-                console.error('Failed to save CSV file:', err);
+                console.error('Failed to share CSV file:', err);
                 Alert.alert(
                     localeString('general.error'),
                     localeString('views.ActivityToCsv.csvDownloadFailed')
@@ -550,13 +545,7 @@ export default class ActivityExport extends React.Component<
                                 marginBottom: 20
                             }}
                         >
-                            {Platform.OS === 'android'
-                                ? localeString(
-                                      'views.ActivityExport.explainerAndroid'
-                                  )
-                                : localeString(
-                                      'views.ActivityExport.explaineriOS'
-                                  )}
+                            {localeString('views.ActivityExport.explainer')}
                         </Text>
                         <Button
                             title={localeString('general.close')}

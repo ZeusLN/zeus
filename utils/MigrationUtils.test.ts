@@ -18,6 +18,17 @@ jest.mock('../stores/LightningAddressStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
 
+const mockPurgeCsvExports = jest.fn();
+const mockPurgeConfigExports = jest.fn();
+jest.mock('../utils/ActivityCsvUtils', () => ({
+    purgeLegacyActivityCsvExports: (...args: any[]) =>
+        mockPurgeCsvExports(...args)
+}));
+jest.mock('../utils/NodeConfigUtils', () => ({
+    purgeLegacyNodeConfigExports: (...args: any[]) =>
+        mockPurgeConfigExports(...args)
+}));
+
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
     DEFAULT_FIAT: 'USD',
@@ -806,6 +817,39 @@ describe('MigrationUtils', () => {
                 'Error saving migrated Cashu seed version:',
                 expect.any(Error)
             );
+        });
+    });
+
+    describe('purgeLegacyExportFiles', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            (EncryptedStorage.getItem as jest.Mock).mockReset();
+            (EncryptedStorage.setItem as jest.Mock).mockReset();
+        });
+
+        it('runs both purges then sets the one-shot flag', async () => {
+            (EncryptedStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+            await MigrationUtils.purgeLegacyExportFiles();
+
+            expect(mockPurgeCsvExports).toHaveBeenCalledTimes(1);
+            expect(mockPurgeConfigExports).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'legacy-export-file-cleanup',
+                'true'
+            );
+        });
+
+        it('skips everything once the flag is set', async () => {
+            (EncryptedStorage.getItem as jest.Mock).mockResolvedValue('true');
+
+            await MigrationUtils.purgeLegacyExportFiles();
+
+            expect(mockPurgeCsvExports).not.toHaveBeenCalled();
+            expect(mockPurgeConfigExports).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 });

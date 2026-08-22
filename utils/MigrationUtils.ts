@@ -77,6 +77,9 @@ import {
     SWAPS_LAST_USED_KEY
 } from '../utils/SwapUtils';
 
+import { purgeLegacyActivityCsvExports } from '../utils/ActivityCsvUtils';
+import { purgeLegacyNodeConfigExports } from '../utils/NodeConfigUtils';
+
 import {
     TimePeriod,
     displayFromExpirySeconds,
@@ -632,6 +635,30 @@ class MigrationsUtils {
         }
         await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
         return settings;
+    }
+
+    // Older builds wrote export artifacts straight to shared storage: activity
+    // CSVs and wallet config backups (connection credentials) to the
+    // Files-visible Documents dir on iOS, config backups to public Downloads
+    // on Android. Exports now go through the share sheet and iOS file sharing
+    // is disabled, but files written by older builds persist until removed:
+    // invisible to the user, yet still swept into iCloud/iTunes backups.
+    // One-shot best-effort cleanup; the flag is set regardless of outcome
+    // because a failed unlink (scoped storage, file owned by a previous
+    // install) can never succeed on a later retry. Runs before the settings
+    // blob is even read, so it covers both the legacy and modern
+    // (zeus-settings-v2) paths.
+    public async purgeLegacyExportFiles() {
+        const MOD_KEY_EXPORT_FILES = 'legacy-export-file-cleanup';
+        const modExportFiles = await EncryptedStorage.getItem(
+            MOD_KEY_EXPORT_FILES
+        );
+        if (modExportFiles) return;
+
+        await purgeLegacyActivityCsvExports();
+        await purgeLegacyNodeConfigExports();
+
+        await EncryptedStorage.setItem(MOD_KEY_EXPORT_FILES, 'true');
     }
 
     public async storageMigrationV2(settings: any) {

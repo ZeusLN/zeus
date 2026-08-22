@@ -133,6 +133,12 @@ jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
+jest.mock('./ActivityCsvUtils', () => ({
+    purgeLegacyActivityCsvExports: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./NodeConfigUtils', () => ({
+    purgeLegacyNodeConfigExports: jest.fn().mockResolvedValue(undefined)
+}));
 
 import hashjs from 'hash.js';
 import { BackHandler, Platform } from 'react-native';
@@ -154,6 +160,8 @@ import {
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import { purgeLegacyActivityCsvExports } from './ActivityCsvUtils';
+import { purgeLegacyNodeConfigExports } from './NodeConfigUtils';
 import { sleep } from './SleepUtils';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
@@ -162,6 +170,8 @@ const mockedStopLdkNode = stopLdkNode as jest.Mock;
 const mockedStorageGetItem = Storage.getItem as jest.Mock;
 const mockedSleep = sleep as jest.Mock;
 const mockedStorageRemoveItem = Storage.removeItem as jest.Mock;
+const mockedPurgeCsvExports = purgeLegacyActivityCsvExports as jest.Mock;
+const mockedPurgeConfigExports = purgeLegacyNodeConfigExports as jest.Mock;
 
 const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
 
@@ -253,6 +263,13 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
 
         expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-1');
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
+    });
+
+    it('purges legacy export artifacts from shared storage', async () => {
+        await clearAllData();
+
+        expect(mockedPurgeCsvExports).toHaveBeenCalledTimes(1);
+        expect(mockedPurgeConfigExports).toHaveBeenCalledTimes(1);
     });
 
     it('does not delete an ldk-node directory when ldkNodeDir is missing', async () => {
