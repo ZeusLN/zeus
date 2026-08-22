@@ -34,6 +34,7 @@ import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import AddressUtils from '../../utils/AddressUtils';
@@ -815,7 +816,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
                     <KeyIcon
                         onPress={() => {
-                            navigation.navigate('Seed', {
+                            reAuthNavigation(navigation, 'Seed', {
                                 seedPhrase: this.state.seedPhrase
                             });
                         }}

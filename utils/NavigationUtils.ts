@@ -22,4 +22,21 @@ const protectedNavigation = async (
     }
 };
 
-export { protectedNavigation };
+// Requires re-authentication (PIN, passphrase, or biometrics) before
+// navigating to a screen that reveals sensitive material (e.g. the seed),
+// regardless of POS status or current session login state
+const reAuthNavigation = (
+    navigation: NativeStackNavigationProp<any, any>,
+    route: string,
+    routeParams?: any
+) => {
+    if (settingsStore.loginMethodConfigured()) {
+        navigation.navigate('Lockscreen', {
+            pendingNavigation: { screen: route, params: routeParams }
+        });
+    } else {
+        navigation.navigate(route, routeParams);
+    }
+};
+
+export { protectedNavigation, reAuthNavigation };

@@ -322,6 +322,23 @@ export default class Lockscreen extends React.Component<
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
                 return;
+            } else if (route.params?.pendingNavigation) {
+                // must be handled before selectNodeOnStartup, which would
+                // otherwise drop the re-auth target and land on the wallet
+                // picker
+                if (
+                    (SettingsStore.settings?.pos?.posEnabled ||
+                        PosEnabled.Disabled) !== PosEnabled.Disabled
+                ) {
+                    setPosStatus('inactive');
+                }
+                this.resetAuthenticationAttempts();
+                const { pendingNavigation } = route.params;
+                this.proceed(
+                    pendingNavigation.screen,
+                    pendingNavigation.params
+                );
+                return;
             } else if (SettingsStore.settings.selectNodeOnStartup) {
                 // Only handle wallet selection when NOT modifying security
                 this.resetAuthenticationAttempts();
@@ -346,11 +363,7 @@ export default class Lockscreen extends React.Component<
                     setPosStatus('inactive');
                 }
                 this.resetAuthenticationAttempts();
-                const pendingNavigation = route.params?.pendingNavigation;
-                this.proceed(
-                    pendingNavigation?.screen,
-                    pendingNavigation?.params
-                );
+                this.proceed();
             }
         } else if (
             // duress creds only trigger the wipe on a genuine login attempt -

@@ -12,6 +12,7 @@ import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -71,7 +72,10 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                         backgroundColor: 'transparent'
                                     }}
                                     onPress={() =>
-                                        navigation.navigate('CashuSeed')
+                                        reAuthNavigation(
+                                            navigation,
+                                            'CashuSeed'
+                                        )
                                     }
                                 >
                                     <ListItem.Content>
