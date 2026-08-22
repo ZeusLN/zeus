@@ -1,6 +1,5 @@
 import * as React from 'react';
 import forEach from 'lodash/forEach';
-import isNull from 'lodash/isNull';
 import {
     StyleSheet,
     ScrollView,
@@ -104,7 +103,6 @@ export default class TransactionView extends React.Component<
             destAddresses,
             getFee,
             getFeePercentage,
-            status,
             getOutpoint,
             raw_tx_hex,
             getNoteKey
@@ -325,7 +323,7 @@ export default class TransactionView extends React.Component<
                         />
                     )}
 
-                    {!!num_confirmations && !isNull(num_confirmations) && (
+                    {num_confirmations != null && (
                         <KeyValue
                             keyValue={localeString('views.Transaction.numConf')}
                             value={num_confirmations}
@@ -334,12 +332,11 @@ export default class TransactionView extends React.Component<
                         />
                     )}
 
-                    {!!status && (
-                        <KeyValue
-                            keyValue={localeString('general.status')}
-                            value={transaction.getStatusDisplay}
-                        />
-                    )}
+                    <KeyValue
+                        keyValue={localeString('general.status')}
+                        value={transaction.getStatusDisplay}
+                        color={isConfirmed ? 'green' : 'red'}
+                    />
 
                     {!!date && (
                         <KeyValue

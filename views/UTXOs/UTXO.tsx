@@ -153,16 +153,12 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                             sensitive
                         />
 
-                        {!!getConfs && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Transaction.numConf'
-                                )}
-                                value={getConfs}
-                                color={isUnconfirmed ? 'red' : 'green'}
-                                sensitive
-                            />
-                        )}
+                        <KeyValue
+                            keyValue={localeString('views.Transaction.numConf')}
+                            value={getConfs}
+                            color={isUnconfirmed ? 'red' : 'green'}
+                            sensitive
+                        />
 
                         {blockheight && (
                             <KeyValue

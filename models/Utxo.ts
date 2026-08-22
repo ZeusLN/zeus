@@ -32,7 +32,7 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getConfs(): number {
-        return Number(this.confirmations);
+        return Number(this.confirmations) || 0;
     }
 
     @computed public get getOutpoint(): string {
