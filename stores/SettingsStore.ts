@@ -1930,6 +1930,16 @@ export default class SettingsStore {
     public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
+            // ORDER IS LOAD-BEARING. keychainDesyncMigration must run BEFORE
+            // keychainCloudSyncMigration: migrateKey() short-circuits on a
+            // truthy Storage.getItem(), which (with the patched
+            // react-native-keychain) reads the device-local partition. For a
+            // pre-2026 install that partition starts empty, so running the
+            // legacy migration first would repopulate it with STALE unprefixed
+            // data and permanently shadow the fresher iCloud-partition copy of
+            // zeus:* data. Desync first guarantees the local partition is
+            // populated before any legacy fallback can win.
+            await MigrationsUtils.keychainDesyncMigration();
             await MigrationsUtils.keychainCloudSyncMigration();
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
