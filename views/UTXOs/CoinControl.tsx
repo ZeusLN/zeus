@@ -11,6 +11,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import Screen from './../../components/Screen';
 
+import { PaymentMethodLayer } from './../../utils/ChoosePaymentMethodUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -44,7 +45,7 @@ export default class CoinControl extends React.Component<
 
         const accountParam = props.route.params.account;
         const account =
-            accountParam && accountParam === 'On-chain'
+            accountParam && accountParam === PaymentMethodLayer.OnChain
                 ? 'default'
                 : accountParam;
 
