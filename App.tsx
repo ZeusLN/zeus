@@ -96,7 +96,6 @@ import NostrContacts from './views/NostrContacts';
 import MultiQR from './views/MultiQR';
 
 // Settings views
-import Settings from './views/Settings/Settings';
 import WalletConfiguration from './views/Settings/WalletConfiguration';
 import Wallets from './views/Settings/Wallets';
 import Networking from './views/Settings/Networking';
@@ -285,10 +284,9 @@ import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
 
-import Menu from './views/Menu';
+import AppMenu from './views/AppMenu';
 
 // Tools
-import Tools from './views/Tools';
 import ActivityExport from './views/Tools/ActivityExport';
 import BumpFee from './views/Tools/BumpFee';
 import CurrencyConverter from './views/Tools/CurrencyConverter';
@@ -639,18 +637,20 @@ export default class App extends React.PureComponent {
                                                             />
                                                             <Stack.Screen
                                                                 name="Menu" // @ts-ignore:next-line
-                                                                component={Menu}
+                                                                component={
+                                                                    AppMenu
+                                                                }
                                                             />
                                                             <Stack.Screen
                                                                 name="Settings" // @ts-ignore:next-line
                                                                 component={
-                                                                    Settings
+                                                                    AppMenu
                                                                 }
                                                             />
                                                             <Stack.Screen
                                                                 name="Tools" // @ts-ignore:next-line
                                                                 component={
-                                                                    Tools
+                                                                    AppMenu
                                                                 }
                                                             />
                                                             <Stack.Screen
