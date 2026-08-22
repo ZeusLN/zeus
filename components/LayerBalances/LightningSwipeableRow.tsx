@@ -1,19 +1,24 @@
 import React, { Component } from 'react';
 import {
     Alert,
-    Animated,
     StyleSheet,
     Text,
     View,
     I18nManager,
     TouchableOpacity
 } from 'react-native';
+import { SharedValue } from 'react-native-reanimated';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import { RectButton } from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+    SwipeableMethods
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
+
+import ActionContainer from './ActionContainer';
 
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
@@ -45,26 +50,24 @@ interface LightningSwipeableRowProps {
     SyncStore?: SyncStore;
 }
 
+interface LightningSwipeableRowState {
+    isOpen: boolean;
+}
+
 @inject('SyncStore')
 @observer
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
-    {}
+    LightningSwipeableRowState
 > {
+    state: LightningSwipeableRowState = { isOpen: false };
+
     private renderAction = (
         text: string,
         x: number,
-        progress: Animated.AnimatedInterpolation<number>
+        progress: SharedValue<number>
     ) => {
         const { navigation } = this.props;
-        const transTranslateX = progress.interpolate({
-            inputRange: [0.25, 1],
-            outputRange: [x, 0]
-        });
-        const transOpacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-        });
         const pressHandler = () => {
             this.close();
 
@@ -84,13 +87,7 @@ export default class LightningSwipeableRow extends Component<
         };
 
         return (
-            <Animated.View
-                style={{
-                    flex: 1,
-                    transform: [{ translateX: transTranslateX }],
-                    opacity: transOpacity
-                }}
-            >
+            <ActionContainer x={x} progress={progress}>
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     <View
                         style={[styles.view]}
@@ -147,13 +144,11 @@ export default class LightningSwipeableRow extends Component<
                         </Text>
                     </View>
                 </RectButton>
-            </Animated.View>
+            </ActionContainer>
         );
     };
 
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>
-    ) => {
+    private renderActions = (progress: SharedValue<number>) => {
         let actionCount = 1; // Receive is always shown
         if (nodeInfoStore.supportsOffers) actionCount++;
         if (BackendUtils.supportsRouting()) actionCount++;
@@ -194,10 +189,10 @@ export default class LightningSwipeableRow extends Component<
         );
     };
 
-    private swipeableRow?: Swipeable;
+    private swipeableRow?: SwipeableMethods;
 
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
+    private updateRef = (ref: SwipeableMethods | null) => {
+        this.swipeableRow = ref ?? undefined;
     };
 
     private close = () => {
@@ -399,25 +394,43 @@ export default class LightningSwipeableRow extends Component<
         }
         if (locked) return children;
         return (
-            <Swipeable
+            <ReanimatedSwipeable
                 ref={this.updateRef}
                 friction={2}
                 enableTrackpadTwoFingerGesture
                 leftThreshold={30}
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
+                onSwipeableWillOpen={() => this.setState({ isOpen: true })}
+                onSwipeableWillClose={() => this.setState({ isOpen: false })}
             >
                 <TouchableOpacity
-                    onPress={() =>
-                        lightning || offer || clinkNoffer || lnurlParams
-                            ? this.fetchLnInvoice()
-                            : this.open()
-                    }
+                    // Tap-to-close fallback: upstream ReanimatedSwipeable's
+                    // built-in tap-to-close relies on a `pointerEvents`
+                    // useAnimatedStyle write that doesn't propagate to
+                    // descendants of v3 HostGestureDetector on Android Fabric
+                    // (see software-mansion/react-native-gesture-handler#4225).
+                    // Close explicitly from JS while we wait for the upstream
+                    // fix to ship in 3.1.0 stable.
+                    onPress={() => {
+                        if (this.state.isOpen) {
+                            this.close();
+                        } else if (
+                            lightning ||
+                            offer ||
+                            clinkNoffer ||
+                            lnurlParams
+                        ) {
+                            this.fetchLnInvoice();
+                        } else {
+                            this.open();
+                        }
+                    }}
                     activeOpacity={1}
                 >
                     {children}
                 </TouchableOpacity>
-            </Swipeable>
+            </ReanimatedSwipeable>
         );
     }
 }

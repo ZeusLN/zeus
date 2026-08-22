@@ -5,6 +5,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useSharedValue } from 'react-native-reanimated';
+import type { LegacyPanGesture } from 'react-native-gesture-handler';
 import Carousel, {
     Pagination,
     ICarouselInstance
@@ -152,8 +153,9 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     }}
                     onConfigurePanGesture={(gesture) => {
                         'worklet';
-                        gesture.activeOffsetX([-20, 20]);
-                        gesture.failOffsetY([-5, 5]);
+                        const g = gesture as unknown as LegacyPanGesture;
+                        g.activeOffsetX([-20, 20]);
+                        g.failOffsetY([-5, 5]);
                     }}
                 />
             </View>
