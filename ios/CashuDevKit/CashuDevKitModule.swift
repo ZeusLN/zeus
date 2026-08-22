@@ -203,6 +203,34 @@ class CashuDevKitModule: RCTEventEmitter {
         return dbPath.path
     }
 
+    /// Hardens a Cashu proof database file at rest. Proofs are bearer assets, so
+    /// the plaintext SQLite file must not leave the device via iCloud/iTunes
+    /// backup, and should be encrypted by the OS when the device is locked.
+    /// Applied to the main db and its WAL/SHM sidecars (guarded on existence).
+    private func secureDatabaseFile(atPath path: String) {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: path) else { return }
+        // Exclude from iCloud/iTunes backup
+        do {
+            var url = URL(fileURLWithPath: path)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try url.setResourceValues(values)
+        } catch {
+            print("CashuDevKit: isExcludedFromBackup failed for \(path): \(error)")
+        }
+        // At-rest protection: unreadable until first unlock after boot, which
+        // protects a powered-off/stolen device without breaking background use.
+        do {
+            try fm.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: path
+            )
+        } catch {
+            print("CashuDevKit: setProtection failed for \(path): \(error)")
+        }
+    }
+
     private func encodeToJson(_ object: Any) -> String? {
         guard let data = try? JSONSerialization.data(withJSONObject: object) else {
             return nil
@@ -445,6 +473,14 @@ class CashuDevKitModule: RCTEventEmitter {
                     self.walletUnit = currencyUnit
                     self.wallets.removeAll()
                     self.isInitialized = true
+                }
+
+                // Harden the freshly created proof db at rest (bearer assets):
+                // exclude from backup and set file protection. WAL mode means
+                // the -wal/-shm sidecars exist once migrations have run, so
+                // apply after the database and repository are constructed.
+                for p in [dbPath, dbPath + "-wal", dbPath + "-shm"] {
+                    self.secureDatabaseFile(atPath: p)
                 }
 
                 resolve(nil)
@@ -1599,6 +1635,43 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject("REMOVE_PROOFS_ERROR", error.localizedDescription, error)
             }
         }
+    }
+
+    // MARK: - Database Deletion
+
+    /// Closes the repository/database handles and deletes the proof db (and
+    /// its WAL/SHM sidecars) from disk. Used by "Delete Cashu data" so
+    /// plaintext bearer proofs do not survive the user's deletion. Dropping
+    /// the repository, db, and per-mint wallet references releases the
+    /// underlying SQLite connection before the files are unlinked. Resolves
+    /// false if no database was opened this session (nothing to delete).
+    @objc(deleteWalletDatabase:rejecter:)
+    func deleteWalletDatabase(_ resolve: @escaping RCTPromiseResolveBlock,
+                              reject: @escaping RCTPromiseRejectBlock) {
+        let path = self.currentDbPath
+        walletQueue.sync {
+            self.repo = nil
+            self.db = nil
+            self.wallets.removeAll()
+            self.preparedSends.removeAll()
+            self.isInitialized = false
+        }
+        guard let dbPath = path else {
+            resolve(false)
+            return
+        }
+        let fm = FileManager.default
+        for p in [dbPath, dbPath + "-wal", dbPath + "-shm"] {
+            if fm.fileExists(atPath: p) {
+                do {
+                    try fm.removeItem(atPath: p)
+                } catch {
+                    print("CashuDevKit: failed to delete \(p): \(error)")
+                }
+            }
+        }
+        self.currentDbPath = nil
+        resolve(true)
     }
 
     // MARK: - Cleanup

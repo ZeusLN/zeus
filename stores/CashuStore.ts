@@ -5632,6 +5632,18 @@ export default class CashuStore {
                 await Storage.removeItem(`${walletId}-pubkey`);
             }
 
+            // Close the CDK handles and delete the proof database file itself.
+            // removeMint above only clears rows; the plaintext SQLite file (with
+            // its bearer proofs) must be unlinked or it survives "Delete Cashu
+            // data". Native uses the tracked db path, so this is independent of
+            // the seed-phrase key removed below. A failure here must not abort
+            // the rest of the cleanup.
+            try {
+                await CashuDevKit.deleteWalletDatabase();
+            } catch (e) {
+                console.warn('CDK: Failed to delete wallet database:', e);
+            }
+
             // Clean up legacy storage keys (may exist from migration)
             await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
             await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
