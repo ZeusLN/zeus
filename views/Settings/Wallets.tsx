@@ -273,10 +273,14 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             if (initialStart) {
                 setInitialStart(false);
             }
-            // The active-node branch below skips connecting, so it never
-            // reaches setConnectingStatus, which clears this elsewhere
-            setWalletSelectionPending(false);
             if (nodeActive) {
+                // This branch skips connecting, so it is the one path that
+                // never reaches setConnectingStatus, which clears the latch
+                // everywhere else. Clearing it any earlier would drop the
+                // latch before updateSettings assigns settings, and the
+                // BalanceStore reaction would fire while the credentials
+                // still belong to the previously used wallet.
+                setWalletSelectionPending(false);
                 // if already on selected node, just pop to
                 // the Wallet view, skip connecting procedures
                 this.navigateAfterWalletSelection();
