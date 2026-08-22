@@ -1,4 +1,4 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('./Stores', () => ({}));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('./SettingsStore', () => ({}));
