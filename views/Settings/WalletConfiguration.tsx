@@ -26,6 +26,7 @@ import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
 import { confirmAction } from '../../utils/ActionUtils';
 
@@ -528,7 +529,61 @@ export default class WalletConfiguration extends React.Component<
         }
     }
 
+    // Returns true when the active implementation would carry node
+    // credentials (macaroon/rune/token) over an explicit http:// scheme to
+    // a host that is neither loopback nor a Tor onion service. A bare host
+    // or an https:// scheme resolves to HTTPS in the backend getURL(), so
+    // only an explicit http:// is treated as insecure. Gated per
+    // implementation because state retains fields the active backend never
+    // transmits credentials over (e.g. a stale host on an lndhub config).
+    private hasInsecureCleartextTransport = (): boolean => {
+        const { implementation, host, lndhubUrl } = this.state;
+        switch (implementation) {
+            case 'lnd':
+            case 'cln-rest':
+                return UrlUtils.isCleartextHttpTransport(host);
+            case 'lndhub':
+                return UrlUtils.isCleartextHttpTransport(lndhubUrl);
+            default:
+                return false;
+        }
+    };
+
     saveWalletConfiguration = (
+        recoveryCipherSeed?: string,
+        newEmbeddedLndWallet?: boolean
+    ) => {
+        if (this.hasInsecureCleartextTransport()) {
+            confirmAction(
+                localeString('general.warning'),
+                localeString(
+                    'views.Settings.WalletConfiguration.cleartextHttpWarning'
+                ),
+                {
+                    text: localeString('general.proceed'),
+                    style: 'destructive',
+                    onPress: () =>
+                        this.performSaveWalletConfiguration(
+                            recoveryCipherSeed,
+                            newEmbeddedLndWallet
+                        )
+                },
+                {
+                    text: localeString('general.cancel'),
+                    onPress: () => void 0,
+                    isPreferred: true
+                }
+            );
+            return;
+        }
+
+        this.performSaveWalletConfiguration(
+            recoveryCipherSeed,
+            newEmbeddedLndWallet
+        );
+    };
+
+    private performSaveWalletConfiguration = (
         recoveryCipherSeed?: string,
         newEmbeddedLndWallet?: boolean
     ) => {
@@ -3267,7 +3322,12 @@ export default class WalletConfiguration extends React.Component<
                                                 implementation !==
                                                     'lightning-node-connect' &&
                                                 implementation !==
-                                                    'nostr-wallet-connect'
+                                                    'nostr-wallet-connect' &&
+                                                // The cert modal is about TLS
+                                                // trust; a cleartext http host
+                                                // has no cert, so skip straight
+                                                // to the cleartext warning.
+                                                !this.hasInsecureCleartextTransport()
                                             ) {
                                                 this.setState({
                                                     showCertModal: true
