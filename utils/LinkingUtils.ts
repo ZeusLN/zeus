@@ -126,7 +126,30 @@ class LinkingUtils {
         } else {
             handleAnything(url)
                 .then(([route, props]) => {
-                    navigation.navigate(route, props);
+                    // navigate() only reuses an existing route when it is the
+                    // currently focused one, so a payment request arriving
+                    // while another screen sits on top of PaymentRequest
+                    // (e.g. the QR view opened from its header) would push a
+                    // SECOND PaymentRequest, freshly pinned to the injected
+                    // invoice. That bypasses the payment-request-changed
+                    // warning on the buried instance and leaves stale review
+                    // screens in the stack. If a PaymentRequest already
+                    // exists, pop back to it instead: it is already showing
+                    // the new invoice alongside the warning. Never pop while
+                    // a payment status screen is focused, so an in-flight
+                    // payment's UI is not torn down.
+                    const state = navigation.getState();
+                    const routes = state?.routes ?? [];
+                    const focusedRoute = routes[state?.index ?? 0]?.name;
+                    if (
+                        route === 'PaymentRequest' &&
+                        focusedRoute !== 'SendingLightning' &&
+                        routes.some((r) => r.name === 'PaymentRequest')
+                    ) {
+                        navigation.popTo(route, props);
+                    } else {
+                        navigation.navigate(route, props);
+                    }
                 })
                 .catch((err) =>
                     console.error(
