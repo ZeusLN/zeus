@@ -178,6 +178,8 @@ class BackendUtils {
     disableOffer = (...args: any[]) => this.call('disableOffer', args);
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
+    decodeOffer = (...args: any[]) => this.call('decodeOffer', args);
+    payOffer = (...args: any[]) => this.call('payOffer', args);
     createWithdrawalRequest = (...args: any[]) =>
         this.call('createWithdrawalRequest', args);
     redeemWithdrawalRequest = (...args: any[]) =>
@@ -252,6 +254,7 @@ class BackendUtils {
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsChannelFundMax = () => this.call('supportsChannelFundMax');
     supportsOffers = () => this.call('supportsOffers');
+    supportsOffersDirectPay = () => this.call('supportsOffersDirectPay');
     supportsListingOffers = () => this.call('supportsListingOffers');
     supportsBolt12Address = () => this.call('supportsBolt12Address');
     supportsBolt11BlindedRoutes = () =>

@@ -696,7 +696,12 @@ export default class CLNRest {
     fetchInvoiceFromOffer = async (
         bolt12: string,
         amountSatoshis: string,
-        timeoutSeconds?: number | string
+        timeoutSeconds?: number | string,
+        // Accepted for signature parity with the ldk-node backend, which pays
+        // inside this call and so must apply the fee limit itself. CLN only
+        // fetches the invoice here; the payment goes through PaymentRequest,
+        // which applies the user's fee limit downstream.
+        _feeLimitSat?: number | string
     ) => {
         return await this.postRequest('/v1/fetchinvoice', {
             offer: bolt12,
@@ -845,6 +850,9 @@ export default class CLNRest {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => true;
+    // fetchinvoice hands back the invoice for the PaymentRequest screen to
+    // review and pay; the offer itself is never paid directly
+    supportsOffersDirectPay = () => false;
     supportsListingOffers = () => true;
     supportsBolt12Address = () => true;
     supportsCustomFeeLimit = () => true;
