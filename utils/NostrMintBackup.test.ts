@@ -43,20 +43,20 @@ describe('NostrMintBackup', () => {
         });
 
         it('should produce a valid secp256k1 keypair', () => {
-            const { privateKeyHex, publicKeyHex } =
+            const { privateKey, publicKeyHex } =
                 deriveMintBackupKeypair(testSeed);
 
             // Verify the public key matches what nostr-tools derives
-            const expectedPubkey = getPublicKey(privateKeyHex);
+            const expectedPubkey = getPublicKey(privateKey);
             expect(publicKeyHex).toBe(expectedPubkey);
         });
 
         it('should produce valid npub/nsec encodings', () => {
-            const { privateKeyHex, publicKeyHex } =
+            const { privateKey, privateKeyHex, publicKeyHex } =
                 deriveMintBackupKeypair(testSeed);
 
             const npub = nip19.npubEncode(publicKeyHex);
-            const nsec = nip19.nsecEncode(privateKeyHex);
+            const nsec = nip19.nsecEncode(privateKey);
 
             expect(npub).toMatch(/^npub1/);
             expect(nsec).toMatch(/^nsec1/);
@@ -66,7 +66,9 @@ describe('NostrMintBackup', () => {
             expect(decodedNpub.data).toBe(publicKeyHex);
 
             const decodedNsec = nip19.decode(nsec);
-            expect(decodedNsec.data).toBe(privateKeyHex);
+            expect(bytesToHex(decodedNsec.data as Uint8Array)).toBe(
+                privateKeyHex
+            );
         });
     });
 

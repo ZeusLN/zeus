@@ -6,11 +6,10 @@ import { Notifications } from 'react-native-notifications';
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
-import { schnorr } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
-// @ts-ignore:next-line
-import { getPublicKey, relayInit } from 'nostr-tools';
+import { getPublicKey, SimplePool } from 'nostr-tools';
 import { mnemonicToEntropy, generateMnemonic } from '@scure/bip39';
 
 import { sha256 } from 'js-sha256';
@@ -229,7 +228,10 @@ export default class LightningAddressStore {
                     .hex();
                 if (nostrPrivateKey) {
                     const pmthash_sig = bytesToHex(
-                        schnorr.sign(hash, nostrPrivateKey)
+                        schnorr.sign(
+                            hexToBytes(hash),
+                            hexToBytes(nostrPrivateKey)
+                        )
                     );
                     nostrSignatures.push(pmthash_sig);
                 }
@@ -308,11 +310,13 @@ export default class LightningAddressStore {
 
             const relays_sig = bytesToHex(
                 schnorr.sign(
-                    hashjs
-                        .sha256()
-                        .update(JSON.stringify(relays))
-                        .digest('hex'),
-                    nostrPrivateKey
+                    hexToBytes(
+                        hashjs
+                            .sha256()
+                            .update(JSON.stringify(relays))
+                            .digest('hex')
+                    ),
+                    hexToBytes(nostrPrivateKey)
                 )
             );
 
@@ -925,37 +929,23 @@ export default class LightningAddressStore {
         try {
             const attestationEvents: any = {};
 
-            const hashpk = getPublicKey(hash);
+            const hashpk = getPublicKey(hexToBytes(hash));
 
-            await Promise.all(
-                this.settingsStore.settings.lightningAddress.nostrRelays.map(
-                    async (relayItem) => {
-                        const relay = relayInit(relayItem);
-                        relay.on('connect', () => {
-                            console.log(`connected to ${relay.url}`);
-                        });
-                        relay.on('error', () => {
-                            console.log(`failed to connect to ${relay.url}`);
-                        });
+            const relays =
+                this.settingsStore.settings.lightningAddress.nostrRelays;
+            const pool = new SimplePool();
+            try {
+                const events = await pool.querySync(relays, {
+                    kinds: [55869],
+                    '#p': [hashpk]
+                });
 
-                        await relay.connect();
-
-                        const events = await relay.list([
-                            {
-                                kinds: [55869],
-                                '#p': [hashpk]
-                            }
-                        ]);
-
-                        events.map((event: any) => {
-                            attestationEvents[event.id] = event;
-                        });
-
-                        relay.close();
-                        return;
-                    }
-                )
-            );
+                events.map((event: any) => {
+                    attestationEvents[event.id] = event;
+                });
+            } finally {
+                pool.close(relays);
+            }
 
             Object.keys(attestationEvents).map((key) => {
                 const attestation = this.analyzeAttestation(
