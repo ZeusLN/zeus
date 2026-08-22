@@ -24,11 +24,26 @@ import wifUtils from './WIFUtils';
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
+// The numeric range checks below only apply to literal dotted-quad IPv4
+// addresses. The WHATWG parser canonicalizes every real IPv4 host to that
+// form (127.1 and 0x7f.0.0.1 both become 127.0.0.1), so anything else dotted
+// is a DNS name; 127.evil.com is a legal subdomain and must not classify as
+// loopback.
+const isIPv4Literal = (host: string): boolean => {
+    const octets = host.split('.');
+    return (
+        octets.length === 4 &&
+        octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) < 256)
+    );
+};
+
 // Loopback hosts resolve to the device itself; a cleartext fetch to one never
 // leaves the phone, so it needs neither an unencrypted-transport warning nor
 // Tor routing.
 const isLoopbackHost = (host: string): boolean =>
-    host === 'localhost' || host === '::1' || /^127\./.test(host);
+    host === 'localhost' ||
+    host === '::1' ||
+    (isIPv4Literal(host) && host.startsWith('127.'));
 
 // Private / non-routable hosts (loopback, RFC 1918, link-local, IPv6 ULA,
 // mDNS .local). The Tor SOCKS proxy cannot reach these, so a BTCPay server on
@@ -36,10 +51,11 @@ const isLoopbackHost = (host: string): boolean =>
 const isPrivateHost = (host: string): boolean =>
     isLoopbackHost(host) ||
     host === '0.0.0.0' ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    /^169\.254\./.test(host) ||
+    (isIPv4Literal(host) &&
+        (/^10\./.test(host) ||
+            /^192\.168\./.test(host) ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+            /^169\.254\./.test(host))) ||
     /^f[cd][0-9a-f]{2}:/.test(host) || // IPv6 unique-local fc00::/7
     /^fe[89ab][0-9a-f]:/.test(host) || // IPv6 link-local fe80::/10
     host.endsWith('.local');
@@ -1219,5 +1235,10 @@ const handleAnything = async (
     }
 };
 
-export { isClipboardValue, convertMerchantQRToLightningAddress, isMerchantQR };
+export {
+    isClipboardValue,
+    convertMerchantQRToLightningAddress,
+    isMerchantQR,
+    classifyBtcPayConfigUrl
+};
 export default handleAnything;
