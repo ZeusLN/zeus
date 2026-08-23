@@ -41,6 +41,62 @@ export const cashuTokenPrefixes = [
     'cashu:'
 ];
 
+/**
+ * Where a wallet's cashu seed came from. All three are stored under the
+ * same `v2-bip39` seed version, but they carry very different backup and
+ * disclosure consequences, so the seed export screen has to tell them
+ * apart before it can describe the words it is about to reveal.
+ */
+export enum CashuSeedOrigin {
+    /**
+     * The cashu seed *is* the wallet's own seed, verbatim. A 12-word LDK
+     * mnemonic already carries 128 bits of entropy, so `getCDKMnemonic`
+     * uses it directly rather than deriving from it. Revealing these
+     * words reveals the whole wallet, not just the ecash in it.
+     */
+    WalletSeed = 'wallet-seed',
+    /**
+     * Deterministically derived from the wallet seed (bytes 48:64 of the
+     * BIP-39 seed) for 24-word LDK and LND wallets. Distinct from the
+     * wallet seed, and re-derivable from it, so the wallet backup covers
+     * it.
+     */
+    DerivedFromWalletSeed = 'derived-from-wallet-seed',
+    /**
+     * Generated independently because the wallet has no seed to derive
+     * from (remote nodes). Nothing else can reproduce it, so these words
+     * are the only copy and must be backed up separately.
+     */
+    Independent = 'independent'
+}
+
+/**
+ * Classifies a wallet's cashu seed, mirroring the branches in
+ * `CashuStore.getCDKMnemonic`.
+ *
+ * Assumes a stored cashu seed on a wallet that has its own seed was
+ * derived from it, which holds because that is the only way one is
+ * persisted on such wallets.
+ */
+export const classifyCashuSeedOrigin = (
+    cashuSeedPhrase?: string[],
+    ldkMnemonic?: string,
+    lndSeedPhrase?: string[]
+): CashuSeedOrigin => {
+    const cashuSeed = cashuSeedPhrase?.join(' ').trim();
+    const walletSeed = ldkMnemonic?.trim().split(/\s+/).join(' ');
+
+    if (cashuSeed && walletSeed && cashuSeed === walletSeed) {
+        return CashuSeedOrigin.WalletSeed;
+    }
+
+    if (walletSeed || (lndSeedPhrase && lndSeedPhrase.length > 0)) {
+        return CashuSeedOrigin.DerivedFromWalletSeed;
+    }
+
+    return CashuSeedOrigin.Independent;
+};
+
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;
 const MAX_P2PK_SECRET_DEPTH = 10;

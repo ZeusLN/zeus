@@ -19,15 +19,21 @@ import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 
 import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    CashuSeedOrigin,
+    classifyCashuSeedOrigin
+} from '../../utils/CashuUtils';
 
 import Skull from '../../assets/images/SVG/Skull.svg';
 
 interface CashuSeedProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    SettingsStore: SettingsStore;
 }
 
 interface CashuSeedState {
@@ -84,7 +90,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class CashuSeed extends React.PureComponent<
     CashuSeedProps,
@@ -106,8 +112,18 @@ export default class CashuSeed extends React.PureComponent<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { understood, showModal, seedPhrase } = this.state;
+
+        // The same 12 words mean three different things depending on how
+        // they were produced, so describe the ones actually on screen
+        // rather than assuming the embedded-LND case.
+        const seedOrigin = classifyCashuSeedOrigin(
+            seedPhrase,
+            SettingsStore.ldkMnemonic,
+            SettingsStore.seedPhrase
+        );
+        const isWalletSeed = seedOrigin === CashuSeedOrigin.WalletSeed;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -164,7 +180,7 @@ export default class CashuSeed extends React.PureComponent<
                                     >
                                         {localeString(
                                             'views.Settings.Seed.dangerousText1'
-                                        )}
+                                        ).replace('24', '12')}
                                     </Text>
                                     <Text
                                         style={{
@@ -177,6 +193,19 @@ export default class CashuSeed extends React.PureComponent<
                                             'views.Settings.Seed.dangerousText2'
                                         )}
                                     </Text>
+                                    {isWalletSeed && (
+                                        <Text
+                                            style={{
+                                                ...styles.blackText,
+                                                color: 'black',
+                                                margin: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.CashuSeed.isWalletSeed'
+                                            )}
+                                        </Text>
+                                    )}
                                     <View style={styles.button}>
                                         <CopyButton
                                             title={localeString(
@@ -226,6 +255,32 @@ export default class CashuSeed extends React.PureComponent<
                         >
                             {localeString('views.Cashu.CashuSeed.text1')}
                         </Text>
+                        {isWalletSeed ? (
+                            <View style={{ marginLeft: 10, marginRight: 10 }}>
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Cashu.CashuSeed.isWalletSeed'
+                                    )}
+                                />
+                            </View>
+                        ) : (
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    textAlign: 'center',
+                                    margin: 10,
+                                    fontSize: 20
+                                }}
+                            >
+                                {localeString(
+                                    seedOrigin ===
+                                        CashuSeedOrigin.DerivedFromWalletSeed
+                                        ? 'views.Cashu.CashuSeed.derivedFromWalletSeed'
+                                        : 'views.Cashu.CashuSeed.independentSeed'
+                                )}
+                            </Text>
+                        )}
                         <Text
                             style={{
                                 color: themeColor('text'),
