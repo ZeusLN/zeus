@@ -1003,6 +1003,8 @@
     "views.Tools.NostrKeys.allMintsAlreadyAdded": "All discovered mints are already in your wallet",
     "views.Tools.NostrKeys.noSeed": "No Cashu seed available. Add a mint first to initialize your wallet.",
     "views.Tools.developerTools.title": "Developer Tools",
+    "views.Tools.startupTiming.title": "Startup Timing",
+    "views.Tools.startupTiming.explainer": "Timing of this session's app startup, from JS start to the first completed node connection, including keychain operation counts. Copy and share this report when diagnosing slow startups. It contains no secrets: long storage key names are truncated.",
     "views.Tools.developerTools.noItemsExist": "No items exist",
     "views.Tools.developerTools.abandonChannel.title": "Abandon Channel",
     "views.Tools.developerTools.abandonChannel.message": "Are you sure you want to abandon this channel? The channel will be removed from the database and you may lose funds if you haven't already recovered them.",

@@ -8,6 +8,10 @@ import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
+import {
+    markStartupPhase,
+    sealStartupTiming
+} from '../utils/StartupTimingUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
     DEFAULT_SCORER_URL,
@@ -1928,11 +1932,13 @@ export default class SettingsStore {
     };
 
     public getSettings = async (silentUpdate: boolean = false) => {
+        markStartupPhase('getSettingsFirstCall');
         if (!silentUpdate) this.loading = true;
         try {
             await MigrationsUtils.keychainCloudSyncMigration();
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
+            markStartupPhase('settingsBlobRead');
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
@@ -1947,6 +1953,7 @@ export default class SettingsStore {
                     parsedSettings
                 );
                 this.settings = parsedSettings;
+                markStartupPhase('settingsMigrationsChecked');
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -1976,6 +1983,7 @@ export default class SettingsStore {
         } finally {
             this.isMigrating = false;
             if (!silentUpdate) this.loading = false;
+            markStartupPhase('settingsLoaded');
         }
 
         return this.settings;
@@ -2307,6 +2315,12 @@ export default class SettingsStore {
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;
+        }
+        if (!status) {
+            // First completed connect ends the startup window; collection
+            // stops here so steady-state operation records nothing
+            markStartupPhase('connectComplete');
+            sealStartupTiming();
         }
         this.connecting = status;
         return this.connecting;
