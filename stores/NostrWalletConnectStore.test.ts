@@ -1410,3 +1410,93 @@ describe('NostrWalletConnectStore sign_message', () => {
         expect(response.result.methods).toEqual(['get_info']);
     });
 });
+
+describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
+    const invoice = 'lnbc1cashupreimagetest';
+    const preimage = 'a'.repeat(64);
+
+    // Drives handleCashuPayInvoice past its guards to the response shape.
+    // The melt has already succeeded by that point, so only the fields the
+    // response is built from need to be real.
+    const buildCashuStore = (
+        cashuInvoice: any,
+        payments: any[] = []
+    ): NostrWalletConnectStore => {
+        const store = buildPayInvoiceTestStore();
+        (store as any).cashuStore = {
+            selectedMintUrl: 'https://mint.example',
+            totalBalanceSats: 100_000,
+            paymentError: false,
+            paymentErrorMsg: '',
+            payReq: new Invoice({
+                payment_request: invoice,
+                num_satoshis: '100'
+            } as any),
+            getPayReqError: null,
+            getPayReq: jest.fn().mockResolvedValue(undefined),
+            payLnInvoiceFromEcash: jest.fn().mockResolvedValue(cashuInvoice),
+            isProperlyConfigured: () => true,
+            payments
+        };
+        // isCashuConfigured is a computed, so satisfy its inputs rather
+        // than trying to redefine it
+        store.cashuEnabled = true;
+        jest.spyOn(store as any, 'finalizePayment').mockResolvedValue(
+            undefined
+        );
+        return store;
+    };
+
+    const payWith = async (cashuInvoice: any, payments: any[] = []) => {
+        const store = buildCashuStore(cashuInvoice, payments);
+        const connection = seedPayInvoiceConnection(store);
+        return (store as any).handleCashuPayInvoice(connection, { invoice });
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(
+            NostrConnectUtils,
+            'getPayInvoiceAmountSats'
+        ).mockResolvedValue(100);
+    });
+
+    it('returns the melt preimage when there is one', async () => {
+        const response = await payWith({
+            isFailed: false,
+            getPreimage: preimage,
+            getPaymentRequest: invoice,
+            getFee: 1
+        });
+
+        expect(response.result.preimage).toBe(preimage);
+    });
+
+    it('never returns the invoice as the preimage', async () => {
+        // Regression: this used to fall back to getPaymentRequest, handing
+        // NIP-47 clients a bolt11 string as proof of payment.
+        const response = await payWith({
+            isFailed: false,
+            getPreimage: '',
+            getPaymentRequest: invoice,
+            getFee: 1
+        });
+
+        expect(response.result.preimage).not.toBe(invoice);
+        expect(response.result.preimage).toBe('');
+    });
+
+    it('falls back to the payments-list preimage, as the lightning leg does', async () => {
+        const response = await payWith(
+            {
+                isFailed: false,
+                getPreimage: '',
+                getPaymentRequest: invoice,
+                getFee: 1
+            },
+            [{ getPaymentRequest: invoice, getPreimage: preimage, getFee: 1 }]
+        );
+
+        expect(response.result.preimage).toBe(preimage);
+    });
+});
