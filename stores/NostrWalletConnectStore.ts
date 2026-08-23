@@ -2570,10 +2570,11 @@ export default class NostrWalletConnectStore {
 
         return {
             result: {
+                // Never fall back to the invoice itself: NIP-47 clients
+                // treat this field as proof of payment, and a bolt11
+                // string is not one. Mirrors the lightning leg.
                 preimage:
-                    cashuInvoice.getPreimage ||
-                    cashuInvoice.getPaymentRequest ||
-                    '',
+                    cashuInvoice.getPreimage || payment?.getPreimage || '',
                 fees_paid: satsToMillisats(feeSats)
             },
             error: undefined
