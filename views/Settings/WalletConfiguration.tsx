@@ -1968,30 +1968,51 @@ export default class WalletConfiguration extends React.Component<
                                             'views.Settings.WalletConfiguration.nostrWalletConnectUrl'
                                         )}
                                     </Text>
-                                    <TextInput
-                                        placeholder={'nostr+walletconnect://'}
-                                        textColor={
-                                            nostrWalletConnectUrlError
-                                                ? themeColor('error')
-                                                : themeColor('text')
-                                        }
-                                        value={nostrWalletConnectUrl}
-                                        autoCapitalize="none"
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                nostrWalletConnectUrl: text
-                                                    .trim()
-                                                    .replace(/\s+/g, ' '),
-                                                nostrWalletConnectUrlError:
-                                                    !text.startsWith(
-                                                        'nostr+walletconnect://'
-                                                    ),
-                                                saved: false
-                                            })
-                                        }
-                                        locked={loading}
-                                        autoCorrect={false}
-                                    />
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <TextInput
+                                            placeholder={
+                                                'nostr+walletconnect://'
+                                            }
+                                            textColor={
+                                                nostrWalletConnectUrlError
+                                                    ? themeColor('error')
+                                                    : themeColor('text')
+                                            }
+                                            value={nostrWalletConnectUrl}
+                                            autoCapitalize="none"
+                                            secureTextEntry={this.state.hidden}
+                                            style={{
+                                                flex: 1,
+                                                marginRight: 15
+                                            }}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    nostrWalletConnectUrl: text
+                                                        .trim()
+                                                        .replace(/\s+/g, ' '),
+                                                    nostrWalletConnectUrlError:
+                                                        !text.startsWith(
+                                                            'nostr+walletconnect://'
+                                                        ),
+                                                    saved: false
+                                                })
+                                            }
+                                            locked={loading}
+                                            autoCorrect={false}
+                                        />
+                                        <ShowHideToggle
+                                            onPress={() =>
+                                                this.setState({
+                                                    hidden: !this.state.hidden
+                                                })
+                                            }
+                                        />
+                                    </View>
                                 </>
                             )}
                             {implementation === 'lndhub' && (
