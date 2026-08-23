@@ -22,6 +22,7 @@ import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { isPlausibleSatPerVbyte } from '../utils/FeeUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
@@ -88,6 +89,13 @@ export default class EditFee extends React.Component<
         const { selectedFee, fee, customFee } = this.state;
         const { navigation, FeeStore, route } = this.props;
         const displayOnly = route.params?.displayOnly;
+        // A typed rate is never silently corrected: an out-of-range value
+        // is surfaced and blocks confirmation, so what gets broadcast is
+        // always the number the user actually entered.
+        const customFeeInvalid =
+            selectedFee === 'custom' &&
+            !!customFee &&
+            !isPlausibleSatPerVbyte(customFee);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
             FeeStore;
 
@@ -389,6 +397,21 @@ export default class EditFee extends React.Component<
                                     />
                                 </TouchableWithoutFeedback>
 
+                                {customFeeInvalid && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('warning'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            textAlign: 'center',
+                                            marginTop: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.EditFee.customFeeTooHigh'
+                                        )}
+                                    </Text>
+                                )}
+
                                 <View style={styles.confirmButton}>
                                     <Button
                                         title={localeString(
@@ -405,7 +428,8 @@ export default class EditFee extends React.Component<
                                         disabled={
                                             !fee ||
                                             (selectedFee === 'custom' &&
-                                                !customFee)
+                                                !customFee) ||
+                                            customFeeInvalid
                                         }
                                     />
                                 </View>

@@ -652,6 +652,7 @@
     "views.EditFee.minimumFee": "Minimum fee",
     "views.EditFee.confirmFee": "Confirm Fee",
     "views.EditFee.error": "Error fetching fee rates",
+    "views.EditFee.customFeeTooHigh": "Enter a fee rate between 1 and 2000 sats/vB",
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "Paid",
     "views.Invoice.unpaid": "Unpaid",
