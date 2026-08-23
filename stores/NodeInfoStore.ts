@@ -66,6 +66,12 @@ export default class NodeInfoStore {
             BackendUtils.getMyNodeInfo()
                 .then((data: any) => {
                     if (this.currentRequest !== currentRequest) {
+                        // A newer getNodeInfo call superseded this one.
+                        // Settle anyway: callers like Wallet's fetchData
+                        // await this promise, and a bare return would leave
+                        // it pending forever, wedging fetchLock and the
+                        // connecting overlay until app restart.
+                        resolve('Old getNodeInfo call');
                         return;
                     }
                     const nodeInfo = new NodeInfo(data);
