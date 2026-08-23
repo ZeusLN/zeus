@@ -6,7 +6,7 @@ import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
 import Invoice from './../models/Invoice';
 import { localeString } from './../utils/LocaleUtils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes } from './../utils/HashingUtils';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
 
 export default class LndHub extends LND {
@@ -150,24 +150,20 @@ export default class LndHub extends LND {
         ]);
     };
     lnurlAuth = (message: string) => {
-        const messageHash = new sha256Hash()
-            .update(Base64Utils.stringToUint8Array(message))
-            .digest();
+        const messageHash = sha256Bytes(
+            Base64Utils.stringToUint8Array(message)
+        );
 
         let signed, signature, key;
         switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
-                key = new sha256Hash()
-                    .update(
-                        Base64Utils.stringToUint8Array(
-                            `lndhub://${settingsStore.username}:${settingsStore.password}`
-                        )
+                key = sha256Bytes(
+                    Base64Utils.stringToUint8Array(
+                        `lndhub://${settingsStore.username}:${settingsStore.password}`
                     )
-                    .digest();
+                );
                 signed = ecdsaSignDERHex(messageHash, key);
-                signature = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signed))
-                    .digest();
+                signature = sha256Bytes(Base64Utils.stringToUint8Array(signed));
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(
