@@ -5644,9 +5644,21 @@ export default class CashuStore {
                 console.warn('CDK: Failed to delete wallet database:', e);
             }
 
-            // Clean up legacy storage keys (may exist from migration)
-            await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
+            // Persist an empty mint list instead of removing the key.
+            // Boot treats a missing key as a fresh install or recovery and
+            // restores the mint list from the Nostr backup (and re-adds the
+            // onboarding mints); since nostrBackupMints never publishes an
+            // empty list, the stale backup would resurrect every deleted
+            // mint on the next launch. An empty list records that the user
+            // deliberately deleted their mints, matching removeMint
+            await Storage.setItem(
+                `${lndDir}-cashu-mintUrls`,
+                JSON.stringify([])
+            );
             await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
+            await Storage.removeItem(
+                `${lndDir}-cashu-nostrMintBackupTimestamp`
+            );
 
             // Clean up app-specific storage
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
