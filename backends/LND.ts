@@ -218,7 +218,10 @@ export default class LND {
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
+            // anchor to the scheme: a bare string replace rewrites the
+            // first match anywhere, so a host containing "http" had its
+            // own name mangled (https://httpbin.org -> wss://wsbin.org)
+            baseUrl = baseUrl.replace(/^https/, 'wss').replace(/^http/, 'ws');
         }
 
         if (baseUrl[baseUrl.length - 1] === '/') {
