@@ -63,7 +63,11 @@ function setup(selectedNode: number) {
             'releaseFetchLock',
             'setInitialStart'
         ],
-        { BackendUtils }
+        {
+            BackendUtils,
+            markStartupPhase: () => {},
+            sealStartupTiming: () => {}
+        }
     );
     const settings = new Settings();
     Object.assign(settings, {
@@ -125,7 +129,8 @@ function setup(selectedNode: number) {
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),
-            repairMissingChannelEdges
+            repairMissingChannelEdges,
+            markStartupPhase: () => {}
         }
     );
     const view = new Wallet();

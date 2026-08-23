@@ -127,7 +127,9 @@ function setup() {
             BackendUtils,
             localeString: (s: string) => s,
             LNC_CONNECT_POLL_INTERVAL_MS: 500,
-            LNC_CONNECT_MAX_POLLS: 120
+            LNC_CONNECT_MAX_POLLS: 120,
+            markStartupPhase: () => {},
+            sealStartupTiming: () => {}
         }
     );
     const settings = new Settings();
@@ -175,7 +177,8 @@ function setup() {
             },
             themeColor: () => '#000',
             isLightTheme: () => false,
-            autoPurgeLegacyKeychain: jest.fn()
+            autoPurgeLegacyKeychain: jest.fn(),
+            markStartupPhase: () => {}
         }
     );
     const view = new Wallet();

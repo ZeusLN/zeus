@@ -1,3 +1,5 @@
+// First import so t0 approximates JS start; uses no polyfilled globals
+import {markStartupPhase} from './utils/StartupTimingUtils';
 import './polyfills';
 import 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
@@ -30,5 +32,9 @@ LogBox.ignoreLogs([
   'Updating fee rate estimates timed out',
   'NodeException'
 ]);
+
+// All top-level imports (including the full App screen graph and store
+// singleton construction) have evaluated by the time this line runs
+markStartupPhase('bundleEvaluated');
 
 AppRegistry.registerComponent(appName, () => App);
