@@ -1377,7 +1377,7 @@
     "views.Cashu.CashuSeed.text1": "The following 12 words are your Cashu wallet backup. They let you import your ecash into another Cashu wallet.",
     "views.Cashu.CashuSeed.derivedFromWalletSeed": "These words are derived from your wallet seed phrase, so backing up your wallet seed also backs up your ecash.",
     "views.Cashu.CashuSeed.independentSeed": "These words are the ONLY backup of your ecash. They are not derived from your wallet seed phrase, so your wallet backup does not cover them. Save them separately.",
-    "views.Cashu.CashuSeed.isWalletSeed": "WARNING: these words are also your wallet seed phrase. Anyone who sees them can spend everything in this wallet, not just your ecash. Never share them with a mint, a Cashu wallet, or anyone else.",
+    "views.Cashu.CashuSeed.isWalletSeed": "WARNING: these words are also your wallet seed phrase. They control everything in this wallet, not just your ecash.",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
     "views.Cashu.LegacySeedRecovery.subtitle": "Check for funds on legacy seed format",
     "views.Cashu.LegacySeedRecovery.description": "This tool checks if you have any unspent funds on the legacy Cashu seed format. If funds are found, they will be automatically restored to your wallet.",
