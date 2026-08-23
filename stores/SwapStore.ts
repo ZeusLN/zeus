@@ -15,7 +15,8 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
     isValidRescueKey,
-    verifyReverseSwapInvoice
+    verifyReverseSwapInvoice,
+    deriveSwapPreimage
 } from '../utils/SwapUtils';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -819,7 +820,7 @@ export default class SwapStore {
             throw new Error(`No private key at index ${index}`);
         }
 
-        return crypto.sha256(Buffer.from(childKey.privateKey));
+        return deriveSwapPreimage(childKey.privateKey);
     };
 
     @action
@@ -960,9 +961,18 @@ export default class SwapStore {
                                 };
 
                                 if (isReverseSwap) {
+                                    // Re-derive the preimage. Only reverse
+                                    // swaps have one of ours: the host knows
+                                    // just its hash, so without this the
+                                    // rescued claim is built with an empty
+                                    // preimage, fails every retry, and the
+                                    // host reclaims the lockup at timeout.
                                     return {
                                         ...rescuedSwapBase,
-                                        type: SwapType.Reverse
+                                        type: SwapType.Reverse,
+                                        preimage: deriveSwapPreimage(
+                                            childKey.privateKey
+                                        )
                                     };
                                 } else {
                                     return {
