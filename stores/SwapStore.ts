@@ -279,9 +279,12 @@ export default class SwapStore {
                 this.getHeaders
             );
 
-            const status = response.info().status;
+            // named httpStatus, not status: spreading a local called
+            // `status` into a swap is what overwrote the swap's own
+            // SwapState here
+            const httpStatus = response.info().status;
             const data = response.json();
-            if (status == 200) {
+            if (httpStatus == 200) {
                 const lockupTransaction = {
                     id: data.id,
                     hex: data.hex,
@@ -294,7 +297,6 @@ export default class SwapStore {
                     swap.id === id
                         ? {
                               ...swap,
-                              status,
                               lockupTransaction
                           }
                         : swap
