@@ -1797,6 +1797,7 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No Cashu mint selected. Please select a mint first.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Failed to decode invoice - payReq is undefined",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Invoice already paid",
+    "stores.NostrWalletConnectStore.error.invoicePaymentInProgress": "A payment for this invoice is still in progress",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Invalid payment request",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Invalid amount",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Message must be a non-empty string",

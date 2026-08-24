@@ -2272,6 +2272,21 @@ export default class NostrWalletConnectStore {
         // spend the same sats twice.
         await this.reconcilePendingPayInvoiceActivities(connection);
 
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+        const existing = connection.findPayInvoiceActivity(
+            paymentRequest || request.invoice,
+            decodedPaymentHash
+        );
+        if (existing && connection.isUnresolvedPayInvoiceActivity(existing)) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoicePaymentInProgress'
+                ),
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            );
+        }
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
@@ -2703,14 +2718,8 @@ export default class NostrWalletConnectStore {
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
     ): Promise<boolean> {
-        const pending = connection.activity.filter(
-            (a) =>
-                a.type === 'pay_invoice' &&
-                a.payment_source !== 'cashu' &&
-                !a.isBudgetDebited &&
-                (a.status === 'pending' ||
-                    (a.status === 'failed' &&
-                        NostrConnectUtils.isPaymentTimedOutMessage(a.error)))
+        const pending = connection.activity.filter((a) =>
+            connection.isUnresolvedPayInvoiceActivity(a)
         );
         if (pending.length === 0) return false;
 
@@ -2731,40 +2740,10 @@ export default class NostrWalletConnectStore {
             if (!payment) continue;
 
             runInAction(() => {
-                if (activity.isBudgetDebited) return;
                 if (
-                    activity.status !== 'pending' &&
-                    activity.status !== 'failed'
+                    this.applyPayInvoiceReconcile(activity, connection, payment)
                 ) {
-                    return;
-                }
-
-                activity.payment = new Payment(payment);
-                changed = true;
-
-                if (payment.isFailed) {
-                    activity.status = 'failed';
-                    return;
-                }
-                if (payment.isIncomplete) {
-                    activity.status = 'pending';
-                    activity.error = undefined;
-                    return;
-                }
-
-                activity.status = 'success';
-                activity.error = undefined;
-                const amountSats =
-                    Math.floor(Number(activity.satAmount)) ||
-                    Math.floor(Number(payment.getAmount) || 0);
-                const feeSats = Number(payment.getFee) || 0;
-                activity.fees_paid = feeSats;
-
-                const spendSats =
-                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                if (spendSats > 0 && !activity.isBudgetDebited) {
-                    connection.trackSpending(spendSats, this.maxBudgetLimit);
-                    activity.isBudgetDebited = true;
+                    changed = true;
                 }
             });
         }
@@ -2774,6 +2753,70 @@ export default class NostrWalletConnectStore {
             this.findAndUpdateConnection(connection);
         }
         return changed;
+    }
+
+    private applyPayInvoiceReconcile(
+        activity: ConnectionActivity,
+        connection: NWCConnection,
+        raw: Payment
+    ): boolean {
+        if (activity.isBudgetDebited) return false;
+        if (activity.status !== 'pending' && activity.status !== 'failed') {
+            return false;
+        }
+
+        const listed = new Payment(raw);
+        const before = {
+            status: activity.status,
+            error: activity.error,
+            fees_paid: activity.fees_paid,
+            isBudgetDebited: !!activity.isBudgetDebited,
+            paymentHash:
+                activity.payment instanceof Payment
+                    ? activity.payment.paymentHash
+                    : undefined,
+            paymentStatus: activity.payment?.status
+        };
+
+        if (raw.isFailed) {
+            // CLN listpays does not populate failure_reason/htlcs, so
+            // Payment.isFailed may stay false for genuine CLN failures;
+            // those rows remain in the reconcile filter until expiry.
+            activity.status = 'failed';
+            activity.error =
+                listed.failure_reason &&
+                String(listed.failure_reason) !== 'FAILURE_REASON_NONE'
+                    ? String(listed.failure_reason)
+                    : localeString('error.paymentFailed');
+        } else if (raw.isIncomplete) {
+            activity.status = 'pending';
+            activity.error = undefined;
+        } else {
+            activity.status = 'success';
+            activity.error = undefined;
+            const amountSats =
+                Math.floor(Number(activity.satAmount)) ||
+                Math.floor(Number(raw.getAmount) || 0);
+            const feeSats = Number(raw.getFee) || 0;
+            activity.fees_paid = feeSats;
+            const spendSats =
+                amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+            if (spendSats > 0) {
+                connection.trackSpending(spendSats, this.maxBudgetLimit);
+                activity.isBudgetDebited = true;
+            }
+        }
+
+        activity.payment = listed;
+
+        return (
+            before.status !== activity.status ||
+            before.error !== activity.error ||
+            before.fees_paid !== activity.fees_paid ||
+            before.isBudgetDebited !== !!activity.isBudgetDebited ||
+            before.paymentHash !== listed.paymentHash ||
+            before.paymentStatus !== listed.status
+        );
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(
@@ -3188,7 +3231,11 @@ export default class NostrWalletConnectStore {
         );
         const existing = index !== -1 ? connection.activity[index] : undefined;
 
-        if (existing?.status === 'success' && record.status !== 'success') {
+        if (
+            existing &&
+            ((existing.status === 'success' && record.status !== 'success') ||
+                (existing.status === 'pending' && record.status === 'failed'))
+        ) {
             return false;
         }
 

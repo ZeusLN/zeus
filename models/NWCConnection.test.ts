@@ -6,7 +6,16 @@ jest.mock('../utils/NostrConnectUtils', () => ({
     __esModule: true,
     default: {
         getReadOnlyPermissions: () => [],
-        hasPaymentPermissions: () => false
+        hasPaymentPermissions: () => false,
+        isPaymentTimedOutMessage: (message?: string | null) => {
+            if (!message) return false;
+            const normalized = message.toLowerCase();
+            return (
+                normalized.includes('timed out') ||
+                message === 'views.SendingLightning.paymentTimedOut' ||
+                message === 'error.paymentTimedOut'
+            );
+        }
     }
 }));
 
@@ -308,5 +317,41 @@ describe('NWCConnection pay_invoice activity lookup', () => {
         expect(
             connection.findPayInvoiceActivity('lnbc1normalized', paymentHash)
         ).toBeUndefined();
+    });
+
+    it('isUnresolvedPayInvoiceActivity matches pending and timeout-failed holds', () => {
+        const connection = baseConnection();
+        const pending = {
+            id: 'lnbc1pending',
+            type: 'pay_invoice' as const,
+            payment_source: 'lightning' as const,
+            status: 'pending' as const,
+            satAmount: 100
+        };
+        const timeoutFailed = {
+            id: 'lnbc1timeout',
+            type: 'pay_invoice' as const,
+            payment_source: 'lightning' as const,
+            status: 'failed' as const,
+            satAmount: 100,
+            error: 'views.SendingLightning.paymentTimedOut'
+        };
+
+        expect(connection.isUnresolvedPayInvoiceActivity(pending)).toBe(true);
+        expect(connection.isUnresolvedPayInvoiceActivity(timeoutFailed)).toBe(
+            true
+        );
+        expect(
+            connection.isUnresolvedPayInvoiceActivity({
+                ...timeoutFailed,
+                error: 'FAILURE_REASON_NO_ROUTE'
+            })
+        ).toBe(false);
+        expect(
+            connection.isUnresolvedPayInvoiceActivity({
+                ...pending,
+                isBudgetDebited: true
+            })
+        ).toBe(false);
     });
 });
