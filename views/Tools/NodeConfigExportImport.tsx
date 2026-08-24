@@ -179,13 +179,9 @@ export default class NodeConfigExportImport extends React.Component<
                                 marginBottom: 20
                             }}
                         >
-                            {Platform.OS === 'android'
-                                ? localeString(
-                                      'views.Tools.nodeConfigExportImport.explainerAndroid'
-                                  )
-                                : localeString(
-                                      'views.Tools.nodeConfigExportImport.explaineriOS'
-                                  )}
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.explainer'
+                            )}
                         </Text>
                         <Button
                             title={localeString('general.ok')}
