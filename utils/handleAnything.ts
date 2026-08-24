@@ -11,14 +11,14 @@ import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
+import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-// @ts-ignore:next-line
-import { relayInit, nip05, nip19 } from 'nostr-tools';
+import { SimplePool, nip05 } from 'nostr-tools';
 import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
@@ -38,48 +38,33 @@ const nostrProfileLookup = async (data: string) => {
     let profile: any;
 
     const pubkey = data;
-    const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
-        async (relayItem) => {
-            try {
-                const relay = relayInit(relayItem);
-                relay.on('connect', () => {
-                    console.log(`connected to ${relay.url}`);
-                });
-                relay.on('error', (): any => {
-                    console.log(`failed to connect to ${relay.url}`);
-                });
-
-                await relay.connect();
-                return relay.list([
-                    {
-                        authors: [pubkey],
-                        kinds: [0]
-                    }
-                ]);
-            } catch (e) {}
-        }
-    );
-
-    await Promise.all(profilesEventsPromises).then((profilesEventsArrays) => {
-        const profileEvents = profilesEventsArrays
-            .flat()
-            .filter((event) => event !== undefined);
-
-        profileEvents.forEach((item: any) => {
-            try {
-                const content = JSON.parse(item.content);
-                if (!profile || item.created_at > profile.timestamp) {
-                    profile = {
-                        content,
-                        timestamp: item.created_at
-                    };
-                }
-            } catch (error: any) {
-                throw new Error(
-                    `Error parsing JSON for item with ID ${item.id}: ${error.message}`
-                );
-            }
+    const pool = new SimplePool();
+    let profileEvents: any[] = [];
+    try {
+        profileEvents = await pool.querySync(DEFAULT_NOSTR_RELAYS, {
+            authors: [pubkey],
+            kinds: [0]
         });
+    } catch (e) {
+        console.log('nostr profile lookup error', e);
+    } finally {
+        pool.close(DEFAULT_NOSTR_RELAYS);
+    }
+
+    profileEvents.forEach((item: any) => {
+        try {
+            const content = JSON.parse(item.content);
+            if (!profile || item.created_at > profile.timestamp) {
+                profile = {
+                    content,
+                    timestamp: item.created_at
+                };
+            }
+        } catch (error: any) {
+            throw new Error(
+                `Error parsing JSON for item with ID ${item.id}: ${error.message}`
+            );
+        }
     });
 
     return [
@@ -916,8 +901,10 @@ const handleAnything = async (
         // lookup to when the user acts on the value.
         if (isClipboardValue) return true;
         try {
-            const decoded = nip19.decode(data);
-            const pubkey = decoded.data.toString();
+            const pubkey = NostrUtils.npubToHex(data);
+            if (!pubkey) {
+                throw new Error('Invalid npub');
+            }
             return await nostrProfileLookup(pubkey);
         } catch (e) {
             throw new Error(

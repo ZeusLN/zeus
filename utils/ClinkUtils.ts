@@ -1,19 +1,14 @@
 import { bech32 } from '@scure/base';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
-    // @ts-ignore:next-line
-    generatePrivateKey,
-    // @ts-ignore:next-line
+    generateSecretKey,
     getPublicKey,
-    // @ts-ignore:next-line
-    finishEvent,
-    // @ts-ignore:next-line
-    relayInit,
-    // @ts-ignore:next-line
-    verifySignature
+    finalizeEvent,
+    Relay,
+    verifyEvent,
+    nip44
 } from 'nostr-tools';
-import * as nip44 from '@nostr/tools/nip44';
 
 // CLINK Offers — successor to LNURL-pay using Nostr as transport.
 // Spec: https://github.com/shocknet/clink (specs/clink-offers.md)
@@ -320,14 +315,14 @@ const sendAndAwaitResponse = (opts: {
             : console.log(`[CLINK ${relayUrl}] ${msg}`);
 
     return new Promise((resolve, reject) => {
-        const relay = relayInit(relayUrl);
+        const relay = new Relay(relayUrl);
         let resolved = false;
         let sub: any;
         let eventsSeen = 0;
         let eventsRejected = 0;
         const cleanup = () => {
             try {
-                sub?.unsub();
+                sub?.close();
             } catch {}
             try {
                 relay.close();
@@ -343,9 +338,8 @@ const sendAndAwaitResponse = (opts: {
             reject(new ClinkRequestError('TIMEOUT'));
         }, timeoutMs);
 
-        relay.on('notice', (msg: string) => log('relay NOTICE:', msg));
-        relay.on('error', () => log('relay error event fired'));
-        relay.on('disconnect', () => log('relay disconnected'));
+        relay.onnotice = (msg: string) => log('relay NOTICE:', msg);
+        relay.onclose = () => log('relay disconnected');
 
         log(`request id=${event.id} payer=${payerPkHex.slice(0, 8)}…`);
 
@@ -357,79 +351,94 @@ const sendAndAwaitResponse = (opts: {
                 // pre-index it. Client-side check still enforces it
                 // (isValidClinkResponseEvent). `since` is widened to 60s
                 // to absorb clock skew between phone and relay.
-                sub = relay.sub([
+                sub = relay.subscribe(
+                    [
+                        {
+                            kinds: [CLINK_KIND],
+                            '#p': [payerPkHex],
+                            authors: [recipientPkHex],
+                            since: Math.floor(Date.now() / 1000) - 60
+                        }
+                    ],
                     {
-                        kinds: [CLINK_KIND],
-                        '#p': [payerPkHex],
-                        authors: [recipientPkHex],
-                        since: Math.floor(Date.now() / 1000) - 60
+                        oneose: () => log('relay sent EOSE'),
+                        onevent: (ev: any) => {
+                            if (resolved) return;
+                            eventsSeen++;
+                            if (
+                                !isValidClinkResponseEvent(
+                                    ev,
+                                    event.id,
+                                    recipientPkHex
+                                )
+                            ) {
+                                eventsRejected++;
+                                log('event rejected (structural mismatch)', {
+                                    id: ev.id,
+                                    kind: ev.kind,
+                                    author: ev.pubkey,
+                                    tags: ev.tags
+                                });
+                                return;
+                            }
+                            const hasVersionTag = (
+                                Array.isArray(ev.tags) ? ev.tags : []
+                            ).some(
+                                (t: any) =>
+                                    Array.isArray(t) && t[0] === 'clink_version'
+                            );
+                            if (!hasVersionTag) {
+                                log(
+                                    'WARN: service response missing clink_version tag (spec violation, accepting for interop)'
+                                );
+                            }
+                            let valid = false;
+                            try {
+                                valid = verifyEvent(ev);
+                            } catch (e) {
+                                log('verifyEvent threw:', e);
+                            }
+                            if (!valid) {
+                                eventsRejected++;
+                                log('event rejected (bad signature)', {
+                                    id: ev.id
+                                });
+                                return;
+                            }
+                            let plaintext: string;
+                            try {
+                                plaintext = nip44.decrypt(
+                                    ev.content,
+                                    conversationKey
+                                );
+                            } catch (e) {
+                                eventsRejected++;
+                                log(
+                                    'event rejected (nip44 decrypt failed):',
+                                    e
+                                );
+                                return;
+                            }
+                            let parsed: NofferResponse;
+                            try {
+                                parsed = JSON.parse(plaintext);
+                            } catch (e) {
+                                eventsRejected++;
+                                log('event rejected (plaintext not JSON):', e);
+                                return;
+                            }
+                            log('response accepted', parsed);
+                            resolved = true;
+                            clearTimeout(timeout);
+                            cleanup();
+                            resolve(parsed);
+                        }
                     }
-                ]);
+                );
                 log('subscribed', {
                     kind: CLINK_KIND,
                     p: payerPkHex,
                     author: recipientPkHex
-                });
-
-                sub.on('eose', () => log('relay sent EOSE'));
-
-                sub.on('event', (ev: any) => {
-                    if (resolved) return;
-                    eventsSeen++;
-                    if (
-                        !isValidClinkResponseEvent(ev, event.id, recipientPkHex)
-                    ) {
-                        eventsRejected++;
-                        log('event rejected (structural mismatch)', {
-                            id: ev.id,
-                            kind: ev.kind,
-                            author: ev.pubkey,
-                            tags: ev.tags
-                        });
-                        return;
-                    }
-                    const hasVersionTag = (
-                        Array.isArray(ev.tags) ? ev.tags : []
-                    ).some(
-                        (t: any) => Array.isArray(t) && t[0] === 'clink_version'
-                    );
-                    if (!hasVersionTag) {
-                        log(
-                            'WARN: service response missing clink_version tag (spec violation, accepting for interop)'
-                        );
-                    }
-                    let valid = false;
-                    try {
-                        valid = verifySignature(ev);
-                    } catch (e) {
-                        log('verifySignature threw:', e);
-                    }
-                    if (!valid) {
-                        eventsRejected++;
-                        log('event rejected (bad signature)', { id: ev.id });
-                        return;
-                    }
-                    let plaintext: string;
-                    try {
-                        plaintext = nip44.decrypt(ev.content, conversationKey);
-                    } catch (e) {
-                        eventsRejected++;
-                        log('event rejected (nip44 decrypt failed):', e);
-                        return;
-                    }
-                    let parsed: NofferResponse;
-                    try {
-                        parsed = JSON.parse(plaintext);
-                    } catch (e) {
-                        eventsRejected++;
-                        log('event rejected (plaintext not JSON):', e);
-                        return;
-                    }
-                    log('response accepted', parsed);
-                    resolved = true;
-                    clearTimeout(timeout);
-                    cleanup();
-                    resolve(parsed);
                 });
 
                 // Publish AFTER subscribing so we don't miss a fast reply.
@@ -499,18 +508,15 @@ export const requestInvoiceFromNoffer = async (
     const payload = buildClinkRequestPayload(noffer, params);
 
     // Ephemeral payer key per request (privacy: don't link to user identity)
-    const payerSkHex = generatePrivateKey();
-    const payerPkHex = getPublicKey(payerSkHex);
-    const conversationKey = nip44.getConversationKey(
-        hexToBytes(payerSkHex),
-        noffer.pubkey
-    );
+    const payerSk = generateSecretKey();
+    const payerPkHex = getPublicKey(payerSk);
+    const conversationKey = nip44.getConversationKey(payerSk, noffer.pubkey);
     const encryptedContent = nip44.encrypt(
         JSON.stringify(payload),
         conversationKey
     );
 
-    const event = finishEvent(
+    const event = finalizeEvent(
         {
             kind: CLINK_KIND,
             content: encryptedContent,
@@ -520,7 +526,7 @@ export const requestInvoiceFromNoffer = async (
             ],
             created_at: Math.floor(Date.now() / 1000)
         },
-        payerSkHex
+        payerSk
     );
 
     let lastErr: unknown;

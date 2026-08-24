@@ -1,12 +1,3 @@
-// Test-env shim: jest's moduleNameMapper forces @scure/bip32 to resolve
-// @noble/hashes/_assert to the top-level package (1.7.x, exports `abytes`),
-// while Metro/production resolves to the nested package (1.3.x, exports `bytes`).
-// Alias `bytes` -> `abytes` so HDKey.fromMasterSeed works under jest.
-const assertMod = require('@noble/hashes/_assert');
-if (!assertMod.bytes && assertMod.abytes) {
-    assertMod.bytes = assertMod.abytes;
-}
-
 import {
     deriveVssSigningKey,
     deriveVssSigningKeyFromSeed

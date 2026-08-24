@@ -2,12 +2,11 @@ import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-// @ts-ignore:next-line
-import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { schnorr } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
+import { schnorr } from '@noble/curves/secp256k1.js';
 import hashjs from 'hash.js';
 
 import Button from '../../components/Button';
@@ -64,8 +63,9 @@ export default class CreateZaplockerLightningAddress extends React.Component<
     };
 
     generateNostrKeys = () => {
-        const nostrPrivateKey = generatePrivateKey();
-        const nostrPublicKey = getPublicKey(nostrPrivateKey);
+        const nostrSecretKey = generateSecretKey();
+        const nostrPrivateKey = bytesToHex(nostrSecretKey);
+        const nostrPublicKey = getPublicKey(nostrSecretKey);
         const nostrNpub = nip19.npubEncode(nostrPublicKey);
 
         this.setState({
@@ -92,7 +92,7 @@ export default class CreateZaplockerLightningAddress extends React.Component<
             nostrPrivateKey &&
             nostrPrivateKey !== prevProps.route.params?.nostrPrivateKey
         ) {
-            const nostrPublicKey = getPublicKey(nostrPrivateKey);
+            const nostrPublicKey = getPublicKey(hexToBytes(nostrPrivateKey));
             const nostrNpub = nip19.npubEncode(nostrPublicKey);
 
             this.setState({
@@ -279,17 +279,21 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     const relays_sig =
                                                         bytesToHex(
                                                             schnorr.sign(
-                                                                hashjs
-                                                                    .sha256()
-                                                                    .update(
-                                                                        JSON.stringify(
-                                                                            nostrRelays
+                                                                hexToBytes(
+                                                                    hashjs
+                                                                        .sha256()
+                                                                        .update(
+                                                                            JSON.stringify(
+                                                                                nostrRelays
+                                                                            )
                                                                         )
-                                                                    )
-                                                                    .digest(
-                                                                        'hex'
-                                                                    ),
-                                                                nostrPrivateKey
+                                                                        .digest(
+                                                                            'hex'
+                                                                        )
+                                                                ),
+                                                                hexToBytes(
+                                                                    nostrPrivateKey
+                                                                )
                                                             )
                                                         );
                                                     const response =

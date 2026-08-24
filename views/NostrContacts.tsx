@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox } from '@rneui/themed';
-// @ts-ignore:next-line
-import { relayInit, nip05, nip19 } from 'nostr-tools';
+import { SimplePool, nip05, nip19 } from 'nostr-tools';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { SharedText } from '../components/SharedTransition';
@@ -28,6 +27,7 @@ import { Row } from '../components/layout/Row';
 import AddressUtils from '../utils/AddressUtils';
 import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
+import NostrUtils from '../utils/NostrUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Storage from '../storage';
@@ -253,10 +253,9 @@ export default class NostrContacts extends React.Component<
         this.setState({ loading: true, error: '' });
         const { account } = this.state;
 
-        let pubkey: string;
+        let pubkey: string = '';
         if (this.state.isValidNpub) {
-            const decoded = nip19.decode(account);
-            pubkey = decoded.data.toString();
+            pubkey = NostrUtils.npubToHex(account) || '';
         } else if (this.state.isValidNip05) {
             try {
                 const lookup: any = await nip05.queryProfile(account);
@@ -270,62 +269,51 @@ export default class NostrContacts extends React.Component<
             }
         }
 
-        const profilesEventsPromises = DEFAULT_NOSTR_RELAYS.map(
-            async (relayItem) => {
-                try {
-                    const relay = relayInit(relayItem);
-                    const tags: Array<string> = [];
+        if (!pubkey) {
+            this.setState({ loading: false });
+            return;
+        }
 
-                    relay.on('connect', () => {
-                        console.log(`connected to ${relay.url}`);
-                    });
+        const pool = new SimplePool();
 
-                    relay.on('error', (): void => {
-                        console.log(`failed to connect to ${relay.url}`);
-                    });
+        Promise.resolve()
+            .then(async () => {
+                const contactEvents = await pool.querySync(
+                    DEFAULT_NOSTR_RELAYS,
+                    {
+                        authors: [pubkey],
+                        kinds: [3]
+                    }
+                );
 
-                    await relay.connect();
-                    let eventReceived = await relay.list([
-                        {
-                            authors: [pubkey],
-                            kinds: [3]
-                        }
-                    ]);
+                let latestContactEvent: any;
 
-                    let latestContactEvent: any;
+                contactEvents.forEach((content: any) => {
+                    if (
+                        !latestContactEvent ||
+                        content.created_at > latestContactEvent.created_at
+                    ) {
+                        latestContactEvent = content;
+                    }
+                });
 
-                    eventReceived.forEach((content: any) => {
-                        if (
-                            !latestContactEvent ||
-                            content.created_at > latestContactEvent.created_at
-                        ) {
-                            latestContactEvent = content;
-                        }
-                    });
-
-                    if (!latestContactEvent) return;
-
+                const tags: Array<string> = [];
+                if (latestContactEvent) {
                     latestContactEvent.tags.forEach((tag: string) => {
                         if (tag[0] === 'p') {
                             tags.push(tag[1]);
                         }
                     });
+                }
 
-                    return relay.list([
-                        {
-                            authors: tags,
-                            kinds: [0]
-                        }
-                    ]);
-                } catch (e) {}
-            }
-        );
+                if (tags.length === 0) return [];
 
-        Promise.all(profilesEventsPromises)
-            .then((profilesEventsArrays) => {
-                const profileEvents = profilesEventsArrays
-                    .flat()
-                    .filter((event) => event !== undefined);
+                return pool.querySync(DEFAULT_NOSTR_RELAYS, {
+                    authors: tags,
+                    kinds: [0]
+                });
+            })
+            .then((profileEvents) => {
                 const newContactDataIndexByName: Record<string, NostrContact> =
                     {};
                 const newContactDataIndexByPubkey: Record<
@@ -379,6 +367,9 @@ export default class NostrContacts extends React.Component<
             })
             .catch((error) => {
                 console.error('Error fetching profiles events:', error);
+            })
+            .finally(() => {
+                pool.close(DEFAULT_NOSTR_RELAYS);
             });
     }
 
