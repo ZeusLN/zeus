@@ -734,6 +734,53 @@ export default class SwapStore {
         }
     };
 
+    /**
+     * Records the address a swap's claim should pay out to.
+     *
+     * A rescued reverse swap has none: the destination is attached
+     * client-side at creation and never sent to the host, so it cannot come
+     * back from /swap/restore. The claim path resolves one lazily and
+     * persists it here, so that a later attempt at the same swap pays out
+     * to the address already chosen rather than burning a fresh one.
+     *
+     * Rescued swaps are written to SWAPS_KEY whatever their type and only
+     * moved to REVERSE_SWAPS_KEY by the next fetchAndUpdateSwaps, so both
+     * lists are searched.
+     */
+    @action
+    public updateSwapDestinationAddress = async (
+        swapId: string,
+        destinationAddress: string
+    ): Promise<boolean> => {
+        try {
+            for (const key of [REVERSE_SWAPS_KEY, SWAPS_KEY]) {
+                const storedSwaps = await Storage.getItem(key);
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+                if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
+
+                const updatedSwaps = swaps.map((swap: any) =>
+                    swap?.id === swapId ? { ...swap, destinationAddress } : swap
+                );
+
+                await Storage.setItem(key, JSON.stringify(updatedSwaps));
+                console.log(
+                    `Updated destination address for swap ID ${swapId}`
+                );
+                return true;
+            }
+
+            console.error(`No stored swap found for swap ID ${swapId}`);
+            return false;
+        } catch (error) {
+            console.error(
+                'Error updating swap destination address in storage:',
+                error
+            );
+            return false;
+        }
+    };
+
     @action
     public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {

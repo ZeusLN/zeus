@@ -11,7 +11,7 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@noble|@scure|uuid)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts",
