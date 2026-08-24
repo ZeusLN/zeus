@@ -52,6 +52,18 @@ export const bigFloor = (big: BigNumber): BigNumber => {
     return big.integerValue(BigNumber.ROUND_FLOOR);
 };
 
+/**
+ * Builds the swap-update WebSocket URL for a swap host. The scheme
+ * rewrites are anchored to `^`: a bare string replace rewrites the first
+ * match anywhere in the string, so a host whose own name contains `http`
+ * had it rewritten instead of the scheme, sending swap updates to a
+ * different — and attacker-registrable — host. Custom swap hosts are
+ * user-supplied (settings.swaps.customHost), so that input is reachable.
+ * See LND.getURL for the same fix on the backend side.
+ */
+export const swapWebSocketUrl = (endpoint: string): string =>
+    endpoint.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws';
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
