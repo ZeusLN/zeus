@@ -306,6 +306,7 @@
     "views.Accounts.title": "Accounts",
     "views.Accounts.select": "Select payment method",
     "views.Accounts.fetchTxFees": "Fetch on-chain transaction fees",
+    "views.ChoosePaymentMethod.selectReceiveMethod": "Select receive method",
     "views.EditFee.title": "Edit network fee",
     "views.EditFee.titleDisplayOnly": "Transaction fees",
     "views.LnurlPay.LnurlPay.amount": "Amount to pay",

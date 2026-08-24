@@ -56,6 +56,9 @@ type DataRow = {
     account?: string;
     hidden?: boolean;
     satAmount?: number;
+    // LNURL withdraws fund the wallet, so rows must not be
+    // disabled or flagged on the wallet's existing balance
+    isWithdraw?: boolean;
 };
 
 const LAYER_LOCALE_MAP: Record<string, string> = {
@@ -90,7 +93,9 @@ const hasInsufficientBalance = (
     (satAmount !== undefined && satAmount > Number(balance));
 
 const Row = ({ item }: { item: DataRow }) => {
-    const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient =
+        !item.isWithdraw &&
+        hasInsufficientBalance(item.balance, item.satAmount);
     const layerLabel = LAYER_LOCALE_MAP[item.layer]
         ? localeString(LAYER_LOCALE_MAP[item.layer])
         : item.layer;
@@ -184,7 +189,9 @@ const SwipeableRow = ({
     clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
-    const insufficient = hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient =
+        !item.isWithdraw &&
+        hasInsufficientBalance(item.balance, item.satAmount);
     const rowDisabled = item.disabled || insufficient;
     if (item.layer === 'Lightning') {
         return (
@@ -295,12 +302,18 @@ export default class PaymentMethodList extends Component<
         } = this.props;
         let DATA: DataRow[] = [];
 
+        const isWithdraw = lnurlParams?.tag === 'withdrawRequest';
+        const subtitle = isWithdraw
+            ? lnurlParams?.defaultDescription || lnurlParams?.domain
+            : lightning ?? lnurlParams?.tag;
+
         if (lightning || lnurlParams) {
             DATA.push({
                 layer: 'Lightning',
-                subtitle: lightning ?? lnurlParams?.tag,
+                subtitle,
                 balance: lightningBalance,
                 disabled: false,
+                isWithdraw,
                 satAmount
             });
 
@@ -310,9 +323,10 @@ export default class PaymentMethodList extends Component<
             ) {
                 DATA.push({
                     layer: 'Lightning via ecash',
-                    subtitle: lightning ?? lnurlParams?.tag,
+                    subtitle,
                     balance: ecashBalance,
                     disabled: false,
+                    isWithdraw,
                     satAmount
                 });
             }

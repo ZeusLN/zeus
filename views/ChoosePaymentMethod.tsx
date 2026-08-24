@@ -68,7 +68,7 @@ export default class ChoosePaymentMethod extends React.Component<
     private blurUnsubscribe?: () => void;
     private hasNavigatedAway = false;
 
-    state = {
+    state: ChoosePaymentMethodState = {
         value: '',
         satAmount: '',
         lightning: '',
@@ -162,8 +162,10 @@ export default class ChoosePaymentMethod extends React.Component<
         lnurlParams?: LNURLWithdrawParams;
     }) => {
         const lightning = override?.lightning ?? this.state.lightning;
+        const lnurlParams = override?.lnurlParams ?? this.state.lnurlParams;
         const { InvoicesStore, CashuStore } = this.props;
-        if (!lightning) return;
+        // for withdraws, lightning holds the raw LNURL, not a bolt11
+        if (!lightning || lnurlParams?.tag === 'withdrawRequest') return;
         const tasks: Promise<void>[] = [];
         if (InvoicesStore) {
             tasks.push(InvoicesStore.getPayReq(lightning).catch(() => {}));
@@ -186,6 +188,11 @@ export default class ChoosePaymentMethod extends React.Component<
             clinkNoffer,
             lnurlParams
         } = this.state;
+
+        // LNURL withdraws bring funds into the wallet;
+        // no local balance is required to redeem them
+        if (lnurlParams?.tag === 'withdrawRequest') return false;
+
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
@@ -241,6 +248,16 @@ export default class ChoosePaymentMethod extends React.Component<
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
 
+        const isWithdraw = lnurlParams?.tag === 'withdrawRequest';
+        // only fixed-amount withdraws (min === max) have a single
+        // knowable amount before the redemption flow
+        const withdrawSatAmount =
+            isWithdraw &&
+            lnurlParams &&
+            lnurlParams.minWithdrawable === lnurlParams.maxWithdrawable
+                ? Math.floor(lnurlParams.maxWithdrawable / 1000)
+                : undefined;
+
         const hasInsufficientFunds = this.hasInsufficientFunds();
         const hasLightningPayment = !!(
             lightning ||
@@ -264,7 +281,11 @@ export default class ChoosePaymentMethod extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Accounts.select'),
+                        text: isWithdraw
+                            ? localeString(
+                                  'views.ChoosePaymentMethod.selectReceiveMethod'
+                              )
+                            : localeString('views.Accounts.select'),
                         style: { color: themeColor('text') }
                     }}
                     navigation={navigation}
@@ -274,7 +295,7 @@ export default class ChoosePaymentMethod extends React.Component<
                 <RescanStatus navigation={navigation} />
                 <SyncingStatus navigation={navigation} />
 
-                {!!satAmount && (
+                {(!!satAmount || !!withdrawSatAmount) && (
                     <View style={styles.amountSection}>
                         <Text
                             style={[
@@ -284,10 +305,12 @@ export default class ChoosePaymentMethod extends React.Component<
                                 }
                             ]}
                         >
-                            {localeString('views.Payment.paymentAmount')}
+                            {isWithdraw
+                                ? localeString('views.Receive.amount')
+                                : localeString('views.Payment.paymentAmount')}
                         </Text>
                         <Amount
-                            sats={satAmount}
+                            sats={satAmount || withdrawSatAmount}
                             sensitive
                             jumboText
                             toggleable
