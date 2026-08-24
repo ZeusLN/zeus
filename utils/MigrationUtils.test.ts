@@ -945,20 +945,29 @@ describe('MigrationUtils', () => {
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
 
-        it('runs after migrateRgsDefaultToZeus and converges legacy installs to v2', async () => {
-            // fresh legacy upgrade: neither flag set — the old migration
-            // pins the v1 ZEUS default, the new one upgrades it to v2
-            EncryptedStorage.getItem.mockResolvedValue(null);
+        it('ignores the superseded rgs-default-zeus flag', async () => {
+            // typical existing install: the retired migration already ran
+            // and pinned the v1 ZEUS default — its flag must not gate the
+            // v2 rewrite
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(key === 'rgs-default-zeus' ? 'true' : null)
+            );
             const settings: any = {
-                nodes: [{ implementation: 'ldk-node', ldkNetwork: 'mainnet' }]
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    }
+                ]
             };
 
-            await MigrationUtils.migrateRgsDefaultToZeus(settings);
             await MigrationUtils.migrateRgsDefaultsToV2(settings);
 
             expect(settings.nodes[0].ldkRgsServer).toBe(
                 'https://rgs.zeusln.com/snapshot/v2'
             );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
     });
 
