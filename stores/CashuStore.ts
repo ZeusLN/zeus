@@ -5632,9 +5632,33 @@ export default class CashuStore {
                 await Storage.removeItem(`${walletId}-pubkey`);
             }
 
-            // Clean up legacy storage keys (may exist from migration)
-            await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
+            // Close the CDK handles and delete the proof database file itself.
+            // removeMint above only clears rows; the plaintext SQLite file (with
+            // its bearer proofs) must be unlinked or it survives "Delete Cashu
+            // data". Native uses the tracked db path, so this is independent of
+            // the seed-phrase key removed below. A failure here must not abort
+            // the rest of the cleanup.
+            try {
+                await CashuDevKit.deleteWalletDatabase();
+            } catch (e) {
+                console.warn('CDK: Failed to delete wallet database:', e);
+            }
+
+            // Persist an empty mint list instead of removing the key.
+            // Boot treats a missing key as a fresh install or recovery and
+            // restores the mint list from the Nostr backup (and re-adds the
+            // onboarding mints); since nostrBackupMints never publishes an
+            // empty list, the stale backup would resurrect every deleted
+            // mint on the next launch. An empty list records that the user
+            // deliberately deleted their mints, matching removeMint
+            await Storage.setItem(
+                `${lndDir}-cashu-mintUrls`,
+                JSON.stringify([])
+            );
             await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
+            await Storage.removeItem(
+                `${lndDir}-cashu-nostrMintBackupTimestamp`
+            );
 
             // Clean up app-specific storage
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);

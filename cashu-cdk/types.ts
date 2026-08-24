@@ -333,4 +333,7 @@ export interface CashuDevKitNativeModule {
 
     // Database
     getDatabasePath(): Promise<string>;
+    // Closes the wallet/db handles and deletes the proof db (+ WAL/SHM).
+    // Resolves false if no database was opened this session.
+    deleteWalletDatabase(): Promise<boolean>;
 }

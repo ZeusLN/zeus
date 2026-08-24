@@ -834,6 +834,22 @@ class CashuDevKit {
             throw mapCDKError(error);
         }
     }
+
+    /**
+     * Close the wallet/database handles and delete the proof database (and its
+     * WAL/SHM sidecars) from disk. Used by "Delete Cashu data" so plaintext
+     * bearer proofs do not survive deletion. Resolves false if no database was
+     * opened this session.
+     */
+    async deleteWalletDatabase(): Promise<boolean> {
+        try {
+            const deleted = await CashuDevKitModule.deleteWalletDatabase();
+            this.initialized = false;
+            return deleted;
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
 }
 
 // Export singleton instance
