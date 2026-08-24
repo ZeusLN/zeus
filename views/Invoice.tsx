@@ -356,6 +356,20 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
+                        {!!invoice.getFee && (
+                            <KeyValue
+                                keyValue={localeString('views.Payment.fee')}
+                                value={
+                                    <Amount
+                                        sats={invoice.getFee}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                                sensitive
+                            />
+                        )}
+
                         {isPaid && !is_amp && (
                             <KeyValue
                                 keyValue={localeString(

@@ -1762,22 +1762,40 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             haveUnifiedInvoice &&
                                             !creatingInvoice && (
-                                                <CollapsedQR
-                                                    value={unifiedInvoice || ''}
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? ZIconWhite
-                                                            : ZIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={displaySatAmount}
-                                                    displayAmount
-                                                />
+                                                <>
+                                                    <CollapsedQR
+                                                        value={
+                                                            unifiedInvoice || ''
+                                                        }
+                                                        expanded
+                                                        textBottom
+                                                        truncateLongValue
+                                                        logo={
+                                                            themeColor(
+                                                                'invertQrIcons'
+                                                            )
+                                                                ? ZIconWhite
+                                                                : ZIcon
+                                                        }
+                                                        nfcSupported={
+                                                            nfcSupported
+                                                        }
+                                                        satAmount={
+                                                            displaySatAmount
+                                                        }
+                                                        displayAmount
+                                                    />
+                                                    {/* the unified QR embeds the on-chain
+                                                        address, so the reuse caveat applies
+                                                        here too */}
+                                                    {BackendUtils.reusesOnchainAddress() && (
+                                                        <WarningMessage
+                                                            message={localeString(
+                                                                'views.Receive.warningAddressReuse'
+                                                            )}
+                                                        />
+                                                    )}
+                                                </>
                                             )}
                                         {selectedIndex == 1 &&
                                             !belowDustLimit &&
@@ -1807,29 +1825,40 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             btcAddress &&
                                             !creatingInvoice && (
-                                                <CollapsedQR
-                                                    value={btcAddress}
-                                                    copyValue={
-                                                        btcAddressCopyValue
-                                                    }
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? OnChainIconWhite
-                                                            : OnChainIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={
-                                                        satAmount === '0'
-                                                            ? undefined
-                                                            : satAmount
-                                                    }
-                                                    displayAmount
-                                                />
+                                                <>
+                                                    <CollapsedQR
+                                                        value={btcAddress}
+                                                        copyValue={
+                                                            btcAddressCopyValue
+                                                        }
+                                                        expanded
+                                                        textBottom
+                                                        truncateLongValue
+                                                        logo={
+                                                            themeColor(
+                                                                'invertQrIcons'
+                                                            )
+                                                                ? OnChainIconWhite
+                                                                : OnChainIcon
+                                                        }
+                                                        nfcSupported={
+                                                            nfcSupported
+                                                        }
+                                                        satAmount={
+                                                            satAmount === '0'
+                                                                ? undefined
+                                                                : satAmount
+                                                        }
+                                                        displayAmount
+                                                    />
+                                                    {BackendUtils.reusesOnchainAddress() && (
+                                                        <WarningMessage
+                                                            message={localeString(
+                                                                'views.Receive.warningAddressReuse'
+                                                            )}
+                                                        />
+                                                    )}
+                                                </>
                                             )}
 
                                         {selectedIndex == 3 &&

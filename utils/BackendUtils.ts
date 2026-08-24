@@ -8,6 +8,8 @@ import EmbeddedLND from '../backends/EmbeddedLND';
 import LdkNode from '../backends/LdkNode';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
+// Phoenixd
+import Phoenixd from '../backends/Phoenixd';
 // Custodial
 import LndHub from '../backends/LndHub';
 import NostrWalletConnect from '../backends/NostrWalletConnect';
@@ -18,6 +20,7 @@ class BackendUtils {
     embeddedLND: EmbeddedLND;
     ldkNode: LdkNode;
     clnRest: CLNRest;
+    phoenixd: Phoenixd;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
     constructor() {
@@ -26,6 +29,7 @@ class BackendUtils {
         this.embeddedLND = new EmbeddedLND();
         this.ldkNode = new LdkNode();
         this.clnRest = new CLNRest();
+        this.phoenixd = new Phoenixd();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
     }
@@ -43,6 +47,8 @@ class BackendUtils {
                 return this.ldkNode;
             case 'cln-rest':
                 return this.clnRest;
+            case 'phoenixd':
+                return this.phoenixd;
             case 'lndhub':
                 return this.lndHub;
             case 'nostr-wallet-connect':
@@ -219,6 +225,9 @@ class BackendUtils {
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
+    // true when getNewAddress returns the same address until it is paid,
+    // rather than a fresh one per request
+    reusesOnchainAddress = () => this.call('reusesOnchainAddress');
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
@@ -237,6 +246,9 @@ class BackendUtils {
     supportsForwardingHistory = () => this.call('supportsForwardingHistory');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
+    // true when the backend's on-chain and lightning balances are the
+    // same funds (phoenixd), so totals must not sum them
+    hasOverlappingBalances = () => this.call('hasOverlappingBalances');
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');

@@ -524,15 +524,17 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
-                {lightningBalance === 0 && totalBlockchainBalance !== 0 && (
-                    <Button
-                        title={localeString(
-                            'components.LayerBalances.moveFundsToLn'
-                        )}
-                        onPress={() => navigation.navigate('OpenChannel')}
-                        secondary
-                    />
-                )}
+                {lightningBalance === 0 &&
+                    totalBlockchainBalance !== 0 &&
+                    BackendUtils.supportsChannelManagement() && (
+                        <Button
+                            title={localeString(
+                                'components.LayerBalances.moveFundsToLn'
+                            )}
+                            onPress={() => navigation.navigate('OpenChannel')}
+                            secondary
+                        />
+                    )}
                 <FlatList
                     data={DATA}
                     ItemSeparatorComponent={() => (

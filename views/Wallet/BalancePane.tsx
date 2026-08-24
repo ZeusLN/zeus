@@ -22,6 +22,7 @@ import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';
 import RescanStatus from '../../components/RescanStatus';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -198,8 +199,13 @@ export default class BalancePane extends React.PureComponent<
             .plus(unconfirmedBlockchainBalance)
             .toNumber()
             .toFixed(3);
-        const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
-            .plus(lightningBalance)
+        // Backends where the on-chain and lightning balances are the
+        // same funds (phoenixd) must not have them summed
+        const combinedBalanceValue = (
+            BackendUtils.hasOverlappingBalances()
+                ? new BigNumber(totalBlockchainBalance)
+                : new BigNumber(totalBlockchainBalance).plus(lightningBalance)
+        )
             .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
             .toFixed(3);

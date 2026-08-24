@@ -170,6 +170,8 @@ interface WalletConfigurationState {
     ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
+    // Phoenixd
+    phoenixdPassword: string;
     deletingWallet: boolean;
     saving: boolean;
     // Errors
@@ -256,6 +258,8 @@ export default class WalletConfiguration extends React.Component<
         ldkNodeInitialized: false,
         // NWC
         nostrWalletConnectUrl: '',
+        // Phoenixd
+        phoenixdPassword: '',
         // Errors
         lndhubUrlError: false,
         usernameError: false,
@@ -470,7 +474,9 @@ export default class WalletConfiguration extends React.Component<
                 ldkScorerUrl,
                 ldkVssServer,
                 // NWC
-                nostrWalletConnectUrl
+                nostrWalletConnectUrl,
+                // Phoenixd
+                phoenixdPassword
             } = node as any;
 
             this.setState({
@@ -516,7 +522,9 @@ export default class WalletConfiguration extends React.Component<
                 ldkVssServer,
                 ldkNodeInitialized: !!ldkMnemonic,
                 // NWC
-                nostrWalletConnectUrl
+                nostrWalletConnectUrl,
+                // Phoenixd
+                phoenixdPassword
             });
         } else {
             this.setState({
@@ -558,6 +566,7 @@ export default class WalletConfiguration extends React.Component<
             lndDir,
             isSqlite,
             nostrWalletConnectUrl,
+            phoenixdPassword,
             photo,
             // embedded LDK Node
             ldkMnemonic,
@@ -576,6 +585,10 @@ export default class WalletConfiguration extends React.Component<
             (!lndhubUrl || !username || !password)
         ) {
             throw new Error('lndhub settings missing.');
+        }
+
+        if (implementation === 'phoenixd' && (!host || !phoenixdPassword)) {
+            throw new Error('phoenixd settings missing.');
         }
 
         // Block the action buttons until navigation: a second Save (or a
@@ -606,6 +619,7 @@ export default class WalletConfiguration extends React.Component<
             lndDir,
             isSqlite,
             nostrWalletConnectUrl,
+            phoenixdPassword,
             photo,
             // embedded LDK Node
             ldkMnemonic,
@@ -722,7 +736,8 @@ export default class WalletConfiguration extends React.Component<
             mailboxServer,
             customMailboxServer,
             photo,
-            nostrWalletConnectUrl
+            nostrWalletConnectUrl,
+            phoenixdPassword
         } = this.state;
         const { nodes } = settings;
 
@@ -743,7 +758,8 @@ export default class WalletConfiguration extends React.Component<
             mailboxServer,
             customMailboxServer,
             photo,
-            nostrWalletConnectUrl
+            nostrWalletConnectUrl,
+            phoenixdPassword
         };
 
         navigation.navigate('WalletConfiguration', {
@@ -1350,6 +1366,8 @@ export default class WalletConfiguration extends React.Component<
             ldkNodeInitialized,
             // NWC
             nostrWalletConnectUrl,
+            // Phoenixd
+            phoenixdPassword,
             lndhubUrlError,
             usernameError,
             hostError,
@@ -1377,7 +1395,8 @@ export default class WalletConfiguration extends React.Component<
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
-            implementation !== 'nostr-wallet-connect';
+            implementation !== 'nostr-wallet-connect' &&
+            implementation !== 'phoenixd';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
@@ -1412,7 +1431,12 @@ export default class WalletConfiguration extends React.Component<
                         saved: false,
                         certVerification: value === 'lndhub' ? true : false,
                         host: '',
-                        lndhubUrl: ''
+                        lndhubUrl: '',
+                        // phoenixd hides the Tor toggle, so a value
+                        // carried over from another implementation would
+                        // otherwise stick with no way to switch it off
+                        enableTor:
+                            value === 'phoenixd' ? false : this.state.enableTor
                     });
                 }}
                 values={interfaceKeys}
@@ -2251,7 +2275,8 @@ export default class WalletConfiguration extends React.Component<
                                 </>
                             )}
                             {(implementation === 'lnd' ||
-                                implementation === 'cln-rest') && (
+                                implementation === 'cln-rest' ||
+                                implementation === 'phoenixd') && (
                                 <>
                                     <Text
                                         style={{
@@ -2263,7 +2288,14 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <TextInput
-                                        placeholder={'localhost'}
+                                        placeholder={
+                                            // phoenixd binds plain http,
+                                            // and getURL assumes https
+                                            // when no scheme is given
+                                            implementation === 'phoenixd'
+                                                ? 'http://hostname'
+                                                : 'localhost'
+                                        }
                                         textColor={
                                             hostError
                                                 ? themeColor('error')
@@ -2342,7 +2374,13 @@ export default class WalletConfiguration extends React.Component<
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={'443/8080'}
+                                        placeholder={
+                                            // phoenixd's http-bind-port
+                                            // default
+                                            implementation === 'phoenixd'
+                                                ? '9740'
+                                                : '443/8080'
+                                        }
                                         textColor={
                                             portError
                                                 ? themeColor('error')
@@ -2403,7 +2441,62 @@ export default class WalletConfiguration extends React.Component<
                                         locked={loading}
                                     />
 
-                                    {implementation === 'cln-rest' ? (
+                                    {implementation === 'phoenixd' ? (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.phoenixdPassword'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={'8a6b...'}
+                                                    textColor={themeColor(
+                                                        'text'
+                                                    )}
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={phoenixdPassword}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            phoenixdPassword:
+                                                                text.trim(),
+                                                            saved: false
+                                                        })
+                                                    }
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
+                                                    }
+                                                />
+                                            </View>
+                                        </>
+                                    ) : implementation === 'cln-rest' ? (
                                         <>
                                             <Text
                                                 style={{
@@ -3332,6 +3425,8 @@ export default class WalletConfiguration extends React.Component<
                                                 !(host && macaroonHex)) ||
                                             (implementation === 'cln-rest' &&
                                                 !(host && rune)) ||
+                                            (implementation === 'phoenixd' &&
+                                                !(host && phoenixdPassword)) ||
                                             (implementation ===
                                                 'lightning-node-connect' &&
                                                 (!pairingPhrase ||
