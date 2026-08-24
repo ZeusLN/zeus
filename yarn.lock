@@ -1339,6 +1339,11 @@
   dependencies:
     "@noble/curves" "^1.7.0"
 
+"@branta-ops/branta@3.1.4":
+  version "3.1.4"
+  resolved "https://registry.yarnpkg.com/@branta-ops/branta/-/branta-3.1.4.tgz#a588863010fb6ee022acf149bd1706b75ee5e5eb"
+  integrity sha512-4ZLiPaIP4XQEbZywyJ6MFGe6ZeXscooFuKyaFAsePrCrKOBbvgIiNeBS5o6BHARLUJALNjuODKI7Ba64DHGV2w==
+
 "@eggjs/yauzl@^2.11.0":
   version "2.11.0"
   resolved "https://registry.yarnpkg.com/@eggjs/yauzl/-/yauzl-2.11.0.tgz#b8e4413f50fc7c51451f770f152de4c1137aa99b"
@@ -1842,6 +1847,11 @@
   dependencies:
     eslint-scope "5.1.1"
 
+"@noble/ciphers@0.5.3", "@noble/ciphers@^0.5.1":
+  version "0.5.3"
+  resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-0.5.3.tgz#48b536311587125e0d0c1535f73ec8375cd76b23"
+  integrity sha512-B0+6IIHiqEs3BPMT0hcRmHvEj2QHOLu+uwt+tqDDeVd0oyVzh7BPrDcPjRnV1PV/5LaknXJJQvOuRGR0zQJz+w==
+
 "@noble/ciphers@2.1.1":
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-2.1.1.tgz#c8c74fcda8c3d1f88797d0ecda24f9fc8b92b052"
@@ -1851,11 +1861,6 @@
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-0.2.0.tgz#a12cda60f3cf1ab5d7c77068c3711d2366649ed7"
   integrity sha512-6YBxJDAapHSdd3bLDv6x2wRPwq4QFMUaB3HvljNBUTThDd12eSm7/3F+2lnfzx2jvM+S6Nsy0jEt9QbPqSwqRw==
-
-"@noble/ciphers@^0.5.1":
-  version "0.5.3"
-  resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-0.5.3.tgz#48b536311587125e0d0c1535f73ec8375cd76b23"
-  integrity sha512-B0+6IIHiqEs3BPMT0hcRmHvEj2QHOLu+uwt+tqDDeVd0oyVzh7BPrDcPjRnV1PV/5LaknXJJQvOuRGR0zQJz+w==
 
 "@noble/curves@1.1.0", "@noble/curves@~1.1.0":
   version "1.1.0"

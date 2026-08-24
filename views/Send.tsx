@@ -21,6 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
 import BalanceStore from '../stores/BalanceStore';
+import { BrantaVerification } from '../stores/BrantaStore';
 import ContactStore from '../stores/ContactStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
@@ -30,6 +31,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import AmountInput from '../components/AmountInput';
+import BrantaVerificationComponent from '../components/BrantaVerification';
 import Button from '../components/Button';
 import FeeLimit from '../components/FeeLimit';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -82,6 +84,7 @@ interface SendProps {
             contactName: string;
             clearOnBackPress: boolean;
             fromGraphSync: boolean;
+            brantaVerification: BrantaVerification | null;
         }
     >;
 }
@@ -113,6 +116,7 @@ interface SendState {
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
     nfcSupported: boolean;
+    brantaVerification: BrantaVerification | null;
 }
 
 @inject(
@@ -142,7 +146,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             isValid,
             contactName,
-            bolt12
+            bolt12,
+            brantaVerification
         } = route.params ?? {};
         const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
@@ -184,7 +189,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account: 'default',
             additionalOutputs: [],
             fundMax: false,
-            nfcSupported: false
+            nfcSupported: false,
+            brantaVerification: brantaVerification || null
         };
     }
 
@@ -199,7 +205,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount,
                 fee,
                 transactionType,
-                contactName
+                contactName,
+                brantaVerification
             } = route.params ?? {};
 
             if (transactionType === 'Lightning') {
@@ -211,7 +218,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 destination,
                 bolt12,
                 isValid: true,
-                contactName
+                contactName,
+                brantaVerification: brantaVerification || null
             };
 
             if (satAmount) {
@@ -246,7 +254,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         await this.readClipboard();
 
-        if (this.state.destination) {
+        if (
+            this.state.destination &&
+            !(this.state.isValid && this.state.brantaVerification)
+        ) {
             this.validateAddress(this.state.destination);
         }
 
@@ -628,7 +639,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account,
             utxos,
             nfcSupported,
-            timeoutSeconds
+            timeoutSeconds,
+            brantaVerification
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -783,6 +795,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     marginBottom: 10
                                 }}
                             />
+                            {brantaVerification && (
+                                <BrantaVerificationComponent
+                                    verification={brantaVerification}
+                                />
+                            )}
                         </>
                     ) : (
                         <>

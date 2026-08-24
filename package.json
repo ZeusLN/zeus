@@ -11,12 +11,16 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@nostr|@noble|@scure|uuid)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts",
       "zeus_modules"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@branta-ops/branta$": "<rootDir>/node_modules/@branta-ops/branta/dist/index.js",
+      "^@branta-ops/branta/v2$": "<rootDir>/node_modules/@branta-ops/branta/dist/v2/index.js"
+    }
   },
   "scripts": {
     "start": "react-native start",
@@ -40,10 +44,13 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
+    "@branta-ops/branta": "3.1.4",
     "@getalby/sdk": "8.0.3",
     "@keystonehq/bc-ur-registry": "0.8.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.13",
+    "@noble/ciphers": "0.5.3",
+    "@noble/hashes": "1.7.2",
     "@noble/secp256k1": "1.6.3",
     "@nostr-dev-kit/ndk": "2.13.0-rc2",
     "@nostr/tools": "npm:@jsr/nostr__tools",

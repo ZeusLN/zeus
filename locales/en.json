@@ -1258,6 +1258,8 @@
     "views.Settings.Privacy.mempoolInstance.explainer1": "ZEUS uses this mempool instance to fetch fee estimates, broadcast transactions, sweep funds from private keys, and check the latest block height while your node is syncing.",
     "views.Settings.Privacy.mempoolInstance.explainer2": "It is used for these purposes even when mempool fee suggestions are disabled. Select a custom instance to keep this activity between you and your own server.",
     "views.Settings.Privacy.invalidCustomUrl": "Please enter a valid URL starting with http:// or https://",
+    "views.Settings.Privacy.enableBranta": "Enable Branta verification",
+    "views.Settings.Privacy.enableBranta.explainer": "When enabled, ZEUS will verify payment destinations for merchants running Branta. Only your IP address is visible to Branta servers.",
     "views.Settings.stealthMode": "Stealth Mode",
     "views.Settings.StealthMode.title": "Stealth Mode",
     "views.Settings.StealthMode.chooseApp": "Choose Stealth App",
