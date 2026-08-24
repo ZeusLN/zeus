@@ -7,6 +7,7 @@ import {
     calculateSendAmount,
     calculateLimit,
     isValidRescueKey,
+    swapWebSocketUrl,
     verifyReverseSwapInvoice
 } from './SwapUtils';
 
@@ -240,6 +241,37 @@ describe('SwapUtils', () => {
             );
             expect(result.valid).toBe(false);
             expect(result.reason).toBe('undecodable');
+        });
+    });
+
+    describe('swapWebSocketUrl', () => {
+        it('rewrites the scheme and appends the ws route', () => {
+            expect(swapWebSocketUrl('https://api.boltz.exchange/v2')).toBe(
+                'wss://api.boltz.exchange/v2/ws'
+            );
+            expect(swapWebSocketUrl('http://192.168.1.5:9001/v2')).toBe(
+                'ws://192.168.1.5:9001/v2/ws'
+            );
+        });
+
+        it('leaves a host containing "http" in its name intact', () => {
+            expect(swapWebSocketUrl('https://boltz.httprelay.io/v2')).toBe(
+                'wss://boltz.httprelay.io/v2/ws'
+            );
+        });
+
+        it('leaves an http host containing "https" in its name intact', () => {
+            // the unanchored replace hit "myhttpserver", not the scheme,
+            // pointing swap updates at a host the user never configured
+            expect(swapWebSocketUrl('http://myhttpserver.local:9001/v2')).toBe(
+                'ws://myhttpserver.local:9001/v2/ws'
+            );
+        });
+
+        it('rewrites only the scheme, never a later occurrence', () => {
+            expect(swapWebSocketUrl('https://http.http/https')).toBe(
+                'wss://http.http/https/ws'
+            );
         });
     });
 });
