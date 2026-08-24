@@ -38,6 +38,7 @@ import ZeusText from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
+import PreventRemove from '../../components/PreventRemove';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -153,7 +154,6 @@ export default class SeedRecovery extends React.PureComponent<
     SeedRecoveryState
 > {
     textInput: React.RefObject<TextInputRN | null>;
-    private removeBeforeRemoveListener?: () => void;
     constructor(props: SeedRecoveryProps) {
         super(props);
 
@@ -231,23 +231,6 @@ export default class SeedRecovery extends React.PureComponent<
     }
 
     async componentDidMount() {
-        // Backing out of SCB entry (header arrow, iOS swipe, Android
-        // hardware back) must return to the seed grid, not pop the
-        // screen and discard the hand-entered seed
-        this.removeBeforeRemoveListener = this.props.navigation.addListener(
-            'beforeRemove',
-            (e) => {
-                if (
-                    this.state.selectedInputType === 'scb' &&
-                    (e.data.action.type === 'GO_BACK' ||
-                        e.data.action.type === 'POP')
-                ) {
-                    e.preventDefault();
-                    this.exitScbEntry();
-                }
-            }
-        );
-
         await this.initFromProps(this.props);
 
         const { SettingsStore, route } = this.props;
@@ -271,10 +254,6 @@ export default class SeedRecovery extends React.PureComponent<
         if (this.props.route.params !== prevProps.route.params) {
             await this.initFromProps(this.props);
         }
-    }
-
-    componentWillUnmount() {
-        this.removeBeforeRemoveListener?.();
     }
 
     exitScbEntry = () => {
@@ -1007,6 +986,13 @@ export default class SeedRecovery extends React.PureComponent<
 
         return (
             <Screen>
+                {/* Backing out of SCB entry (header arrow, iOS swipe, Android
+                    hardware back) must return to the seed grid, not pop the
+                    screen and discard the hand-entered seed */}
+                <PreventRemove
+                    enabled={selectedInputType === 'scb'}
+                    onAttempt={this.exitScbEntry}
+                />
                 <Header
                     leftComponent="Back"
                     centerComponent={{
