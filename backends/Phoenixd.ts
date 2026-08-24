@@ -25,9 +25,21 @@ import {
 const calls = new Map<string, Promise<any>>();
 
 const TXID_REGEX = /^[0-9a-f]{64}$/;
-// phoenixd caps neither list; Zeus deliberately limits both incoming
-// and outgoing history to the most recent 100 entries
-const HISTORY_LIMIT = 100;
+// How many history entries to pull per list. phoenixd imposes no
+// server-side maximum (it only defaults to 20), so this is Zeus's own
+// cap, matching LND's 500.
+//
+// The number matters more than a cap usually would, because phoenixd's
+// two list endpoints do not order alike. PaymentsIncoming.sq sorts
+// `ORDER BY created_at DESC`, but PaymentsOutgoing.sq has no ORDER BY at
+// all and SqlitePaymentsDb does not sort afterwards, so the outgoing
+// list comes back oldest-first. A truncated outgoing list therefore
+// drops the NEWEST sends rather than the oldest. Below the cap the whole
+// list arrives and PhoenixdRequestHandler's own sort fixes the order, so
+// this is only reachable past 500 outgoing payments. Paging through
+// `offset` until exhaustion would remove the ceiling entirely; see the
+// known limitations in the PR.
+const HISTORY_LIMIT = 500;
 
 // phoenixd's 401 body; used to recognize limited-access credentials on
 // transports that don't surface the HTTP status (Tor)

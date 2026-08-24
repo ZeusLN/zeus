@@ -325,22 +325,31 @@ describe('Phoenixd backend', () => {
     });
 
     describe('activity', () => {
-        it('requests incoming history with all=true and limit=100', async () => {
+        it('requests incoming history with all=true and limit=500', async () => {
             mockFetch.mockResolvedValue(mockResponse(200, []));
             await backend.getInvoices();
             const [method, url] = lastCall();
             expect(method).toEqual('get');
             expect(url).toEqual(
-                'http://100.87.112.121:9740/payments/incoming?all=true&limit=100'
+                'http://100.87.112.121:9740/payments/incoming?all=true&limit=500'
             );
         });
 
-        it('requests outgoing history with all=true and limit=100', async () => {
+        it('requests outgoing history with all=true and limit=500', async () => {
             mockFetch.mockResolvedValue(mockResponse(200, []));
             await backend.getPayments();
             const [, url] = lastCall();
             expect(url).toEqual(
-                'http://100.87.112.121:9740/payments/outgoing?all=true&limit=100'
+                'http://100.87.112.121:9740/payments/outgoing?all=true&limit=500'
+            );
+        });
+
+        it('requests on-chain history with the same limit', async () => {
+            mockFetch.mockResolvedValue(mockResponse(200, []));
+            await backend.getTransactions();
+            const [, url] = lastCall();
+            expect(url).toEqual(
+                'http://100.87.112.121:9740/payments/outgoing?all=true&limit=500'
             );
         });
 
