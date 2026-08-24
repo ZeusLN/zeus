@@ -1940,6 +1940,7 @@ export default class SettingsStore {
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
                 await MigrationsUtils.migrateRgsDefaultToZeus(parsedSettings);
+                await MigrationsUtils.migrateRgsDefaultsToV2(parsedSettings);
                 await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
                 await MigrationsUtils.migrateInvoiceExpiryDisplay(
                     parsedSettings
