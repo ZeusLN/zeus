@@ -1001,9 +1001,11 @@ export default class NostrConnectUtils {
     static isPaymentTimedOutMessage(message?: string | null): boolean {
         if (!message) return false;
         const normalized = message.toLowerCase();
-        // English substring catches raw backend/LND strings; localized paths use localeString equality below.
+        // English substring catches raw backend/LND strings; keys are locale-stable.
         return (
             normalized.includes('timed out') ||
+            message === 'views.SendingLightning.paymentTimedOut' ||
+            message === 'error.paymentTimedOut' ||
             message ===
                 localeString('views.SendingLightning.paymentTimedOut') ||
             message === localeString('error.paymentTimedOut')

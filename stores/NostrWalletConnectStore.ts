@@ -3201,7 +3201,9 @@ export default class NostrWalletConnectStore {
                 satAmount: amountSats,
                 status: 'failed',
                 payment_source,
-                error: errorMessage,
+                error: NostrConnectUtils.isPaymentTimedOutMessage(errorMessage)
+                    ? 'views.SendingLightning.paymentTimedOut'
+                    : errorMessage,
                 createdAt: new Date(),
                 ...(paymentHash ? { paymentHash } : {})
             });

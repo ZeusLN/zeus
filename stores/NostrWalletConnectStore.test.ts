@@ -674,6 +674,23 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.pendingSpendSats).toBe(100);
     });
+
+    it('recordFailedPayment stores timeout errors as locale keys', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store);
+
+        await (store as any).recordFailedPayment({
+            rawInvoice: normalizedInvoice,
+            connection,
+            amountSats: 100,
+            payment_source: 'lightning',
+            errorMessage: 'payment timed out waiting for preimage'
+        });
+
+        expect(connection.activity[0].error).toBe(
+            'views.SendingLightning.paymentTimedOut'
+        );
+    });
 });
 
 describe('NostrWalletConnectStore connection data scoping', () => {
