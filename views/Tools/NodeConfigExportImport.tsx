@@ -39,7 +39,9 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
-    EXPORT_FORMAT_VERSION
+    isValidExportPassword,
+    EXPORT_FORMAT_VERSION,
+    MIN_EXPORT_PASSWORD_LENGTH
 } from '../../utils/NodeConfigUtils';
 import KeychainRecoveryUtils, {
     RecoveryResult,
@@ -419,6 +421,24 @@ export default class NodeConfigExportImport extends React.Component<
     private renderExportModal = () => {
         const { activeModal, exportPassword, confirmPassword } = this.state;
 
+        const passwordAcceptable = isValidExportPassword(exportPassword);
+        const passwordsMatch = exportPassword === confirmPassword;
+
+        // Say why the export button is inert rather than leaving the user to
+        // guess, but stay quiet until they have typed something in the field
+        // the complaint is about.
+        let validationError: string | undefined;
+        if (exportPassword && !passwordAcceptable) {
+            validationError = localeString(
+                'views.Tools.nodeConfigExportImport.passwordTooShort',
+                { length: MIN_EXPORT_PASSWORD_LENGTH }
+            );
+        } else if (confirmPassword && !passwordsMatch) {
+            validationError = localeString(
+                'views.Tools.nodeConfigExportImport.passwordMismatch'
+            );
+        }
+
         return (
             <Modal
                 visible={activeModal === 'export'}
@@ -469,6 +489,18 @@ export default class NodeConfigExportImport extends React.Component<
                             secureTextEntry
                         />
 
+                        {validationError && (
+                            <Text
+                                style={{
+                                    color: themeColor('error'),
+                                    fontSize: 13,
+                                    marginTop: 8
+                                }}
+                            >
+                                {validationError}
+                            </Text>
+                        )}
+
                         <View style={styles.buttonContainer}>
                             <Button
                                 title={localeString(
@@ -476,8 +508,7 @@ export default class NodeConfigExportImport extends React.Component<
                                 )}
                                 onPress={this.executeExport}
                                 disabled={
-                                    !exportPassword ||
-                                    exportPassword !== confirmPassword
+                                    !passwordAcceptable || !passwordsMatch
                                 }
                                 buttonStyle={{ marginBottom: 10 }}
                             />

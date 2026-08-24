@@ -1016,6 +1016,8 @@
     "views.Tools.nodeConfigExportImport.password": "Enter a password",
     "views.Tools.nodeConfigExportImport.confirmPassword": "Confirm password",
     "views.Tools.nodeConfigExportImport.encryptExplainer": "This file contains sensitive credentials (macaroons, runes, passwords, pairing phrases, and connection secrets). It will be encrypted with the password you set here. Keep the password safe - it cannot be recovered.",
+    "views.Tools.nodeConfigExportImport.passwordTooShort": "Password must be at least {{length}} characters.",
+    "views.Tools.nodeConfigExportImport.passwordMismatch": "Passwords do not match.",
     "views.Tools.nodeConfigExportImport.exportSuccess": "Export successful",
     "views.Tools.nodeConfigExportImport.exportError": "Export failed",
     "views.Tools.nodeConfigExportImport.importSuccess": "Import successful",

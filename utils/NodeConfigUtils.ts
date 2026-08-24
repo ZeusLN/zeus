@@ -11,6 +11,18 @@ import { encryptFile, decryptFile } from './ZipUtils';
 // (PBKDF2-HMAC-SHA256) blob, base64-wrapped in the JSON envelope below.
 export const EXPORT_FORMAT_VERSION = 2;
 
+// The export password is the only thing standing between a captured backup and
+// the node credentials inside it, so hold it to a floor rather than accepting
+// anything non-empty.
+export const MIN_EXPORT_PASSWORD_LENGTH = 8;
+
+// Measures the password by its non-whitespace-padded length so a run of spaces
+// cannot pass for a passphrase. The password itself is never trimmed - export
+// and import must agree on the exact bytes fed to the KDF, or a backup written
+// with a leading space would no longer open.
+export const isValidExportPassword = (password: string): boolean =>
+    !!password && password.trim().length >= MIN_EXPORT_PASSWORD_LENGTH;
+
 interface NodeConfigExport {
     version: number;
     encrypted: boolean;
@@ -55,10 +67,12 @@ export const exportNodeConfigs = async (
     nodes: Node[],
     password: string
 ): Promise<void> => {
-    // The UI enforces a confirmed password, but guard here too so this API
-    // can never produce an unencrypted export.
-    if (!password) {
-        throw new Error('A password is required to export node configs');
+    // The UI enforces a confirmed password, but guard here too so this API can
+    // never produce an unencrypted or trivially-keyed export.
+    if (!isValidExportPassword(password)) {
+        throw new Error(
+            `A password of at least ${MIN_EXPORT_PASSWORD_LENGTH} characters is required to export node configs`
+        );
     }
 
     const timestamp = moment().format('YYYYMMDD-HHmmss');

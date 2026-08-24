@@ -5,7 +5,9 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
-    EXPORT_FORMAT_VERSION
+    isValidExportPassword,
+    EXPORT_FORMAT_VERSION,
+    MIN_EXPORT_PASSWORD_LENGTH
 } from './NodeConfigUtils';
 import SettingsStore, { Settings } from '../stores/SettingsStore';
 
@@ -93,6 +95,9 @@ const createMockSettingsStore = (nodes?: any[]): Partial<SettingsStore> => ({
     updateSettings: mockUpdateSettings
 });
 
+// Long enough to clear MIN_EXPORT_PASSWORD_LENGTH.
+const testPassword = 'hunter2!';
+
 const testNodes = [
     {
         implementation: 'lnd',
@@ -152,7 +157,7 @@ describe('NodeConfigUtils', () => {
 
     describe('exportNodeConfigs', () => {
         it('produces a v2 encrypted envelope and saves it via the system save dialog', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
 
             expect(mockSaveDocuments).toHaveBeenCalledTimes(1);
             const saveArg = mockSaveDocuments.mock.calls[0][0];
@@ -172,7 +177,7 @@ describe('NodeConfigUtils', () => {
         });
 
         it('never writes the export to shared Downloads', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
             const wroteToDownloads = Object.keys(mockFiles).some((p) =>
                 p.startsWith('/downloads')
             );
@@ -180,7 +185,7 @@ describe('NodeConfigUtils', () => {
         });
 
         it('cleans up all staged files after a successful export', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
 
             // saveDocuments copies the envelope to the destination before
             // resolving, so nothing needs to survive in cache.
@@ -195,7 +200,7 @@ describe('NodeConfigUtils', () => {
             );
 
             await expect(
-                exportNodeConfigs(testNodes, 'hunter2')
+                exportNodeConfigs(testNodes, testPassword)
             ).rejects.toThrow();
 
             expect(Object.keys(mockFiles)).toHaveLength(0);
@@ -207,7 +212,7 @@ describe('NodeConfigUtils', () => {
             ]);
 
             await expect(
-                exportNodeConfigs(testNodes, 'hunter2')
+                exportNodeConfigs(testNodes, testPassword)
             ).rejects.toThrow('write failed');
 
             expect(Object.keys(mockFiles)).toHaveLength(0);
@@ -218,21 +223,29 @@ describe('NodeConfigUtils', () => {
                 '/cache/nodeconfig-exports/20200101-000000.zeus-wallet-config-backup';
             mockFiles[stale] = Buffer.from('old export', 'utf8');
 
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
 
             expect(mockFiles[stale]).toBeUndefined();
             expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
-        it('refuses to export without a password', async () => {
-            await expect(exportNodeConfigs(testNodes, '')).rejects.toThrow();
+        it.each([
+            ['an empty password', ''],
+            ['a single space', ' '],
+            ['whitespace only', '        '],
+            ['whitespace padding a short password', '  abc   '],
+            ['a password below the minimum length', 'hunter2']
+        ])('refuses to export with %s', async (_label, password) => {
+            await expect(
+                exportNodeConfigs(testNodes, password)
+            ).rejects.toThrow();
 
             expect(mockSaveDocuments).not.toHaveBeenCalled();
             expect(Object.keys(mockFiles)).toHaveLength(0);
         });
 
         it('does not emit any node credential in cleartext', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
             const envelope = JSON.parse(capturedEnvelope as string);
             expect(JSON.stringify(envelope)).not.toContain('deadbeefcafe');
         });
@@ -240,15 +253,18 @@ describe('NodeConfigUtils', () => {
 
     describe('decryptExportDataV2', () => {
         it('round-trips an exported v2 backup with the correct password', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
             const envelope = JSON.parse(capturedEnvelope as string);
 
-            const nodes = await decryptExportDataV2(envelope.data, 'hunter2');
+            const nodes = await decryptExportDataV2(
+                envelope.data,
+                testPassword
+            );
             expect(nodes).toEqual(testNodes);
         });
 
         it('rejects a wrong password', async () => {
-            await exportNodeConfigs(testNodes, 'hunter2');
+            await exportNodeConfigs(testNodes, testPassword);
             const envelope = JSON.parse(capturedEnvelope as string);
 
             await expect(
@@ -277,6 +293,43 @@ describe('NodeConfigUtils', () => {
             ).toString();
 
             expect(() => decryptExportData(v1Blob, 'nope')).toThrow();
+        });
+    });
+
+    describe('isValidExportPassword', () => {
+        it.each(['', ' ', '   ', '\t\n', '  abc   ', 'hunter2'])(
+            'rejects %j',
+            (password) => {
+                expect(isValidExportPassword(password)).toBe(false);
+            }
+        );
+
+        it.each([
+            'hunter2!',
+            'a'.repeat(MIN_EXPORT_PASSWORD_LENGTH),
+            // interior whitespace counts toward the length
+            'a b c d e',
+            // padding is ignored, but the core clears the bar on its own
+            `  ${'a'.repeat(MIN_EXPORT_PASSWORD_LENGTH)}  `
+        ])('accepts %j', (password) => {
+            expect(isValidExportPassword(password)).toBe(true);
+        });
+
+        it('does not trim the password it validates', async () => {
+            // Export and import must agree on the exact bytes fed to the KDF -
+            // if validation trimmed, a backup written with a padded password
+            // would no longer open with that same password.
+            const padded = ` ${testPassword} `;
+
+            await exportNodeConfigs(testNodes, padded);
+            const envelope = JSON.parse(capturedEnvelope as string);
+
+            await expect(
+                decryptExportDataV2(envelope.data, testPassword)
+            ).rejects.toBeDefined();
+            await expect(
+                decryptExportDataV2(envelope.data, padded)
+            ).resolves.toEqual(testNodes);
         });
     });
 
