@@ -44,6 +44,7 @@ import Screen from '../../components/Screen';
 import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { markStartupPhase } from '../../utils/StartupTimingUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import {
@@ -328,9 +329,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore: { updateSettings }
         } = this.props;
 
+        markStartupPhase('walletMounted');
+
         const supportedBiometryType = await getSupportedBiometryType();
 
         await updateSettings({ supportedBiometryType });
+
+        markStartupPhase('biometrySettingUpdated');
 
         this.handleFocus();
     }
@@ -526,6 +531,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async fetchData(transientRetryCount = 0) {
         const { SettingsStore } = this.props;
+
+        markStartupPhase('fetchDataStart');
 
         // ensure we don't run this twice in parallel
         const seq = SettingsStore.acquireFetchLock();
@@ -1239,6 +1246,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
+                markStartupPhase('nodeInfoLoaded');
                 if (BackendUtils.supportsAccounts()) {
                     await UTXOsStore.listAccounts();
                 }

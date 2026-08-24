@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native';
 
 import { StealthAppContainer } from '../views/Stealth';
 import StealthModeUtils, { StealthApp } from '../utils/StealthModeUtils';
+import { markStartupPhase } from '../utils/StartupTimingUtils';
 import Storage from '../storage';
 
 interface StealthModeWrapperProps {
@@ -39,15 +40,18 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
     }, []);
 
     const checkStealthStatus = async () => {
+        markStartupPhase('stealthCheckStart');
         // Only check on Android
         if (Platform.OS !== 'android') {
             setIsLoading(false);
+            markStartupPhase('stealthGateCleared');
             return;
         }
 
         try {
             // Check native stealth status first (most reliable)
             const nativeActive = await StealthModeUtils.isStealthModeActive();
+            markStartupPhase('stealthNativeChecked');
 
             // Get JS settings to cross-reference
             const settingsStr = await Storage.getItem(STORAGE_KEY);
@@ -79,6 +83,7 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
             console.error('Error checking stealth status:', error);
         } finally {
             setIsLoading(false);
+            markStartupPhase('stealthGateCleared');
         }
     };
 

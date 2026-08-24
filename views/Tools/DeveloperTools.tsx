@@ -900,6 +900,22 @@ export default class DeveloperTools extends React.Component<
                     }}
                     scrollEventThrottle={16}
                 >
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('StartupTiming')}
+                        style={[
+                            styles.categoryContainer,
+                            { backgroundColor: themeColor('secondary') }
+                        ]}
+                    >
+                        <Text
+                            style={{
+                                ...styles.categoryTitle,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.Tools.startupTiming.title')}
+                        </Text>
+                    </TouchableOpacity>
                     {categories
                         .filter((c) =>
                             c.commands.some((c) =>

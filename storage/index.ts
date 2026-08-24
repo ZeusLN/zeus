@@ -1,5 +1,7 @@
 import * as Keychain from 'react-native-keychain';
 
+import { recordStorageOp } from '../utils/StartupTimingUtils';
+
 const KEY_PREFIX = 'zeus:';
 
 class Storage {
@@ -18,17 +20,22 @@ class Storage {
 
     getItem = async (key: string) => {
         const prefixedKey = this.prefixKey(key);
-        const response: any = await Keychain.getInternetCredentials(
-            prefixedKey,
-            {
-                cloudSync: false
-            }
-        );
+        const startedAt = Date.now();
+        try {
+            const response: any = await Keychain.getInternetCredentials(
+                prefixedKey,
+                {
+                    cloudSync: false
+                }
+            );
 
-        if (response && response.password) {
-            return response.password;
+            if (response && response.password) {
+                return response.password;
+            }
+            return false;
+        } finally {
+            recordStorageOp('get', key, Date.now() - startedAt);
         }
-        return false;
     };
 
     setItem = async (key: string, value: any) => {
@@ -48,24 +55,34 @@ class Storage {
             return this.removeItem(key);
         }
 
-        const response = await Keychain.setInternetCredentials(
-            prefixedKey,
-            prefixedKey,
-            stringValue,
-            {
-                cloudSync: false
-            }
-        );
-        return response;
+        const startedAt = Date.now();
+        try {
+            const response = await Keychain.setInternetCredentials(
+                prefixedKey,
+                prefixedKey,
+                stringValue,
+                {
+                    cloudSync: false
+                }
+            );
+            return response;
+        } finally {
+            recordStorageOp('set', key, Date.now() - startedAt);
+        }
     };
 
     removeItem = async (key: string) => {
         const prefixedKey = this.prefixKey(key);
-        const response = await Keychain.resetInternetCredentials({
-            server: prefixedKey,
-            cloudSync: false
-        });
-        return response;
+        const startedAt = Date.now();
+        try {
+            const response = await Keychain.resetInternetCredentials({
+                server: prefixedKey,
+                cloudSync: false
+            });
+            return response;
+        } finally {
+            recordStorageOp('remove', key, Date.now() - startedAt);
+        }
     };
 }
 

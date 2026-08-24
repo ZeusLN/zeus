@@ -293,6 +293,7 @@ import ActivityExport from './views/Tools/ActivityExport';
 import BumpFee from './views/Tools/BumpFee';
 import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
+import StartupTiming from './views/Tools/StartupTiming';
 import Rebalance from './views/Tools/Rebalance';
 import RebalancingChannels from './views/Tools/RebalancingChannels';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
@@ -1526,6 +1527,12 @@ export default class App extends React.PureComponent {
                                                                 name="DeveloperTools" // @ts-ignore:next-line
                                                                 component={
                                                                     DeveloperTools
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="StartupTiming" // @ts-ignore:next-line
+                                                                component={
+                                                                    StartupTiming
                                                                 }
                                                             />
                                                             <Stack.Screen
