@@ -1175,8 +1175,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else if (implementation === 'lightning-node-connect') {
             let error;
-            if (connecting) {
-                error = await connect();
+            // An LNC session does not survive the OS suspending the app, and
+            // the native layer has no keepalive and never redials on its own.
+            // Without a liveness check every call below would be issued
+            // against a dead connection, which used to hang forever
+            // (ZEUS-4278) and now fails fast — either way the wallet is
+            // unusable until something reconnects, so reconnect here.
+            const reconnectNeeded =
+                connecting || !(await BackendUtils.isConnected());
+            if (reconnectNeeded) {
+                try {
+                    error = await connect();
+                } catch (connectError: any) {
+                    console.log('LNC connect failed:', connectError);
+                    error = connectError?.message ?? String(connectError);
+                }
             }
             if (!error) {
                 try {
