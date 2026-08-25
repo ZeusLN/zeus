@@ -365,6 +365,7 @@
     "views.Settings.WalletConfiguration.seedPhraseLength": "시드 문구 길이",
     "views.Settings.WalletConfiguration.seedPhraseLength.12": "12단어",
     "views.Settings.WalletConfiguration.seedPhraseLength.24": "24단어",
+    "views.Settings.WalletConfiguration.cleartextHttpWarning": "This connection uses unencrypted HTTP. Your node credentials will be sent in cleartext and can be read or stolen by anyone on the network path. Only proceed if you trust the entire connection, such as a local or VPN-only link.",
     "views.Settings.WalletConfiguration.saveWallet": "지갑 설정 저장",
     "views.Settings.WalletConfiguration.setWalletActive": "지갑을 활성으로 설정",
     "views.Settings.WalletConfiguration.walletActive": "지갑 활성",
