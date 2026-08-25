@@ -38,6 +38,7 @@ import ZeusText from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
+import PreventRemove from '../../components/PreventRemove';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -254,6 +255,14 @@ export default class SeedRecovery extends React.PureComponent<
             await this.initFromProps(this.props);
         }
     }
+
+    exitScbEntry = () => {
+        Keyboard.dismiss();
+        this.setState({
+            selectedInputType: null,
+            selectedText: ''
+        });
+    };
 
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
@@ -990,6 +999,13 @@ export default class SeedRecovery extends React.PureComponent<
 
         return (
             <Screen>
+                {/* Backing out of SCB entry (header arrow, iOS swipe, Android
+                    hardware back) must return to the seed grid, not pop the
+                    screen and discard the hand-entered seed */}
+                <PreventRemove
+                    enabled={selectedInputType === 'scb'}
+                    onAttempt={this.exitScbEntry}
+                />
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -1242,13 +1258,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             title={localeString(
                                                 'general.confirm'
                                             )}
-                                            onPress={() => {
-                                                Keyboard.dismiss();
-                                                this.setState({
-                                                    selectedInputType: null,
-                                                    selectedText: ''
-                                                });
-                                            }}
+                                            onPress={() => this.exitScbEntry()}
                                             secondary
                                         />
                                     </View>
