@@ -30,14 +30,18 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import { suppressBackgroundLockDuring } from '../../utils/BackgroundLockUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor, isLightTheme } from '../../utils/ThemeUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
     saveNodeConfigs,
-    createExportFileContent as createExportFileContent,
-    saveNodeConfigExportFile,
-    decryptExportData
+    exportNodeConfigs,
+    decryptExportData,
+    decryptExportDataV2,
+    isValidExportPassword,
+    EXPORT_FORMAT_VERSION,
+    MIN_EXPORT_PASSWORD_LENGTH
 } from '../../utils/NodeConfigUtils';
 import KeychainRecoveryUtils, {
     RecoveryResult,
@@ -48,7 +52,6 @@ import SettingsStore, {
     Node,
     INTERFACE_KEYS
 } from '../../stores/SettingsStore';
-import moment from 'moment';
 
 // Helper function to get human-readable implementation name
 const getImplementationDisplayName = (
@@ -80,7 +83,6 @@ interface NodeConfigExportImportState {
     selectedNodes: Array<number>;
     exportPassword: string;
     confirmPassword: string;
-    useEncryption: boolean;
     importFilePath: string | null;
     importPassword: string;
     importPasswordHidden: boolean;
@@ -118,7 +120,6 @@ export default class NodeConfigExportImport extends React.Component<
         selectedNodes: [],
         exportPassword: '',
         confirmPassword: '',
-        useEncryption: true,
         importFilePath: null,
         importPassword: '',
         importPasswordHidden: true,
@@ -180,13 +181,9 @@ export default class NodeConfigExportImport extends React.Component<
                                 marginBottom: 20
                             }}
                         >
-                            {Platform.OS === 'android'
-                                ? localeString(
-                                      'views.Tools.nodeConfigExportImport.explainerAndroid'
-                                  )
-                                : localeString(
-                                      'views.Tools.nodeConfigExportImport.explaineriOS'
-                                  )}
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.explainer'
+                            )}
                         </Text>
                         <Button
                             title={localeString('general.ok')}
@@ -398,8 +395,7 @@ export default class NodeConfigExportImport extends React.Component<
                                 title={localeString('general.confirm')}
                                 onPress={() => {
                                     this.setState({
-                                        activeModal: 'export',
-                                        useEncryption: true
+                                        activeModal: 'export'
                                     });
                                 }}
                                 disabled={selectedNodes.length === 0}
@@ -423,8 +419,25 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private renderExportModal = () => {
-        const { activeModal, exportPassword, confirmPassword, useEncryption } =
-            this.state;
+        const { activeModal, exportPassword, confirmPassword } = this.state;
+
+        const passwordAcceptable = isValidExportPassword(exportPassword);
+        const passwordsMatch = exportPassword === confirmPassword;
+
+        // Say why the export button is inert rather than leaving the user to
+        // guess, but stay quiet until they have typed something in the field
+        // the complaint is about.
+        let validationError: string | undefined;
+        if (exportPassword && !passwordAcceptable) {
+            validationError = localeString(
+                'views.Tools.nodeConfigExportImport.passwordTooShort',
+                { length: MIN_EXPORT_PASSWORD_LENGTH }
+            );
+        } else if (confirmPassword && !passwordsMatch) {
+            validationError = localeString(
+                'views.Tools.nodeConfigExportImport.passwordMismatch'
+            );
+        }
 
         return (
             <Modal
@@ -444,58 +457,47 @@ export default class NodeConfigExportImport extends React.Component<
                             }
                         ]}
                     >
-                        <CheckBox
-                            title={localeString('general.encrypt')}
-                            checked={useEncryption}
-                            onPress={() =>
-                                this.setState({ useEncryption: !useEncryption })
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                marginBottom: 10
+                            }}
+                        >
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.encryptExplainer'
+                            )}
+                        </Text>
+
+                        <TextInput
+                            placeholder={localeString(
+                                'views.Tools.nodeConfigExportImport.password'
+                            )}
+                            value={exportPassword}
+                            onChangeText={(text: string) =>
+                                this.setState({ exportPassword: text })
                             }
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderWidth: 0
-                            }}
-                            textStyle={{
-                                color: themeColor('text')
-                            }}
-                            checkedColor={themeColor('text')}
+                            secureTextEntry
+                        />
+                        <TextInput
+                            placeholder={localeString(
+                                'views.Tools.nodeConfigExportImport.confirmPassword'
+                            )}
+                            value={confirmPassword}
+                            onChangeText={(text: string) =>
+                                this.setState({ confirmPassword: text })
+                            }
+                            secureTextEntry
                         />
 
-                        {useEncryption && (
-                            <>
-                                <TextInput
-                                    placeholder={localeString(
-                                        'views.Tools.nodeConfigExportImport.password'
-                                    )}
-                                    value={exportPassword}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ exportPassword: text })
-                                    }
-                                    secureTextEntry
-                                />
-                                <TextInput
-                                    placeholder={localeString(
-                                        'views.Tools.nodeConfigExportImport.confirmPassword'
-                                    )}
-                                    value={confirmPassword}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ confirmPassword: text })
-                                    }
-                                    secureTextEntry
-                                />
-                            </>
-                        )}
-
-                        {!useEncryption && (
+                        {validationError && (
                             <Text
                                 style={{
                                     color: themeColor('error'),
-                                    fontWeight: 'bold',
-                                    marginBottom: 10
+                                    fontSize: 13,
+                                    marginTop: 8
                                 }}
                             >
-                                {localeString(
-                                    'views.Tools.nodeConfigExportImport.unencryptedWarning'
-                                )}
+                                {validationError}
                             </Text>
                         )}
 
@@ -506,9 +508,7 @@ export default class NodeConfigExportImport extends React.Component<
                                 )}
                                 onPress={this.executeExport}
                                 disabled={
-                                    useEncryption &&
-                                    (!exportPassword ||
-                                        exportPassword !== confirmPassword)
+                                    !passwordAcceptable || !passwordsMatch
                                 }
                                 buttonStyle={{ marginBottom: 10 }}
                             />
@@ -525,11 +525,8 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private executeExport = async () => {
-        const {
-            selectedNodes: selectedNodeIndices,
-            useEncryption,
-            exportPassword
-        } = this.state;
+        const { selectedNodes: selectedNodeIndices, exportPassword } =
+            this.state;
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
@@ -539,43 +536,47 @@ export default class NodeConfigExportImport extends React.Component<
             const selectedNodeConfigs = selectedNodeIndices.map(
                 (index) => nodes[index]
             );
-            const exportFileContent = createExportFileContent(
-                selectedNodeConfigs,
-                useEncryption,
-                exportPassword
+
+            // Encrypts (native AES-256-GCM) and prompts for a destination
+            // via the system save dialog, staged from app-private cache.
+            // Nothing is written to shared storage unprompted and no
+            // plaintext export is produced.
+            await suppressBackgroundLockDuring(SettingsStore, () =>
+                exportNodeConfigs(selectedNodeConfigs, exportPassword)
             );
-
-            const timestamp = moment().format('YYYYMMDD-HHmmss');
-            const filename = `${timestamp}.zeus-wallet-config-backup`;
-
-            await saveNodeConfigExportFile(filename, exportFileContent);
             this.setState({ isLoading: false });
+            this.resetExportState();
             Alert.alert(
                 localeString('general.success'),
-                localeString(
-                    'views.Tools.nodeConfigExportImport.exportSuccess'
-                ),
-                [
-                    {
-                        text: localeString('general.ok'),
-                        onPress: () => this.resetExportState()
-                    }
-                ]
+                localeString('views.Tools.nodeConfigExportImport.exportSuccess')
             );
         } catch (error) {
-            this.handleError(
-                error,
-                'views.Tools.nodeConfigExportImport.exportError'
-            );
+            if (
+                isErrorWithCode(error) &&
+                error.code === errorCodes.OPERATION_CANCELED
+            ) {
+                // not really an error, user just dismissed the save dialog
+                this.setState({ isLoading: false });
+                this.resetExportState();
+            } else {
+                this.handleError(
+                    error,
+                    'views.Tools.nodeConfigExportImport.exportError'
+                );
+            }
         }
     };
 
     private handleImport = async () => {
         try {
             this.setState({ isLoading: true });
-            const [result] = await pick({
-                type: [types.allFiles]
-            });
+            const [result] = await suppressBackgroundLockDuring(
+                this.props.SettingsStore,
+                () =>
+                    pick({
+                        type: [types.allFiles]
+                    })
+            );
 
             const filePath = result.uri;
             if (!filePath) {
@@ -604,7 +605,10 @@ export default class NodeConfigExportImport extends React.Component<
             const content = await RNFS.readFile(filePath, 'utf8');
             const importData: NodeConfigExport = JSON.parse(content);
 
-            if (!importData.version || importData.version > 1) {
+            if (
+                !importData.version ||
+                importData.version > EXPORT_FORMAT_VERSION
+            ) {
                 this.handleError(
                     undefined,
                     'views.Tools.nodeConfigExportImport.importError'
@@ -621,7 +625,16 @@ export default class NodeConfigExportImport extends React.Component<
                 });
             } else {
                 // Show node selection modal for unencrypted imports
-                const nodes = (importData.data as { nodes: Node[] }).nodes;
+                const nodes = (importData.data as { nodes: Node[] })?.nodes;
+
+                if (!Array.isArray(nodes)) {
+                    this.handleError(
+                        undefined,
+                        'views.Tools.nodeConfigExportImport.importError'
+                    );
+                    return;
+                }
+
                 this.setState({
                     isLoading: false,
                     importNodes: nodes,
@@ -875,10 +888,15 @@ export default class NodeConfigExportImport extends React.Component<
         try {
             this.setState({ isLoading: true });
 
-            const nodes = decryptExportData(
-                importData!.data as string,
-                password
-            );
+            // v2 = native AES-256-GCM blob; v1 = legacy CryptoJS passphrase
+            // blob (kept importable permanently).
+            const nodes =
+                importData!.version >= 2
+                    ? await decryptExportDataV2(
+                          importData!.data as string,
+                          password
+                      )
+                    : decryptExportData(importData!.data as string, password);
 
             // Show node selection modal for encrypted imports
             this.setState({
