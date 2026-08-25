@@ -25,6 +25,11 @@ LOW_MEMORY=""
 # directory instead. It is mounted, so it may live anywhere on the host.
 GRADLE_CACHE_HOST=""
 
+# Regenerate the Gradle dependency lock files instead of just consuming them.
+# Locks are written from inside the pinned builder image on purpose, so the
+# recorded graph matches the toolchain that actually builds releases.
+WRITE_LOCKS=""
+
 usage() {
     cat <<'USAGE'
 Usage: ./build.sh [options]
@@ -39,6 +44,8 @@ Usage: ./build.sh [options]
                         the published release hashes.
   --gradle-cache DIR    Use DIR as the Gradle cache instead of ./.gradle-cache,
                         so multiple checkouts share one (~6GB) cache.
+  --write-locks         Regenerate android/gradle.lockfile and
+                        android/app/gradle.lockfile from this build.
   -h, --help            Show this message.
 USAGE
 }
@@ -55,6 +62,7 @@ while [[ "$#" -gt 0 ]]; do
             esac
             GRADLE_CACHE_HOST="$1"
             ;;
+        --write-locks) WRITE_LOCKS="1" ;;
         -h|--help) usage && exit 0 ;;
         *) echo "Unknown parameter: $1" && usage && exit 1 ;;
     esac
@@ -76,6 +84,7 @@ docker run --rm $TTY_FLAG --name $CONTAINER_NAME \
     -e SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH \
     -e GRADLE_USER_HOME="$GRADLE_USER_HOME_PATH" \
     -e LOW_MEMORY="$LOW_MEMORY" \
+    -e WRITE_LOCKS="$WRITE_LOCKS" \
     "${CACHE_MOUNT[@]}" \
     -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building ZEUS...\n********************************\n" && \
@@ -93,6 +102,9 @@ docker run --rm $TTY_FLAG --name $CONTAINER_NAME \
               "-Dorg.gradle.jvmargs=-Xmx2200m -XX:MaxMetaspaceSize=512m"
               "-Pkotlin.compiler.execution.strategy=in-process"
           );
+      fi && \
+      if [ -n "$WRITE_LOCKS" ]; then
+          GRADLE_FLAGS+=("--write-locks");
       fi && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
       cd /olympus/zeus/android ; ./gradlew "${GRADLE_FLAGS[@]}" generateCodegenArtifactsFromSchema && ./gradlew "${GRADLE_FLAGS[@]}" app:assembleRelease && \
