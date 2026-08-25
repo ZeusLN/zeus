@@ -47,33 +47,54 @@ jest.mock('react-native-fs', () => ({
     }
 }));
 
-// Fake native GCM: a reversible, password-checked wire format standing in for
-// the real ZipUtils AES-256-GCM primitive. Format: [0x01][passLen][pass][pt].
-// decryptFile rejects on a password mismatch, mirroring a GCM tag failure.
-jest.mock('./ZipUtils', () => ({
-    encryptFile: (input: string, output: string, pass: string) => {
-        const plain = mockFiles[input];
-        if (!plain) return Promise.reject(new Error('no input'));
-        const passBuf = Buffer.from(pass, 'utf8');
-        mockFiles[output] = Buffer.concat([
-            Buffer.from([0x01, passBuf.length]),
-            passBuf,
-            plain
-        ]);
-        return Promise.resolve();
-    },
-    decryptFile: (input: string, output: string, pass: string) => {
-        const blob = mockFiles[input];
-        if (!blob) return Promise.reject(new Error('no input'));
-        const passLen = blob[1];
-        const storedPass = blob.slice(2, 2 + passLen).toString('utf8');
-        if (storedPass !== pass) {
-            return Promise.reject(new Error('AEADBadTagException'));
+// Fake native AEAD standing in for the real ZipUtils AES-256-GCM primitive.
+// Not real crypto, but it holds the properties the callers depend on: the
+// output leaks neither the plaintext nor the password, and a wrong password is
+// rejected the way a GCM tag mismatch is.
+// Wire format: [0x01][tag(8)][keystream-XOR ciphertext].
+jest.mock('./ZipUtils', () => {
+    const { createHash } = require('crypto');
+    const keystream = (pass: string, len: number) => {
+        const key = createHash('sha256').update(pass).digest();
+        const blocks = [];
+        for (let i = 0; i * 32 < len; i++) {
+            blocks.push(
+                createHash('sha256')
+                    .update(key)
+                    .update(Buffer.from([i]))
+                    .digest()
+            );
         }
-        mockFiles[output] = blob.slice(2 + passLen);
-        return Promise.resolve();
-    }
-}));
+        return Buffer.concat(blocks).slice(0, len);
+    };
+    const tagFor = (pass: string) =>
+        createHash('sha256').update(`tag:${pass}`).digest().slice(0, 8);
+    const xor = (a: Buffer, b: Buffer) =>
+        Buffer.from(a.map((byte, i) => byte ^ b[i]));
+
+    return {
+        encryptFile: (input: string, output: string, pass: string) => {
+            const plain = mockFiles[input];
+            if (!plain) return Promise.reject(new Error('no input'));
+            mockFiles[output] = Buffer.concat([
+                Buffer.from([0x01]),
+                tagFor(pass),
+                xor(plain, keystream(pass, plain.length))
+            ]);
+            return Promise.resolve();
+        },
+        decryptFile: (input: string, output: string, pass: string) => {
+            const blob = mockFiles[input];
+            if (!blob) return Promise.reject(new Error('no input'));
+            if (!blob.slice(1, 9).equals(tagFor(pass))) {
+                return Promise.reject(new Error('AEADBadTagException'));
+            }
+            const ct = blob.slice(9);
+            mockFiles[output] = xor(ct, keystream(pass, ct.length));
+            return Promise.resolve();
+        }
+    };
+});
 
 let capturedEnvelope: string | undefined;
 const mockSaveDocuments = jest
@@ -248,6 +269,9 @@ describe('NodeConfigUtils', () => {
             await exportNodeConfigs(testNodes, testPassword);
             const envelope = JSON.parse(capturedEnvelope as string);
             expect(JSON.stringify(envelope)).not.toContain('deadbeefcafe');
+            expect(
+                Buffer.from(envelope.data, 'base64').toString('latin1')
+            ).not.toContain('deadbeefcafe');
         });
     });
 
@@ -277,10 +301,8 @@ describe('NodeConfigUtils', () => {
         it('still decrypts a CryptoJS passphrase-mode backup', () => {
             // Known-answer for backward compatibility with pre-v2 exports
             // created via CryptoJS 4.2.0 passphrase mode.
-            const v1Blob = CryptoJS.AES.encrypt(
-                JSON.stringify({ nodes: testNodes }),
-                'legacy-pass'
-            ).toString();
+            const v1Blob =
+                'U2FsdGVkX19NlQ0tFzDOF42jXq6tf6pAvFFR5Jq/75EQIetRfIf3/8bLQIW7JIU7agsWSpkseUrAXLaDW3un279/O51Z6ubZtRbaU5XXvYUfI+yNE6fO2bYfcnBT+EcZBH381TamDQEbfIJbdx+/RX4OQuvGjqY3jv9uB6NM1ZBeD4q3C34xpqGp9OpzJTA1';
 
             const nodes = decryptExportData(v1Blob, 'legacy-pass');
             expect(nodes).toEqual(testNodes);
