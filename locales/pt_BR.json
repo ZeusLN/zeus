@@ -365,6 +365,7 @@
     "views.Settings.WalletConfiguration.seedPhraseLength": "Seed phrase length",
     "views.Settings.WalletConfiguration.seedPhraseLength.12": "12 words",
     "views.Settings.WalletConfiguration.seedPhraseLength.24": "24 words",
+    "views.Settings.WalletConfiguration.cleartextHttpWarning": "This connection uses unencrypted HTTP. Your node credentials will be sent in cleartext and can be read or stolen by anyone on the network path. Only proceed if you trust the entire connection, such as a local or VPN-only link.",
     "views.Settings.WalletConfiguration.saveWallet": "Salvar configuração da carteira",
     "views.Settings.WalletConfiguration.setWalletActive": "Definir configuração da carteira como ativa",
     "views.Settings.WalletConfiguration.walletActive": "Carteira Ativa",
