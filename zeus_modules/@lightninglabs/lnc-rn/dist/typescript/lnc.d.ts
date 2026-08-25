@@ -6,6 +6,9 @@ export default class LNC {
     lnd: LndApi;
     private _emitter;
     private _subscriptions;
+    private _requestTimeoutMs;
+    private _initPromise;
+    private _initError;
     constructor(lncConfig?: LncConfig);
     onLocalPrivCreate: (keyHex: string) => void;
     onRemoteKeyReceive: (keyHex: string) => void;
@@ -21,9 +24,13 @@ export default class LNC {
      */
     connect(): Promise<any>;
     /**
-     * Disconnects from the proxy server
+     * Disconnects from the proxy server.
+     *
+     * Awaitable: callers that immediately re-init the same namespace must
+     * know the previous connection is closed first, because InitLNC replaces
+     * the namespace's mobile client outright without closing what was there.
      */
-    disconnect(): void;
+    disconnect(): Promise<void>;
     private _removeSubscriptions;
     /**
      * Emulates a GRPC request but uses the mobile client instead to communicate with the LND node
