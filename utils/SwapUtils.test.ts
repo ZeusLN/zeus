@@ -1,4 +1,28 @@
 import BigNumber from 'bignumber.js';
+
+jest.mock('react-native', () => ({
+    Platform: { OS: 'ios' }
+}));
+
+// Paths must mirror the real constants' asymmetry: the legacy Android writer
+// used the PUBLIC Downloads dir (RNFS.DownloadDirectoryPath), not the
+// app-scoped one, so the purge must read the same constant.
+jest.mock('react-native-fs', () => ({
+    DownloadDirectoryPath: '/public-downloads',
+    DocumentDirectoryPath: '/docs',
+    CachesDirectoryPath: '/cache',
+    exists: jest.fn().mockResolvedValue(false),
+    unlink: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined)
+}));
+
+const mockSaveDocuments = jest.fn();
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: (...args: any[]) => mockSaveDocuments(...args)
+}));
+
+import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
 import {
     bigCeil,
     bigFloor,
@@ -8,7 +32,11 @@ import {
     calculateLimit,
     isValidRescueKey,
     swapWebSocketUrl,
-    verifyReverseSwapInvoice
+    verifyReverseSwapInvoice,
+    purgeLegacyRescueKeyFiles,
+    saveRescueKeyFile,
+    unlinkRescueKeyStagingFile,
+    RESCUE_KEY_FILENAME
 } from './SwapUtils';
 
 // regtest BOLT11 vector: 123 sats,
@@ -271,6 +299,152 @@ describe('SwapUtils', () => {
         it('rewrites only the scheme, never a later occurrence', () => {
             expect(swapWebSocketUrl('https://http.http/https')).toBe(
                 'wss://http.http/https/ws'
+            );
+        });
+    });
+
+    describe('purgeLegacyRescueKeyFiles', () => {
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
+
+        beforeEach(() => {
+            Platform.OS = 'ios';
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
+        });
+
+        it('does nothing when no legacy file exists', async () => {
+            await purgeLegacyRescueKeyFiles();
+            expect(exists).toHaveBeenCalledWith(`/docs/${RESCUE_KEY_FILENAME}`);
+            expect(unlink).not.toHaveBeenCalled();
+        });
+
+        it('unlinks the legacy iOS Documents file when present', async () => {
+            exists.mockResolvedValue(true);
+            await purgeLegacyRescueKeyFiles();
+            expect(unlink).toHaveBeenCalledWith(`/docs/${RESCUE_KEY_FILENAME}`);
+        });
+
+        it('unlinks from public Downloads on Android, matching the legacy writer', async () => {
+            Platform.OS = 'android';
+            exists.mockResolvedValue(true);
+            await purgeLegacyRescueKeyFiles();
+            expect(exists).toHaveBeenCalledWith(
+                `/public-downloads/${RESCUE_KEY_FILENAME}`
+            );
+            expect(unlink).toHaveBeenCalledWith(
+                `/public-downloads/${RESCUE_KEY_FILENAME}`
+            );
+        });
+
+        it('swallows unlink errors (scoped storage may deny deletion)', async () => {
+            exists.mockResolvedValue(true);
+            unlink.mockRejectedValue(new Error('EACCES'));
+            await expect(purgeLegacyRescueKeyFiles()).resolves.toBeUndefined();
+        });
+    });
+
+    describe('unlinkRescueKeyStagingFile', () => {
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
+
+        beforeEach(() => {
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
+        });
+
+        it('does nothing when no staging file exists', async () => {
+            await unlinkRescueKeyStagingFile();
+            expect(exists).toHaveBeenCalledWith(
+                `/cache/${RESCUE_KEY_FILENAME}`
+            );
+            expect(unlink).not.toHaveBeenCalled();
+        });
+
+        it('unlinks the staging file when present', async () => {
+            exists.mockResolvedValue(true);
+            await unlinkRescueKeyStagingFile();
+            expect(unlink).toHaveBeenCalledWith(
+                `/cache/${RESCUE_KEY_FILENAME}`
+            );
+        });
+
+        it('swallows unlink errors', async () => {
+            exists.mockResolvedValue(true);
+            unlink.mockRejectedValue(new Error('EBUSY'));
+            await expect(unlinkRescueKeyStagingFile()).resolves.toBeUndefined();
+        });
+    });
+
+    describe('saveRescueKeyFile', () => {
+        const exists = RNFS.exists as jest.Mock;
+        const unlink = RNFS.unlink as jest.Mock;
+        const writeFile = RNFS.writeFile as jest.Mock;
+        const stagingPath = `/cache/${RESCUE_KEY_FILENAME}`;
+        const mnemonic = 'abandon ability able about above absent';
+
+        beforeEach(() => {
+            exists.mockReset().mockResolvedValue(false);
+            unlink.mockReset().mockResolvedValue(undefined);
+            writeFile.mockReset().mockResolvedValue(undefined);
+            mockSaveDocuments
+                .mockReset()
+                .mockResolvedValue([
+                    { uri: 'content://saved', name: null, error: null }
+                ]);
+        });
+
+        it('stages the mnemonic JSON and presents the system save dialog', async () => {
+            await saveRescueKeyFile(mnemonic);
+
+            expect(writeFile).toHaveBeenCalledWith(
+                stagingPath,
+                JSON.stringify({ mnemonic }, null, 2),
+                'utf8'
+            );
+            expect(mockSaveDocuments).toHaveBeenCalledWith({
+                sourceUris: [`file://${stagingPath}`],
+                fileName: RESCUE_KEY_FILENAME,
+                mimeType: 'application/json',
+                copy: true
+            });
+        });
+
+        it('removes the staging file after a successful save', async () => {
+            // The staging file exists once written; the finally-unlink must
+            // see and delete it.
+            writeFile.mockImplementation(async () => {
+                exists.mockResolvedValue(true);
+            });
+
+            await saveRescueKeyFile(mnemonic);
+
+            expect(unlink).toHaveBeenCalledWith(stagingPath);
+        });
+
+        it('removes the staging file and rethrows when the user cancels the dialog', async () => {
+            writeFile.mockImplementation(async () => {
+                exists.mockResolvedValue(true);
+            });
+            mockSaveDocuments.mockRejectedValue(
+                Object.assign(new Error('user canceled'), {
+                    code: 'OPERATION_CANCELED'
+                })
+            );
+
+            await expect(saveRescueKeyFile(mnemonic)).rejects.toMatchObject({
+                code: 'OPERATION_CANCELED'
+            });
+            expect(unlink).toHaveBeenCalledWith(stagingPath);
+        });
+
+        it('throws when the save dialog reports a write error', async () => {
+            mockSaveDocuments.mockResolvedValue([
+                { uri: 'content://saved', name: null, error: 'write failed' }
+            ]);
+
+            await expect(saveRescueKeyFile(mnemonic)).rejects.toThrow(
+                'write failed'
             );
         });
     });

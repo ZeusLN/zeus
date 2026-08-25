@@ -119,7 +119,9 @@ jest.mock('../utils/SwapUtils', () => ({
     SWAPS_KEY: 'swaps',
     REVERSE_SWAPS_KEY: 'reverse-swaps',
     SWAPS_RESCUE_KEY: 'swaps-rescue-key',
-    SWAPS_LAST_USED_KEY: 'swaps-last-used-key'
+    SWAPS_LAST_USED_KEY: 'swaps-last-used-key',
+    purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',

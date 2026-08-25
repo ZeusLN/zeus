@@ -8,6 +8,22 @@ jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
 }));
+// SwapUtils' rescue-key export pulls these in at import time; neither is
+// covered by transformIgnorePatterns. The tests below never reach them.
+jest.mock('react-native-fs', () => ({
+    __esModule: true,
+    default: {
+        DownloadDirectoryPath: '/public-downloads',
+        DocumentDirectoryPath: '/docs',
+        CachesDirectoryPath: '/cache',
+        exists: jest.fn().mockResolvedValue(false),
+        unlink: jest.fn(),
+        writeFile: jest.fn()
+    }
+}));
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: jest.fn()
+}));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
     isOnionHttpsUrl: jest.fn(),
