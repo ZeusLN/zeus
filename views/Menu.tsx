@@ -36,6 +36,7 @@ import Screen from '../components/Screen';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { reAuthNavigation } from '../utils/NavigationUtils';
 import {
     themeColor,
     getUpgradeBackgroundColor,
@@ -409,7 +410,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             >
                                 <TouchableOpacity
                                     style={styles.columnField}
-                                    onPress={() => navigation.navigate('Seed')}
+                                    onPress={() =>
+                                        reAuthNavigation(navigation, 'Seed')
+                                    }
                                 >
                                     <View style={styles.icon}>
                                         <KeyIcon
