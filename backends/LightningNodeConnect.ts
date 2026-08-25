@@ -8,7 +8,7 @@ import LNC from '../zeus_modules/@lightninglabs/lnc-rn';
 import { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-core';
 
 import { settingsStore, nodeInfoStore } from '../stores/Stores';
-import CredentialStore from './LNC/credentialStore';
+import CredentialStore, { hash } from './LNC/credentialStore';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 
@@ -53,19 +53,35 @@ export default class LightningNodeConnect {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
             settingsStore;
 
-        this.lnc = new LNC({
-            credentialStore: await new CredentialStore(
-                pairingPhrase
-            ).initialize()
-        });
+        // Upstream's InitLNC replaces the namespace's mobile client outright
+        // (m[nameSpace] = newMobileClient()) without closing the connection
+        // already on it, orphaning a live mailbox session that keeps holding
+        // this wallet's session keys server side, and leaving the JS
+        // instance's global 'lnc.localPrivCreate' / 'lnc.remoteKeyReceive'
+        // listeners attached so the next wallet's keys get written under the
+        // old wallet's storage key. Tear the previous session down first.
+        await this.disconnect();
 
-        this.lnc.credentials.pairingPhrase = pairingPhrase;
-        this.lnc.credentials.serverHost =
+        const credentialStore = await new CredentialStore(
+            pairingPhrase
+        ).initialize();
+
+        // Load before overlaying the settings values: load() replaces the
+        // whole persisted blob, so anything assigned beforehand is discarded.
+        await credentialStore.load(pairingPhrase);
+        credentialStore.pairingPhrase = pairingPhrase;
+        credentialStore.serverHost =
             mailboxServer === 'custom-defined'
                 ? customMailboxServer
                 : mailboxServer;
 
-        return await this.lnc.credentials.load(pairingPhrase);
+        this.lnc = new LNC({
+            // One namespace per wallet. Upstream keys its mobile clients by
+            // namespace, so the shared 'default' meant every LNC wallet
+            // fought over a single native connection.
+            namespace: hash(pairingPhrase || ''),
+            credentialStore
+        });
     };
 
     connect = async () => await this.lnc.connect();
@@ -103,8 +119,33 @@ export default class LightningNodeConnect {
         this.permForwardingHistory = true;
         this.permSignMessage = true;
     };
-    isConnected = async () => await this.lnc.isConnected();
-    disconnect = () => this.lnc && this.lnc.disconnect();
+    isConnected = async () => {
+        if (!this.lnc) return false;
+        try {
+            return await this.lnc.isConnected();
+        } catch (e) {
+            // rejects with 'unknown namespace' when the native client was
+            // never initialized, which is just another way of saying no
+            console.log('LNC: isConnected check failed', e);
+            return false;
+        }
+    };
+    disconnect = async () => {
+        if (!this.lnc) return;
+        // Let queued credential writes land before the session goes away. An
+        // LNC pairing phrase is single use, so a wallet whose freshly paired
+        // localKey/remoteKey never reached the keychain can never reconnect.
+        try {
+            await this.lnc.credentials?.flushWrites?.();
+        } catch (e) {
+            console.log('LNC: error flushing credential writes', e);
+        }
+        try {
+            await this.lnc.disconnect();
+        } catch (e) {
+            console.log('LNC: error disconnecting', e);
+        }
+    };
 
     getTransactions = async (data: any) =>
         await this.lnc.lnd.lightning
