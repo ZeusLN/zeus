@@ -725,6 +725,64 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('purgeRescueKeyFiles', () => {
+        const RNFS = require('react-native-fs');
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        // Platform.OS is 'ios' under the RN jest preset, so the legacy path
+        // is the Documents dir. The staging path is the cache dir on both.
+        const STAGING_PATH = '/cache/rescue_key.json';
+        const LEGACY_PATH = '/docs/rescue_key.json';
+
+        const stagingUnlinks = () =>
+            RNFS.unlink.mock.calls.filter(
+                (call: any[]) => call[0] === STAGING_PATH
+            );
+
+        beforeEach(() => {
+            RNFS.exists.mockReset().mockResolvedValue(true);
+            RNFS.unlink.mockReset().mockResolvedValue(undefined);
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+        });
+
+        it('unlinks the staging file at most once per process', async () => {
+            // getSettings() calls this on every transition to the background
+            // (App.tsx stealth-mode handler), not only at launch. The Android
+            // save dialog backgrounds the app while the staging file still
+            // has to be readable - saveDocuments() copies it only once the
+            // app is back in the foreground - so unlinking on every call
+            // deletes the export source mid-save and fails the export.
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.purgeRescueKeyFiles();
+            await MigrationUtils.purgeRescueKeyFiles();
+            await MigrationUtils.purgeRescueKeyFiles();
+
+            expect(stagingUnlinks()).toHaveLength(1);
+        });
+
+        it('purges the legacy shared-storage file once and sets the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+
+            await MigrationUtils.purgeRescueKeyFiles();
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(LEGACY_PATH);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'rescue-key-file-cleanup',
+                'true'
+            );
+        });
+
+        it('skips the legacy purge when the flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.purgeRescueKeyFiles();
+
+            expect(RNFS.unlink).not.toHaveBeenCalledWith(LEGACY_PATH);
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
             // Clear mock history before each test
