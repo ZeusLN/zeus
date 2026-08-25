@@ -76,13 +76,15 @@ export default class SwipeableRowContainer extends React.Component<
                 onSwipeableWillClose={() => this.setState({ expanded: false })}
             >
                 <TouchableOpacity
-                    // Tap-to-close fallback: upstream ReanimatedSwipeable's
-                    // built-in tap-to-close relies on a `pointerEvents`
-                    // useAnimatedStyle write that doesn't propagate to
-                    // descendants of v3 HostGestureDetector on Android Fabric
-                    // (see software-mansion/react-native-gesture-handler#4225).
-                    // Close explicitly from JS while we wait for the upstream
-                    // fix to ship in 3.1.0 stable.
+                    // Tap-to-close fallback. Upstream ReanimatedSwipeable
+                    // closes an open row from its own tap gesture, and marks
+                    // the row content `pointerEvents: 'box-only'` while open so
+                    // this handler is bypassed. That path was broken on
+                    // gesture-handler 3.0.x (the tap gesture's `enabled`
+                    // SharedValue write threw on the UI runtime, see
+                    // software-mansion/react-native-gesture-handler#4315,
+                    // fixed in 3.1.0). Kept as a belt-and-braces close so a
+                    // row can never wedge open if that write is dropped again.
                     onPress={() =>
                         expanded ? this.close() : onPress(this.open)
                     }
