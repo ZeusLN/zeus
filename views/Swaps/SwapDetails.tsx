@@ -30,6 +30,7 @@ import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
+import { swapWebSocketUrl } from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -257,9 +258,7 @@ export default class SwapDetails extends React.Component<
         this.setState({ loading: true });
 
         // Create a WebSocket connection
-        const webSocket = new WebSocket(
-            endpoint.replace('https', 'wss') + '/ws'
-        );
+        const webSocket = new WebSocket(swapWebSocketUrl(endpoint));
 
         // Handle WebSocket connection open
         webSocket.onopen = () => {
@@ -449,9 +448,7 @@ export default class SwapDetails extends React.Component<
         this.setState({ loading: true });
 
         // Create a WebSocket connection
-        const webSocket = new WebSocket(
-            endpoint.replace('https', 'wss') + '/ws'
-        );
+        const webSocket = new WebSocket(swapWebSocketUrl(endpoint));
 
         // Handle WebSocket connection open
         webSocket.onopen = () => {

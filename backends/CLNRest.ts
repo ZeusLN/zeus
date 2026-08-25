@@ -198,7 +198,10 @@ export default class CLNRest {
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
+            // see LND.getURL: anchored so a host containing "http" is not
+            // mangled. Unreachable today (no caller passes ws), kept in
+            // sync so reviving it cannot revive the bug.
+            baseUrl = baseUrl.replace(/^https/, 'wss').replace(/^http/, 'ws');
         }
 
         if (baseUrl[baseUrl.length - 1] === '/') {
