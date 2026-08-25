@@ -10,6 +10,7 @@ import {
     getBalance,
     getChainTransactions,
     getOffchainBalance,
+    getUTXOs as getChainUTXOs,
     listPeers,
     listClosedChannels,
     listPeerChannels
@@ -617,7 +618,7 @@ export default class CLNRest {
             feebase: data.base_fee_msat,
             feeppm: data.fee_rate
         });
-    getUTXOs = () => this.postRequest('/v1/listfunds');
+    getUTXOs = async () => await getChainUTXOs();
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             message

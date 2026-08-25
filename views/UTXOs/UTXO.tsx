@@ -58,8 +58,14 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
         const utxo = route.params?.utxo;
         const { testnet } = NodeInfoStore;
 
-        const { getOutpoint, address, getConfs, isUnconfirmed, blockheight } =
-            utxo;
+        const {
+            getOutpoint,
+            address,
+            confirmations,
+            getConfs,
+            isUnconfirmed,
+            blockheight
+        } = utxo;
         const amount = utxo.getAmount;
         const tx = utxo.txid || utxo.outpoint.txid_str;
 
@@ -153,12 +159,16 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                             sensitive
                         />
 
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.numConf')}
-                            value={getConfs}
-                            color={isUnconfirmed ? 'red' : 'green'}
-                            sensitive
-                        />
+                        {confirmations != null && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.numConf'
+                                )}
+                                value={getConfs}
+                                color={isUnconfirmed ? 'red' : 'green'}
+                                sensitive
+                            />
+                        )}
 
                         {blockheight && (
                             <KeyValue
