@@ -1522,8 +1522,10 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 var txDirection: TransactionDirection? = nil
-                if let dir = direction {
-                    txDirection = dir == "incoming" ? .incoming : .outgoing
+                if direction == "incoming" {
+                    txDirection = .incoming
+                } else if direction == "outgoing" {
+                    txDirection = .outgoing
                 }
 
                 let transactions = try await db.listTransactions(
@@ -1539,10 +1541,30 @@ class CashuDevKitModule: RCTEventEmitter {
                         "amount": tx.amount.value,
                         "mint_url": tx.mintUrl.url,
                         "timestamp": tx.timestamp,
-                        "fee": tx.fee.value
+                        "fee": tx.fee.value,
+                        "unit": currencyUnitToString(tx.unit)
                     ]
                     if let memo = tx.memo {
                         result["memo"] = memo
+                    }
+                    if let quoteId = tx.quoteId {
+                        result["quote_id"] = quoteId
+                    }
+                    if let paymentRequest = tx.paymentRequest {
+                        result["payment_request"] = paymentRequest
+                    }
+                    if let paymentProof = tx.paymentProof {
+                        result["payment_proof"] = paymentProof
+                    }
+                    if let paymentMethod = tx.paymentMethod {
+                        switch paymentMethod {
+                        case .bolt11:
+                            result["payment_method"] = "bolt11"
+                        case .bolt12:
+                            result["payment_method"] = "bolt12"
+                        case .custom(let method):
+                            result["payment_method"] = method
+                        }
                     }
                     return result
                 }

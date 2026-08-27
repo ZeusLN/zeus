@@ -192,8 +192,14 @@ export interface CDKTransaction {
     fee?: number;
     mint_url: string;
     timestamp: number;
+    unit?: string;
     memo?: string;
-    state: string;
+    quote_id?: string;
+    payment_request?: string;
+    payment_proof?: string;
+    payment_method?: string;
+    // lifecycle status; absent until CDK 0.18 (all records are then completed)
+    state?: string;
 }
 
 // ============================================================================
