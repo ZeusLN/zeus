@@ -1659,6 +1659,118 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(findAndUpdateConnection).toHaveBeenCalledTimes(1);
         expect(scheduleMaxBudgetRefresh).toHaveBeenCalledTimes(1);
     });
+
+    it('abandons a permanent pending hold when the node never lists the payment', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1permanent-pending-hold';
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(true);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('error.paymentFailed');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(false);
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('abandons a permanent timeout-failed hold when the node never lists the payment', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1permanent-timeout-hold';
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('error.paymentFailed');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(false);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('does not abandon a recent unresolved hold with no node listing', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1recent-hold';
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(true);
+        expect(connection.pendingSpendSats).toBe(10000);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () => {

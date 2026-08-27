@@ -2382,6 +2382,9 @@ export default class NostrWalletConnectStore {
                 paymentHash
             );
 
+        // Deliberate: debit when the node shows this invoice settled even if
+        // Zeus did not initiate the pay via this NWC connection. Without that,
+        // a wallet-paid invoice retried over NWC would escape the budget cap.
         const settledEvidence =
             !!preimage ||
             (!!payment && NostrConnectUtils.isSettledPayment(payment));
@@ -2730,26 +2733,48 @@ export default class NostrWalletConnectStore {
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
     ): Promise<boolean> {
+        let changed = false;
+
         const pending = connection.activity.filter((a) =>
             connection.isUnresolvedPayInvoiceActivity(a)
         );
         if (pending.length === 0) return false;
 
+        for (const activity of pending) {
+            if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
+                changed = true;
+            }
+        }
+
+        const stillUnresolved = connection.activity.filter((a) =>
+            connection.isUnresolvedPayInvoiceActivity(a)
+        );
+        if (stillUnresolved.length === 0) {
+            if (changed) {
+                this.scheduleMaxBudgetRefresh();
+                this.findAndUpdateConnection(connection);
+            }
+            return changed;
+        }
+
         const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
             connection.id,
-            pending
+            stillUnresolved
         );
 
-        let changed = false;
-
-        for (const activity of pending) {
+        for (const activity of stillUnresolved) {
             const payment = payments.find(
                 (p) =>
                     p.getPaymentRequest === activity.id ||
                     (!!activity.paymentHash &&
                         p.paymentHash === activity.paymentHash)
             );
-            if (!payment) continue;
+            if (!payment) {
+                if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
+                    changed = true;
+                }
+                continue;
+            }
 
             runInAction(() => {
                 if (
@@ -2765,6 +2790,25 @@ export default class NostrWalletConnectStore {
             this.findAndUpdateConnection(connection);
         }
         return changed;
+    }
+
+    /**
+     * Release a hold the node will never list. Non-timeout error exits reconcile
+     * and prune protection so budget and replay recover without deleting the
+     * connection.
+     */
+    private abandonStaleUnresolvedPayInvoiceHold(
+        activity: ConnectionActivity
+    ): boolean {
+        if (!NostrConnectUtils.isPayInvoiceHoldAbandoned(activity)) {
+            return false;
+        }
+
+        runInAction(() => {
+            activity.status = 'failed';
+            activity.error = 'error.paymentFailed';
+        });
+        return true;
     }
 
     private applyPayInvoiceReconcile(

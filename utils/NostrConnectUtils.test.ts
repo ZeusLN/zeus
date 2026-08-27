@@ -1312,4 +1312,44 @@ describe('NostrConnectUtils', () => {
             );
         });
     });
+
+    describe('isPayInvoiceHoldAbandoned', () => {
+        const now = Date.parse('2024-06-15T12:00:00Z');
+        const baseActivity = (): ConnectionActivity => ({
+            id: 'lnbc1hold',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            createdAt: new Date(now - 60_000)
+        });
+
+        it('abandons after max age with no node listing', () => {
+            const activity = baseActivity();
+            activity.createdAt = new Date(
+                now - NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS - 1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(true);
+        });
+
+        it('abandons after invoice expiry plus grace', () => {
+            const activity = baseActivity();
+            activity.expiresAt = new Date(
+                now -
+                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS -
+                    1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(true);
+        });
+
+        it('keeps a recent unresolved hold', () => {
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(baseActivity(), now)
+            ).toBe(false);
+        });
+    });
 });

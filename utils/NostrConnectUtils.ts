@@ -1013,6 +1013,62 @@ export default class NostrConnectUtils {
         );
     }
 
+    /** Max hold when the node never lists the payment (LndHub, paginated history). */
+    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+    /** Grace after bolt11 expiry before abandoning an unresolved hold. */
+    static readonly UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS =
+        24 * 60 * 60 * 1000;
+
+    static resolveBolt11ExpiryTimeMs(invoice: string): number | undefined {
+        try {
+            const decoded = Bolt11Utils.decode(invoice);
+            const expiry = decoded.timeExpireDate;
+            if (expiry == null || expiry <= 0) return undefined;
+            return expiry * 1000;
+        } catch {
+            return undefined;
+        }
+    }
+
+    /** True when an unresolved pay_invoice hold should be released. */
+    static isPayInvoiceHoldAbandoned(
+        activity: ConnectionActivity,
+        nowMs: number = Date.now()
+    ): boolean {
+        if (
+            activity.type !== 'pay_invoice' ||
+            activity.payment_source === 'cashu' ||
+            activity.isBudgetDebited
+        ) {
+            return false;
+        }
+
+        const createdAt = activity.createdAt?.getTime();
+        if (!createdAt) return false;
+
+        if (
+            nowMs >=
+            createdAt + NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS
+        ) {
+            return true;
+        }
+
+        const expiryMs =
+            activity.expiresAt?.getTime() ??
+            NostrConnectUtils.resolveBolt11ExpiryTimeMs(activity.id);
+        if (
+            expiryMs &&
+            nowMs >=
+                expiryMs +
+                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
     static isSettledPayment(payment: Payment): boolean {
         return !payment.isIncomplete && !payment.isFailed;
     }
