@@ -721,9 +721,11 @@ class CashuDevKitModule: RCTEventEmitter {
             .lowercased()
         if h.isEmpty { return true }
         if h == "localhost" || h.hasSuffix(".localhost") { return true }
-        // IPv6 loopback / unique-local / link-local
-        if h == "::1" || h.hasPrefix("fc") || h.hasPrefix("fd") ||
-            h.hasPrefix("fe80:") {
+        // IPv6 loopback / unique-local / link-local. The fc/fd unique-local
+        // prefix check only applies to IPv6 literals (which always contain
+        // ":") so hostnames like fc-mint.example.com are not rejected.
+        if h == "::1" || h.hasPrefix("fe80:") ||
+            (h.contains(":") && (h.hasPrefix("fc") || h.hasPrefix("fd"))) {
             return true
         }
         // IPv4 ranges: 127/8, 10/8, 169.254/16, 172.16/12, 192.168/16, 0/8

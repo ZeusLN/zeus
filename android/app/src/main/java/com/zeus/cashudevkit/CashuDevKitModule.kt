@@ -738,9 +738,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         if (host.isNullOrBlank()) return true
         val h = host.trim().trimStart('[').trimEnd(']').lowercase()
         if (h == "localhost" || h.endsWith(".localhost")) return true
-        // IPv6 loopback / unique-local / link-local
-        if (h == "::1" || h.startsWith("fc") || h.startsWith("fd") ||
-            h.startsWith("fe80:")
+        // IPv6 loopback / unique-local / link-local. The fc/fd unique-local
+        // prefix check only applies to IPv6 literals (which always contain
+        // ':') so hostnames like fc-mint.example.com are not rejected.
+        if (h == "::1" || h.startsWith("fe80:") ||
+            (h.contains(':') && (h.startsWith("fc") || h.startsWith("fd")))
         ) {
             return true
         }
