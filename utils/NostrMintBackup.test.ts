@@ -80,6 +80,7 @@ function makeBackupEvent(
         tamperSig?: boolean;
         rawPayload?: string;
         plainContent?: string;
+        createdAt?: number;
     } = {}
 ) {
     const plaintext =
@@ -98,7 +99,7 @@ function makeBackupEvent(
             ['d', 'mint-list'],
             ['client', 'zeus']
         ],
-        created_at: timestamp,
+        created_at: opts.createdAt ?? timestamp,
         pubkey: getPublicKey(signerPriv)
     };
     // Signed by hand rather than with finalizeEvent: finalizeEvent marks
@@ -294,6 +295,90 @@ describe('NostrMintBackup', () => {
             );
 
             expect(result).toEqual({ mints: [], timestamp: 2000 });
+        });
+
+        it('ranks freshness by the payload timestamp, not created_at', async () => {
+            // The documented contract is that the NIP-44 payload timestamp
+            // is canonical and the outer created_at is ignored (matching
+            // cashu.me). Lock that in with events where the two disagree
+            // and created_at points the other way
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://new-mint'],
+                            2000,
+                            { createdAt: 500 }
+                        )
+                    ]
+                },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://old-mint'],
+                            1000,
+                            { createdAt: 9000 }
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b']
+            );
+
+            expect(result).toEqual({
+                mints: ['https://new-mint'],
+                timestamp: 2000
+            });
+        });
+
+        it('applies minTimestamp to the payload timestamp, not created_at', async () => {
+            // A stale payload cannot pass the floor on the strength of a
+            // newer created_at, and a fresh payload is not dropped for
+            // carrying an older one
+            installFakeRelays({
+                'wss://relay-a': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://stale-mint'],
+                            1000,
+                            { createdAt: 9999 }
+                        )
+                    ]
+                },
+                'wss://relay-b': {
+                    events: [
+                        makeBackupEvent(
+                            privateKeyHex,
+                            conversationKey,
+                            ['https://fresh-mint'],
+                            2000,
+                            { createdAt: 500 }
+                        )
+                    ]
+                }
+            });
+
+            const result = await restoreMintsFromNostr(
+                privateKeyHex,
+                publicKeyHex,
+                ['wss://relay-a', 'wss://relay-b'],
+                1500
+            );
+
+            expect(result).toEqual({
+                mints: ['https://fresh-mint'],
+                timestamp: 2000
+            });
         });
 
         it('drops backups older than minTimestamp', async () => {
