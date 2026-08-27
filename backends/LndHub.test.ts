@@ -198,6 +198,7 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsLightningSends: true,
     supportsWatchtowerClient: false,
     supportsKeysend: false,
+    supportsPaymentLookup: false,
     supportsChannelManagement: false,
     supportsCircularRebalancing: false,
     supportsForceClose: false,
