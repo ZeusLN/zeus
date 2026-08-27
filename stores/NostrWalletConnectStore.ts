@@ -1809,6 +1809,8 @@ export default class NostrWalletConnectStore {
                 // Unresolved pay_invoice (pending or timeout-failed) must survive
                 // until reconcilePendingPayInvoiceActivities can debit. Active
                 // pending make_invoice must stay for the outstanding cap.
+                // Cashu pay_invoice is excluded: melt never records pending today;
+                // extend this guard if that changes (pendingSpendSats counts it too).
                 if (
                     activity.type === 'pay_invoice' &&
                     activity.payment_source !== 'cashu' &&
