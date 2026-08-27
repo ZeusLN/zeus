@@ -155,7 +155,9 @@ export default class ReceiveEcash extends React.Component<
             !lightningAddressHandle &&
             BackendUtils.supportsLightningAddress()
         ) {
-            status();
+            status().catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
         }
 
         this.setState({
