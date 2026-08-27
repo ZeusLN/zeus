@@ -99,6 +99,8 @@ const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
 const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
+/** Grace before closing an unused relay after delete awaited in-flight handlers. */
+export const RELAY_RELEASE_GRACE_MS = 5000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -184,6 +186,15 @@ export default class NostrWalletConnectStore {
         number
     >();
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
+    private pendingDeleteConnectionIds = new Set<string>();
+    private inFlightHandlersByConnection = new Map<
+        string,
+        Set<Promise<unknown>>
+    >();
+    private scheduledRelayReleases = new Map<
+        string,
+        ReturnType<typeof setTimeout>
+    >();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -429,6 +440,7 @@ export default class NostrWalletConnectStore {
                 this.connectionJustSucceeded = false;
                 this.lastConnectionAttempt = 0;
                 this.cashuEnabled = false;
+                this.cancelAllScheduledRelayReleases();
                 this.nwcWalletServices.clear();
                 this.publishedRelays.clear();
                 await this.unsubscribeFromAllConnections();
@@ -633,7 +645,7 @@ export default class NostrWalletConnectStore {
     @action
     public deleteConnection = async (connectionId: string) => {
         try {
-            const { connection, index } = this.getConnection({ connectionId });
+            const { connection } = this.getConnection({ connectionId });
             if (!connection) {
                 throw new Error(
                     localeString(
@@ -641,17 +653,42 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            const relayUrl = connection.relayUrl;
-            await this.deleteClientKeys(connection.pubkey);
-            this.unsubscribeFromConnection(connectionId);
-            this.lastPendingPaymentStatusFetchByConnection.delete(connectionId);
-            this.lastPendingInvoiceStatusFetchByConnection.delete(connectionId);
-            this.makeInvoiceTimestampsByConnection.delete(connectionId);
-            runInAction(() => {
-                this.connections.splice(index, 1);
-            });
-            this.releaseUnusedRelayService(relayUrl);
-            await this.saveConnections();
+            this.pendingDeleteConnectionIds.add(connectionId);
+            try {
+                const relayUrl = connection.relayUrl;
+                const hadActiveSubscription =
+                    this.activeSubscriptions.has(connectionId);
+                this.unsubscribeFromConnection(connectionId);
+                this.lastPendingPaymentStatusFetchByConnection.delete(
+                    connectionId
+                );
+                this.lastPendingInvoiceStatusFetchByConnection.delete(
+                    connectionId
+                );
+                this.makeInvoiceTimestampsByConnection.delete(connectionId);
+                const hadInFlight = await this.awaitInFlightHandlers(
+                    connectionId
+                );
+                await this.deleteClientKeys(connection.pubkey);
+                const { index: liveIndex } = this.getConnection({
+                    connectionId
+                });
+                runInAction(() => {
+                    if (liveIndex !== -1) {
+                        this.connections.splice(liveIndex, 1);
+                    }
+                });
+                // Defer when a handler was in flight or the connection had been
+                // subscribed: the SDK may still be flushing the NIP-47 response.
+                if (hadInFlight || hadActiveSubscription) {
+                    this.scheduleReleaseUnusedRelayService(relayUrl);
+                } else {
+                    this.releaseUnusedRelayService(relayUrl);
+                }
+                await this.saveConnections();
+            } finally {
+                this.pendingDeleteConnectionIds.delete(connectionId);
+            }
         } catch (error: any) {
             runInAction(() => {
                 this.setError(
@@ -1202,14 +1239,12 @@ export default class NostrWalletConnectStore {
     };
 
     @action
-    private markConnectionUsed = async (connectionId: string) => {
+    private markConnectionUsed = async (
+        connectionId: string
+    ): Promise<boolean> => {
         const { connection } = this.getConnection({ connectionId });
         if (!connection) {
-            throw new Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionNotFound'
-                )
-            );
+            return false;
         }
         const wasNeverUsed = !connection.lastUsed;
 
@@ -1235,6 +1270,7 @@ export default class NostrWalletConnectStore {
         ) {
             this.stopWaitingForConnection();
         }
+        return true;
     };
     @action
     private findAndUpdateConnection(
@@ -1317,6 +1353,7 @@ export default class NostrWalletConnectStore {
             return;
         }
         try {
+            this.cancelScheduledRelayRelease(connection.relayUrl);
             this.unsubscribeFromConnection(connection.id);
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
@@ -1521,6 +1558,33 @@ export default class NostrWalletConnectStore {
         });
     }
 
+    private scheduleReleaseUnusedRelayService(relayUrl: string): void {
+        if (!relayUrl) return;
+        const existing = this.scheduledRelayReleases.get(relayUrl);
+        if (existing) {
+            clearTimeout(existing);
+        }
+        const timeoutId = setTimeout(() => {
+            this.scheduledRelayReleases.delete(relayUrl);
+            this.releaseUnusedRelayService(relayUrl);
+        }, RELAY_RELEASE_GRACE_MS);
+        this.scheduledRelayReleases.set(relayUrl, timeoutId);
+    }
+
+    private cancelScheduledRelayRelease(relayUrl: string): void {
+        const existing = this.scheduledRelayReleases.get(relayUrl);
+        if (!existing) return;
+        clearTimeout(existing);
+        this.scheduledRelayReleases.delete(relayUrl);
+    }
+
+    private cancelAllScheduledRelayReleases(): void {
+        for (const timeoutId of this.scheduledRelayReleases.values()) {
+            clearTimeout(timeoutId);
+        }
+        this.scheduledRelayReleases.clear();
+    }
+
     private async unsubscribeFromAllConnections(): Promise<void> {
         const connectionIds = Array.from(this.activeSubscriptions.keys());
         for (const connectionId of connectionIds) {
@@ -1586,6 +1650,48 @@ export default class NostrWalletConnectStore {
         return successfulPublishes;
     }
 
+    private trackInFlightHandler(
+        connectionId: string,
+        work: Promise<unknown>
+    ): void {
+        let set = this.inFlightHandlersByConnection.get(connectionId);
+        if (!set) {
+            set = new Set();
+            this.inFlightHandlersByConnection.set(connectionId, set);
+        }
+        set.add(work);
+    }
+
+    private untrackInFlightHandler(
+        connectionId: string,
+        work: Promise<unknown>
+    ): void {
+        const set = this.inFlightHandlersByConnection.get(connectionId);
+        if (!set) return;
+        set.delete(work);
+        if (set.size === 0) {
+            this.inFlightHandlersByConnection.delete(connectionId);
+        }
+    }
+
+    private async awaitInFlightHandlers(
+        connectionId: string
+    ): Promise<boolean> {
+        const set = this.inFlightHandlersByConnection.get(connectionId);
+        if (!set?.size) return false;
+        await Promise.allSettled([...set]);
+        return true;
+    }
+
+    private unauthorizedConnectionResponse<T>(): T {
+        return NostrConnectUtils.createNip47Error(
+            localeString(
+                'stores.NostrWalletConnectStore.error.connectionNotFound'
+            ),
+            Nip47ErrorCode.UNAUTHORIZED
+        ) as T;
+    }
+
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
      * the subscription) when the connection is missing or has expired.
@@ -1596,35 +1702,46 @@ export default class NostrWalletConnectStore {
         connectionId: string,
         handler: () => Promise<T>
     ): Promise<T> {
-        const { connection } = this.getConnection({ connectionId });
-        if (!connection) {
-            if (!this.hasWalletContext()) {
+        let releaseGate = () => {};
+        const gate = new Promise<void>((resolve) => {
+            releaseGate = resolve;
+        });
+        this.trackInFlightHandler(connectionId, gate);
+        try {
+            const { connection } = this.getConnection({ connectionId });
+            if (!connection) {
+                if (!this.hasWalletContext()) {
+                    return NostrConnectUtils.createNip47Error(
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                        ),
+                        Nip47ErrorCode.INTERNAL_ERROR
+                    ) as T;
+                }
+                this.unsubscribeFromConnection(connectionId);
+                return this.unauthorizedConnectionResponse<T>();
+            }
+            if (this.pendingDeleteConnectionIds.has(connectionId)) {
+                return this.unauthorizedConnectionResponse<T>();
+            }
+            if (connection.isExpired) {
+                this.unsubscribeFromConnection(connectionId);
                 return NostrConnectUtils.createNip47Error(
                     localeString(
-                        'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                        'views.Settings.NostrWalletConnect.error.connectionExpired'
                     ),
-                    Nip47ErrorCode.INTERNAL_ERROR
+                    Nip47ErrorCode.RESTRICTED
                 ) as T;
             }
-            this.unsubscribeFromConnection(connectionId);
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionNotFound'
-                ),
-                Nip47ErrorCode.UNAUTHORIZED
-            ) as T;
+            const marked = await this.markConnectionUsed(connectionId);
+            if (!marked || this.pendingDeleteConnectionIds.has(connectionId)) {
+                return this.unauthorizedConnectionResponse<T>();
+            }
+            return await handler();
+        } finally {
+            releaseGate();
+            this.untrackInFlightHandler(connectionId, gate);
         }
-        if (connection.isExpired) {
-            this.unsubscribeFromConnection(connectionId);
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'views.Settings.NostrWalletConnect.error.connectionExpired'
-                ),
-                Nip47ErrorCode.RESTRICTED
-            ) as T;
-        }
-        await this.markConnectionUsed(connectionId);
-        return await handler();
     }
 
     // Serializes payment handling across all connections. Payment flows

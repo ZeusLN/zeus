@@ -63,7 +63,8 @@ import Invoice from '../models/Invoice';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
-    NWC_CLIENT_KEYS
+    NWC_CLIENT_KEYS,
+    RELAY_RELEASE_GRACE_MS
 } from './NostrWalletConnectStore';
 
 const hex64 = (c: string) => c.repeat(64);
@@ -1057,6 +1058,160 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
             error: undefined
         });
         expect(connection.lastUsed).toBeInstanceOf(Date);
+    });
+
+    it('returns UNAUTHORIZED instead of throwing when the connection is deleted before handler entry', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
+            async () => {
+                store.connections = [];
+                return false;
+            }
+        );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'UNAUTHORIZED',
+                message:
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+            }
+        });
+    });
+
+    it('lets an in-flight handler finish before deleteConnection removes the record', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        let enteredHandler = false;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    enteredHandler = true;
+                    releaseHandler = resolve;
+                })
+        );
+
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(enteredHandler).toBe(true);
+
+        let deleted = false;
+        const deleteDone = store.deleteConnection(connection.id).then(() => {
+            deleted = true;
+        });
+
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(deleted).toBe(false);
+        expect(store.connections).toHaveLength(1);
+
+        const lateResponse = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+        expect(lateResponse.error?.code).toBe('UNAUTHORIZED');
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        await deleteDone;
+
+        expect(deleted).toBe(true);
+        expect(store.connections).toHaveLength(0);
+    });
+
+    it('defers relay release when delete awaited in-flight handlers', async () => {
+        jest.useFakeTimers();
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        (store as any).nwcWalletServices.set(OLD_RELAY, { close: jest.fn() });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    releaseHandler = resolve;
+                })
+        );
+
+        await Promise.resolve();
+
+        const releaseSpy = jest.spyOn(
+            store as any,
+            'releaseUnusedRelayService'
+        );
+        const deleteDone = store.deleteConnection(connection.id);
+
+        await Promise.resolve();
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        await deleteDone;
+
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(RELAY_RELEASE_GRACE_MS - 1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(1);
+        expect(releaseSpy).toHaveBeenCalledWith(OLD_RELAY);
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
+    });
+
+    it('defers relay release when delete follows a subscribed connection even without in-flight handlers', async () => {
+        jest.useFakeTimers();
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        (store as any).nwcWalletServices.set(OLD_RELAY, { close: jest.fn() });
+        (store as any).activeSubscriptions.set(connection.id, jest.fn());
+
+        await (store as any).withGlobalHandler(connection.id, async () => ({
+            result: { ok: true },
+            error: undefined
+        }));
+
+        jest.spyOn(store as any, 'unsubscribeFromConnection').mockRestore();
+
+        const releaseSpy = jest.spyOn(
+            store as any,
+            'releaseUnusedRelayService'
+        );
+        await store.deleteConnection(connection.id);
+
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(RELAY_RELEASE_GRACE_MS);
+        expect(releaseSpy).toHaveBeenCalledWith(OLD_RELAY);
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
     });
 });
 
