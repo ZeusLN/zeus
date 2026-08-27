@@ -1806,16 +1806,20 @@ export default class NostrWalletConnectStore {
             let oldestTime = Infinity;
             for (let i = 0; i < connection.activity.length; i++) {
                 const activity = connection.activity[i];
-                // Pending pay_invoice holds budget via pendingSpendSats until
-                // reconcilePendingPayInvoiceActivities settles it. Active pending
-                // make_invoice must stay for the outstanding cap. Expired or
-                // already-paid pending make_invoice is prunable: those entries are
-                // only reconciled from user-driven paths, so a make_invoice-only
-                // client would otherwise grow activity without bound.
+                // Unresolved pay_invoice (pending or timeout-failed) must survive
+                // until reconcilePendingPayInvoiceActivities can debit. Active
+                // pending make_invoice must stay for the outstanding cap.
+                if (
+                    activity.type === 'pay_invoice' &&
+                    activity.payment_source !== 'cashu' &&
+                    connection.isUnresolvedPayInvoiceActivity(activity)
+                ) {
+                    continue;
+                }
                 if (
                     activity.status === 'pending' &&
-                    (activity.type !== 'make_invoice' ||
-                        this.isActivePendingMakeInvoice(activity))
+                    activity.type === 'make_invoice' &&
+                    this.isActivePendingMakeInvoice(activity)
                 ) {
                     continue;
                 }
@@ -2066,8 +2070,8 @@ export default class NostrWalletConnectStore {
     ): Promise<boolean> {
         if (
             activity.type === 'pay_invoice' &&
-            activity.status === 'pending' &&
-            activity.payment_source !== 'cashu'
+            activity.payment_source !== 'cashu' &&
+            connection.isUnresolvedPayInvoiceActivity(activity)
         ) {
             return this.reconcilePendingPayInvoiceActivities(connection);
         }
@@ -2380,9 +2384,7 @@ export default class NostrWalletConnectStore {
 
         const settledEvidence =
             !!preimage ||
-            (!!payment &&
-                NostrConnectUtils.isSettledPayment(payment) &&
-                !!paymentHash);
+            (!!payment && NostrConnectUtils.isSettledPayment(payment));
 
         if (!settledEvidence) {
             const paymentError = this.checkPaymentErrors(

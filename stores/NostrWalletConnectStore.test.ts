@@ -1288,7 +1288,7 @@ describe('NostrWalletConnectStore activity prune', () => {
         jest.clearAllMocks();
     });
 
-    it('never prunes pending pay_invoice entries when trimming the activity log', () => {
+    it('never prunes unresolved pay_invoice entries when trimming the activity log', () => {
         const store = buildPayInvoiceTestStore();
         const oldest = new Date('2024-01-01T00:00:00Z');
         const activity = [
@@ -1327,6 +1327,44 @@ describe('NostrWalletConnectStore activity prune', () => {
             connection.activity.find((a) => a.id === 'lnbc-make-0')
         ).toBeUndefined();
         expect(connection.pendingSpendSats).toBe(1000);
+    });
+
+    it('never prunes timeout-failed pay_invoice entries awaiting reconcile', () => {
+        const store = buildPayInvoiceTestStore();
+        const oldest = new Date('2024-01-01T00:00:00Z');
+        const activity = [
+            {
+                id: 'lnbc-timeout-failed-pay',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'failed' as const,
+                satAmount: 1000,
+                error: 'views.SendingLightning.paymentTimedOut',
+                createdAt: oldest
+            },
+            ...Array.from({ length: 99 }, (_, i) => ({
+                id: `lnbc-make-${i}`,
+                type: 'make_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const,
+                createdAt: new Date(oldest.getTime() + (i + 1) * 1000)
+            }))
+        ];
+        const connection = seedPayInvoiceConnection(store, { activity });
+        connection.activity.push({
+            id: 'lnbc-make-new',
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            createdAt: new Date('2024-06-01T00:00:00Z')
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(100);
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-timeout-failed-pay')
+        ).toBeDefined();
     });
 
     it('stops pruning when every activity entry is still pending', () => {
