@@ -2742,29 +2742,12 @@ export default class NostrWalletConnectStore {
         );
         if (pending.length === 0) return false;
 
-        for (const activity of pending) {
-            if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
-                changed = true;
-            }
-        }
-
-        const stillUnresolved = connection.activity.filter((a) =>
-            connection.isUnresolvedPayInvoiceActivity(a)
-        );
-        if (stillUnresolved.length === 0) {
-            if (changed) {
-                this.scheduleMaxBudgetRefresh();
-                this.findAndUpdateConnection(connection);
-            }
-            return changed;
-        }
-
         const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
             connection.id,
-            stillUnresolved
+            pending
         );
 
-        for (const activity of stillUnresolved) {
+        for (const activity of pending) {
             const payment = payments.find(
                 (p) =>
                     p.getPaymentRequest === activity.id ||
