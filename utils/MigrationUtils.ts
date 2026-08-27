@@ -462,8 +462,8 @@ class MigrationsUtils {
                 DEFAULT_SLIDE_TO_PAY_THRESHOLD;
         }
 
-        // migrate old default RGS server to new ZEUS RGS server
-        await this.migrateRgsDefaultToZeus(newSettings);
+        // migrate retired v1 RGS endpoints to v2 (BOLT 12 offer support)
+        await this.migrateRgsDefaultsToV2(newSettings);
 
         // migrate old default Olympus LSP hosts to new zeuslsp.com hosts
         await this.migrateOlympusHostsToZeusLsp(newSettings);
@@ -474,29 +474,58 @@ class MigrationsUtils {
         return newSettings;
     }
 
-    public async migrateRgsDefaultToZeus(settings: any) {
-        const MOD_KEY_RGS = 'rgs-default-zeus';
-        const modRgs = await EncryptedStorage.getItem(MOD_KEY_RGS);
-        if (modRgs) return settings;
+    // Rewrite persisted v1 RGS endpoints to their v2 equivalents in a
+    // single pass. RGS v1 snapshots lack node announcement data (features
+    // + addresses), which LDK requires to deliver BOLT 12 invoice_requests
+    // to an offer's introduction node. Only values still equal to a known
+    // old default are touched; custom URLs are left alone. Unset values
+    // need no migration — runtime falls back to the (updated)
+    // RGS_SERVERS_MAINNET / RGS_SERVERS_TESTNET constants. Mappings are
+    // scoped per network so a URL is only rewritten on nodes of the
+    // network it belongs to. Supersedes migrateRgsDefaultToZeus
+    // ('rgs-default-zeus'), which pinned the then-default into every
+    // mainnet node; the values it wrote are matched here, so its flag is
+    // no longer consulted and unset values are no longer pinned (#4470:
+    // fewer keystore ops). Must run on both the legacy and modern
+    // (zeus-settings-v2) paths.
+    public async migrateRgsDefaultsToV2(settings: any) {
+        const MOD_KEY_RGS_V2 = 'rgs-defaults-v2';
+        const modRgsV2 = await EncryptedStorage.getItem(MOD_KEY_RGS_V2);
+        if (modRgsV2) return settings;
 
-        const OLD_RGS_DEFAULT =
-            'https://rapidsync.lightningdevkit.org/snapshot';
-        const NEW_RGS_DEFAULT = 'https://rgs.zeusln.com/snapshot';
+        const urlMigrationsByNetwork: {
+            [network: string]: { [oldUrl: string]: string };
+        } = {
+            mainnet: {
+                'https://rgs.zeusln.com/snapshot':
+                    'https://rgs.zeusln.com/snapshot/v2',
+                'https://rapidsync.lightningdevkit.org/snapshot':
+                    'https://rapidsync.lightningdevkit.org/snapshot/v2'
+            },
+            testnet: {
+                'https://rapidsync.lightningdevkit.org/testnet/snapshot':
+                    'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
+            }
+        };
+
+        let changed = false;
         if (settings?.nodes && Array.isArray(settings.nodes)) {
             for (const node of settings.nodes) {
-                const isMainnet =
-                    !node.ldkNetwork || node.ldkNetwork === 'mainnet';
+                const urlMigrations =
+                    urlMigrationsByNetwork[node.ldkNetwork || 'mainnet'];
                 if (
-                    isMainnet &&
-                    (!node.ldkRgsServer ||
-                        node.ldkRgsServer === OLD_RGS_DEFAULT)
+                    urlMigrations &&
+                    node.ldkRgsServer &&
+                    urlMigrations[node.ldkRgsServer]
                 ) {
-                    node.ldkRgsServer = NEW_RGS_DEFAULT;
+                    node.ldkRgsServer = urlMigrations[node.ldkRgsServer];
+                    changed = true;
                 }
             }
         }
-        await settingsStore.setSettings(settings);
-        await EncryptedStorage.setItem(MOD_KEY_RGS, 'true');
+
+        if (changed) await settingsStore.setSettings(settings);
+        await EncryptedStorage.setItem(MOD_KEY_RGS_V2, 'true');
         return settings;
     }
 

@@ -783,6 +783,226 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('migrateRgsDefaultsToV2', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('rewrites both v1 default endpoints on mainnet nodes', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    },
+                    {
+                        implementation: 'ldk-node',
+                        // ldkNetwork unset counts as mainnet
+                        ldkRgsServer:
+                            'https://rapidsync.lightningdevkit.org/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rgs.zeusln.com/snapshot/v2'
+            );
+            expect(settings.nodes[1].ldkRgsServer).toBe(
+                'https://rapidsync.lightningdevkit.org/snapshot/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'rgs-defaults-v2',
+                'true'
+            );
+        });
+
+        it('persists the settings object rather than a JSON string', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            const persistedSettings =
+                settingsStore.setSettings.mock.calls[0][0];
+            expect(typeof persistedSettings).not.toBe('string');
+            expect(persistedSettings).toBe(settings);
+        });
+
+        it('leaves custom URLs untouched and does not rewrite storage', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer: 'https://my-custom-rgs.com/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://my-custom-rgs.com/snapshot'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'rgs-defaults-v2',
+                'true'
+            );
+        });
+
+        it('leaves unset values unset so runtime falls back to new defaults', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [{ implementation: 'ldk-node', ldkNetwork: 'mainnet' }]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBeUndefined();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'rgs-defaults-v2',
+                'true'
+            );
+        });
+
+        it('rewrites the v1 testnet default on testnet nodes', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'testnet',
+                        ldkRgsServer:
+                            'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not apply mappings across networks', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        // mainnet URL on a testnet node: misconfigured
+                        // either way, not this migration's to fix
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'testnet',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    },
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer:
+                            'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rgs.zeusln.com/snapshot'
+            );
+            expect(settings.nodes[1].ldkRgsServer).toBe(
+                'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rgs.zeusln.com/snapshot'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is idempotent when run twice without the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rgs.zeusln.com/snapshot/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores the superseded rgs-default-zeus flag', async () => {
+            // typical existing install: the retired migration already ran
+            // and pinned the v1 ZEUS default — its flag must not gate the
+            // v2 rewrite
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(key === 'rgs-default-zeus' ? 'true' : null)
+            );
+            const settings: any = {
+                nodes: [
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rgs.zeusln.com/snapshot/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
             // Clear mock history before each test

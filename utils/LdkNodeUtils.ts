@@ -46,18 +46,28 @@ export const ESPLORA_SERVERS_MUTINYNET: EsploraServer[] = [
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
 // Default RGS (Rapid Gossip Sync) servers
+// The /v2 endpoints serve RGS format v2 snapshots, which include node
+// announcement data (features + addresses). LDK requires that data to
+// deliver BOLT 12 invoice_requests: DefaultMessageRouter only sends
+// onion messages to direct peers, so it must be able to look up an
+// offer's introduction node in the graph and connect to it directly.
 export const RGS_SERVERS_MAINNET: EsploraServer[] = [
-    { key: 'ZEUS (rgs.zeusln.com)', value: 'https://rgs.zeusln.com/snapshot' },
+    {
+        key: 'ZEUS (rgs.zeusln.com)',
+        value: 'https://rgs.zeusln.com/snapshot/v2'
+    },
     {
         key: 'LDK (rapidsync.lightningdevkit.org)',
-        value: 'https://rapidsync.lightningdevkit.org/snapshot'
+        value: 'https://rapidsync.lightningdevkit.org/snapshot/v2'
     }
 ];
 
+// Note the path asymmetry: the LDK server routes testnet v2 at
+// /testnet/v2/snapshot, not /testnet/snapshot/v2 like mainnet.
 export const RGS_SERVERS_TESTNET: EsploraServer[] = [
     {
         key: 'LDK (rapidsync.lightningdevkit.org)',
-        value: 'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+        value: 'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
     }
 ];
 
