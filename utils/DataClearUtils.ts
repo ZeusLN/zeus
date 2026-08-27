@@ -52,7 +52,9 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
-    SWAPS_LAST_USED_KEY
+    SWAPS_LAST_USED_KEY,
+    purgeLegacyRescueKeyFiles,
+    unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 import {
     NWC_CONNECTIONS_KEY,
@@ -669,6 +671,13 @@ export async function clearAllData(): Promise<void> {
     // hold channel + wallet state and are not covered by the keychain/Cashu
     // clears above, so they must be unlinked explicitly.
     await clearNodeDataDirectories(settings);
+
+    // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
+    // the app sandbox (public Downloads on Android, Files-visible Documents
+    // on iOS); the save-dialog staging copy lives in app cache, which
+    // nothing else in this flow touches either.
+    await purgeLegacyRescueKeyFiles();
+    await unlinkRescueKeyStagingFile();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');

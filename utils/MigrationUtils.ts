@@ -74,7 +74,9 @@ import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
-    SWAPS_LAST_USED_KEY
+    SWAPS_LAST_USED_KEY,
+    purgeLegacyRescueKeyFiles,
+    unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 
 import {
@@ -632,6 +634,47 @@ class MigrationsUtils {
         }
         await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
         return settings;
+    }
+
+    // Rescue-key export file cleanup, in two parts with different cadences.
+    //
+    // Staging file: the save-dialog export stages the mnemonic in app cache
+    // and removes it before returning, so this unlink is belt-and-braces for
+    // saves interrupted by a crash and for files staged by earlier
+    // share-sheet builds of this flow. It must run at most once per process:
+    // getSettings() is not a launch-only path, it also runs on every
+    // transition to the background (App.tsx stealth-mode handler), and the
+    // Android save dialog backgrounds the app while the staging file still
+    // has to be readable - saveDocuments() only copies it once the app is
+    // back in the foreground. Unlinking on every call deletes the source out
+    // from under the copy and fails the export.
+    //
+    // Legacy shared-storage files: older builds' download wrote the mnemonic
+    // as plaintext JSON into shared storage (Android public Downloads, iOS
+    // Files-visible Documents), with nothing ever deleting it. One-shot
+    // best-effort cleanup; the flag is set regardless of outcome because a
+    // failed unlink (scoped storage, file owned by a previous install) can
+    // never succeed on a later retry.
+    //
+    // Runs before the settings blob is even read, so it covers both the
+    // legacy and modern (zeus-settings-v2) paths.
+    private rescueKeyStagingPurged = false;
+
+    public async purgeRescueKeyFiles() {
+        if (!this.rescueKeyStagingPurged) {
+            this.rescueKeyStagingPurged = true;
+            await unlinkRescueKeyStagingFile();
+        }
+
+        const MOD_KEY_RESCUE_FILE = 'rescue-key-file-cleanup';
+        const modRescueFile = await EncryptedStorage.getItem(
+            MOD_KEY_RESCUE_FILE
+        );
+        if (modRescueFile) return;
+
+        await purgeLegacyRescueKeyFiles();
+
+        await EncryptedStorage.setItem(MOD_KEY_RESCUE_FILE, 'true');
     }
 
     public async storageMigrationV2(settings: any) {
