@@ -223,7 +223,7 @@ export default class NWCConnectionActivity extends React.Component<
         ModalStore.toggleInfoModal({
             title: localeString('views.Payment.failedPayment'),
             text: item.error
-                ? [item.error]
+                ? [localeString(item.error) || item.error]
                 : [localeString('error.paymentFailed')]
         });
     };

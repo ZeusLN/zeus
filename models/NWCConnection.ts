@@ -264,6 +264,24 @@ export default class NWCConnection extends BaseModel {
         return index !== -1 ? this.activity[index] : undefined;
     }
 
+    /** Pending hold or timeout-failed row still awaiting node reconciliation. */
+    public isUnresolvedPayInvoiceActivity(
+        activity: ConnectionActivity
+    ): boolean {
+        if (
+            activity.type !== 'pay_invoice' ||
+            activity.payment_source === 'cashu' ||
+            activity.isBudgetDebited
+        ) {
+            return false;
+        }
+        return (
+            activity.status === 'pending' ||
+            (activity.status === 'failed' &&
+                NostrConnectUtils.isPaymentTimedOutMessage(activity.error))
+        );
+    }
+
     @computed public get remainingBudget(): number {
         if (!this.hasBudgetLimit) return Infinity;
         return Math.max(0, this.maxAmountSats! - this.effectiveSpendSats);

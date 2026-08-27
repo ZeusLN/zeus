@@ -113,6 +113,14 @@ const paymentFixtures = {
             htlcs: [{ status: 'FAILED' }]
         }),
 
+    failedCln: () =>
+        new Payment({
+            payment_request: INVOICE_A,
+            payment_hash: HASH_A,
+            status: 'failed',
+            payment_preimage: ZERO_PREIMAGE
+        }),
+
     /** Another invoice — used to verify lookup does not cross-match */
     otherInvoiceInFlight: () =>
         new Payment({
@@ -749,24 +757,77 @@ describe('NostrConnectUtils', () => {
                     });
                 });
 
-                it('returns not inTransit when timeout fired but nothing is in flight', () => {
+                it('returns settled payment when timeout fired after the list already shows success', () => {
+                    const settled = paymentFixtures.settled();
                     const result = resolve({
-                        payments: [paymentFixtures.settled()],
+                        payments: [settled],
                         paymentState: storeState.timedOut()
                     });
 
-                    expect(result).toEqual({ inTransit: false });
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(settled);
+                });
+
+                it('holds budget when timeout fired and the payment is not listed yet', () => {
+                    const result = resolve({
+                        payments: [],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('holds budget when send is still loading and the payment is not listed yet', () => {
+                    const result = resolve({
+                        payments: [],
+                        paymentState: storeState.stillLoading()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('does not treat an unrelated in-flight payment as this invoice', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.otherInvoiceInFlight()],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({ inTransit: true });
+                });
+
+                it('returns not inTransit when timeout fired and the listed payment failed', () => {
+                    const failed = paymentFixtures.failed();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
+                });
+
+                it('returns not inTransit when CLN lists a failed sendpay', () => {
+                    const failed = paymentFixtures.failedCln();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
                 });
             });
 
             describe('when store shows settled failure (no false positive)', () => {
                 it('does not treat a genuine failure as in-transit', () => {
+                    const failed = paymentFixtures.failed();
                     const result = resolve({
-                        payments: [paymentFixtures.failed()],
+                        payments: [failed],
                         paymentState: storeState.failed()
                     });
 
-                    expect(result).toEqual({ inTransit: false });
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
                 });
             });
         });
@@ -1250,6 +1311,46 @@ describe('NostrConnectUtils', () => {
             expect(NostrConnectUtils.isValidSignMessage('challenge')).toBe(
                 true
             );
+        });
+    });
+
+    describe('isPayInvoiceHoldAbandoned', () => {
+        const now = Date.parse('2024-06-15T12:00:00Z');
+        const baseActivity = (): ConnectionActivity => ({
+            id: 'lnbc1hold',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            createdAt: new Date(now - 60_000)
+        });
+
+        it('abandons after max age with no node listing', () => {
+            const activity = baseActivity();
+            activity.createdAt = new Date(
+                now - NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS - 1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(true);
+        });
+
+        it('abandons after invoice expiry plus grace', () => {
+            const activity = baseActivity();
+            activity.expiresAt = new Date(
+                now -
+                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS -
+                    1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(true);
+        });
+
+        it('keeps a recent unresolved hold', () => {
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(baseActivity(), now)
+            ).toBe(false);
         });
     });
 });

@@ -1924,16 +1924,22 @@ export default class NostrWalletConnectStore {
             let oldestTime = Infinity;
             for (let i = 0; i < connection.activity.length; i++) {
                 const activity = connection.activity[i];
-                // Pending pay_invoice holds budget via pendingSpendSats until
-                // reconcilePendingPayInvoiceActivities settles it. Active pending
-                // make_invoice must stay for the outstanding cap. Expired or
-                // already-paid pending make_invoice is prunable: those entries are
-                // only reconciled from user-driven paths, so a make_invoice-only
-                // client would otherwise grow activity without bound.
+                // Unresolved pay_invoice (pending or timeout-failed) must survive
+                // until reconcilePendingPayInvoiceActivities can debit. Active
+                // pending make_invoice must stay for the outstanding cap.
+                // Cashu pay_invoice is excluded: melt never records pending today;
+                // extend this guard if that changes (pendingSpendSats counts it too).
+                if (
+                    activity.type === 'pay_invoice' &&
+                    activity.payment_source !== 'cashu' &&
+                    connection.isUnresolvedPayInvoiceActivity(activity)
+                ) {
+                    continue;
+                }
                 if (
                     activity.status === 'pending' &&
-                    (activity.type !== 'make_invoice' ||
-                        this.isActivePendingMakeInvoice(activity))
+                    activity.type === 'make_invoice' &&
+                    this.isActivePendingMakeInvoice(activity)
                 ) {
                     continue;
                 }
@@ -2184,8 +2190,8 @@ export default class NostrWalletConnectStore {
     ): Promise<boolean> {
         if (
             activity.type === 'pay_invoice' &&
-            activity.status === 'pending' &&
-            activity.payment_source !== 'cashu'
+            activity.payment_source !== 'cashu' &&
+            connection.isUnresolvedPayInvoiceActivity(activity)
         ) {
             return this.reconcilePendingPayInvoiceActivities(connection);
         }
@@ -2385,6 +2391,34 @@ export default class NostrWalletConnectStore {
             }
         }
 
+        // Late-settling pays can be recorded failed when the 125s wait
+        // expires; debit them before enforcing budget so a replay cannot
+        // spend the same sats twice.
+        try {
+            await this.reconcilePendingPayInvoiceActivities(connection);
+        } catch (error) {
+            console.error('NWC: pay_invoice reconcile failed:', error);
+        }
+
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+        const existing = connection.findPayInvoiceActivity(
+            paymentRequest || request.invoice,
+            decodedPaymentHash
+        );
+        if (existing && connection.isUnresolvedPayInvoiceActivity(existing)) {
+            const fees_paid =
+                existing.fees_paid || existing.payment?.getFee || 0;
+
+            return {
+                result: {
+                    preimage: '',
+                    fees_paid: satsToMillisats(Number(fees_paid) || 0)
+                },
+                error: undefined
+            };
+        }
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
@@ -2457,28 +2491,6 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        const paymentError = this.checkPaymentErrors(
-            Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
-            localeString('views.SendingLightning.paymentTimedOut'),
-            localeString(
-                'stores.NostrWalletConnectStore.error.noPreimageReceived'
-            )
-        );
-        if (
-            paymentError &&
-            paymentError.error &&
-            paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
-        ) {
-            await this.recordFailedPayment({
-                rawInvoice: request.invoice,
-                connection,
-                amountSats,
-                payment_source: 'lightning',
-                errorMessage: paymentError.error?.message
-            });
-            return paymentError;
-        }
-
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
@@ -2489,6 +2501,37 @@ export default class NostrWalletConnectStore {
                 payments,
                 paymentHash
             );
+
+        // Deliberate: debit when the node shows this invoice settled even if
+        // Zeus did not initiate the pay via this NWC connection. Without that,
+        // a wallet-paid invoice retried over NWC would escape the budget cap.
+        const settledEvidence =
+            !!preimage ||
+            (!!payment && NostrConnectUtils.isSettledPayment(payment));
+
+        if (!settledEvidence) {
+            const paymentError = this.checkPaymentErrors(
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
+                localeString('views.SendingLightning.paymentTimedOut'),
+                localeString(
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                )
+            );
+            if (
+                paymentError &&
+                paymentError.error &&
+                paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            ) {
+                await this.recordFailedPayment({
+                    rawInvoice: request.invoice,
+                    connection,
+                    amountSats,
+                    payment_source: 'lightning',
+                    errorMessage: paymentError.error?.message
+                });
+                return paymentError;
+            }
+        }
 
         const feeSats = Number(payment?.getFee) || Number(fees_paid) || 0;
 
@@ -2802,19 +2845,19 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Promotes pending pay_invoice activities that have since settled or failed.
-     * Used by the activity screen and by list_transactions — without the latter,
-     * an NWC client sees a settled payment as pending until someone opens the
-     * screen. Node fetches are rate limited by the helper below.
+     * Promotes pending (and timeout-failed) pay_invoice activities that have
+     * since settled or failed. Used by the activity screen, list_transactions,
+     * and pay_invoice budget checks. A payment recorded failed after the store
+     * wait can still settle; without this, that spend never hits the budget.
+     * Node fetches are rate limited by the helper below.
      */
     private async reconcilePendingPayInvoiceActivities(
         connection: NWCConnection
     ): Promise<boolean> {
-        const pending = connection.activity.filter(
-            (a) =>
-                a.type === 'pay_invoice' &&
-                a.status === 'pending' &&
-                a.payment_source !== 'cashu'
+        let changed = false;
+
+        const pending = connection.activity.filter((a) =>
+            connection.isUnresolvedPayInvoiceActivity(a)
         );
         if (pending.length === 0) return false;
 
@@ -2823,8 +2866,6 @@ export default class NostrWalletConnectStore {
             pending
         );
 
-        let changed = false;
-
         for (const activity of pending) {
             const payment = payments.find(
                 (p) =>
@@ -2832,32 +2873,18 @@ export default class NostrWalletConnectStore {
                     (!!activity.paymentHash &&
                         p.paymentHash === activity.paymentHash)
             );
-            if (!payment) continue;
+            if (!payment) {
+                if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
+                    changed = true;
+                }
+                continue;
+            }
 
             runInAction(() => {
-                if (activity.status !== 'pending') return;
-
-                activity.payment = new Payment(payment);
-                changed = true;
-
-                if (payment.isFailed) {
-                    activity.status = 'failed';
-                    return;
-                }
-                if (payment.isIncomplete) return;
-
-                activity.status = 'success';
-                const amountSats =
-                    Math.floor(Number(activity.satAmount)) ||
-                    Math.floor(Number(payment.getAmount) || 0);
-                const feeSats = Number(payment.getFee) || 0;
-                activity.fees_paid = feeSats;
-
-                const spendSats =
-                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
-                if (spendSats > 0 && !activity.isBudgetDebited) {
-                    connection.trackSpending(spendSats, this.maxBudgetLimit);
-                    activity.isBudgetDebited = true;
+                if (
+                    this.applyPayInvoiceReconcile(activity, connection, payment)
+                ) {
+                    changed = true;
                 }
             });
         }
@@ -2867,6 +2894,86 @@ export default class NostrWalletConnectStore {
             this.findAndUpdateConnection(connection);
         }
         return changed;
+    }
+
+    /**
+     * Release a hold the node will never list. Non-timeout error exits reconcile
+     * and prune protection so budget and replay recover without deleting the
+     * connection.
+     */
+    private abandonStaleUnresolvedPayInvoiceHold(
+        activity: ConnectionActivity
+    ): boolean {
+        if (!NostrConnectUtils.isPayInvoiceHoldAbandoned(activity)) {
+            return false;
+        }
+
+        runInAction(() => {
+            activity.status = 'failed';
+            activity.error = 'error.paymentFailed';
+        });
+        return true;
+    }
+
+    private applyPayInvoiceReconcile(
+        activity: ConnectionActivity,
+        connection: NWCConnection,
+        raw: Payment
+    ): boolean {
+        if (activity.isBudgetDebited) return false;
+        if (activity.status !== 'pending' && activity.status !== 'failed') {
+            return false;
+        }
+
+        const listed = new Payment(raw);
+        const before = {
+            status: activity.status,
+            error: activity.error,
+            fees_paid: activity.fees_paid,
+            isBudgetDebited: !!activity.isBudgetDebited,
+            paymentHash:
+                activity.payment instanceof Payment
+                    ? activity.payment.paymentHash
+                    : undefined,
+            paymentStatus: activity.payment?.status
+        };
+
+        if (NostrConnectUtils.isListedPaymentFailed(raw)) {
+            activity.status = 'failed';
+            activity.error = NostrConnectUtils.paymentFailureReasonLocaleKey(
+                listed.failure_reason
+            );
+        } else if (NostrConnectUtils.isListedPaymentInTransit(raw)) {
+            activity.status = 'pending';
+            activity.error = undefined;
+        } else if (!raw.isIncomplete) {
+            activity.status = 'success';
+            activity.error = undefined;
+            const amountSats =
+                Math.floor(Number(activity.satAmount)) ||
+                Math.floor(Number(raw.getAmount) || 0);
+            const feeSats = Number(raw.getFee) || 0;
+            activity.fees_paid = feeSats;
+            const spendSats =
+                amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+            if (spendSats > 0) {
+                connection.trackSpending(spendSats, this.maxBudgetLimit);
+                activity.isBudgetDebited = true;
+            }
+        } else {
+            return false;
+        }
+
+        activity.payment = listed;
+
+        return (
+            before.status !== activity.status ||
+            before.error !== activity.error ||
+            before.fees_paid !== activity.fees_paid ||
+            before.isBudgetDebited !== !!activity.isBudgetDebited ||
+            before.paymentHash !== listed.paymentHash ||
+            before.paymentStatus !== listed.status
+        );
     }
 
     private async getPaymentsForPendingPayInvoiceRefresh(
@@ -3251,7 +3358,9 @@ export default class NostrWalletConnectStore {
                 satAmount: amountSats,
                 status: 'failed',
                 payment_source,
-                error: errorMessage,
+                error: NostrConnectUtils.isPaymentTimedOutMessage(errorMessage)
+                    ? 'views.SendingLightning.paymentTimedOut'
+                    : errorMessage,
                 createdAt: new Date(),
                 ...(paymentHash ? { paymentHash } : {})
             });
@@ -3281,7 +3390,11 @@ export default class NostrWalletConnectStore {
         );
         const existing = index !== -1 ? connection.activity[index] : undefined;
 
-        if (existing?.status === 'success' && record.status !== 'success') {
+        if (
+            existing &&
+            ((existing.status === 'success' && record.status !== 'success') ||
+                (existing.status === 'pending' && record.status === 'failed'))
+        ) {
             return false;
         }
 

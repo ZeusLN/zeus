@@ -60,6 +60,7 @@ import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
+import Payment from '../models/Payment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import NostrWalletConnectStore, {
@@ -644,6 +645,52 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
             NostrConnectUtils.notifyOutgoingNwcPaymentFailed
         ).not.toHaveBeenCalled();
         expect(connection.activity[0].status).toBe('success');
+    });
+
+    it('upsertPayInvoiceActivity never demotes pending to failed', () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 100,
+                    paymentHash
+                }
+            ]
+        });
+
+        const applied = (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'failed',
+            satAmount: 100,
+            error: 'payment is in transition'
+        });
+
+        expect(applied).toBe(false);
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(100);
+    });
+
+    it('recordFailedPayment stores timeout errors as locale keys', async () => {
+        const store = buildPayInvoiceTestStore();
+        const connection = seedPayInvoiceConnection(store);
+
+        await (store as any).recordFailedPayment({
+            rawInvoice: normalizedInvoice,
+            connection,
+            amountSats: 100,
+            payment_source: 'lightning',
+            errorMessage: 'payment timed out waiting for preimage'
+        });
+
+        expect(connection.activity[0].error).toBe(
+            'views.SendingLightning.paymentTimedOut'
+        );
     });
 });
 
@@ -1396,7 +1443,7 @@ describe('NostrWalletConnectStore activity prune', () => {
         jest.clearAllMocks();
     });
 
-    it('never prunes pending pay_invoice entries when trimming the activity log', () => {
+    it('never prunes unresolved pay_invoice entries when trimming the activity log', () => {
         const store = buildPayInvoiceTestStore();
         const oldest = new Date('2024-01-01T00:00:00Z');
         const activity = [
@@ -1437,6 +1484,44 @@ describe('NostrWalletConnectStore activity prune', () => {
         expect(connection.pendingSpendSats).toBe(1000);
     });
 
+    it('never prunes timeout-failed pay_invoice entries awaiting reconcile', () => {
+        const store = buildPayInvoiceTestStore();
+        const oldest = new Date('2024-01-01T00:00:00Z');
+        const activity = [
+            {
+                id: 'lnbc-timeout-failed-pay',
+                type: 'pay_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'failed' as const,
+                satAmount: 1000,
+                error: 'views.SendingLightning.paymentTimedOut',
+                createdAt: oldest
+            },
+            ...Array.from({ length: 99 }, (_, i) => ({
+                id: `lnbc-make-${i}`,
+                type: 'make_invoice' as const,
+                payment_source: 'lightning' as const,
+                status: 'success' as const,
+                createdAt: new Date(oldest.getTime() + (i + 1) * 1000)
+            }))
+        ];
+        const connection = seedPayInvoiceConnection(store, { activity });
+        connection.activity.push({
+            id: 'lnbc-make-new',
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            createdAt: new Date('2024-06-01T00:00:00Z')
+        });
+
+        (store as any).pruneConnectionActivity(connection);
+
+        expect(connection.activity).toHaveLength(100);
+        expect(
+            connection.activity.find((a) => a.id === 'lnbc-timeout-failed-pay')
+        ).toBeDefined();
+    });
+
     it('stops pruning when every activity entry is still pending', () => {
         const store = buildPayInvoiceTestStore();
         const connection = seedPayInvoiceConnection(store, {
@@ -1470,6 +1555,625 @@ describe('NostrWalletConnectStore activity prune', () => {
         expect((store as any).checkMakeInvoiceLimits(connection)).toBeNull();
         (store as any).pruneConnectionActivity(connection);
         expect(connection.activity.length).toBeLessThanOrEqual(100);
+    });
+});
+
+describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('debits a timeout-failed pay_invoice once the node later shows settlement', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1timeout-missed-debit';
+        const paymentHash = hex64('e');
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 10000,
+            fee_sat: '50',
+            payment_preimage: hex64('9')
+        });
+        (store as any).paymentsStore = {
+            payments: [settled],
+            getPayments: jest.fn(async () => [settled])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        expect(connection.canSpend(10000)).toBe(true);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(10050);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
+    it('promotes a timeout-failed pay_invoice to pending when the node still shows in-flight', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1timeout-still-inflight';
+        const paymentHash = hex64('f');
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'IN_FLIGHT',
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000000'
+        });
+        (store as any).paymentsStore = {
+            payments: [inFlight],
+            getPayments: jest.fn(async () => [inFlight])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
+    it('does not promote a CLN-shaped failed sendpay to pending', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1cln-failed-shape';
+        const paymentHash = hex64('8');
+        const failedCln = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'failed',
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000000'
+        });
+        (store as any).paymentsStore = {
+            payments: [failedCln],
+            getPayments: jest.fn(async () => [failedCln])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('does not debit a genuine route failure that never settled', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1genuine-fail';
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    error: 'route not found',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('overwrites the timeout error once the node confirms failure', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1timeout-confirmed-fail';
+        const paymentHash = hex64('a');
+        const failed = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE',
+            value_sat: 10000
+        });
+        (store as any).paymentsStore = {
+            payments: [failed],
+            getPayments: jest.fn(async () => [failed])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('error.failureReasonNoRoute');
+        expect(
+            NostrConnectUtils.isPaymentTimedOutMessage(
+                connection.activity[0].error
+            )
+        ).toBe(false);
+    });
+
+    it('does not churn on idempotent reconcile of node-confirmed failure', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1timeout-churn';
+        const paymentHash = hex64('b');
+        const failed = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE',
+            value_sat: 10000
+        });
+        (store as any).paymentsStore = {
+            payments: [failed],
+            getPayments: jest.fn(async () => [failed])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+        const findAndUpdateConnection = jest.spyOn(
+            store as any,
+            'findAndUpdateConnection'
+        );
+        const scheduleMaxBudgetRefresh = jest.spyOn(
+            store as any,
+            'scheduleMaxBudgetRefresh'
+        );
+
+        const first = await (store as any).reconcilePendingPayInvoiceActivities(
+            connection
+        );
+        const second = await (
+            store as any
+        ).reconcilePendingPayInvoiceActivities(connection);
+        const third = await (store as any).reconcilePendingPayInvoiceActivities(
+            connection
+        );
+
+        expect(first).toBe(true);
+        expect(second).toBe(false);
+        expect(third).toBe(false);
+        expect(findAndUpdateConnection).toHaveBeenCalledTimes(1);
+        expect(scheduleMaxBudgetRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('debits a stale hold when the node lists settlement instead of abandoning', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1stale-settled-probe';
+        const paymentHash = hex64('1');
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 10000,
+            fee_sat: '50',
+            payment_preimage: hex64('2')
+        });
+        (store as any).paymentsStore = {
+            payments: [settled],
+            getPayments: jest.fn(async () => [settled])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(10050);
+        expect(connection.activity[0].error).toBeUndefined();
+    });
+
+    it('keeps a stale hold when the node still lists the payment in-flight', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1stale-inflight-probe';
+        const paymentHash = hex64('3');
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'IN_FLIGHT',
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000000'
+        });
+        (store as any).paymentsStore = {
+            payments: [inFlight],
+            getPayments: jest.fn(async () => [inFlight])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(true);
+        expect(connection.activity[0].error).toBeUndefined();
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('abandons a permanent pending hold when the node never lists the payment', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1permanent-pending-hold';
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(true);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('error.paymentFailed');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(false);
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('abandons a permanent timeout-failed hold when the node never lists the payment', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1permanent-timeout-hold';
+        const staleCreatedAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: staleCreatedAt
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('error.paymentFailed');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(false);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
+    it('does not abandon a recent unresolved hold with no node listing', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1recent-hold';
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(
+            connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
+        ).toBe(true);
+        expect(connection.pendingSpendSats).toBe(10000);
+    });
+});
+
+describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () => {
+    const invoice = 'lnbc1replay-guard';
+    const paymentHash = hex64('c');
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils as any).decodePaymentRequest = jest
+            .fn()
+            .mockResolvedValue({
+                timestamp: String(Math.floor(Date.now() / 1000) - 60),
+                expiry: '3600'
+            });
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: invoice,
+            paymentHash,
+            descriptionHash: '',
+            description: '',
+            amount: 5000,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'getPayInvoiceAmountSats'
+        ).mockResolvedValue(5000);
+    });
+
+    function buildHandlerStore() {
+        const transactionsStore: any = {
+            reset: jest.fn(),
+            sendPayment: jest.fn(),
+            payment_hash: null,
+            payment_preimage: null,
+            payment_fee: 0,
+            status: null,
+            isIncomplete: null,
+            error: false,
+            payment_error: null,
+            loading: false
+        };
+        const balanceStore = {
+            getLightningBalance: jest
+                .fn()
+                .mockResolvedValue({ lightningBalance: 100000 })
+        };
+        const paymentsStore: any = {
+            payments: [],
+            getPayments: jest.fn().mockResolvedValue([])
+        };
+        const settingsStore: any = {
+            connecting: false,
+            implementation: 'lnd',
+            settings: {
+                locale: 'en',
+                ecash: { enableCashu: false },
+                lightningAddress: { enabled: false }
+            }
+        };
+        const store = new NostrWalletConnectStore(
+            settingsStore,
+            balanceStore as any,
+            {
+                nodeInfo: { nodeId: NODE_PUBKEY },
+                getNodeInfo: jest.fn()
+            } as any,
+            transactionsStore as any,
+            {} as any,
+            { invoices: [] } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            paymentsStore as any
+        );
+        jest.spyOn(store as any, 'findAndUpdateConnection').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(store as any, 'scheduleMaxBudgetRefresh').mockImplementation(
+            () => undefined
+        );
+        jest.spyOn(store as any, 'waitForPaymentCompletion').mockResolvedValue(
+            undefined
+        );
+        return { store, transactionsStore, paymentsStore };
+    }
+
+    it('refuses to replay pay_invoice while a pending hold exists', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 100000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(5000);
+    });
+
+    it('finalizes and debits when the store errors but the node lists settlement', async () => {
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore();
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 5000,
+            fee_sat: '10',
+            payment_preimage: hex64('d')
+        });
+        paymentsStore.payments = [settled];
+        paymentsStore.getPayments = jest.fn().mockResolvedValue([settled]);
+        transactionsStore.payment_hash = paymentHash;
+        transactionsStore.payment_error =
+            'views.SendingLightning.paymentTimedOut';
+        transactionsStore.loading = false;
+        transactionsStore.status = 'FAILED';
+        transactionsStore.isIncomplete = true;
+
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 100000,
+            totalSpendSats: 0
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPayment).toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe(hex64('d'));
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(5010);
     });
 });
 

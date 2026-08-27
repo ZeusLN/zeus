@@ -21,6 +21,7 @@ import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import CashuInvoice from '../models/CashuInvoice';
+import { lnrpc } from '../proto/lightning';
 
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
@@ -1002,13 +1003,71 @@ export default class NostrConnectUtils {
     static isPaymentTimedOutMessage(message?: string | null): boolean {
         if (!message) return false;
         const normalized = message.toLowerCase();
-        // English substring catches raw backend/LND strings; localized paths use localeString equality below.
+        // English substring catches raw backend/LND strings; keys are locale-stable.
         return (
             normalized.includes('timed out') ||
+            message === 'views.SendingLightning.paymentTimedOut' ||
+            message === 'error.paymentTimedOut' ||
             message ===
                 localeString('views.SendingLightning.paymentTimedOut') ||
             message === localeString('error.paymentTimedOut')
         );
+    }
+
+    /** Max hold when the node never lists the payment (LndHub, paginated history). */
+    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+    /** Grace after bolt11 expiry before abandoning an unresolved hold. */
+    static readonly UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS =
+        24 * 60 * 60 * 1000;
+
+    static resolveBolt11ExpiryTimeMs(invoice: string): number | undefined {
+        try {
+            const decoded = Bolt11Utils.decode(invoice);
+            const expiry = decoded.timeExpireDate;
+            if (expiry == null || expiry <= 0) return undefined;
+            return expiry * 1000;
+        } catch {
+            return undefined;
+        }
+    }
+
+    /** True when an unresolved pay_invoice hold should be released. */
+    static isPayInvoiceHoldAbandoned(
+        activity: ConnectionActivity,
+        nowMs: number = Date.now()
+    ): boolean {
+        if (
+            activity.type !== 'pay_invoice' ||
+            activity.payment_source === 'cashu' ||
+            activity.isBudgetDebited
+        ) {
+            return false;
+        }
+
+        const createdAt = activity.createdAt?.getTime();
+        if (!createdAt) return false;
+
+        if (
+            nowMs >=
+            createdAt + NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS
+        ) {
+            return true;
+        }
+
+        const expiryMs =
+            activity.expiresAt?.getTime() ??
+            NostrConnectUtils.resolveBolt11ExpiryTimeMs(activity.id);
+        if (
+            expiryMs &&
+            nowMs >=
+                expiryMs +
+                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS
+        ) {
+            return true;
+        }
+
+        return false;
     }
 
     static isSettledPayment(payment: Payment): boolean {
@@ -1024,6 +1083,40 @@ export default class NostrConnectUtils {
             payment.status === 'pending';
 
         return hasInFlightStatus && payment.isIncomplete && !payment.isFailed;
+    }
+
+    /** CLN listpays marks failures with status only — no htlcs/failure_reason. */
+    static isListedPaymentFailed(payment: Payment): boolean {
+        if (payment.isFailed) return true;
+        const status = payment.status;
+        return status === 'failed' || status === 'FAILED';
+    }
+
+    static paymentFailureReasonLocaleKey(
+        reason: string | number | null | undefined
+    ): string {
+        if (
+            reason == null ||
+            reason === '' ||
+            reason === 'FAILURE_REASON_NONE' ||
+            reason === lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+        ) {
+            return 'error.paymentFailed';
+        }
+        const name =
+            typeof reason === 'number'
+                ? lnrpc.PaymentFailureReason[reason]
+                : String(reason);
+        const keys: Record<string, string> = {
+            FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
+            FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
+            FAILURE_REASON_ERROR: 'error.failureReasonError',
+            FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
+                'error.failureReasonIncorrectPaymentDetails',
+            FAILURE_REASON_INSUFFICIENT_BALANCE:
+                'error.failureReasonInsufficientBalance'
+        };
+        return keys[name] || 'error.paymentFailed';
     }
 
     static findPaymentForInvoice<T extends Payment>(
@@ -1171,13 +1264,28 @@ export default class NostrConnectUtils {
             ) || paymentState.loading;
 
         if (timedOutOrStillLoading || paymentState.isIncomplete) {
-            const payment = NostrConnectUtils.findInTransitPaymentForInvoice(
+            const listed = NostrConnectUtils.findPaymentForInvoice(
                 invoice,
                 payments,
                 paymentHash
             );
-            if (payment) {
-                return { inTransit: true, payment };
+            if (listed && NostrConnectUtils.isSettledPayment(listed)) {
+                return { inTransit: false, payment: listed };
+            }
+            if (listed && NostrConnectUtils.isListedPaymentFailed(listed)) {
+                return { inTransit: false, payment: listed };
+            }
+            // Timeout / still-loading with no listed outcome: the HTLC may
+            // still settle. Treat as in-flight so budget is held via
+            // pendingSpendSats instead of recording a terminal failure.
+            if (
+                timedOutOrStillLoading &&
+                (!listed || NostrConnectUtils.isListedPaymentInTransit(listed))
+            ) {
+                return { inTransit: true, payment: listed };
+            }
+            if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
+                return { inTransit: true, payment: listed };
             }
         }
 
