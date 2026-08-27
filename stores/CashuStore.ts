@@ -56,6 +56,7 @@ import CashuUtils, {
     isMeltPaid,
     isMeltSettledUnpaid,
     meltQuoteOutcome,
+    isCdkMeltTrackedLocally,
     MintPaymentStatus,
     MintProgressInfo,
     MultimintProgressCallback,
@@ -214,6 +215,8 @@ export default class CashuStore {
     private meltsInProgress = new Set<string>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
+    // CDK outgoing melts not represented in locally persisted payments
+    @observable public cdkPayments: Array<CashuPayment> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
     @observable public seed?: Uint8Array;
@@ -731,6 +734,17 @@ export default class CashuStore {
                 this.cdkInvoices = cdkTransactions
                     .filter((tx) => tx.direction === 'incoming')
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
+                // Outgoing melts CDK recorded but local storage missed
+                // (e.g. app killed between melt and persist). Token sends
+                // carry no quote_id and stay tracked via sentTokens.
+                this.cdkPayments = cdkTransactions
+                    .filter(
+                        (tx) =>
+                            tx.direction === 'outgoing' &&
+                            !!tx.quote_id &&
+                            !isCdkMeltTrackedLocally(tx, this.payments || [])
+                    )
+                    .map((tx) => CashuPayment.fromCDKTransaction(tx));
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
