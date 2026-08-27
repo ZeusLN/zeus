@@ -1465,6 +1465,23 @@ export default class LdkNode {
     };
 
     /**
+     * Targeted lookup by payment hash. listPayments is in-memory, so the
+     * filter is a local operation. Resolves payments awaitPaymentCompletion's
+     * timeout leaves pending.
+     */
+    lookupPayment = async (data: { payment_hash: string }): Promise<any> => {
+        const target = data.payment_hash.toLowerCase();
+        const payments = await LdkNodeInjection.payments.listPayments();
+        const payment = payments.find(
+            (p) =>
+                p.direction === 'outbound' &&
+                p.kind.type !== 'onchain' &&
+                (p.kind.hash || '').toLowerCase() === target
+        );
+        return payment ? this.formatPayment(payment) : null;
+    };
+
+    /**
      * List all payments (raw)
      */
     listPayments = async (): Promise<PaymentDetails[]> => {
@@ -2178,9 +2195,7 @@ export default class LdkNode {
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
-    // follow-up: awaitPaymentCompletion already polls listPayments; a
-    // lookup by hash could resolve payments its timeout leaves pending
-    supportsPaymentLookup = () => false;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
