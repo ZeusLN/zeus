@@ -2270,7 +2270,11 @@ export default class NostrWalletConnectStore {
         // Late-settling pays can be recorded failed when the 125s wait
         // expires; debit them before enforcing budget so a replay cannot
         // spend the same sats twice.
-        await this.reconcilePendingPayInvoiceActivities(connection);
+        try {
+            await this.reconcilePendingPayInvoiceActivities(connection);
+        } catch (error) {
+            console.error('NWC: pay_invoice reconcile failed:', error);
+        }
 
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(request.invoice);
@@ -2279,12 +2283,16 @@ export default class NostrWalletConnectStore {
             decodedPaymentHash
         );
         if (existing && connection.isUnresolvedPayInvoiceActivity(existing)) {
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.invoicePaymentInProgress'
-                ),
-                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
-            );
+            const fees_paid =
+                existing.fees_paid || existing.payment?.getFee || 0;
+
+            return {
+                result: {
+                    preimage: '',
+                    fees_paid: satsToMillisats(Number(fees_paid) || 0)
+                },
+                error: undefined
+            };
         }
 
         const budgetCheck = this.validateBudgetBeforePayment(
@@ -2372,7 +2380,9 @@ export default class NostrWalletConnectStore {
 
         const settledEvidence =
             !!preimage ||
-            (!!payment && NostrConnectUtils.isSettledPayment(payment));
+            (!!payment &&
+                NostrConnectUtils.isSettledPayment(payment) &&
+                !!paymentHash);
 
         if (!settledEvidence) {
             const paymentError = this.checkPaymentErrors(
@@ -2778,20 +2788,15 @@ export default class NostrWalletConnectStore {
             paymentStatus: activity.payment?.status
         };
 
-        if (raw.isFailed) {
-            // CLN listpays does not populate failure_reason/htlcs, so
-            // Payment.isFailed may stay false for genuine CLN failures;
-            // those rows remain in the reconcile filter until expiry.
+        if (NostrConnectUtils.isListedPaymentFailed(raw)) {
             activity.status = 'failed';
-            activity.error =
-                listed.failure_reason &&
-                String(listed.failure_reason) !== 'FAILURE_REASON_NONE'
-                    ? String(listed.failure_reason)
-                    : localeString('error.paymentFailed');
-        } else if (raw.isIncomplete) {
+            activity.error = NostrConnectUtils.paymentFailureReasonLocaleKey(
+                listed.failure_reason
+            );
+        } else if (NostrConnectUtils.isListedPaymentInTransit(raw)) {
             activity.status = 'pending';
             activity.error = undefined;
-        } else {
+        } else if (!raw.isIncomplete) {
             activity.status = 'success';
             activity.error = undefined;
             const amountSats =
@@ -2805,6 +2810,8 @@ export default class NostrWalletConnectStore {
                 connection.trackSpending(spendSats, this.maxBudgetLimit);
                 activity.isBudgetDebited = true;
             }
+        } else {
+            return false;
         }
 
         activity.payment = listed;

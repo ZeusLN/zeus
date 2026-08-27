@@ -112,6 +112,14 @@ const paymentFixtures = {
             htlcs: [{ status: 'FAILED' }]
         }),
 
+    failedCln: () =>
+        new Payment({
+            payment_request: INVOICE_A,
+            payment_hash: HASH_A,
+            status: 'failed',
+            payment_preimage: ZERO_PREIMAGE
+        }),
+
     /** Another invoice — used to verify lookup does not cross-match */
     otherInvoiceInFlight: () =>
         new Payment({
@@ -788,6 +796,17 @@ describe('NostrConnectUtils', () => {
 
                 it('returns not inTransit when timeout fired and the listed payment failed', () => {
                     const failed = paymentFixtures.failed();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result.inTransit).toBe(false);
+                    expect(result.payment).toBe(failed);
+                });
+
+                it('returns not inTransit when CLN lists a failed sendpay', () => {
+                    const failed = paymentFixtures.failedCln();
                     const result = resolve({
                         payments: [failed],
                         paymentState: storeState.timedOut()

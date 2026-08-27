@@ -1453,6 +1453,45 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(connection.canSpend(1)).toBe(false);
     });
 
+    it('does not promote a CLN-shaped failed sendpay to pending', async () => {
+        const store = buildPayInvoiceTestStore();
+        const invoice = 'lnbc1cln-failed-shape';
+        const paymentHash = hex64('8');
+        const failedCln = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'failed',
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000000'
+        });
+        (store as any).paymentsStore = {
+            payments: [failedCln],
+            getPayments: jest.fn(async () => [failedCln])
+        };
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    satAmount: 10000,
+                    paymentHash,
+                    error: 'views.SendingLightning.paymentTimedOut',
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+
     it('does not debit a genuine route failure that never settled', async () => {
         const store = buildPayInvoiceTestStore();
         const invoice = 'lnbc1genuine-fail';
@@ -1518,7 +1557,7 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         await (store as any).reconcilePendingPayInvoiceActivities(connection);
 
         expect(connection.activity[0].status).toBe('failed');
-        expect(connection.activity[0].error).toBe('FAILURE_REASON_NO_ROUTE');
+        expect(connection.activity[0].error).toBe('error.failureReasonNoRoute');
         expect(
             NostrConnectUtils.isPaymentTimedOutMessage(
                 connection.activity[0].error
@@ -1695,10 +1734,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         );
 
         expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
-        expect(response.error?.code).toBe(Nip47ErrorCode.FAILED_TO_PAY_INVOICE);
-        expect(response.error?.message).toBe(
-            'stores.NostrWalletConnectStore.error.invoicePaymentInProgress'
-        );
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.pendingSpendSats).toBe(5000);
     });
@@ -1715,6 +1752,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         });
         paymentsStore.payments = [settled];
         paymentsStore.getPayments = jest.fn().mockResolvedValue([settled]);
+        transactionsStore.payment_hash = paymentHash;
         transactionsStore.payment_error =
             'views.SendingLightning.paymentTimedOut';
         transactionsStore.loading = false;
