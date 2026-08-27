@@ -30,7 +30,7 @@ export default function CopiedToastHost() {
 
     if (!visible) return null;
     return (
-        <View pointerEvents="none" style={styles.container}>
+        <View style={styles.container}>
             <View
                 style={[styles.toast, { backgroundColor: themeColor('text') }]}
             >
@@ -55,6 +55,7 @@ export default function CopiedToastHost() {
 
 const styles = StyleSheet.create({
     container: {
+        pointerEvents: 'none',
         position: 'absolute',
         left: 0,
         right: 0,
