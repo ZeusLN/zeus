@@ -3000,9 +3000,54 @@ export default class NostrWalletConnectStore {
             return cached;
         }
 
+        const lookedUp = await this.lookupPendingPaymentsByHash(
+            lightningPending
+        );
+        if (lookedUp) {
+            this.lastPendingPaymentStatusFetchByConnection.set(
+                connectionId,
+                now
+            );
+            return lookedUp;
+        }
+
         await this.paymentsStore.getPayments();
         this.lastPendingPaymentStatusFetchByConnection.set(connectionId, now);
         return this.paymentsStore.payments || [];
+    }
+
+    /**
+     * Targeted per-hash lookups for the pending pay_invoice refresh: the
+     * by-hash question is answered by lookupPayment instead of fetching
+     * and scanning the payment list, so cost scales with the request
+     * rather than with payment history (issue #4286). Returns undefined
+     * when the backend has no lookup, a pending activity lacks a payment
+     * hash (matching it needs the list's payment_request strings), or a
+     * lookup fails; callers fall back to the list scan. Null lookup
+     * results are dropped: the node has no record of that payment, which
+     * downstream absence handling (stale-hold abandonment) already covers.
+     */
+    private async lookupPendingPaymentsByHash(
+        lightningPending: ConnectionActivity[]
+    ): Promise<Payment[] | undefined> {
+        if (!BackendUtils.supportsPaymentLookup()) return undefined;
+
+        const hashes = lightningPending.map((activity) => activity.paymentHash);
+        if (hashes.some((hash) => !hash)) return undefined;
+
+        const uniqueHashes = [...new Set(hashes as string[])];
+        try {
+            const results = await Promise.all(
+                uniqueHashes.map((payment_hash) =>
+                    BackendUtils.lookupPayment({ payment_hash })
+                )
+            );
+            return results
+                .filter((raw) => !!raw)
+                .map((raw) => new Payment(raw));
+        } catch {
+            return undefined;
+        }
     }
 
     private findLightningInvoiceInStore(invoice: Invoice): Invoice | undefined {
