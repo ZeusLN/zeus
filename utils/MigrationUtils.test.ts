@@ -885,14 +885,43 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('does not touch non-mainnet nodes', async () => {
+        it('rewrites the v1 testnet default on testnet nodes', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 nodes: [
                     {
                         implementation: 'ldk-node',
                         ldkNetwork: 'testnet',
+                        ldkRgsServer:
+                            'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+                    }
+                ]
+            };
+
+            await MigrationUtils.migrateRgsDefaultsToV2(settings);
+
+            expect(settings.nodes[0].ldkRgsServer).toBe(
+                'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not apply mappings across networks', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                nodes: [
+                    {
+                        // mainnet URL on a testnet node: misconfigured
+                        // either way, not this migration's to fix
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'testnet',
                         ldkRgsServer: 'https://rgs.zeusln.com/snapshot'
+                    },
+                    {
+                        implementation: 'ldk-node',
+                        ldkNetwork: 'mainnet',
+                        ldkRgsServer:
+                            'https://rapidsync.lightningdevkit.org/testnet/snapshot'
                     }
                 ]
             };
@@ -901,6 +930,9 @@ describe('MigrationUtils', () => {
 
             expect(settings.nodes[0].ldkRgsServer).toBe(
                 'https://rgs.zeusln.com/snapshot'
+            );
+            expect(settings.nodes[1].ldkRgsServer).toBe(
+                'https://rapidsync.lightningdevkit.org/testnet/snapshot'
             );
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
         });

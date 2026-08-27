@@ -62,10 +62,12 @@ export const RGS_SERVERS_MAINNET: EsploraServer[] = [
     }
 ];
 
+// Note the path asymmetry: the LDK server routes testnet v2 at
+// /testnet/v2/snapshot, not /testnet/snapshot/v2 like mainnet.
 export const RGS_SERVERS_TESTNET: EsploraServer[] = [
     {
         key: 'LDK (rapidsync.lightningdevkit.org)',
-        value: 'https://rapidsync.lightningdevkit.org/testnet/snapshot'
+        value: 'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
     }
 ];
 

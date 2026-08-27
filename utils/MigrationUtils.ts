@@ -480,7 +480,9 @@ class MigrationsUtils {
     // to an offer's introduction node. Only values still equal to a known
     // old default are touched; custom URLs are left alone. Unset values
     // need no migration — runtime falls back to the (updated)
-    // RGS_SERVERS_MAINNET constants. Supersedes migrateRgsDefaultToZeus
+    // RGS_SERVERS_MAINNET / RGS_SERVERS_TESTNET constants. Mappings are
+    // scoped per network so a URL is only rewritten on nodes of the
+    // network it belongs to. Supersedes migrateRgsDefaultToZeus
     // ('rgs-default-zeus'), which pinned the then-default into every
     // mainnet node; the values it wrote are matched here, so its flag is
     // no longer consulted and unset values are no longer pinned (#4470:
@@ -491,20 +493,28 @@ class MigrationsUtils {
         const modRgsV2 = await EncryptedStorage.getItem(MOD_KEY_RGS_V2);
         if (modRgsV2) return settings;
 
-        const urlMigrations: { [oldUrl: string]: string } = {
-            'https://rgs.zeusln.com/snapshot':
-                'https://rgs.zeusln.com/snapshot/v2',
-            'https://rapidsync.lightningdevkit.org/snapshot':
-                'https://rapidsync.lightningdevkit.org/snapshot/v2'
+        const urlMigrationsByNetwork: {
+            [network: string]: { [oldUrl: string]: string };
+        } = {
+            mainnet: {
+                'https://rgs.zeusln.com/snapshot':
+                    'https://rgs.zeusln.com/snapshot/v2',
+                'https://rapidsync.lightningdevkit.org/snapshot':
+                    'https://rapidsync.lightningdevkit.org/snapshot/v2'
+            },
+            testnet: {
+                'https://rapidsync.lightningdevkit.org/testnet/snapshot':
+                    'https://rapidsync.lightningdevkit.org/testnet/v2/snapshot'
+            }
         };
 
         let changed = false;
         if (settings?.nodes && Array.isArray(settings.nodes)) {
             for (const node of settings.nodes) {
-                const isMainnet =
-                    !node.ldkNetwork || node.ldkNetwork === 'mainnet';
+                const urlMigrations =
+                    urlMigrationsByNetwork[node.ldkNetwork || 'mainnet'];
                 if (
-                    isMainnet &&
+                    urlMigrations &&
                     node.ldkRgsServer &&
                     urlMigrations[node.ldkRgsServer]
                 ) {
