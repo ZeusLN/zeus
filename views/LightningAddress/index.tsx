@@ -99,7 +99,7 @@ export default class LightningAddress extends React.Component<
 
         const skipStatus = route.params?.skipStatus;
 
-        if (!skipStatus) status();
+        if (!skipStatus) status().catch(this.handleStoreError);
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
@@ -114,9 +114,18 @@ export default class LightningAddress extends React.Component<
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
         } else {
-            this.props.LightningAddressStore.status();
+            this.props.LightningAddressStore.status().catch(
+                this.handleStoreError
+            );
         }
     };
+
+    // LightningAddressStore methods record failures in the store's observable
+    // error/error_msg state (which this view renders) and then re-throw, so
+    // fire-and-forget call sites must catch the rejection to avoid an
+    // unhandled promise rejection.
+    private handleStoreError = (error: unknown) =>
+        console.log('LightningAddressStore error', error);
 
     copyLightningAddress = () => {
         const { LightningAddressStore } = this.props;
@@ -320,7 +329,9 @@ export default class LightningAddress extends React.Component<
                                         'views.Settings.LightningAddress.generateNew'
                                     )}
                                     onPress={() =>
-                                        deleteAndGenerateNewPreimages()
+                                        deleteAndGenerateNewPreimages().catch(
+                                            this.handleStoreError
+                                        )
                                     }
                                 />
                             )}
@@ -984,7 +995,11 @@ export default class LightningAddress extends React.Component<
                                                 margin: 15,
                                                 alignItems: 'center'
                                             }}
-                                            onPress={() => status()}
+                                            onPress={() =>
+                                                status().catch(
+                                                    this.handleStoreError
+                                                )
+                                            }
                                         >
                                             <Text
                                                 style={{
@@ -1048,7 +1063,11 @@ export default class LightningAddress extends React.Component<
                                             ListFooterComponent={
                                                 <Spacer height={100} />
                                             }
-                                            onRefresh={() => status()}
+                                            onRefresh={() =>
+                                                status().catch(
+                                                    this.handleStoreError
+                                                )
+                                            }
                                             refreshing={loading}
                                             keyExtractor={(_, index) =>
                                                 `${index}`
@@ -1064,12 +1083,18 @@ export default class LightningAddress extends React.Component<
                                                         lightningAddressType ===
                                                         'zaplocker'
                                                     ) {
-                                                        redeemAllOpenPaymentsZaplocker();
+                                                        redeemAllOpenPaymentsZaplocker().catch(
+                                                            this
+                                                                .handleStoreError
+                                                        );
                                                     } else if (
                                                         lightningAddressType ===
                                                         'cashu'
                                                     ) {
-                                                        redeemAllOpenPaymentsCashu();
+                                                        redeemAllOpenPaymentsCashu().catch(
+                                                            this
+                                                                .handleStoreError
+                                                        );
                                                     }
                                                 }}
                                                 disabled={!isReady}
@@ -1128,7 +1153,10 @@ export default class LightningAddress extends React.Component<
                                                             'Clear local hashes'
                                                         }
                                                         onPress={() =>
-                                                            deleteLocalHashes()
+                                                            deleteLocalHashes().catch(
+                                                                this
+                                                                    .handleStoreError
+                                                            )
                                                         }
                                                         secondary
                                                     />
