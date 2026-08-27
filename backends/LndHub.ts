@@ -206,6 +206,9 @@ export default class LndHub extends LND {
     };
     supportsWatchtowerClient = () => false;
     supportsKeysend = () => false;
+    // the inherited lookupPayment would scan LndHub's /gettxs-shaped
+    // getPayments response, which has no payment_hash/status fields
+    supportsPaymentLookup = () => false;
     supportsChannelManagement = () => false;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => false;

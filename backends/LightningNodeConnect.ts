@@ -221,6 +221,17 @@ export default class LightningNodeConnect {
                     params?.reversed !== undefined ? params.reversed : true
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    // scans the newest payments; trackPaymentV2 over LNC is a stream and
+    // would need view-level event plumbing
+    lookupPayment = async (data: { payment_hash: string }) =>
+        await this.getPayments({ maxPayments: 50, reversed: true }).then(
+            (response: any) =>
+                response?.payments?.find(
+                    (payment: any) =>
+                        payment.payment_hash?.toLowerCase() ===
+                        data.payment_hash.toLowerCase()
+                ) ?? null
+        );
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
@@ -386,7 +397,11 @@ export default class LightningNodeConnect {
                         resolve({
                             payment_error: localeString(
                                 'views.SendingLightning.paymentTimedOut'
-                            )
+                            ),
+                            // outcome unknown on the node: lets the caller
+                            // track the payment to a terminal state
+                            // instead of reporting failure
+                            payment_timed_out: true
                         })
                     ),
                 timeoutMs
@@ -876,6 +891,7 @@ export default class LightningNodeConnect {
     supportsOnchainReceiving = () => this.permNewAddress;
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;

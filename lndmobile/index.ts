@@ -386,7 +386,10 @@ export const sendPaymentV2Sync = async (
         forcedTimeout((timeout_seconds + 1) * 1000, {
             payment_error: localeString(
                 'views.SendingLightning.paymentTimedOut'
-            )
+            ),
+            // outcome unknown on the node: lets the caller track the
+            // payment to a terminal state instead of reporting failure
+            payment_timed_out: true
         }),
         call()
     ]);
