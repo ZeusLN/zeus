@@ -32,6 +32,10 @@ const nodeInfo = nodeInfoStore as any;
 const CONNECTION_ERROR = 'Connection error';
 const PAYMENT_TIMED_OUT =
     'Payment timed out. It may be in transit, meaning it may complete momentarily or it may go on to fail. Check the Activity view to track its progress.';
+const TIMED_OUT = {
+    payment_error: PAYMENT_TIMED_OUT,
+    payment_timed_out: true
+};
 
 // shape of a react-native-blob-util FetchBlobResponse
 const response = (status: number, data: any, json?: () => any) => ({
@@ -571,9 +575,7 @@ describe('LND.payLightningInvoice timeout race', () => {
         expect(settled).not.toHaveBeenCalled();
 
         await jest.advanceTimersByTimeAsync(1);
-        await expect(result).resolves.toEqual({
-            payment_error: PAYMENT_TIMED_OUT
-        });
+        await expect(result).resolves.toEqual(TIMED_OUT);
     });
 
     it('resolves the timed-out shape, not the transport rejection, when nothing answers', async () => {
@@ -582,9 +584,7 @@ describe('LND.payLightningInvoice timeout race', () => {
 
         const result = lnd.payLightningInvoice({ timeout_seconds: 10 });
         await jest.advanceTimersByTimeAsync(20000);
-        await expect(result).resolves.toEqual({
-            payment_error: PAYMENT_TIMED_OUT
-        });
+        await expect(result).resolves.toEqual(TIMED_OUT);
     });
 
     it('defaults to a 60s timeout when timeout_seconds is missing or not numeric', async () => {
@@ -599,9 +599,7 @@ describe('LND.payLightningInvoice timeout race', () => {
             await jest.advanceTimersByTimeAsync(60999);
             expect(settled).not.toHaveBeenCalled();
             await jest.advanceTimersByTimeAsync(1);
-            await expect(result).resolves.toEqual({
-                payment_error: PAYMENT_TIMED_OUT
-            });
+            await expect(result).resolves.toEqual(TIMED_OUT);
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: true,
                 timeout: 65000
@@ -653,9 +651,7 @@ describe('LND.payLightningInvoice timeout race', () => {
         resolveFetch(response(200, '{"result":{"status":"SUCCEEDED"}}\n'));
         await jest.advanceTimersByTimeAsync(0);
 
-        await expect(result).resolves.toEqual({
-            payment_error: PAYMENT_TIMED_OUT
-        });
+        await expect(result).resolves.toEqual(TIMED_OUT);
     });
 });
 
@@ -709,7 +705,8 @@ describe('LND capability flags', () => {
         ['supportsCashuWallet', false],
         ['supportsAddressMessageSigning', true],
         ['supportsSettingInvoiceExpiration', true],
-        ['supportsNostrWalletConnectService', true]
+        ['supportsNostrWalletConnectService', true],
+        ['supportsPaymentLookup', true]
     ];
 
     it.each(staticFlags)('%s() returns %s', (flag, expected) => {

@@ -90,6 +90,7 @@ export default class NostrWalletConnect {
     supportsOnchainReceiving = () => false;
     supportsLightningSends = () => true;
     supportsKeysend = () => false;
+    supportsPaymentLookup = () => false;
     supportsChannelManagement = () => false;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => false;

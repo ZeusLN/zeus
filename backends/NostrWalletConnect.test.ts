@@ -643,7 +643,8 @@ describe('NostrWalletConnect capability flags', () => {
         supportInboundFees: false,
         supportsCashuWallet: false,
         supportsSettingInvoiceExpiration: false,
-        supportsNostrWalletConnectService: false
+        supportsNostrWalletConnectService: false,
+        supportsPaymentLookup: false
     };
 
     const backend = new NostrWalletConnect();

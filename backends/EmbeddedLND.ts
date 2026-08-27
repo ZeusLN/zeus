@@ -270,6 +270,20 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         });
+    // override LND's REST implementation with an on-device lookup
+    lookupPayment = async (data: { payment_hash: string }) => {
+        const response = await listPayments({
+            maxPayments: 50,
+            reversed: true
+        });
+        return (
+            response?.payments?.find(
+                (payment: any) =>
+                    payment.payment_hash?.toLowerCase() ===
+                    data.payment_hash.toLowerCase()
+            ) ?? null
+        );
+    };
     // The native call returns once the request is handed to LND, before LND
     // has processed it. The outcome arrives on the CloseChannel stream: an
     // error, or close_pending once the closing transaction is published.
