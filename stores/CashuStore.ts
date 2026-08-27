@@ -5655,13 +5655,43 @@ export default class CashuStore {
                 console.warn('CDK: Failed to delete wallet database:', e);
             }
 
+            // Overwrite the relay backup with an empty one before the seed
+            // (which derives the backup keypair) is removed below. Without
+            // this, reinstalling and restoring from the same seed would pull
+            // the stale non-empty backup and resurrect every mint deleted
+            // here. Calls backupMintsToNostr directly rather than
+            // nostrBackupMints so nothing is persisted mid-delete: a publish
+            // outlasting the race below would otherwise re-create the
+            // timestamp key after it is removed. Best-effort: bounded so
+            // unreachable relays cannot stall deletion, and failure
+            // (e.g. offline) must not abort cleanup
+            const backupSeed = this.getNostrBackupSeed();
+            if (backupSeed) {
+                const { privateKeyHex, publicKeyHex } =
+                    deriveMintBackupKeypair(backupSeed);
+                await Promise.race([
+                    backupMintsToNostr(
+                        privateKeyHex,
+                        publicKeyHex,
+                        [],
+                        DEFAULT_NOSTR_RELAYS
+                    ).catch((e) =>
+                        console.warn(
+                            'Nostr empty mint backup failed during delete:',
+                            e
+                        )
+                    ),
+                    new Promise((resolve) => setTimeout(resolve, 10000))
+                ]);
+            }
+
             // Persist an empty mint list instead of removing the key.
             // Boot treats a missing key as a fresh install or recovery and
             // restores the mint list from the Nostr backup (and re-adds the
-            // onboarding mints); deleting Cashu data does not publish a
-            // backup, so the stale non-empty one would resurrect every
-            // deleted mint on the next launch. An empty list records that
-            // the user deliberately deleted their mints, matching removeMint
+            // onboarding mints); the empty-backup publish above is
+            // best-effort, so the stale non-empty backup can still be the
+            // freshest on relays. An empty list records that the user
+            // deliberately deleted their mints, matching removeMint
             await Storage.setItem(
                 `${lndDir}-cashu-mintUrls`,
                 JSON.stringify([])
