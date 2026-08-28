@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Σας ευχαριστούμε για την γενναιόδωρη προσφορά σας!",
     "views.PaymentRequest.amountDonated": "Ποσό δωρεάς",
     "views.PaymentRequest.addATip": "Add a Tip with Each Payment",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Λήψη",
     "views.Receive.successCreate": "Το τιμολόγιο δημιουργήθηκε επιτυχώς",
     "views.Receive.warningLndHub": "Παρακαλούμε σημειώσετε ότι το LNDHub έχει μια σταθερή διεύθυνση στην αλυσίδα ",

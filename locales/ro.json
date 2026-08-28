@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Vă mulțumim pentru donația dumneavoastră generoasă!",
     "views.PaymentRequest.amountDonated": "Sumă donată",
     "views.PaymentRequest.addATip": "Adăugați un bacșiș la fiecare plată",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Primește",
     "views.Receive.successCreate": "Creare factură cu succes",
     "views.Receive.warningLndHub": "Rețineți că LNDHub are o adresă on-chain fixă",

@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Terima kasih atas donasi Anda!",
     "views.PaymentRequest.amountDonated": "Jumlah yang didonasikan",
     "views.PaymentRequest.addATip": "Tambahkan Tip untuk Setiap Pembayaran",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Terima",
     "views.Receive.successCreate": "Berhasil membuat faktur",
     "views.Receive.warningLndHub": "Harap dicatat bahwa LNDHub memiliki alamat on-chain tetap",

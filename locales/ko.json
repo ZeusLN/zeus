@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "너그러운 기부에 감사드립니다!",
     "views.PaymentRequest.amountDonated": "기부 금액",
     "views.PaymentRequest.addATip": "각 결제에 팁 추가하기",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "받기",
     "views.Receive.successCreate": "인보이스 생성 성공",
     "views.Receive.warningLndHub": "LNDHub는 고정된 온체인 주소를 가지고 있습니다.",
