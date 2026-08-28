@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Obrigado pela sua generosa doação!",
     "views.PaymentRequest.amountDonated": "Valor doado",
     "views.PaymentRequest.addATip": "Adicione uma gorjeta a cada pagamento",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Receber",
     "views.Receive.successCreate": "Cobrança criada com sucesso",
     "views.Receive.warningLndHub": "Observe que o LNDHub tem um endereço fixo na cadeia",
