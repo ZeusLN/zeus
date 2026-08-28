@@ -5619,6 +5619,10 @@ export default class CashuStore {
 
     @action
     public deleteCashuData = async () => {
+        // Deletion can block on the empty-backup publish below (up to 10s
+        // against unreachable relays), so guard against concurrent runs from
+        // repeated taps
+        if (this.loading) return;
         this.loading = true;
         const lndDir = this.getNodeDir();
 

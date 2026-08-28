@@ -48,7 +48,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
 
     render() {
         const { navigation, CashuStore, SettingsStore } = this.props;
-        const { seedVersion } = CashuStore;
+        const { seedVersion, loading } = CashuStore;
         const isLdk = SettingsStore.implementation === 'ldk-node';
         return (
             <Screen>
@@ -210,6 +210,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                         'views.Tools.cashu.deleteData'
                                     )}
                                     onPress={this.handleDeleteData}
+                                    disabled={loading}
                                     warning
                                 />
                             </View>
