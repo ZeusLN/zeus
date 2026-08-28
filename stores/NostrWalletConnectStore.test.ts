@@ -1260,6 +1260,127 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         jest.clearAllTimers();
         jest.useRealTimers();
     });
+
+    it('lets an in-flight handler finish before updateConnection mutates budget', async () => {
+        const store = buildStore();
+        jest.spyOn(store as any, 'subscribeToConnection').mockResolvedValue(
+            undefined
+        );
+        const connection = seedConnection(store, {
+            maxAmountSats: 5000,
+            totalSpendSats: 42
+        });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    releaseHandler = resolve;
+                })
+        );
+
+        await Promise.resolve();
+
+        let updated = false;
+        const updateDone = store
+            .updateConnection(connection.id, { maxAmountSats: 0 })
+            .then((result) => {
+                updated = result.success;
+            });
+
+        await Promise.resolve();
+        expect(updated).toBe(false);
+        expect(connection.maxAmountSats).toBe(5000);
+
+        const lateResponse = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({
+                result: { should: 'not-run' },
+                error: undefined
+            })
+        );
+        expect(lateResponse.error?.code).toBe('UNAUTHORIZED');
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        await updateDone;
+
+        expect(updated).toBe(true);
+        expect(connection.maxAmountSats).toBe(0);
+    });
+
+    it('defers relay release when updateConnection awaited in-flight handlers', async () => {
+        jest.useFakeTimers();
+        const store = buildStore();
+        jest.spyOn(store as any, 'subscribeToConnection').mockResolvedValue(
+            undefined
+        );
+        jest.spyOn(
+            store as any,
+            'unsubscribeFromConnection'
+        ).mockImplementation(() => undefined);
+        jest.spyOn(store as any, 'generateConnectionSecret').mockReturnValue({
+            connectionUrl: `nostr+walletconnect://${SERVICE_PUB}?relay=${encodeURIComponent(
+                NEW_RELAY
+            )}`,
+            connectionPrivateKey: OLD_PRIVKEY,
+            connectionPublicKey: OTHER_PUBKEY
+        });
+        jest.spyOn(store as any, 'storeClientKeys').mockResolvedValue(
+            undefined
+        );
+        jest.spyOn(store as any, 'deleteClientKeys').mockResolvedValue(
+            undefined
+        );
+        (store as any).nwcWalletServices.set(OLD_RELAY, { close: jest.fn() });
+        (store as any).nwcWalletServices.set(NEW_RELAY, {
+            connected: true,
+            close: jest.fn()
+        });
+        (store as any).publishedRelays.add(OLD_RELAY);
+        (store as any).publishedRelays.add(NEW_RELAY);
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        let releaseHandler: (value: { result: { ok: boolean } }) => void = () =>
+            undefined;
+        const handlerDone = (store as any).withGlobalHandler(
+            connection.id,
+            () =>
+                new Promise((resolve) => {
+                    releaseHandler = resolve;
+                })
+        );
+
+        await Promise.resolve();
+
+        const releaseSpy = jest.spyOn(
+            store as any,
+            'releaseUnusedRelayService'
+        );
+        const updateDone = store.updateConnection(connection.id, {
+            relayUrl: NEW_RELAY
+        });
+
+        await Promise.resolve();
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        releaseHandler({ result: { ok: true } });
+        await handlerDone;
+        const result = await updateDone;
+        expect(result.success).toBe(true);
+
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(RELAY_RELEASE_GRACE_MS);
+        expect(releaseSpy).toHaveBeenCalledWith(OLD_RELAY);
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
+    });
 });
 
 function buildMakeInvoiceTestStore(invoices: Invoice[] = []) {
