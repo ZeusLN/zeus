@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "感謝您的慷慨捐贈！",
     "views.PaymentRequest.amountDonated": "捐贈金額",
     "views.PaymentRequest.addATip": "每次付款時都加小費",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "收款",
     "views.Receive.successCreate": "成功製作了帳單",
     "views.Receive.warningLndHub": "請注意：LNDHub有固定的鏈上位址",
