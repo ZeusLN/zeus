@@ -5,6 +5,7 @@ import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { Proof } from './CashuToken';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { decodeMemo } from '../utils/MemoUtils';
 
 // Quote structure used in meltResponse
 export interface MeltQuote {
@@ -82,7 +83,7 @@ export default class CashuPayment extends Payment {
         const payReq = this.payment_request || this.bolt11;
         if (payReq) {
             try {
-                return Bolt11Utils.decode(payReq).description;
+                return decodeMemo(Bolt11Utils.decode(payReq).description);
             } catch {}
         }
         return undefined;

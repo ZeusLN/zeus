@@ -8,6 +8,7 @@ import { getFeePercentage } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
+import { decodeMemo } from '../utils/MemoUtils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/Stores';
 
@@ -114,7 +115,9 @@ export default class Payment extends BaseModel {
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
             try {
-                return Bolt11Utils.decode(this.getPaymentRequest).description;
+                return decodeMemo(
+                    Bolt11Utils.decode(this.getPaymentRequest).description
+                );
             } catch (e) {
                 console.log('Error decoding payment request:', e);
             }

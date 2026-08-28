@@ -6,6 +6,7 @@ import Base64Utils from '../utils/Base64Utils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils, { DecodedBolt11 } from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
+import { decodeMemo } from '../utils/MemoUtils';
 import { notesStore } from '../stores/Stores';
 
 interface HopHint {
@@ -175,6 +176,8 @@ export default class Invoice extends BaseModel {
         if (typeof source === 'string') memo = source;
         if (Array.isArray(source)) memo = source[0];
 
+        memo = decodeMemo(memo);
+
         // NameDesc
         if (memo?.includes(':  ')) {
             return memo.split(':  ')[1];
@@ -190,6 +193,8 @@ export default class Invoice extends BaseModel {
         let memo;
         if (typeof source === 'string') memo = source;
         if (Array.isArray(source)) memo = source[0];
+
+        memo = decodeMemo(memo);
 
         // NameDesc
         if (memo?.includes(':  ')) {
