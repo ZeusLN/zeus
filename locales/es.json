@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Hay más rutas para probar, pero se superó el tiempo de espera de pago.",
     "error.failureReasonNoRoute": "No se encontró ruta",
     "error.failureReasonError": "Se ha producido un error no recuperable",
-    "error.failureReasonIncorrectPaymentDetails": "Pago fallido: Detalles de pago incorrectos (hash de pago desconocido, monto no válido o delta CLTV final no válido).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Es posible que el nodo receptor no acepte pagos de envío de claves.",
     "error.failureReasonInsufficientBalance": "Balance local insuficiente",
     "error.ldk.recipientRejected": "Pago rechazado por el destinatario",
