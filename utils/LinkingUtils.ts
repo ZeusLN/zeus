@@ -6,6 +6,15 @@ import handleAnything from './handleAnything';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
 import { settingsStore } from '../stores/Stores';
 
+// Payment status screens that must never be popped out from under an
+// in-flight payment by a deep link. Mirrors App.tsx
+// SCREENS_WITH_CUSTOM_BACK_HANDLER's payment entries.
+const SENDING_SCREENS = [
+    'SendingLightning',
+    'SendingOnChain',
+    'CashuSendingLightning'
+];
+
 class LinkingUtils {
     private shareIntentProcessed = false;
     private pendingDeepLink: string | null = null;
@@ -143,7 +152,7 @@ class LinkingUtils {
                     const focusedRoute = routes[state?.index ?? 0]?.name;
                     if (
                         route === 'PaymentRequest' &&
-                        focusedRoute !== 'SendingLightning' &&
+                        !SENDING_SCREENS.includes(focusedRoute) &&
                         routes.some((r) => r.name === 'PaymentRequest')
                     ) {
                         navigation.popTo(route, props);
