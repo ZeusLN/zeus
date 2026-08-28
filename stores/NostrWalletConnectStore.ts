@@ -186,7 +186,7 @@ export default class NostrWalletConnectStore {
         number
     >();
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
-    private pendingDeleteConnectionIds = new Set<string>();
+    private pendingConnectionMutationIds = new Set<string>();
     private inFlightHandlersByConnection = new Map<
         string,
         Set<Promise<unknown>>
@@ -653,7 +653,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            this.pendingDeleteConnectionIds.add(connectionId);
+            this.pendingConnectionMutationIds.add(connectionId);
             try {
                 const relayUrl = connection.relayUrl;
                 const hadActiveSubscription =
@@ -687,7 +687,7 @@ export default class NostrWalletConnectStore {
                 }
                 await this.saveConnections();
             } finally {
-                this.pendingDeleteConnectionIds.delete(connectionId);
+                this.pendingConnectionMutationIds.delete(connectionId);
             }
         } catch (error: any) {
             runInAction(() => {
@@ -756,8 +756,8 @@ export default class NostrWalletConnectStore {
                 newRelayUrl && newRelayUrl !== oldRelayUrl
             );
 
-            // Fallible rotation work must finish before any connection mutation
-            // so a failed attempt leaves relayUrl unchanged and retries still
+            // Fallible rotation work runs before unsubscribe so a failed attempt
+            // leaves relayUrl and the live subscription unchanged; retries still
             // detect the change and return a new pairing URL.
             let rotatedSecret:
                 | {
@@ -767,107 +767,124 @@ export default class NostrWalletConnectStore {
                   }
                 | undefined;
 
-            if (relayUrlChanged) {
-                if (!this.walletServiceKeys?.privateKey) {
-                    await this.loadWalletServiceKeys();
-                }
+            this.pendingConnectionMutationIds.add(connectionId);
+            try {
+                const hadActiveSubscription =
+                    this.activeSubscriptions.has(connectionId);
 
-                rotatedSecret = this.generateConnectionSecret(newRelayUrl!);
-                await this.storeClientKeys(
-                    rotatedSecret.connectionPublicKey,
-                    rotatedSecret.connectionPrivateKey
+                const hadInFlight = await this.awaitInFlightHandlers(
+                    connectionId
                 );
 
-                this.unsubscribeFromConnection(connectionId);
-                if (!this.nwcWalletServices.has(newRelayUrl!)) {
-                    this.nwcWalletServices.set(
-                        newRelayUrl!,
-                        new NWCWalletService({
-                            relayUrls: [newRelayUrl!]
-                        })
+                if (relayUrlChanged) {
+                    if (!this.walletServiceKeys?.privateKey) {
+                        await this.loadWalletServiceKeys();
+                    }
+
+                    rotatedSecret = this.generateConnectionSecret(newRelayUrl!);
+                    await this.storeClientKeys(
+                        rotatedSecret.connectionPublicKey,
+                        rotatedSecret.connectionPrivateKey
                     );
-                }
-                if (!this.publishedRelays.has(newRelayUrl!)) {
-                    const nwcWalletService = this.nwcWalletServices.get(
-                        newRelayUrl!
-                    );
-                    if (
-                        nwcWalletService &&
-                        this.walletServiceKeys?.privateKey
-                    ) {
-                        try {
-                            await this.publishWalletServiceInfoWithRetry(
-                                nwcWalletService,
-                                newRelayUrl!
-                            );
-                            await new Promise((resolve) =>
-                                setTimeout(resolve, 500)
-                            );
-                        } catch (error) {
-                            console.warn(
-                                `NWC: Failed to publish wallet service info to relay ${newRelayUrl} before connection update:`,
-                                error
-                            );
+
+                    if (!this.nwcWalletServices.has(newRelayUrl!)) {
+                        this.nwcWalletServices.set(
+                            newRelayUrl!,
+                            new NWCWalletService({
+                                relayUrls: [newRelayUrl!]
+                            })
+                        );
+                    }
+                    if (!this.publishedRelays.has(newRelayUrl!)) {
+                        const nwcWalletService = this.nwcWalletServices.get(
+                            newRelayUrl!
+                        );
+                        if (
+                            nwcWalletService &&
+                            this.walletServiceKeys?.privateKey
+                        ) {
+                            try {
+                                await this.publishWalletServiceInfoWithRetry(
+                                    nwcWalletService,
+                                    newRelayUrl!
+                                );
+                                await new Promise((resolve) =>
+                                    setTimeout(resolve, 500)
+                                );
+                            } catch (error) {
+                                console.warn(
+                                    `NWC: Failed to publish wallet service info to relay ${newRelayUrl} before connection update:`,
+                                    error
+                                );
+                            }
                         }
                     }
+
+                    this.unsubscribeFromConnection(connectionId);
                 }
+
+                runInAction(() => {
+                    const oldBudgetRenewal = connection.budgetRenewal;
+                    const newBudgetRenewal = updates.budgetRenewal;
+                    const newMaxAmountSats = updates.maxAmountSats;
+
+                    Object.assign(connection, updates);
+                    if (rotatedSecret) {
+                        connection.pubkey = rotatedSecret.connectionPublicKey;
+                    }
+
+                    const hadBudget = connection.hasBudgetLimit;
+                    const hasBudget =
+                        newMaxAmountSats !== undefined && newMaxAmountSats > 0;
+                    const budgetRenewalChanged =
+                        newBudgetRenewal !== undefined &&
+                        newBudgetRenewal !== oldBudgetRenewal;
+
+                    if (!hadBudget && hasBudget) {
+                        connection.resetBudget();
+                    } else if (hadBudget && !hasBudget) {
+                        connection.lastBudgetReset = undefined;
+                        connection.totalSpendSats = 0;
+                    } else if (hasBudget && budgetRenewalChanged) {
+                        connection.resetBudget();
+                    }
+                    this.findAndUpdateConnection(connection);
+                });
+
+                if (relayUrlChanged) {
+                    if (hadInFlight || hadActiveSubscription) {
+                        this.scheduleReleaseUnusedRelayService(oldRelayUrl);
+                    } else {
+                        this.releaseUnusedRelayService(oldRelayUrl);
+                    }
+                }
+
+                if (relayUrlChanged && rotatedSecret) {
+                    // Rotation (new key stored + pubkey rebound) is already durable.
+                    // If subscribe/save fails here, still return the pairing URL so
+                    // the UI can show the QR; subscription recovers on restart.
+                    try {
+                        await this.subscribeToConnection(connection);
+                        await this.saveConnections();
+                    } catch (error) {
+                        console.warn(
+                            'NWC: Relay change rotation persisted but subscribe/save failed; returning pairing URL anyway:',
+                            error
+                        );
+                    }
+                    await this.deleteClientKeys(oldPubkey);
+
+                    return {
+                        nostrUrl: rotatedSecret.connectionUrl,
+                        success: true
+                    };
+                }
+
+                await this.subscribeToConnection(connection);
+                return { success: true };
+            } finally {
+                this.pendingConnectionMutationIds.delete(connectionId);
             }
-
-            runInAction(() => {
-                const oldBudgetRenewal = connection.budgetRenewal;
-                const newBudgetRenewal = updates.budgetRenewal;
-                const newMaxAmountSats = updates.maxAmountSats;
-
-                Object.assign(connection, updates);
-                if (rotatedSecret) {
-                    connection.pubkey = rotatedSecret.connectionPublicKey;
-                }
-
-                const hadBudget = connection.hasBudgetLimit;
-                const hasBudget =
-                    newMaxAmountSats !== undefined && newMaxAmountSats > 0;
-                const budgetRenewalChanged =
-                    newBudgetRenewal !== undefined &&
-                    newBudgetRenewal !== oldBudgetRenewal;
-
-                if (!hadBudget && hasBudget) {
-                    connection.resetBudget();
-                } else if (hadBudget && !hasBudget) {
-                    connection.lastBudgetReset = undefined;
-                    connection.totalSpendSats = 0;
-                } else if (hasBudget && budgetRenewalChanged) {
-                    connection.resetBudget();
-                }
-                this.findAndUpdateConnection(connection);
-            });
-
-            if (relayUrlChanged) {
-                this.releaseUnusedRelayService(oldRelayUrl);
-            }
-
-            if (relayUrlChanged && rotatedSecret) {
-                // Rotation (new key stored + pubkey rebound) is already durable.
-                // If subscribe/save fails here, still return the pairing URL so
-                // the UI can show the QR; subscription recovers on restart.
-                try {
-                    await this.subscribeToConnection(connection);
-                    await this.saveConnections();
-                } catch (error) {
-                    console.warn(
-                        'NWC: Relay change rotation persisted but subscribe/save failed; returning pairing URL anyway:',
-                        error
-                    );
-                }
-                await this.deleteClientKeys(oldPubkey);
-
-                return {
-                    nostrUrl: rotatedSecret.connectionUrl,
-                    success: true
-                };
-            }
-
-            await this.subscribeToConnection(connection);
-            return { success: true };
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
             runInAction(() => {
@@ -1721,7 +1738,7 @@ export default class NostrWalletConnectStore {
                 this.unsubscribeFromConnection(connectionId);
                 return this.unauthorizedConnectionResponse<T>();
             }
-            if (this.pendingDeleteConnectionIds.has(connectionId)) {
+            if (this.pendingConnectionMutationIds.has(connectionId)) {
                 return this.unauthorizedConnectionResponse<T>();
             }
             if (connection.isExpired) {
@@ -1734,7 +1751,10 @@ export default class NostrWalletConnectStore {
                 ) as T;
             }
             const marked = await this.markConnectionUsed(connectionId);
-            if (!marked || this.pendingDeleteConnectionIds.has(connectionId)) {
+            if (
+                !marked ||
+                this.pendingConnectionMutationIds.has(connectionId)
+            ) {
                 return this.unauthorizedConnectionResponse<T>();
             }
             return await handler();
