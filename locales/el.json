@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Υπάρχουν κι άλλες διαδρομές για να δοκιμάσετε, αλλά το χρονικό όριο πληρωμής έχει ξεπεραστεί.",
     "error.failureReasonNoRoute": "Δεν βρέθηκε διαδρομή",
     "error.failureReasonError": "Παρουσιάστηκε ένα μη ανακτήσιμο σφάλμα",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "Μη επαρκές τοπικό υπόλοιπο",
     "error.ldk.recipientRejected": "Payment rejected by recipient",

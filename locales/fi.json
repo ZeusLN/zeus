@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Reittejä on enemmän kokeiltavana, mutta maksun aikaraja ylittyi.",
     "error.failureReasonNoRoute": "Reittejä ei löytynyt",
     "error.failureReasonError": "Ei palautettavissa oleva virhe on tapahtunut",
-    "error.failureReasonIncorrectPaymentDetails": "Maksu epäonnistui: Maksun tiedot ovat virheelliset (tuntematon maksun tiiviste, virheellinen summa tai virheellinen lopullinen CLTV-delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Vastaanottava solmu ei ehkä hyväksy keysend-maksuja.",
     "error.failureReasonInsufficientBalance": "Riittämätön paikallinen saldo",
     "error.ldk.recipientRejected": "Payment rejected by recipient",

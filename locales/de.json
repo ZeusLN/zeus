@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Es gibt weitere Routen, die ausprobiert werden könnten, jedoch wurde das Zeitlimit für die Zahlung überschritten.",
     "error.failureReasonNoRoute": "Keine Route gefunden",
     "error.failureReasonError": "Ein unerwarteter Fehler ist aufgetreten",
-    "error.failureReasonIncorrectPaymentDetails": "Zahlung fehlgeschlagen: Zahlungsdetails inkorrekt (unbekannter Payment-Hash, ungültiger Betrag oder ungültiges finales CLTV-Delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Die Empfänger-Node akzeptiert möglicherweise keine Keysend-Zahlungen.",
     "error.failureReasonInsufficientBalance": "Lokales Guthaben unzureichend",
     "error.ldk.recipientRejected": "Zahlung vom Empfänger abgelehnt",
