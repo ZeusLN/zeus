@@ -65,19 +65,28 @@ describe('LinkingUtils.handleDeepLink', () => {
         expect(navigation.popTo).not.toHaveBeenCalled();
     });
 
-    it('does not pop while a payment is in flight on SendingLightning', async () => {
-        const navigation = makeNavigation([
-            'Wallet',
-            'PaymentRequest',
-            'SendingLightning'
-        ]);
+    it.each(['SendingLightning', 'SendingOnChain', 'CashuSendingLightning'])(
+        'does not pop while a payment is in flight on %s',
+        async (sendingScreen) => {
+            const navigation = makeNavigation([
+                'Wallet',
+                'PaymentRequest',
+                sendingScreen
+            ]);
 
-        LinkingUtils.handleDeepLink('lightning:lnbc1...', navigation as any);
-        await flushPromises();
+            LinkingUtils.handleDeepLink(
+                'lightning:lnbc1...',
+                navigation as any
+            );
+            await flushPromises();
 
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
-        expect(navigation.popTo).not.toHaveBeenCalled();
-    });
+            expect(navigation.navigate).toHaveBeenCalledWith(
+                'PaymentRequest',
+                {}
+            );
+            expect(navigation.popTo).not.toHaveBeenCalled();
+        }
+    );
 
     it('navigates normally for routes other than PaymentRequest', async () => {
         mockHandleAnythingResult = [
