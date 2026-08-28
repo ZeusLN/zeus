@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Je možné vyzkoušet další cesty, ale časový limit pro platbu byl překročen.",
     "error.failureReasonNoRoute": "Nebyla nalezena žádná cesta",
     "error.failureReasonError": "Vyskytla se neopravitelná chyba",
-    "error.failureReasonIncorrectPaymentDetails": "Platba selhala: Nesprávné podrobnosti platby (neznámý hash platby, neplatná částka nebo neplatná finální CLTV delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Přijímací uzel nemusí přijímat keysend platby.",
     "error.failureReasonInsufficientBalance": "Nedostatečný místní zůstatek",
     "error.ldk.recipientRejected": "Platba byla odmítnuta příjemcem",
