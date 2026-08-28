@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 
 import { themeColor } from './../../utils/ThemeUtils';
-import styles from './swipeableRowStyles';
 
 interface SwipeableRowActionProps {
     text: string;
@@ -63,5 +62,22 @@ const SwipeableRowAction: React.FC<SwipeableRowActionProps> = ({
         </Animated.View>
     );
 };
+
+const styles = StyleSheet.create({
+    actionText: {
+        fontSize: 12,
+        backgroundColor: 'transparent',
+        paddingTop: 10,
+        paddingHorizontal: 4,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    action: {
+        flex: 1,
+        justifyContent: 'center'
+    },
+    view: {
+        alignItems: 'center'
+    }
+});
 
 export default SwipeableRowAction;
