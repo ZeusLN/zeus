@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Thank you for your generous donation!",
     "views.PaymentRequest.amountDonated": "Amount donated",
     "views.PaymentRequest.addATip": "Add a Tip with Each Payment",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "प्राप्त करें",
     "views.Receive.successCreate": "इनवॉइस सफलतापूर्वक बनाया गया",
     "views.Receive.warningLndHub": "कृपया ध्यान दें कि LNDHub का एक निश्चित ऑन-चेन पता है",
