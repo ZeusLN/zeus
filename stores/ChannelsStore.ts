@@ -2,7 +2,6 @@ import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 // leave as is, do not do tree-shaking
 import { chain } from 'lodash';
-import { randomBytes } from 'react-native-randombytes';
 
 import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
@@ -20,6 +19,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
+import { randomBytes } from '../utils/RandomUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
