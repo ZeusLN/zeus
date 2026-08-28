@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Danke für deine großzügige Spende!",
     "views.PaymentRequest.amountDonated": "Gespendeter Betrag",
     "views.PaymentRequest.addATip": "Mit jeder Zahlung spenden",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Empfangen",
     "views.Receive.successCreate": "Erfolgreich erstellte Rechnung",
     "views.Receive.warningLndHub": "Bitte beachte, dass LNDHub eine feste On-Chain-Adresse nutzt",
