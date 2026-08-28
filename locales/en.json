@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Thank you for your generous donation!",
     "views.PaymentRequest.amountDonated": "Amount donated",
     "views.PaymentRequest.addATip": "Add a Tip with Each Payment",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Receive",
     "views.Receive.successCreate": "Successfully created invoice",
     "views.Receive.warningLndHub": "Please note that LNDHub has a fixed on-chain address",
