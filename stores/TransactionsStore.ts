@@ -1,7 +1,6 @@
 const bitcoin = require('bitcoinjs-lib');
 
 import { action, observable, runInAction } from 'mobx';
-import { randomBytes } from 'react-native-randombytes';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import FundedPsbt from '../models/FundedPsbt';
@@ -24,6 +23,7 @@ import {
     isPaymentRefusedAsDuplicate,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
+import { randomBytes } from '../utils/RandomUtils';
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
