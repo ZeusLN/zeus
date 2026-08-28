@@ -1,4 +1,4 @@
-import { randomBytes } from 'react-native-randombytes';
+import { randomBytes } from './RandomUtils';
 
 import { LookupOptions, lookUpWithRetries } from './RequestTimeoutUtils';
 
