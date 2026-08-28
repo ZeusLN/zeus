@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Există mai multe rute de încercat, dar a fost depășit timpul de plată.",
     "error.failureReasonNoRoute": "Nu este găsit nici o rută",
     "error.failureReasonError": "A apărut o eroare nerecuperabiă",
-    "error.failureReasonIncorrectPaymentDetails": "Plata eșuată: detaliile de plată incorecte (hash de plată necunoscut, sumă nevalidă sau delta CLTV finală nevalidă).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Este posibil ca nodul receptor să nu accepte plăți prin keysend.",
     "error.failureReasonInsufficientBalance": "Soldul local insuficient",
     "error.ldk.recipientRejected": "Plată respinsă de destinatar",
