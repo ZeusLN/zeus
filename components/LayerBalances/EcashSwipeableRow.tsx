@@ -17,10 +17,10 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { cashuStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
-import MintToken from '../../assets/images/SVG/MintToken.svg';
 import SwipeableRowAction from './SwipeableRowAction';
 import SwipeableRowContainer from './SwipeableRowContainer';
 
+import MintToken from '../../assets/images/SVG/MintToken.svg';
 import Mint from '../../assets/images/SVG/Mint.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';

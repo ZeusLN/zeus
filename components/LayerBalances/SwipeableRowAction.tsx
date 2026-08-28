@@ -6,7 +6,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 interface SwipeableRowActionProps {
     text: string;
-    // Width of the whole action strip: the action slides in from there
+    // translateX offset the action slides in from
     x: number;
     progress: Animated.AnimatedInterpolation<number>;
     icon: React.ReactNode;
