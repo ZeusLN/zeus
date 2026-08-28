@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Il y a plus d'itinéraires à essayer, mais le délai d'expiration du paiement a été dépassé.",
     "error.failureReasonNoRoute": "Aucune route trouvée",
     "error.failureReasonError": "Une erreur non récupérable s'est produite",
-    "error.failureReasonIncorrectPaymentDetails": "Paiement échoué : détails de paiement incorrects (hachage de paiement inconnu, montant non valide ou delta CLTV final non valide).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Le nœud récepteur peut ne pas accepter les paiements par clés.",
     "error.failureReasonInsufficientBalance": "Solde local insuffisant",
     "error.ldk.recipientRejected": "Paiement refusé par le destinataire",
