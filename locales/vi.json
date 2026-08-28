@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "There are more routes to try, but the payment timeout was exceeded.",
     "error.failureReasonNoRoute": "Không tìm thấy định tuyến",
     "error.failureReasonError": "Đã xảy ra một lỗi không thể phục hồi",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "Số dư tại chỗ không đủ",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
