@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, Image, View } from 'react-native';
 import { Icon } from '@rneui/themed';
 
+import { decodeMemo } from '../../utils/MemoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayMetadataProps {
@@ -20,9 +21,11 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
         } catch (err) {
             keypairs = [];
         }
-        const text: string = keypairs
-            .filter(([typ]: any) => typ === 'text/plain')
-            .map(([, content]: any) => content)[0];
+        const text: string = decodeMemo(
+            keypairs
+                .filter(([typ]: any) => typ === 'text/plain')
+                .map(([, content]: any) => content)[0]
+        );
 
         const image: string = keypairs
             .filter(([typ]: any) => typ.slice(0, 6) === 'image/')
