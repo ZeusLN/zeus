@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "Ci sono più percorsi da provare, ma il timeout di pagamento è stato superato.",
     "error.failureReasonNoRoute": "Nessun percorso trovato",
     "error.failureReasonError": "Si è verificato un errore non recuperabile",
-    "error.failureReasonIncorrectPaymentDetails": "Pagamento non riuscito: dettagli di pagamento errati (hash di pagamento sconosciuto, importo non valido o delta CLTV finale non valido).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Il nodo ricevente potrebbe non accettare pagamenti tramite keysend.",
     "error.failureReasonInsufficientBalance": "Equilibrio locale insufficiente",
     "error.ldk.recipientRejected": "Pagamento rifiutato dal destinatario",
