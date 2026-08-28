@@ -1,3 +1,13 @@
+export const FAILURE_REASON_LOCALE_KEYS: Record<string, string> = {
+    FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
+    FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
+    FAILURE_REASON_ERROR: 'error.failureReasonError',
+    FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
+        'error.failureReasonIncorrectPaymentDetails',
+    FAILURE_REASON_INSUFFICIENT_BALANCE:
+        'error.failureReasonInsufficientBalance'
+};
+
 const userFriendlyErrors: any = {
     'Error: SOCKS: Connection refused': 'error.connectionRefused',
     'Error: SOCKS: Host unreachable': 'error.hostUnreachable',
@@ -11,14 +21,8 @@ const userFriendlyErrors: any = {
         'error.invalidMacaroon',
     'ReactNativeBlobUtil failed to encode response data to BASE64 string.':
         'error.invalidResponse',
-    FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
-    FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
-    FAILURE_REASON_ERROR: 'error.failureReasonError',
-    FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
-        'error.failureReasonIncorrectPaymentDetails',
+    ...FAILURE_REASON_LOCALE_KEYS,
     'Payment details incorrect': 'error.failureReasonIncorrectPaymentDetails',
-    FAILURE_REASON_INSUFFICIENT_BALANCE:
-        'error.failureReasonInsufficientBalance',
     // LDK Node payment failure reasons
     recipientRejected: 'error.ldk.recipientRejected',
     retriesExhausted: 'error.ldk.retriesExhausted',
