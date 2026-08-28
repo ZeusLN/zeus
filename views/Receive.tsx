@@ -117,6 +117,7 @@ interface ReceiveProps {
             autoGenerateChange?: boolean;
             forceLn?: boolean; // when coming from the LN balance slider action
             forceOnChain?: boolean; // when coming from the on-chain balance slider action
+            forceLsp?: boolean; // when coming from Create a wrapped invoice in LSP settings
             account: string;
             addressType?: string;
             selectedIndex: number;
@@ -307,8 +308,10 @@ export default class Receive extends React.Component<
 
         const expirationIndex = expirationIndexFromSeconds(newExpirySeconds);
 
+        const forceLsp = !!route.params?.forceLsp;
+
         const lspIsActive =
-            settings?.enableLSP &&
+            (settings?.enableLSP || forceLsp) &&
             BackendUtils.supportsFlowLSP() &&
             !flowLspNotConfigured;
 
@@ -339,7 +342,7 @@ export default class Receive extends React.Component<
             routeHints,
             ampInvoice,
             blindedPaths,
-            enableLSP: settings?.enableLSP,
+            enableLSP: settings?.enableLSP || forceLsp,
             lspIsActive,
             flowLspNotConfigured
         });
@@ -2094,6 +2097,11 @@ export default class Receive extends React.Component<
                                                             <Switch
                                                                 value={
                                                                     enableLSP
+                                                                }
+                                                                disabled={
+                                                                    !!route
+                                                                        .params
+                                                                        ?.forceLsp
                                                                 }
                                                                 onValueChange={async () => {
                                                                     this.setState(
