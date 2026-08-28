@@ -234,6 +234,7 @@ describe('NostrWalletConnectStore relay rotation', () => {
     it('leaves relayUrl unchanged when storing the new key fails so retry can rotate', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
+        const unsubSpy = jest.spyOn(store as any, 'unsubscribeFromConnection');
         const consoleError = jest
             .spyOn(console, 'error')
             .mockImplementation(() => {});
@@ -251,6 +252,8 @@ describe('NostrWalletConnectStore relay rotation', () => {
             expect(result.nostrUrl).toBeUndefined();
             expect(connection.relayUrl).toBe(OLD_RELAY);
             expect(connection.pubkey).toBe(OLD_PUBKEY);
+            expect(unsubSpy).not.toHaveBeenCalled();
+            expect((store as any).subscribeToConnection).not.toHaveBeenCalled();
         } finally {
             consoleError.mockRestore();
         }

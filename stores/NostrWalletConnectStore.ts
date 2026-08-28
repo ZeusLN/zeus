@@ -756,8 +756,8 @@ export default class NostrWalletConnectStore {
                 newRelayUrl && newRelayUrl !== oldRelayUrl
             );
 
-            // Fallible rotation work must finish before any connection mutation
-            // so a failed attempt leaves relayUrl unchanged and retries still
+            // Fallible rotation work runs before unsubscribe so a failed attempt
+            // leaves relayUrl and the live subscription unchanged; retries still
             // detect the change and return a new pairing URL.
             let rotatedSecret:
                 | {
@@ -771,10 +771,6 @@ export default class NostrWalletConnectStore {
             try {
                 const hadActiveSubscription =
                     this.activeSubscriptions.has(connectionId);
-
-                if (relayUrlChanged) {
-                    this.unsubscribeFromConnection(connectionId);
-                }
 
                 const hadInFlight = await this.awaitInFlightHandlers(
                     connectionId
@@ -823,6 +819,8 @@ export default class NostrWalletConnectStore {
                             }
                         }
                     }
+
+                    this.unsubscribeFromConnection(connectionId);
                 }
 
                 runInAction(() => {
