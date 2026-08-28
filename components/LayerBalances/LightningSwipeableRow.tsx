@@ -2,8 +2,6 @@ import React, { Component } from 'react';
 import {
     Alert,
     Animated,
-    StyleSheet,
-    Text,
     View,
     I18nManager,
     TouchableOpacity
@@ -13,7 +11,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
 
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
@@ -27,6 +24,9 @@ import {
     settingsStore
 } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
+
+import SwipeableRowAction from './SwipeableRowAction';
+import SwipeableRowContainer from './SwipeableRowContainer';
 
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Routing from './../../assets/images/SVG/Routing.svg';
@@ -49,118 +49,33 @@ interface LightningSwipeableRowProps {
 @observer
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
-    { expanded: boolean }
+    {}
 > {
-    state = { expanded: false };
-
-    private renderAction = (
-        text: string,
-        x: number,
-        progress: Animated.AnimatedInterpolation<number>
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>,
+        close: () => void
     ) => {
         const { navigation } = this.props;
-        const transTranslateX = progress.interpolate({
-            inputRange: [0.25, 1],
-            outputRange: [x, 0]
-        });
-        const transOpacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1]
-        });
-        const pressHandler = () => {
-            this.close();
-
-            if (text === localeString('general.receive')) {
-                navigation.navigate('Receive', { forceLn: true });
-            } else if (text === localeString('general.paycodes')) {
-                navigation.navigate(
-                    nodeInfoStore.supportsListingOffers
-                        ? 'PayCodes'
-                        : 'CreatePayCode'
-                );
-            } else if (text === localeString('general.routing')) {
-                navigation.navigate('Routing');
-            } else if (text === localeString('general.send')) {
-                navigation.navigate('Send');
-            }
+        const supportsOffers = nodeInfoStore.supportsOffers;
+        const supportsRouting = BackendUtils.supportsRouting();
+        const supportsSends = BackendUtils.supportsLightningSends();
+        // Receive is always shown
+        const actionCount =
+            1 +
+            (supportsOffers ? 1 : 0) +
+            (supportsRouting ? 1 : 0) +
+            (supportsSends ? 1 : 0);
+        const width = actionCount * 70;
+        const iconProps = {
+            fill: themeColor('action') || themeColor('highlight'),
+            width: 30,
+            height: 30
+        };
+        const closeThen = (go: () => void) => () => {
+            close();
+            go();
         };
 
-        return (
-            <Animated.View
-                style={{
-                    flex: 1,
-                    transform: [{ translateX: transTranslateX }],
-                    opacity: transOpacity
-                }}
-            >
-                <RectButton style={[styles.action]} onPress={pressHandler}>
-                    <View
-                        style={[styles.view]}
-                        accessible
-                        accessibilityRole="button"
-                    >
-                        {text === localeString('general.routing') && (
-                            <Routing
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.paycodes') && (
-                            <Receive
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.receive') && (
-                            <Receive
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        {text === localeString('general.send') && (
-                            <Send
-                                fill={
-                                    themeColor('action') ||
-                                    themeColor('highlight')
-                                }
-                                width={30}
-                                height={30}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                ...styles.actionText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {text}
-                        </Text>
-                    </View>
-                </RectButton>
-            </Animated.View>
-        );
-    };
-
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>
-    ) => {
-        let actionCount = 1; // Receive is always shown
-        if (nodeInfoStore.supportsOffers) actionCount++;
-        if (BackendUtils.supportsRouting()) actionCount++;
-        if (BackendUtils.supportsLightningSends()) actionCount++;
-        const width = actionCount * 70;
         return (
             <View
                 style={{
@@ -169,49 +84,52 @@ export default class LightningSwipeableRow extends Component<
                     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
                 }}
             >
-                {this.renderAction(
-                    localeString('general.receive'),
-                    width,
-                    progress
+                <SwipeableRowAction
+                    text={localeString('general.receive')}
+                    x={width}
+                    progress={progress}
+                    icon={<Receive {...iconProps} />}
+                    onPress={closeThen(() =>
+                        navigation.navigate('Receive', { forceLn: true })
+                    )}
+                />
+                {supportsOffers && (
+                    <SwipeableRowAction
+                        text={localeString('general.paycodes')}
+                        x={width}
+                        progress={progress}
+                        icon={<Receive {...iconProps} />}
+                        onPress={closeThen(() =>
+                            navigation.navigate(
+                                nodeInfoStore.supportsListingOffers
+                                    ? 'PayCodes'
+                                    : 'CreatePayCode'
+                            )
+                        )}
+                    />
                 )}
-                {nodeInfoStore.supportsOffers &&
-                    this.renderAction(
-                        localeString('general.paycodes'),
-                        width,
-                        progress
-                    )}
-                {BackendUtils.supportsRouting() &&
-                    this.renderAction(
-                        localeString('general.routing'),
-                        width,
-                        progress
-                    )}
-                {BackendUtils.supportsLightningSends() &&
-                    this.renderAction(
-                        localeString('general.send'),
-                        width,
-                        progress
-                    )}
+                {supportsRouting && (
+                    <SwipeableRowAction
+                        text={localeString('general.routing')}
+                        x={width}
+                        progress={progress}
+                        icon={<Routing {...iconProps} />}
+                        onPress={closeThen(() =>
+                            navigation.navigate('Routing')
+                        )}
+                    />
+                )}
+                {supportsSends && (
+                    <SwipeableRowAction
+                        text={localeString('general.send')}
+                        x={width}
+                        progress={progress}
+                        icon={<Send {...iconProps} />}
+                        onPress={closeThen(() => navigation.navigate('Send'))}
+                    />
+                )}
             </View>
         );
-    };
-
-    private swipeableRow?: Swipeable;
-
-    private updateRef = (ref: Swipeable) => {
-        this.swipeableRow = ref;
-    };
-
-    private close = () => {
-        if (this.swipeableRow) {
-            this.swipeableRow.close();
-        }
-    };
-
-    private open = () => {
-        if (this.swipeableRow) {
-            this.swipeableRow.openLeft();
-        }
     };
 
     private handleLnurlRequest = async (
@@ -368,7 +286,6 @@ export default class LightningSwipeableRow extends Component<
             lnurlParams,
             SyncStore
         } = this.props;
-        const { expanded } = this.state;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -397,6 +314,7 @@ export default class LightningSwipeableRow extends Component<
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled }}
                 >
                     {children}
                 </TouchableOpacity>
@@ -404,56 +322,16 @@ export default class LightningSwipeableRow extends Component<
         }
         if (locked) return children;
         return (
-            <Swipeable
-                ref={this.updateRef}
-                friction={2}
-                enableTrackpadTwoFingerGesture
-                leftThreshold={30}
-                rightThreshold={40}
+            <SwipeableRowContainer
                 renderLeftActions={this.renderActions}
-                onSwipeableWillOpen={() => this.setState({ expanded: true })}
-                onSwipeableWillClose={() => this.setState({ expanded: false })}
+                onPress={(open) =>
+                    lightning || offer || clinkNoffer || lnurlParams
+                        ? this.fetchLnInvoice()
+                        : open()
+                }
             >
-                <TouchableOpacity
-                    onPress={() =>
-                        lightning || offer || clinkNoffer || lnurlParams
-                            ? this.fetchLnInvoice()
-                            : this.open()
-                    }
-                    activeOpacity={1}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded }}
-                    accessibilityActions={[
-                        { name: 'expand' },
-                        { name: 'collapse' }
-                    ]}
-                    onAccessibilityAction={({
-                        nativeEvent: { actionName }
-                    }) => {
-                        if (actionName === 'expand') this.open();
-                        else if (actionName === 'collapse') this.close();
-                    }}
-                >
-                    {children}
-                </TouchableOpacity>
-            </Swipeable>
+                {children}
+            </SwipeableRowContainer>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    actionText: {
-        fontSize: 12,
-        backgroundColor: 'transparent',
-        paddingTop: 10,
-        paddingHorizontal: 4,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    action: {
-        flex: 1,
-        justifyContent: 'center'
-    },
-    view: {
-        alignItems: 'center'
-    }
-});
