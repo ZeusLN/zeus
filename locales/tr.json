@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "Thank you for your generous donation!",
     "views.PaymentRequest.amountDonated": "Amount donated",
     "views.PaymentRequest.addATip": "Add a Tip with Each Payment",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Al",
     "views.Receive.successCreate": "Fatura başarı ile oluşturuldu",
     "views.Receive.warningLndHub": "LNDHub'ın zincir-üstü sabit bir adresi olduğunu lütfen unutmayın.",
