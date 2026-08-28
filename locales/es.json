@@ -854,6 +854,8 @@
     "views.PaymentRequest.thankYouForDonation": "¡Gracias por su generosa donación!",
     "views.PaymentRequest.amountDonated": "Cantidad donada",
     "views.PaymentRequest.addATip": "Añade una propina con cada pago",
+    "views.PaymentRequest.payReqChanged": "The payment request changed while this screen was open. Review the new request before paying.",
+    "views.PaymentRequest.reviewNewPayReq": "Review new payment request",
     "views.Receive.title": "Recibir",
     "views.Receive.successCreate": "Invoice creado satisfactoriamente ",
     "views.Receive.warningLndHub": "Tenga en cuenta que Lndhub tiene una dirección fija en la cadena",
