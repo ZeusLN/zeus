@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "مسیرهای بیشتری برای امتحان کردن هست، ولی زمان پرداخت منقضی شده است.",
     "error.failureReasonNoRoute": "مسیری یافت نشد",
     "error.failureReasonError": "خطایی بی بازگشت رخ داده است",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed: Payment details incorrect (unknown payment hash, invalid amount or invalid final CLTV delta).",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "مانده حساب محلی ناکافی",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
