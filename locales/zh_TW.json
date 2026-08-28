@@ -1819,7 +1819,7 @@
     "error.failureReasonTimeout": "雖然還有其他路徑可以嘗試，但是支付已經逾時了。",
     "error.failureReasonNoRoute": "找不到路徑",
     "error.failureReasonError": "發生了無法復原的錯誤",
-    "error.failureReasonIncorrectPaymentDetails": "支付失敗：支付細節資料有誤(支付雜湊值不明、金額不合法、或是最終 CLTV 差額不合法)",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "收款方站點可能不支援公鑰支付。",
     "error.failureReasonInsufficientBalance": "本站餘額不足",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
