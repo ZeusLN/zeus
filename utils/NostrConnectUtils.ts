@@ -24,6 +24,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import { lnrpc } from '../proto/lightning';
 
 import Base64Utils from './Base64Utils';
+import { FAILURE_REASON_LOCALE_KEYS } from './ErrorUtils';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
@@ -1107,16 +1108,7 @@ export default class NostrConnectUtils {
             typeof reason === 'number'
                 ? lnrpc.PaymentFailureReason[reason]
                 : String(reason);
-        const keys: Record<string, string> = {
-            FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
-            FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
-            FAILURE_REASON_ERROR: 'error.failureReasonError',
-            FAILURE_REASON_INCORRECT_PAYMENT_DETAILS:
-                'error.failureReasonIncorrectPaymentDetails',
-            FAILURE_REASON_INSUFFICIENT_BALANCE:
-                'error.failureReasonInsufficientBalance'
-        };
-        return keys[name] || 'error.paymentFailed';
+        return FAILURE_REASON_LOCALE_KEYS[name] || 'error.paymentFailed';
     }
 
     static findPaymentForInvoice<T extends Payment>(
