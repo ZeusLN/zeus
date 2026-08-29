@@ -69,9 +69,11 @@ import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
 import BalanceStore from '../stores/BalanceStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
@@ -107,6 +109,7 @@ interface ReceiveProps {
     LSPStore: LSPStore;
     LightningAddressStore: LightningAddressStore;
     BalanceStore: BalanceStore;
+    UTXOsStore: UTXOsStore;
     route: Route<
         'Receive',
         {
@@ -148,6 +151,9 @@ interface ReceiveState {
     ampInvoice: boolean;
     routeHints: boolean;
     account: string;
+    // walletrpc address type name matching the non-default account's key
+    // scope, resolved from ListAccounts (undefined until resolved)
+    accountAddressType?: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
     // POS
@@ -188,7 +194,8 @@ const LSP_MIN_CHANNEL_OPEN_FEE_SATS = 1000;
     'NodeInfoStore',
     'LightningAddressStore',
     'LSPStore',
-    'BalanceStore'
+    'BalanceStore',
+    'UTXOsStore'
 )
 @observer
 export default class Receive extends React.Component<
@@ -375,6 +382,17 @@ export default class Receive extends React.Component<
 
         const addressType = this.getAddressType();
 
+        // Non-default accounts exist under a single key scope; address
+        // requests must carry the matching type or lnd rejects them with
+        // "account not found" (ZEUS-2223 / ZEUS-2932)
+        let accountAddressType: string | undefined;
+        if (account && account !== 'default') {
+            accountAddressType =
+                toWalletrpcAddressTypeName(route.params?.addressType) ||
+                (await this.props.UTXOsStore.getAccountAddressType(account));
+            if (accountAddressType) this.setState({ accountAddressType });
+        }
+
         // POS
         const memo = route.params?.memo ?? this.state.memo;
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
@@ -452,10 +470,12 @@ export default class Receive extends React.Component<
             );
         }
 
+        const onChainType =
+            account && account !== 'default' ? accountAddressType : addressType;
         if (autoGenerateChange) {
-            this.autoGenerateChange(account, addressType);
+            this.autoGenerateChange(account, onChainType);
         } else if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress(account, addressType);
+            this.autoGenerateOnChainAddress(account, onChainType);
         }
 
         this.setState({
@@ -635,7 +655,8 @@ export default class Receive extends React.Component<
                     ? addressType || '1'
                     : undefined,
                 noLsp: !effectiveLspIsActive,
-                skipOnchain
+                skipOnchain,
+                ...this.getUnifiedAccountParams()
             })
                 .then(
                     ({
@@ -667,36 +688,45 @@ export default class Receive extends React.Component<
         });
     };
 
-    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
-        const { InvoicesStore } = this.props;
-        const { getNewAddress } = InvoicesStore;
+    // For non-default accounts the on-chain leg of a unified invoice must
+    // come from that account, with its own address type (ZEUS-2223)
+    private getUnifiedAccountParams = () => {
+        const { account, accountAddressType } = this.state;
+        return account !== 'default'
+            ? { account, addressType: accountAddressType }
+            : {};
+    };
 
-        let request: any = {
-            type: address_type || this.state.addressType
-        };
-
-        if (account) {
+    // For non-default accounts, only an account-derived address type may be
+    // sent; the picker/settings default can point at the wrong key scope
+    private buildAddressRequest = (account?: string, address_type?: string) => {
+        const request: any = {};
+        if (account && account !== 'default') {
             request.account = account;
+            if (address_type) request.type = address_type;
+        } else {
+            request.type = address_type || this.state.addressType;
+            if (account) request.account = account;
         }
+        return request;
+    };
 
-        getNewAddress(request).then((onChainAddress: string) => {
-            this.subscribeInvoice(undefined, onChainAddress);
-        });
+    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
+        const { getNewAddress } = this.props.InvoicesStore;
+
+        getNewAddress(this.buildAddressRequest(account, address_type)).then(
+            (onChainAddress: string) => {
+                this.subscribeInvoice(undefined, onChainAddress);
+            }
+        );
     };
 
     autoGenerateChange = (account?: string, address_type?: string) => {
-        const { InvoicesStore } = this.props;
-        const { getNewChangeAddress } = InvoicesStore;
+        const { getNewChangeAddress } = this.props.InvoicesStore;
 
-        let request: any = {
-            type: address_type || this.state.addressType
-        };
-
-        if (account) {
-            request.account = account;
-        }
-
-        getNewChangeAddress(request).then((onChainAddress: string) => {
+        getNewChangeAddress(
+            this.buildAddressRequest(account, address_type)
+        ).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -734,7 +764,8 @@ export default class Receive extends React.Component<
                             expirySeconds: '3600',
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive,
-                            skipOnchain
+                            skipOnchain,
+                            ...this.getUnifiedAccountParams()
                         })
                             .then(
                                 ({
@@ -902,7 +933,7 @@ export default class Receive extends React.Component<
         const { InvoicesStore } = this.props;
         const { onChainAddress, payment_request, getNewAddress } =
             InvoicesStore;
-        const { addressType, account } = this.state;
+        const { addressType, account, accountAddressType } = this.state;
 
         this.setState({
             selectedIndex
@@ -916,10 +947,12 @@ export default class Receive extends React.Component<
             !onChainAddress &&
             BackendUtils.supportsOnchainReceiving()
         ) {
-            await getNewAddress({
-                type: addressType,
-                account: account !== 'default' ? account : 'default'
-            });
+            await getNewAddress(
+                this.buildAddressRequest(
+                    account,
+                    account !== 'default' ? accountAddressType : addressType
+                )
+            );
         }
     };
 
@@ -2906,7 +2939,8 @@ export default class Receive extends React.Component<
                                                                     ? customPreimage
                                                                     : undefined,
                                                             noLsp: !lspIsActive,
-                                                            skipOnchain
+                                                            skipOnchain,
+                                                            ...this.getUnifiedAccountParams()
                                                         })
                                                             .then(
                                                                 ({
