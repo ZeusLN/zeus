@@ -152,6 +152,9 @@ class BackendUtils {
         this.call('subscribeInvoices', args);
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
+    // returns an unsubscribe function
+    watchActivityUpdates = (...args: any[]) =>
+        this.call('watchActivityUpdates', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
     rescan = (...args: any[]) => this.call('rescan', args);
 

@@ -698,7 +698,17 @@ export default class ChannelsStore {
         }
 
         if (implementation === 'lightning-node-connect') {
-            return BackendUtils.closeChannel(urlParams);
+            // the LNC backend resolves once the close stream reports
+            // close_pending or success, so no forced timeout is needed
+            return await BackendUtils.closeChannel(urlParams)
+                .then(() => {
+                    this.handleChannelClose();
+                    return true;
+                })
+                .catch((error: Error) => {
+                    this.handleChannelCloseError(error);
+                    return true;
+                });
         } else {
             let settled = false;
             return await Promise.race([
