@@ -53,3 +53,45 @@ export const toLnrpcAddressTypeNum = (
     const num = Number(name);
     return Number.isInteger(num) ? num : undefined;
 };
+
+// walletrpc.AddressType helpers, for values that live in the walletrpc enum
+// space: ListAccounts / ListAddresses responses and NextAddr requests.
+// walletrpc numbering differs from lnrpc numbering (WITNESS_PUBKEY_HASH is 1
+// in walletrpc but 0 in lnrpc), and REST/LNC decode enums to their names
+// while the embedded proto decode yields raw numbers, so account address
+// types must be normalized through here, never fed to the lnrpc helpers
+// above directly.
+const WALLETRPC_ADDRESS_TYPE_NAMES: { [key: string]: string } = {
+    '1': 'WITNESS_PUBKEY_HASH',
+    '2': 'NESTED_WITNESS_PUBKEY_HASH',
+    '3': 'HYBRID_NESTED_WITNESS_PUBKEY_HASH',
+    '4': 'TAPROOT_PUBKEY',
+    WITNESS_PUBKEY_HASH: 'WITNESS_PUBKEY_HASH',
+    NESTED_WITNESS_PUBKEY_HASH: 'NESTED_WITNESS_PUBKEY_HASH',
+    HYBRID_NESTED_WITNESS_PUBKEY_HASH: 'HYBRID_NESTED_WITNESS_PUBKEY_HASH',
+    TAPROOT_PUBKEY: 'TAPROOT_PUBKEY',
+    // lnrpc's name for nested segwit, accepted for convenience
+    NESTED_PUBKEY_HASH: 'NESTED_WITNESS_PUBKEY_HASH'
+};
+
+export const toWalletrpcAddressTypeName = (
+    value: string | number | undefined | null
+): string | undefined => {
+    if (value == null) return undefined;
+    return WALLETRPC_ADDRESS_TYPE_NAMES[String(value)];
+};
+
+const WALLETRPC_ADDRESS_TYPE_NUMS: { [key: string]: number } = {
+    WITNESS_PUBKEY_HASH: 1,
+    NESTED_WITNESS_PUBKEY_HASH: 2,
+    HYBRID_NESTED_WITNESS_PUBKEY_HASH: 3,
+    TAPROOT_PUBKEY: 4
+};
+
+export const toWalletrpcAddressTypeNum = (
+    value: string | number | undefined | null
+): number | undefined => {
+    const name = toWalletrpcAddressTypeName(value);
+    if (name == null) return undefined;
+    return WALLETRPC_ADDRESS_TYPE_NUMS[name];
+};
