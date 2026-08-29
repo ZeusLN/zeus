@@ -19,20 +19,14 @@ import {
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { toLnrpcAddressType } from '../utils/LndUtils';
+import {
+    toLnrpcAddressType,
+    toWalletrpcAddressTypeName
+} from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
 
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
-
-const NEXT_ADDR_MAP: any = {
-    WITNESS_PUBKEY_HASH: 0,
-    NESTED_PUBKEY_HASH: 1,
-    UNUSED_WITNESS_PUBKEY_HASH: 2,
-    UNUSED_NESTED_PUBKEY_HASH: 3,
-    TAPROOT_PUBKEY: 4,
-    UNUSED_TAPROOT_PUBKEY: 5
-};
 
 export default class LightningNodeConnect {
     lnc: any;
@@ -233,7 +227,9 @@ export default class LightningNodeConnect {
     getNewChangeAddress = async (data: any) =>
         await this.lnc.lnd.walletKit
             .nextAddr({
-                type: NEXT_ADDR_MAP[data.type],
+                // NextAddr takes walletrpc.AddressType, whose names and
+                // numbering differ from lnrpc.AddressType
+                type: toWalletrpcAddressTypeName(data.type),
                 account: data.account || 'default',
                 change: true
             })
