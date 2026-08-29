@@ -5,6 +5,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         decodePaymentRequest: jest.fn(),
+        getNewAddress: jest.fn(),
         isLNDBased: jest.fn(() => false)
     }
 }));
@@ -59,5 +60,69 @@ describe('InvoicesStore.getPayReq', () => {
 
         expect(store.pay_req).toBeNull();
         expect(store.getPayReqError).toBe('decode failed');
+    });
+});
+
+// ZEUS-2223 / ZEUS-2932: imported accounts live under a single key scope;
+// lnd rejects address requests whose type doesn't match it
+describe('InvoicesStore.getNewAddress', () => {
+    beforeEach(() => {
+        (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue({
+            address: 'bcrt1qtest'
+        });
+    });
+
+    it('honors an account-derived walletrpc address type for non-default accounts', async () => {
+        const store = newStore();
+        await store.getNewAddress({
+            account: 'SeedSigner',
+            type: 'TAPROOT_PUBKEY'
+        });
+
+        expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
+            account: 'SeedSigner',
+            type: 'TAPROOT_PUBKEY'
+        });
+    });
+
+    it('normalizes walletrpc numeric address types from the embedded proto decode', async () => {
+        const store = newStore();
+        await store.getNewAddress({ account: 'SeedSigner', type: 4 });
+
+        expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
+            account: 'SeedSigner',
+            type: 'TAPROOT_PUBKEY'
+        });
+    });
+
+    it('drops non-account address types (like the settings preference) for non-default accounts', async () => {
+        const store = newStore();
+        await store.getNewAddress({ account: 'SeedSigner', type: '0' });
+
+        expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
+            account: 'SeedSigner'
+        });
+    });
+
+    it('leaves the requested type untouched for the default account', async () => {
+        const store = newStore();
+        await store.getNewAddress({ account: 'default', type: '0' });
+
+        expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
+            account: 'default',
+            type: '0'
+        });
+    });
+
+    it('surfaces backend errors instead of leaving a stale address', async () => {
+        (BackendUtils.getNewAddress as jest.Mock).mockRejectedValue(
+            new Error('account not found')
+        );
+
+        const store = newStore();
+        await store.getNewAddress({ account: 'SeedSigner' });
+
+        expect(store.onChainAddress).toBeNull();
+        expect(store.error_msg).toContain('account not found');
     });
 });
