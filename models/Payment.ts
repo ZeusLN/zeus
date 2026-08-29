@@ -187,6 +187,9 @@ export default class Payment extends BaseModel {
                 lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
         )
             isFailed = true;
+        // Core Lightning sendpays status; CLN payments carry no htlcs
+        // or failure_reason for the checks above
+        if (this.status === 'failed') isFailed = true;
         return isFailed;
     }
 
