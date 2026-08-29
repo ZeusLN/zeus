@@ -5,11 +5,10 @@ import SettingsStore from './SettingsStore';
 import SyncStore from './SyncStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
-
-import { walletrpc } from '../proto/lightning';
 
 export const LEGACY_HIDDEN_ACCOUNTS_KEY = 'hidden-accounts';
 export const HIDDEN_ACCOUNTS_KEY = 'zeus-hidden-accounts';
@@ -201,6 +200,29 @@ export default class UTXOsStore {
             });
     };
 
+    // Resolves an imported account's address type (as the walletrpc enum
+    // name) so address requests can match the account's key scope; lnd
+    // rejects requests whose type doesn't match it (ZEUS-2223 / ZEUS-2932).
+    public getAccountAddressType = async (
+        name: string
+    ): Promise<string | undefined> => {
+        const cached = this.accounts.find(
+            (account: any) => account.name === name
+        );
+        const cachedType = toWalletrpcAddressTypeName(cached?.address_type);
+        if (cachedType) return cachedType;
+        try {
+            const data = await BackendUtils.listAccounts();
+            const match = (data?.accounts || []).find(
+                (account: any) => account.name === name
+            );
+            return toWalletrpcAddressTypeName(match?.address_type);
+        } catch (e) {
+            console.error('error resolving account address type', e);
+            return undefined;
+        }
+    };
+
     @action
     public importAccount = (data: any) => {
         this.errorMsg = '';
@@ -235,9 +257,9 @@ export default class UTXOsStore {
                             this.addresses_to_generate_progress = i + 1;
                             await BackendUtils.getNewAddress({
                                 account: this.accountToImport.account.name,
-                                type: walletrpc.AddressType[
+                                type: toWalletrpcAddressTypeName(
                                     this.accountToImport.account.address_type
-                                ]
+                                )
                             }).then((response: any) => {
                                 console.log(
                                     `generated address ${i}`,
@@ -246,9 +268,9 @@ export default class UTXOsStore {
                             });
                             await BackendUtils.getNewChangeAddress({
                                 account: this.accountToImport.account.name,
-                                type: walletrpc.AddressType[
+                                type: toWalletrpcAddressTypeName(
                                     this.accountToImport.account.address_type
-                                ],
+                                ),
                                 change: true
                             }).then((response: any) => {
                                 console.log(
