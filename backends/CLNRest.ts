@@ -813,6 +813,8 @@ export default class CLNRest {
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    // listfunds cannot attribute unconfirmed outputs to self-transfers
+    supportsUnconfirmedTransactionOrigin = () => false;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;

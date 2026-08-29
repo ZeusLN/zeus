@@ -219,6 +219,8 @@ class BackendUtils {
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
+    supportsUnconfirmedTransactionOrigin = () =>
+        this.call('supportsUnconfirmedTransactionOrigin');
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
