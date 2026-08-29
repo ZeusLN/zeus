@@ -38,15 +38,17 @@ export default class LightningNodeConnect {
     lnc: any;
     listener: any;
 
-    permOpenChannel: boolean;
-    permSendCoins: boolean;
-    permSendLN: boolean;
-    permNewAddress: boolean;
-    permImportAccount: boolean;
-    permForwardingHistory: boolean;
-    // Default true so NWC subscribe-before-checkPerms (app resume) does
-    // not drop sign_message. checkPerms currently forces all perms true
-    // (ZEUS-3642); restore hasPerms there before relying on this flag.
+    // Default true: checkPerms currently forces all perms true (ZEUS-3642),
+    // and it only runs after a successful connect, so uninitialized perms
+    // would misreport a failed connection as a read-only wallet (and NWC
+    // subscribe-before-checkPerms on app resume would drop sign_message).
+    // Restore hasPerms in checkPerms before relying on these flags.
+    permOpenChannel: boolean = true;
+    permSendCoins: boolean = true;
+    permSendLN: boolean = true;
+    permNewAddress: boolean = true;
+    permImportAccount: boolean = true;
+    permForwardingHistory: boolean = true;
     permSignMessage: boolean = true;
 
     initLNC = async () => {
