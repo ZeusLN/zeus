@@ -73,6 +73,7 @@ const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
+    private walletSwitchInFlight = false;
 
     state = {
         nodes: [],
@@ -266,6 +267,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             nodeIndex: number,
             nodeActive: boolean
         ) => {
+            // A switch is still committing: ignore repeat taps. A second
+            // tap would take the nodeActive branch and drop the latch
+            // before the first tap's settings assignment lands.
+            if (this.walletSwitchInFlight) return;
             if (SettingsStore.settings?.justDeletedWallet) {
                 await this.handleJustDeletedWallet(nodeIndex);
                 return;
@@ -329,13 +334,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     });
                 }
 
-                await updateSettings({
-                    nodes,
-                    selectedNode: nodeIndex
-                }).then(() => {
-                    setConnectingStatus(true);
-                    this.navigateAfterWalletSelection();
-                });
+                this.walletSwitchInFlight = true;
+                try {
+                    await updateSettings({
+                        nodes,
+                        selectedNode: nodeIndex
+                    }).then(() => {
+                        setConnectingStatus(true);
+                        this.navigateAfterWalletSelection();
+                    });
+                } finally {
+                    this.walletSwitchInFlight = false;
+                }
             }
         };
 
