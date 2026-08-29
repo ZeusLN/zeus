@@ -970,6 +970,7 @@
     "views.SendingOnChain.txid": "TXID",
     "views.SendingOnChain.goToBlockExplorer": "Go to block explorer",
     "views.VerifyOnChain.title": "Verify Transaction",
+    "views.VerifyOnChain.feeEstimateInfo": "An estimate of the total fee for this transaction, based on your chosen fee rate and a test run of coin selection in your wallet. The estimate assumes the largest possible transaction size, so the final fee may be slightly lower.",
     "views.NostrContacts.nostrContacts": "Nostr Contacts",
     "views.NostrContacts.lookUpContacts": "Look up Contacts",
     "views.NostrContacts.importAllContacts": "Import all Contacts",
