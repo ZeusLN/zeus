@@ -187,6 +187,7 @@ export default class LndHub extends LND {
     supportsMessageVerification = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => false;
+    supportsUnconfirmedTransactionOrigin = () => false;
     supportsOnchainSends = () => false;
     supportsOnchainReceiving = () =>
         !(
