@@ -211,7 +211,9 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
-    fiatRatesSource: 'Zeus' | 'Yadio';
+    fiatRatesSource: 'Zeus' | 'Yadio' | 'BTCPayServer';
+    btcPayServerHost?: string;
+    btcPayServerStoreId?: string;
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
@@ -297,8 +299,17 @@ export const SETTINGS_WRITE_DEBOUNCE_MS = 500;
 
 export const FIAT_RATES_SOURCE_KEYS = [
     { key: 'ZEUS', value: 'Zeus' },
-    { key: 'Yadio', value: 'Yadio' }
+    { key: 'Yadio', value: 'Yadio' },
+    { key: 'BTCPay Server', value: 'BTCPayServer' }
 ];
+
+// A user's own BTCPay Server decides its own currency coverage, so every
+// currency is selectable there; unsupported ones simply return no rate.
+export const isCurrencySupportedBySource = (
+    currency: { supportedSources?: Array<string> } | undefined,
+    source: string
+): boolean =>
+    source === 'BTCPayServer' || !!currency?.supportedSources?.includes(source);
 
 export const BLOCK_EXPLORER_KEYS = [
     { key: 'mempool.space', value: 'mempool.space' },
@@ -1622,6 +1633,8 @@ export const DEFAULT_SETTINGS: Settings = {
     fiatEnabled: true,
     fiat: DEFAULT_FIAT,
     fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
+    btcPayServerHost: '',
+    btcPayServerStoreId: '',
     // embedded node
     automaticDisasterRecoveryBackup: true,
     expressGraphSync: false,

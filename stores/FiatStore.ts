@@ -701,9 +701,16 @@ export default class FiatStore {
             if (settings.fiatRatesSource.toLowerCase() === 'zeus') {
                 this.fiatRates = await this.getFiatRatesFromZeus();
             } else if (settings.fiat != null) {
-                const rate = await this.getSelectedFiatRateFromYadio(
-                    settings.fiat
-                );
+                const rate =
+                    settings.fiatRatesSource === 'BTCPayServer'
+                        ? await this.getSelectedFiatRateFromBTCPay(
+                              settings.btcPayServerHost || '',
+                              settings.btcPayServerStoreId || '',
+                              settings.fiat
+                          )
+                        : await this.getSelectedFiatRateFromYadio(
+                              settings.fiat
+                          );
 
                 runInAction(() => {
                     if (this.fiatRates) {
@@ -752,6 +759,46 @@ export default class FiatStore {
             }
         } catch (error) {
             console.error('Error fetching fiat rates from yadio', error);
+        }
+
+        return undefined;
+    };
+
+    private getSelectedFiatRateFromBTCPay = async (
+        host: string,
+        storeId: string,
+        code: string
+    ) => {
+        if (!host.trim() || !storeId.trim()) return undefined;
+
+        try {
+            const baseUrl = host.trim().replace(/\/+$/, '');
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${baseUrl}/api/rates?storeId=${encodeURIComponent(
+                    storeId.trim()
+                )}&currencyPairs=BTC_${code}`
+            );
+            const status = response.info().status;
+            if (status == 200) {
+                const rates = response.json();
+                const entry =
+                    Array.isArray(rates) &&
+                    rates.find((r: any) => r.code === code);
+                if (entry && entry.rate != null) {
+                    return {
+                        cryptoCode: 'BTC',
+                        code,
+                        rate: entry.rate,
+                        currencyPair: `BTC_${code}`
+                    };
+                }
+            }
+        } catch (error) {
+            console.error(
+                'Error fetching fiat rates from BTCPay Server',
+                error
+            );
         }
 
         return undefined;
