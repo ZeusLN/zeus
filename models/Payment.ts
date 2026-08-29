@@ -1,6 +1,7 @@
 import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
+import { sha256 } from 'js-sha256';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -63,6 +64,28 @@ export default class Payment extends BaseModel {
             this.payment_hash = Base64Utils.bytesToHex(this.payment_hash.data);
             return this.payment_hash;
         }
+        return undefined;
+    }
+
+    // Some LndHub-style servers omit payment_hash from their responses;
+    // derive it from the payment request or preimage so hash-keyed lookups
+    // (e.g. LNURL successActions) still resolve. Kept separate from
+    // paymentHash so note keys (getNoteKey) stay stable.
+    @computed public get resolvedPaymentHash(): string | undefined {
+        if (this.paymentHash) return this.paymentHash;
+
+        const pay_req = this.getPaymentRequest;
+        if (pay_req) {
+            try {
+                const hash = Bolt11Utils.decode(pay_req).payment_hash;
+                if (hash) return hash;
+            } catch {}
+        }
+
+        if (!this.isIncomplete) {
+            return sha256(Base64Utils.hexToBytes(this.getPreimage));
+        }
+
         return undefined;
     }
 
