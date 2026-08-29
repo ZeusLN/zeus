@@ -12,7 +12,8 @@ import SettingsStore, {
     CURRENCY_KEYS,
     CURRENCY_CODES_KEY,
     DEFAULT_FIAT,
-    DEFAULT_FIAT_RATES_SOURCE
+    DEFAULT_FIAT_RATES_SOURCE,
+    isCurrencySupportedBySource
 } from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
@@ -223,7 +224,7 @@ export default class SelectCurrency extends React.Component<
 
         const currencies = [...this.state.currencies]
             .sort((a, b) => a.key.localeCompare(b.key))
-            .filter((c) => c.supportedSources?.includes(fiatRatesSource));
+            .filter((c) => isCurrencySupportedBySource(c, fiatRatesSource));
 
         const favoriteCurrencyItems = currencies.filter((c) =>
             favoriteCurrencies.includes(c.value)
