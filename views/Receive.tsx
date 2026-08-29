@@ -1049,7 +1049,12 @@ export default class Receive extends React.Component<
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
 
-        const skipOnchain = this.getSkipOnchain();
+        // The defaultInvoiceType preference must not suppress the on-chain
+        // leg while the user is looking at the on-chain pane: in forced
+        // on-chain mode (account receive, on-chain slider action) there are
+        // no tabs whose switch would trigger generation later, leaving the
+        // pane permanently blank
+        const skipOnchain = this.getSkipOnchain() && selectedIndex !== 2;
 
         const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
