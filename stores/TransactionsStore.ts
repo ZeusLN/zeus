@@ -786,7 +786,7 @@ export default class TransactionsStore {
         const payment = new Payment(result);
         this.noteKey = payment.getNoteKey;
         this.payment_preimage = payment.getPreimage;
-        this.payment_hash = payment.paymentHash;
+        this.payment_hash = payment.resolvedPaymentHash;
         this.payment_fee = payment.getFee;
         this.isIncomplete = payment.isIncomplete;
 

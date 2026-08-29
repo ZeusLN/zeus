@@ -504,9 +504,12 @@ export default class SendingLightning extends React.Component<
                                 )}
                             {!!success &&
                                 !error &&
-                                !!payment_preimage &&
                                 payment_hash === LnurlPayStore.paymentHash &&
-                                LnurlPayStore.successAction && (
+                                LnurlPayStore.successAction &&
+                                // the preimage is only needed to decrypt
+                                // LUD-10 aes success actions
+                                (LnurlPayStore.successAction.tag !== 'aes' ||
+                                    !!payment_preimage) && (
                                     <View style={{ width: '90%' }}>
                                         <LnurlPaySuccess
                                             color="white"
@@ -514,7 +517,7 @@ export default class SendingLightning extends React.Component<
                                             successAction={
                                                 LnurlPayStore.successAction
                                             }
-                                            preimage={payment_preimage}
+                                            preimage={payment_preimage || ''}
                                             scrollable={true}
                                             maxHeight={windowSize.height * 0.15}
                                         />
