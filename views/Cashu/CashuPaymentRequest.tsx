@@ -400,11 +400,14 @@ export default class CashuPaymentRequest extends React.Component<
 
         const isPayReqExpired = !!payReq && payReq.isExpiredNow();
 
+        const locale = SettingsStore.settings.locale;
+        if (payReq) payReq.determineFormattedOriginalTimeUntilExpiry(locale);
+
         const requestAmount =
             payReq && payReq.getRequestAmount
                 ? payReq.getRequestAmount
                 : undefined;
-        const expiry = payReq && payReq.expiry;
+        const expiry = payReq && payReq.formattedOriginalTimeUntilExpiry;
         const cltv_expiry = payReq && payReq.cltv_expiry;
         const destination = payReq && payReq.destination;
         const description = payReq && payReq.description;
@@ -824,7 +827,9 @@ export default class CashuPaymentRequest extends React.Component<
                                         keyValue={localeString(
                                             'views.PaymentRequest.cltvExpiry'
                                         )}
-                                        value={cltv_expiry}
+                                        value={`${cltv_expiry} ${localeString(
+                                            'general.blocks'
+                                        )}`}
                                     />
                                 )}
 
