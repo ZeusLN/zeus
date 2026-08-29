@@ -135,6 +135,28 @@ describe('SettingsStore startup wallet selection', () => {
 
         expect(store.walletSelectionPending).toBe(false);
     });
+
+    it('raises the latch again on the next settings write unless startup has ended', async () => {
+        seedSettings(nodeSettings(true));
+        const store = new SettingsStore();
+        await store.getSettings();
+        expect(store.walletSelectionPending).toBe(true);
+
+        // Dropping the latch on its own does not survive the next write
+        // while startup is still on: every write reloads the node
+        // properties, and that raises it again
+        store.setWalletSelectionPending(false);
+        await store.updateSettings({ lurkerMode: true });
+        expect(store.walletSelectionPending).toBe(true);
+
+        // Ending startup first is what keeps it down. The POS branch in
+        // Wallet.tsx relies on this, because that path never reaches
+        // setConnectingStatus(true)
+        store.setInitialStart(false);
+        store.setWalletSelectionPending(false);
+        await store.updateSettings({ lurkerMode: false });
+        expect(store.walletSelectionPending).toBe(false);
+    });
 });
 
 describe('SettingsStore.setConnectingStatus', () => {
