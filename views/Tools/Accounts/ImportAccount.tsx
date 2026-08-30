@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -177,67 +176,67 @@ export default class ImportAccount extends React.Component<
         if (!understood) {
             return (
                 <Screen>
-                    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <View style={{ marginHorizontal: 10 }}>
-                                <ErrorMessage
-                                    message={localeString(
-                                        'general.warning'
-                                    ).toUpperCase()}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text1'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text2'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text3'
-                                ).replace('Zeus', 'ZEUS')}
-                            </Text>
-                            {implementation !== 'embedded-lnd' && (
-                                <Text
-                                    style={{
-                                        ...styles.warningText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.note'
-                                    ).replace('Zeus', 'ZEUS')}
-                                </Text>
-                            )}
-                        </ScrollView>
-                        <View style={{ paddingVertical: 10 }}>
-                            <Button
-                                onPress={() =>
-                                    this.setState({ understood: true })
-                                }
-                                title={localeString('general.iUnderstand')}
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString('views.ImportAccount.title'),
+                            style: { color: themeColor('text') }
+                        }}
+                        navigation={navigation}
+                    />
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View style={{ marginHorizontal: 10 }}>
+                            <ErrorMessage
+                                message={localeString(
+                                    'general.warning'
+                                ).toUpperCase()}
                             />
                         </View>
-                    </SafeAreaView>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.ImportAccount.Warning.text1')}
+                        </Text>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.ImportAccount.Warning.text2')}
+                        </Text>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString(
+                                'views.ImportAccount.Warning.text3'
+                            ).replace('Zeus', 'ZEUS')}
+                        </Text>
+                        {implementation !== 'embedded-lnd' && (
+                            <Text
+                                style={{
+                                    ...styles.warningText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.note'
+                                ).replace('Zeus', 'ZEUS')}
+                            </Text>
+                        )}
+                    </ScrollView>
+                    <View style={{ bottom: 10 }}>
+                        <Button
+                            onPress={() => this.setState({ understood: true })}
+                            title={localeString('general.iUnderstand')}
+                        />
+                    </View>
                 </Screen>
             );
         }
