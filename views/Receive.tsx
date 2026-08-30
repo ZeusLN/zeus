@@ -314,10 +314,15 @@ export default class Receive extends React.Component<
 
         const expirationIndex = expirationIndexFromSeconds(newExpirySeconds);
 
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
+
+        // In on-chain-only mode the lightning leg is never displayed, so
+        // the LSP must not wrap it (or surface fee UI for it)
         const lspIsActive =
             settings?.enableLSP &&
             BackendUtils.supportsFlowLSP() &&
-            !flowLspNotConfigured;
+            !flowLspNotConfigured &&
+            !onChainOnly;
 
         // Calculate invoice options once to avoid duplication
         const routeHints =
@@ -350,8 +355,6 @@ export default class Receive extends React.Component<
             lspIsActive,
             flowLspNotConfigured
         });
-
-        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         reset();
 
@@ -1385,12 +1388,15 @@ export default class Receive extends React.Component<
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
+        // Advanced settings only affect the lightning invoice, which is
+        // never displayed in on-chain-only mode
         const showAdvancedSettingsToggle =
-            (BackendUtils.supportsCustomPreimages() &&
+            !onChainOnly &&
+            ((BackendUtils.supportsCustomPreimages() &&
                 showCustomPreimageField) ||
-            (BackendUtils.isLNDBased() && !lspIsActive) ||
-            (BackendUtils.supportsAMP() && !lspIsActive) ||
-            (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive);
+                (BackendUtils.isLNDBased() && !lspIsActive) ||
+                (BackendUtils.supportsAMP() && !lspIsActive) ||
+                (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive));
 
         const baseModalHeight = 300;
         const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
@@ -2072,7 +2078,8 @@ export default class Receive extends React.Component<
                                     !loading &&
                                     route.params?.selectedIndex !== 2 && (
                                         <>
-                                            {BackendUtils.supportsFlowLSP() &&
+                                            {!onChainOnly &&
+                                                BackendUtils.supportsFlowLSP() &&
                                                 !flowLspNotConfigured && (
                                                     <View
                                                         style={{
@@ -2305,155 +2312,126 @@ export default class Receive extends React.Component<
                                                 </TouchableOpacity>
                                             )}
 
-                                            {BackendUtils.supportsSettingInvoiceExpiration() && (
-                                                <Accordion
-                                                    headerLayout="form"
-                                                    key={`receive-expiration-${lspIsActive}`}
-                                                    id="receive-expiration"
-                                                    title={localeString(
-                                                        'views.Receive.expiration'
-                                                    )}
-                                                    disabled={lspIsActive}
-                                                    renderHeader={(isOpen) => (
-                                                        <Row
-                                                            justify="space-between"
-                                                            style={{
-                                                                alignItems:
-                                                                    'center'
-                                                            }}
-                                                        >
-                                                            <View
+                                            {!onChainOnly &&
+                                                BackendUtils.supportsSettingInvoiceExpiration() && (
+                                                    <Accordion
+                                                        headerLayout="form"
+                                                        key={`receive-expiration-${lspIsActive}`}
+                                                        id="receive-expiration"
+                                                        title={localeString(
+                                                            'views.Receive.expiration'
+                                                        )}
+                                                        disabled={lspIsActive}
+                                                        renderHeader={(
+                                                            isOpen
+                                                        ) => (
+                                                            <Row
+                                                                justify="space-between"
                                                                 style={{
-                                                                    flex: 1
+                                                                    alignItems:
+                                                                        'center'
                                                                 }}
                                                             >
-                                                                <Row
-                                                                    justify="space-between"
+                                                                <View
                                                                     style={{
-                                                                        alignItems:
-                                                                            'center'
+                                                                        flex: 1
                                                                     }}
                                                                 >
-                                                                    <View
+                                                                    <Row
+                                                                        justify="space-between"
                                                                         style={{
-                                                                            flex: 1
+                                                                            alignItems:
+                                                                                'center'
                                                                         }}
                                                                     >
-                                                                        <KeyValue
-                                                                            keyValue={localeString(
-                                                                                'views.Receive.expiration'
-                                                                            )}
-                                                                        />
-                                                                    </View>
-
-                                                                    {!isOpen && (
-                                                                        <Text
+                                                                        <View
                                                                             style={{
-                                                                                ...styles.secondaryText,
-                                                                                color: themeColor(
-                                                                                    'secondaryText'
-                                                                                ),
-                                                                                textAlign:
-                                                                                    'center',
-                                                                                fontSize: 14
+                                                                                flex: 1
                                                                             }}
                                                                         >
-                                                                            {this.getFormattedDuration()}
-                                                                        </Text>
-                                                                    )}
-                                                                </Row>
-                                                            </View>
+                                                                            <KeyValue
+                                                                                keyValue={localeString(
+                                                                                    'views.Receive.expiration'
+                                                                                )}
+                                                                            />
+                                                                        </View>
 
-                                                            {lspIsActive ? (
-                                                                <LockIcon
-                                                                    fill={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            ) : isOpen ? (
-                                                                <CaretDown
-                                                                    fill={themeColor(
-                                                                        'text'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            ) : (
-                                                                <CaretRight
-                                                                    fill={themeColor(
-                                                                        'text'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            )}
-                                                        </Row>
-                                                    )}
-                                                >
-                                                    <>
-                                                        <Row
-                                                            style={{
-                                                                width: '100%'
-                                                            }}
-                                                        >
-                                                            <TextInput
-                                                                keyboardType="numeric"
-                                                                value={expiry}
+                                                                        {!isOpen && (
+                                                                            <Text
+                                                                                style={{
+                                                                                    ...styles.secondaryText,
+                                                                                    color: themeColor(
+                                                                                        'secondaryText'
+                                                                                    ),
+                                                                                    textAlign:
+                                                                                        'center',
+                                                                                    fontSize: 14
+                                                                                }}
+                                                                            >
+                                                                                {this.getFormattedDuration()}
+                                                                            </Text>
+                                                                        )}
+                                                                    </Row>
+                                                                </View>
+
+                                                                {lspIsActive ? (
+                                                                    <LockIcon
+                                                                        fill={themeColor(
+                                                                            'secondaryText'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                ) : isOpen ? (
+                                                                    <CaretDown
+                                                                        fill={themeColor(
+                                                                            'text'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                ) : (
+                                                                    <CaretRight
+                                                                        fill={themeColor(
+                                                                            'text'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                )}
+                                                            </Row>
+                                                        )}
+                                                    >
+                                                        <>
+                                                            <Row
                                                                 style={{
-                                                                    width: '58%'
-                                                                }}
-                                                                onChangeText={(
-                                                                    text: string
-                                                                ) => {
-                                                                    const digits =
-                                                                        text.replace(
-                                                                            /[^0-9]/g,
-                                                                            ''
-                                                                        );
-                                                                    const expirySeconds =
-                                                                        expirySecondsFromInput(
-                                                                            digits,
-                                                                            timePeriod as TimePeriod
-                                                                        );
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: digits,
-                                                                            expirySeconds,
-                                                                            expirationIndex:
-                                                                                expirationIndexFromSeconds(
-                                                                                    expirySeconds
-                                                                                )
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            />
-                                                            <Spacer width={4} />
-                                                            <View
-                                                                style={{
-                                                                    flex: 1
+                                                                    width: '100%'
                                                                 }}
                                                             >
-                                                                <DropdownSetting
-                                                                    selectedValue={
-                                                                        timePeriod
+                                                                <TextInput
+                                                                    keyboardType="numeric"
+                                                                    value={
+                                                                        expiry
                                                                     }
-                                                                    values={
-                                                                        TIME_PERIOD_KEYS
-                                                                    }
-                                                                    onValueChange={async (
-                                                                        value: string
+                                                                    style={{
+                                                                        width: '58%'
+                                                                    }}
+                                                                    onChangeText={(
+                                                                        text: string
                                                                     ) => {
+                                                                        const digits =
+                                                                            text.replace(
+                                                                                /[^0-9]/g,
+                                                                                ''
+                                                                            );
                                                                         const expirySeconds =
                                                                             expirySecondsFromInput(
-                                                                                expiry,
-                                                                                value as TimePeriod
+                                                                                digits,
+                                                                                timePeriod as TimePeriod
                                                                             );
                                                                         this.setState(
                                                                             {
-                                                                                timePeriod:
-                                                                                    value,
+                                                                                expiry: digits,
                                                                                 expirySeconds,
                                                                                 expirationIndex:
                                                                                     expirationIndexFromSeconds(
@@ -2463,50 +2441,86 @@ export default class Receive extends React.Component<
                                                                         );
                                                                     }}
                                                                 />
-                                                            </View>
-                                                        </Row>
+                                                                <Spacer
+                                                                    width={4}
+                                                                />
+                                                                <View
+                                                                    style={{
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    <DropdownSetting
+                                                                        selectedValue={
+                                                                            timePeriod
+                                                                        }
+                                                                        values={
+                                                                            TIME_PERIOD_KEYS
+                                                                        }
+                                                                        onValueChange={async (
+                                                                            value: string
+                                                                        ) => {
+                                                                            const expirySeconds =
+                                                                                expirySecondsFromInput(
+                                                                                    expiry,
+                                                                                    value as TimePeriod
+                                                                                );
+                                                                            this.setState(
+                                                                                {
+                                                                                    timePeriod:
+                                                                                        value,
+                                                                                    expirySeconds,
+                                                                                    expirationIndex:
+                                                                                        expirationIndexFromSeconds(
+                                                                                            expirySeconds
+                                                                                        )
+                                                                                }
+                                                                            );
+                                                                        }}
+                                                                    />
+                                                                </View>
+                                                            </Row>
 
-                                                        <ButtonGroup
-                                                            onPress={
-                                                                this
-                                                                    .updateExpirationIndex
-                                                            }
-                                                            selectedIndex={
-                                                                expirationIndex
-                                                            }
-                                                            buttons={
-                                                                expirationButtons
-                                                            }
-                                                            selectedButtonStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'highlight'
-                                                                    ),
-                                                                borderRadius: 12
-                                                            }}
-                                                            containerStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
+                                                            <ButtonGroup
+                                                                onPress={
+                                                                    this
+                                                                        .updateExpirationIndex
+                                                                }
+                                                                selectedIndex={
+                                                                    expirationIndex
+                                                                }
+                                                                buttons={
+                                                                    expirationButtons
+                                                                }
+                                                                selectedButtonStyle={{
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'highlight'
+                                                                        ),
+                                                                    borderRadius: 12
+                                                                }}
+                                                                containerStyle={{
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'secondary'
+                                                                        ),
+                                                                    borderRadius: 12,
+                                                                    borderWidth: 0,
+                                                                    height: 30,
+                                                                    marginBottom:
+                                                                        Platform.OS ===
+                                                                        'ios'
+                                                                            ? 16
+                                                                            : 0
+                                                                }}
+                                                                innerBorderStyle={{
+                                                                    color: themeColor(
                                                                         'secondary'
-                                                                    ),
-                                                                borderRadius: 12,
-                                                                borderWidth: 0,
-                                                                height: 30,
-                                                                marginBottom:
-                                                                    Platform.OS ===
-                                                                    'ios'
-                                                                        ? 16
-                                                                        : 0
-                                                            }}
-                                                            innerBorderStyle={{
-                                                                color: themeColor(
-                                                                    'secondary'
-                                                                )
-                                                            }}
-                                                        />
-                                                    </>
-                                                </Accordion>
-                                            )}
+                                                                    )
+                                                                }}
+                                                            />
+                                                        </>
+                                                    </Accordion>
+                                                )}
 
                                             {showAdvancedSettingsToggle && (
                                                 <Accordion
