@@ -301,6 +301,9 @@ export default class UTXOsStore {
                         this.error = false;
                         this.success = true;
                     });
+                    // refresh so the new account shows up on the balance
+                    // pane without a manual pull-to-refresh
+                    this.listAccounts();
                     return;
                 } else {
                     runInAction(() => {
