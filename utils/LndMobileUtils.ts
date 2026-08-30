@@ -15,6 +15,7 @@ import { localeString } from './LocaleUtils';
 import { assertValidNodeDir, isValidNodeDir } from './NodeDirUtils';
 import { retry, sleep } from './SleepUtils';
 import { importChannelDb } from './ChannelMigrationUtils';
+import { ensureTorStarted, SOCKS_PORT } from './TorUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -654,6 +655,21 @@ export async function startLnd({
         }
     }
 
+    // When the node should run over Tor, the SOCKS proxy must be
+    // listening before LND starts: with tor.active, LND routes all
+    // peer dials and DNS lookups through it. Hard-fail if Tor won't
+    // bootstrap rather than silently starting over clearnet.
+    let args = '';
+    if (isTorEnabled) {
+        try {
+            await ensureTorStarted();
+        } catch (e) {
+            log.e('Failed to start Tor for embedded LND', [e]);
+            throw new Error(localeString('error.torBootstrap'));
+        }
+        args = `--tor.active --tor.socks=127.0.0.1:${SOCKS_PORT}`;
+    }
+
     // Mark as started only on proper start-up, not on wallet creation
     if (walletPassword) {
         settingsStore.embeddedLndStarted = true;
@@ -661,8 +677,8 @@ export async function startLnd({
 
     await startLndWithRetry({
         startLnd,
+        args,
         lndDir,
-        isTorEnabled,
         isTestnet,
         walletPassword,
         unlockWallet
@@ -682,8 +698,8 @@ export async function startLnd({
  */
 async function startLndWithRetry({
     startLnd,
+    args,
     lndDir,
-    isTorEnabled,
     isTestnet,
     walletPassword,
     unlockWallet
@@ -691,16 +707,15 @@ async function startLndWithRetry({
     startLnd: (opts: {
         args: string;
         lndDir: string;
-        isTorEnabled: boolean;
         isTestnet: boolean;
     }) => Promise<unknown>;
+    args: string;
     lndDir: string;
-    isTorEnabled: boolean;
     isTestnet: boolean;
     walletPassword: string;
     unlockWallet: (password: string) => Promise<void>;
 }) {
-    const startArgs = { args: '', lndDir, isTorEnabled, isTestnet };
+    const startArgs = { args, lndDir, isTestnet };
 
     try {
         await startLnd(startArgs);
@@ -777,13 +792,11 @@ async function retryStartLnd({
     startLnd: (opts: {
         args: string;
         lndDir: string;
-        isTorEnabled: boolean;
         isTestnet: boolean;
     }) => Promise<unknown>;
     startArgs: {
         args: string;
         lndDir: string;
-        isTorEnabled: boolean;
         isTestnet: boolean;
     };
     walletPassword: string;
@@ -1187,7 +1200,6 @@ async function restartLndForWalletCreation(
                 await startLnd({
                     args: '',
                     lndDir,
-                    isTorEnabled: false,
                     isTestnet
                 });
                 await waitForLndReady({
