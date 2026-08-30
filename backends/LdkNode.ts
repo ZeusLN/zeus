@@ -1286,7 +1286,16 @@ export default class LdkNode {
             ? Number(data.value) * 1000
             : 0;
 
-        if (amountMsat > 0) {
+        if (amountMsat > 0 && data.description_hash) {
+            // Commit to a description hash (LUD-06 metadata / NIP-57 zap
+            // requests) instead of a plain description
+            invoice =
+                await LdkNodeInjection.bolt11.receiveBolt11WithDescriptionHash({
+                    amountMsat,
+                    descriptionHash: data.description_hash,
+                    expirySecs
+                });
+        } else if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',

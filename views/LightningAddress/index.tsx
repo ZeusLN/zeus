@@ -177,6 +177,8 @@ export default class LightningAddress extends React.Component<
                             navigation.navigate('CashuLightningAddressInfo');
                         } else if (lightningAddressType === 'nwc') {
                             navigation.navigate('NWCAddressInfo');
+                        } else if (lightningAddressType === 'self') {
+                            navigation.navigate('SelfAddressInfo');
                         }
                     }}
                     color={themeColor('text')}
@@ -195,6 +197,8 @@ export default class LightningAddress extends React.Component<
                         navigation.navigate('CashuLightningAddressSettings');
                     } else if (lightningAddressType === 'nwc') {
                         navigation.navigate('NWCAddressSettings');
+                    } else if (lightningAddressType === 'self') {
+                        navigation.navigate('SelfAddressSettings');
                     }
                 }}
             >
@@ -546,6 +550,211 @@ export default class LightningAddress extends React.Component<
                                                     'zeuspay.intro.explainer2'
                                                 )}
                                             </Text>
+
+                                            {BackendUtils.supportsSelfLightningAddress() && (
+                                                <View
+                                                    style={styles.optionBlock}
+                                                >
+                                                    <Row justify="space-between">
+                                                        <Text
+                                                            style={{
+                                                                ...styles.explainer,
+                                                                fontWeight:
+                                                                    'bold',
+                                                                fontSize: 30,
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {localeString(
+                                                                'general.selfCustodial'
+                                                            )}
+                                                        </Text>
+                                                        <View
+                                                            style={{
+                                                                marginLeft: 15
+                                                            }}
+                                                        >
+                                                            <Pill
+                                                                title={localeString(
+                                                                    'general.selfCustodial'
+                                                                ).toUpperCase()}
+                                                                textColor={themeColor(
+                                                                    'success'
+                                                                )}
+                                                                borderColor={themeColor(
+                                                                    'success'
+                                                                )}
+                                                                width={160}
+                                                                height={25}
+                                                            />
+                                                        </View>
+                                                    </Row>
+
+                                                    <Text
+                                                        style={{
+                                                            ...styles.explainer,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'zeuspay.intro.self.overview'
+                                                        )}
+                                                    </Text>
+
+                                                    <Accordion
+                                                        id="lightning-address-pros-cons-self"
+                                                        title={localeString(
+                                                            'zeuspay.intro.prosAndCons'
+                                                        )}
+                                                        headerLayout="form"
+                                                        embedded
+                                                        scrollRef={
+                                                            this.scrollViewRef
+                                                        }
+                                                        headerStyle={
+                                                            styles.prosConsToggle
+                                                        }
+                                                        renderFormTitle={() => (
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.explainer,
+                                                                    fontWeight:
+                                                                        'bold',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    )
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'zeuspay.intro.prosAndCons'
+                                                                )}
+                                                            </Text>
+                                                        )}
+                                                    >
+                                                        <View
+                                                            style={
+                                                                styles.prosCons
+                                                            }
+                                                        >
+                                                            <Row justify="space-between">
+                                                                <View
+                                                                    style={
+                                                                        styles.prosConsColumn
+                                                                    }
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.explainer,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`🟢 ${localeString(
+                                                                            'general.selfCustodial'
+                                                                        )}`}
+                                                                    </Text>
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.explainer,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`🟢 ${localeString(
+                                                                            'zeuspay.intro.prosAndCons.settledUponPayment'
+                                                                        )}`}
+                                                                    </Text>
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.explainer,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`🟢 ${localeString(
+                                                                            'zeuspay.intro.prosAndCons.automaticallyAccepted'
+                                                                        )}`}
+                                                                    </Text>
+                                                                </View>
+                                                                <View
+                                                                    style={
+                                                                        styles.prosConsColumn
+                                                                    }
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.explainer,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`🔴 ${localeString(
+                                                                            'zeuspay.intro.prosAndCons.phoneReachable'
+                                                                        )}`}
+                                                                    </Text>
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.explainer,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`🔴 ${localeString(
+                                                                            'zeuspay.intro.prosAndCons.channelOrLspFee'
+                                                                        )}`}
+                                                                    </Text>
+                                                                </View>
+                                                            </Row>
+                                                        </View>
+                                                    </Accordion>
+                                                    <Row>
+                                                        <View
+                                                            style={{
+                                                                margin: 2,
+                                                                width: '50%'
+                                                            }}
+                                                        >
+                                                            <Button
+                                                                title={localeString(
+                                                                    'general.learnMore'
+                                                                )}
+                                                                onPress={() =>
+                                                                    navigation.navigate(
+                                                                        'SelfAddressInfo'
+                                                                    )
+                                                                }
+                                                                secondary
+                                                            />
+                                                        </View>
+                                                        <View
+                                                            style={{
+                                                                margin: 2,
+                                                                width: '50%'
+                                                            }}
+                                                        >
+                                                            <Button
+                                                                title={localeString(
+                                                                    'general.getStarted'
+                                                                )}
+                                                                onPress={() =>
+                                                                    navigation.navigate(
+                                                                        'CreateSelfLightningAddress'
+                                                                    )
+                                                                }
+                                                            />
+                                                        </View>
+                                                    </Row>
+                                                </View>
+                                            )}
 
                                             {BackendUtils.supportsCashuWallet() && (
                                                 <View
@@ -993,7 +1202,9 @@ export default class LightningAddress extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                {lightningAddressType === 'nwc'
+                                                {lightningAddressType ===
+                                                    'nwc' ||
+                                                lightningAddressType === 'self'
                                                     ? localeString(
                                                           'views.Settings.LightningAddress.noNeedToRedeem'
                                                       )
@@ -1075,7 +1286,9 @@ export default class LightningAddress extends React.Component<
                                                 disabled={!isReady}
                                             />
                                         )}
-                                        {lightningAddressType === 'nwc' && (
+                                        {(lightningAddressType === 'nwc' ||
+                                            lightningAddressType ===
+                                                'self') && (
                                             <Animated.View
                                                 style={{
                                                     flex: 1,

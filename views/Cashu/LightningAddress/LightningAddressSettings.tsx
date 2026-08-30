@@ -19,6 +19,7 @@ import SettingsStore, {
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 import CashuStore from '../../../stores/CashuStore';
 
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -400,6 +401,38 @@ export default class CashuLightningAddressSettings extends React.Component<
                             </View>
                         )}
                         <ZeusPayPlusSettings navigation={navigation} />
+                        {BackendUtils.supportsSelfLightningAddress() && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    padding: 0,
+                                    marginTop: 30
+                                }}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'CreateSelfLightningAddress',
+                                        { switchTo: true }
+                                    )
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.LightningAddress.switchToSelf'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('text')}
+                                />
+                            </ListItem>
+                        )}
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent',

@@ -267,8 +267,15 @@ class BackendUtils {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
+    // ZEUS Pay 'self' addresses: the server pushes invoice requests to the
+    // phone, which generates them on its own node. LDK Node only — the flow
+    // depends on the receive-only startup path and JS event subscriptions.
+    supportsSelfLightningAddress = () =>
+        settingsStore.implementation === 'ldk-node';
     supportsLightningAddress = () =>
-        this.supportsCustomPreimages() || this.supportsCashuWallet();
+        this.supportsCustomPreimages() ||
+        this.supportsCashuWallet() ||
+        this.supportsSelfLightningAddress();
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
     supportsSettingInvoiceExpiration = () =>
         this.call('supportsSettingInvoiceExpiration');

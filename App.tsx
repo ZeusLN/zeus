@@ -148,6 +148,9 @@ import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
 import LightningAddressQR from './views/LightningAddress/LightningAddressQR';
 import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
+import CreateSelfLightningAddress from './views/LightningAddress/CreateSelfLightningAddress';
+import SelfAddressInfo from './views/LightningAddress/SelfAddressInfo';
+import SelfAddressSettings from './views/LightningAddress/SelfAddressSettings';
 import Attestation from './views/LightningAddress/Attestation';
 import Attestations from './views/LightningAddress/Attestations';
 import NostrKeys from './views/LightningAddress/NostrKeys';
@@ -1720,6 +1723,24 @@ export default class App extends React.PureComponent {
                                                                 name="NWCAddressSettings" // @ts-ignore:next-line
                                                                 component={
                                                                     NWCAddressSettings
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="CreateSelfLightningAddress" // @ts-ignore:next-line
+                                                                component={
+                                                                    CreateSelfLightningAddress
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="SelfAddressInfo" // @ts-ignore:next-line
+                                                                component={
+                                                                    SelfAddressInfo
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="SelfAddressSettings" // @ts-ignore:next-line
+                                                                component={
+                                                                    SelfAddressSettings
                                                                 }
                                                             />
                                                             <Stack.Screen
