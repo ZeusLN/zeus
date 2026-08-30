@@ -246,9 +246,20 @@ export default class UTXOsStore {
             data.birthday_height = this.start_height;
         }
 
-        console.log('importAccount req', data);
+        // birthday_height and addresses_to_generate drive the Zeus-side
+        // rescan and address pre-generation above; they aren't part of
+        // lnd's ImportAccountRequest. Embedded (protobufjs) and REST
+        // silently drop unknown fields but LNC's proto JSON unmarshaler
+        // rejects the whole request over them.
+        const {
+            birthday_height: _birthdayHeight,
+            addresses_to_generate: _addressesToGenerate,
+            ...importRequest
+        } = data;
 
-        return BackendUtils.importAccount(data)
+        console.log('importAccount req', importRequest);
+
+        return BackendUtils.importAccount(importRequest)
             .then(async (response: any) => {
                 if (!data.dry_run) {
                     if (this.start_height) {
