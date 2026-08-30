@@ -227,9 +227,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         handleExportChannels({
             isSqlite: SettingsStore.isSqlite ?? true,
             lndDir: SettingsStore.lndDir || 'lnd',
-            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            // nodeInfo is empty when the node isn't running, so read the
+            // network from the persisted wallet config instead
+            isTestnet: SettingsStore.embeddedLndNetwork === 'Testnet',
             pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
-            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            seedPhrase: (SettingsStore.seedPhrase || []).join(' '),
+            canUploadToOlympus: !!NodeInfoStore.nodeInfo.identity_pubkey,
             setStatus: (msg: string | null) =>
                 this.setState({
                     isChannelExporting: msg !== null,
