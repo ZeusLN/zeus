@@ -257,8 +257,6 @@ export default class UTXOsStore {
             ...importRequest
         } = data;
 
-        console.log('importAccount req', importRequest);
-
         return BackendUtils.importAccount(importRequest)
             .then(async (response: any) => {
                 if (!data.dry_run) {
