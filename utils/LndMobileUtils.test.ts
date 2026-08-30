@@ -63,6 +63,10 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_SPEEDLOADER: 'https://example.com/graph'
 }));
 jest.mock('./LocaleUtils', () => ({ localeString: (key: string) => key }));
+jest.mock('./TorUtils', () => ({
+    ensureTorStarted: jest.fn(),
+    SOCKS_PORT: 9056
+}));
 jest.mock('./ChannelMigrationUtils', () => ({ importChannelDb: jest.fn() }));
 jest.mock('./SleepUtils', () => ({
     ...jest.requireActual('./SleepUtils'),

@@ -221,8 +221,10 @@ const restartTor = async () => {
 export {
     doTorRequest,
     torHttpRequest,
+    ensureTorStarted,
     restartTor,
     isOnionHttpsUrl,
-    RequestMethod
+    RequestMethod,
+    SOCKS_PORT
 };
 export type { TorHttpRequest, TorHttpResponse };
