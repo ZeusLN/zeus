@@ -2047,6 +2047,7 @@
     "views.Settings.NostrWalletConnect.connectionSecret": "Connection Secret",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "Scan this QR code or copy the connection secret in your Nostr app to link this connection.",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "Waiting for app to connect...",
+    "views.Settings.NostrWalletConnect.waitingForInFlightRequest": "Waiting for an in-flight request to finish...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "We didn't receive any event from your Nostr client, but you can still close this screen and use your connection. The connection will work once your Nostr client sends a request.",
     "views.Settings.NostrWalletConnect.connectionTimeout": "Connection Timeout",
     "views.Settings.NostrWalletConnect.keepWaiting": "Keep Waiting",
