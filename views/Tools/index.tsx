@@ -36,7 +36,10 @@ import {
 } from '../../utils/DataClearUtils';
 import { restartApp } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
+import {
+    channelDataExists,
+    handleExportChannels
+} from '../../utils/ChannelMigrationUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -59,6 +62,7 @@ interface ToolsState {
     isChannelExporting: boolean;
     channelExportMessage: string;
     isClearingData: boolean;
+    channelDataOnDisk: boolean;
 }
 
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
@@ -72,7 +76,8 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         this.state = {
             isChannelExporting: false,
             channelExportMessage: '',
-            isClearingData: false
+            isClearingData: false,
+            channelDataOnDisk: false
         };
     }
 
@@ -85,7 +90,22 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         if (route.params?.showClearDataModal) {
             this.handleClearStorage();
         }
+
+        this.checkChannelDataOnDisk();
     }
+
+    // Fallback for offering channel export when the node isn't running
+    // and channels can't be queried
+    checkChannelDataOnDisk = async () => {
+        const { SettingsStore } = this.props;
+        if (SettingsStore.implementation !== 'embedded-lnd') return;
+
+        const channelDataOnDisk = await channelDataExists(
+            SettingsStore.lndDir || 'lnd',
+            SettingsStore.embeddedLndNetwork === 'Testnet'
+        );
+        this.setState({ channelDataOnDisk });
+    };
 
     componentWillUnmount() {
         if (this.focusListener) {
@@ -94,7 +114,10 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         this.releaseWipeGuard?.();
     }
 
-    handleFocus = () => this.props.SettingsStore.getSettings();
+    handleFocus = () => {
+        this.props.SettingsStore.getSettings();
+        this.checkChannelDataOnDisk();
+    };
 
     handleClearStorage = () => {
         Alert.alert(
@@ -146,9 +169,12 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         handleExportChannels({
             isSqlite: SettingsStore.isSqlite ?? true,
             lndDir: SettingsStore.lndDir || 'lnd',
-            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            // nodeInfo is empty when the node isn't running, so read the
+            // network from the persisted wallet config instead
+            isTestnet: SettingsStore.embeddedLndNetwork === 'Testnet',
             pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
-            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            seedPhrase: (SettingsStore.seedPhrase || []).join(' '),
+            canUploadToOlympus: !!NodeInfoStore.nodeInfo.identity_pubkey,
             setStatus: (msg: string | null) =>
                 this.setState({
                     isChannelExporting: msg !== null,
@@ -158,12 +184,21 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
     };
 
     render() {
-        const { navigation, SettingsStore, ChannelsStore } = this.props;
+        const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
+            this.props;
         const { settings, isChannelMigrating, implementation } = SettingsStore;
         const hasChannels =
             ChannelsStore.channels.length > 0 ||
             ChannelsStore.pendingChannels.length > 0 ||
             ChannelsStore.closedChannels.length > 0;
+
+        // If the node is up, trust its channel list; if it won't start,
+        // fall back to channel data found on disk so migration remains
+        // reachable before disaster recovery
+        const nodeConnected = !!NodeInfoStore.nodeInfo.identity_pubkey;
+        const canExportChannels = nodeConnected
+            ? hasChannels
+            : this.state.channelDataOnDisk;
 
         const selectedNode: any =
             (settings &&
@@ -754,7 +789,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
 
                     {implementation === 'embedded-lnd' &&
                         !isChannelMigrating &&
-                        hasChannels && (
+                        canExportChannels && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),

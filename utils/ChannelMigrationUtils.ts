@@ -29,6 +29,25 @@ const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
     return `${rootPath}/${lndDir}/data/graph/${network}`;
 };
 
+/**
+ * Checks whether channel data exists on disk, so export can be offered
+ * even when the node isn't running.
+ */
+export const channelDataExists = async (
+    lndDir: string,
+    isTestnet: boolean
+): Promise<boolean> => {
+    try {
+        const graphDir = getGraphDir(lndDir, isTestnet);
+        if (!(await RNFS.exists(graphDir))) return false;
+        const entries = await RNFS.readDir(graphDir);
+        return entries.length > 0;
+    } catch (e) {
+        console.error('Failed to check for channel data on disk:', e);
+        return false;
+    }
+};
+
 const stopLndSafely = async (): Promise<void> => {
     try {
         await stopLnd();
@@ -770,8 +789,8 @@ export const exportChannelDb = async (
 };
 
 /**
- * Prompts the user to export channel backup — either to Olympus (SQLite only)
- * or as a local zip file.
+ * Prompts the user to export channel backup — either to Olympus (SQLite
+ * only, requires a running node) or as a local zip file.
  */
 export const handleExportChannels = ({
     isSqlite,
@@ -779,6 +798,7 @@ export const handleExportChannels = ({
     isTestnet,
     pubkey,
     seedPhrase,
+    canUploadToOlympus,
     setStatus
 }: {
     isSqlite: boolean;
@@ -786,13 +806,16 @@ export const handleExportChannels = ({
     isTestnet: boolean;
     pubkey: string;
     seedPhrase: string;
+    // Olympus upload signs auth challenges with the node key,
+    // so it's only available while the node is running
+    canUploadToOlympus: boolean;
     setStatus: (msg: string | null) => void;
 }) => {
     const warningText =
         `${localeString('views.Tools.migration.export.text1')}\n\n` +
         `⚠️ ${localeString('views.Tools.migration.export.text2')}`;
 
-    if (isSqlite) {
+    if (isSqlite && canUploadToOlympus) {
         Alert.alert(
             localeString('views.Tools.migration.export.title'),
             warningText,
