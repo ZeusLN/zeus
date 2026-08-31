@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     BackHandler,
     Dimensions,
-    InteractionManager,
     NativeEventSubscription,
     Text,
     TouchableOpacity,
@@ -33,6 +32,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { runWhenIdle } from '../../utils/SchedulingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -85,6 +85,8 @@ export default class CashuSendingLightning extends React.Component<
 
     private focusListener: (() => void) | undefined;
 
+    private cancelPaymentKickoff: (() => void) | undefined;
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
@@ -106,13 +108,17 @@ export default class CashuSendingLightning extends React.Component<
         const { CashuStore, navigation, route } = this.props;
         const { paymentAmount } = route.params || {};
 
-        // Reset payment state and start payment after navigation completes
+        // Reset payment state and start the payment once the JS thread is
+        // free, so the melt does not jank the navigation transition. The
+        // short timeout keeps the wait bounded on a busy thread; the kickoff
+        // is cancelled on unmount so a screen the user has already left never
+        // starts a payment.
         CashuStore.resetPaymentState();
-        InteractionManager.runAfterInteractions(() => {
+        this.cancelPaymentKickoff = runWhenIdle(() => {
             CashuStore.payLnInvoiceFromEcash({
                 amount: paymentAmount
             });
-        });
+        }, 500);
 
         this.focusListener = navigation.addListener('focus', () => {
             const noteKey = CashuStore.noteKey;
@@ -291,6 +297,7 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentWillUnmount(): void {
+        this.cancelPaymentKickoff?.();
         if (this.focusListener) {
             this.focusListener();
         }
