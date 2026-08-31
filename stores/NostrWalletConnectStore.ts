@@ -437,6 +437,7 @@ export default class NostrWalletConnectStore {
                 this.walletServiceKeys = null;
                 this.errorMessage = '';
                 this.waitingForConnection = false;
+                this.waitingForInFlightHandlers = false;
                 this.currentConnectionId = undefined;
                 this.connectionJustSucceeded = false;
                 this.lastConnectionAttempt = 0;
@@ -667,20 +668,16 @@ export default class NostrWalletConnectStore {
                     connectionId
                 );
                 this.makeInvoiceTimestampsByConnection.delete(connectionId);
-                const hasInFlightHandlers =
-                    !!this.inFlightHandlersByConnection.get(connectionId)?.size;
-                if (hasInFlightHandlers) {
+                let hadInFlight = false;
+                if (this.inFlightHandlersByConnection.get(connectionId)?.size) {
                     runInAction(() => {
                         this.waitingForInFlightHandlers = true;
                     });
-                }
-                let hadInFlight = false;
-                try {
-                    hadInFlight = await this.awaitInFlightHandlers(
-                        connectionId
-                    );
-                } finally {
-                    if (hasInFlightHandlers) {
+                    try {
+                        hadInFlight = await this.awaitInFlightHandlers(
+                            connectionId
+                        );
+                    } finally {
                         runInAction(() => {
                             this.waitingForInFlightHandlers = false;
                         });
