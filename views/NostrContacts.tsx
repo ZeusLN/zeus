@@ -581,9 +581,7 @@ export default class NostrContacts extends React.Component<
                                 {localeString('views.NostrContacts.enterNpub')}
                             </Text>
                             <TextInput
-                                placeholder={
-                                    'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
-                                }
+                                placeholder="npub1..."
                                 value={account}
                                 style={{
                                     marginHorizontal: 22,
