@@ -56,6 +56,7 @@ export default class NWCConnectionDetails extends React.Component<
     NWCConnectionDetailsState
 > {
     private unsubscribeFocus?: () => void;
+    private isUnmounted = false;
     constructor(props: NWCConnectionDetailsProps) {
         super(props);
         this.state = {
@@ -169,6 +170,7 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     componentWillUnmount() {
+        this.isUnmounted = true;
         if (this.unsubscribeFocus) {
             this.unsubscribeFocus();
         }
@@ -297,17 +299,21 @@ export default class NWCConnectionDetails extends React.Component<
                     this.setState({ deleting: true, error: null });
                     NostrWalletConnectStore.deleteConnection(connection.id)
                         .then(() => {
-                            navigation.goBack();
+                            if (!this.isUnmounted) {
+                                navigation.goBack();
+                            }
                         })
                         .catch((error) => {
                             console.error(
                                 'Failed to delete connection:',
                                 error
                             );
-                            this.setState({
-                                error: 'Failed to delete connection',
-                                deleting: false
-                            });
+                            if (!this.isUnmounted) {
+                                this.setState({
+                                    error: 'Failed to delete connection',
+                                    deleting: false
+                                });
+                            }
                         });
                 }
             },
