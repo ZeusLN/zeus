@@ -714,7 +714,7 @@ export default class NWCConnectionDetails extends React.Component<
                                         ]}
                                     >
                                         {localeString(
-                                            'views.Settings.NostrWalletConnect.waitingForInFlightRequest'
+                                            'views.Settings.NostrWalletConnect.waitingToFinishPendingRequest'
                                         )}
                                     </Text>
                                 </View>
