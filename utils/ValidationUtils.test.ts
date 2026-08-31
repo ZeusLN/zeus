@@ -401,6 +401,32 @@ describe('isValidNostrWalletConnectUrl', () => {
         ).toBe(false);
     });
 
+    it('accepts ws:// relays for local regtest', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=ws://127.0.0.1:8080&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('accepts relay URLs with paths, ports, and IPv6 hosts', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com/path?x=1&secret=${secret}`
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com:443&secret=${secret}`
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://[::1]:8080&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
     it('rejects relay URLs with embedded spaces', () => {
         expect(
             ValidationUtils.isValidNostrWalletConnectUrl(
@@ -410,6 +436,14 @@ describe('isValidNostrWalletConnectUrl', () => {
         expect(
             ValidationUtils.isValidNostrWalletConnectUrl(
                 `nostr+walletconnect://${walletPubKeyHex}?relay=wss://a+b.io&secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects no-slash nostr+walletconnect: form', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect:${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}`
             )
         ).toBe(false);
     });
@@ -467,6 +501,11 @@ describe('isValidNostrWalletConnectUrl', () => {
         expect(
             ValidationUtils.isValidNostrWalletConnectUrl(
                 `nostr+walletconnect://${walletPubKeyHex}?relay=https://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://&secret=${secret}`
             )
         ).toBe(false);
         expect(

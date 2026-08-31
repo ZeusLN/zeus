@@ -6,8 +6,9 @@ const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
 const PORT_REGEX = /^:\d+$/;
 const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
 const NWC_HEX_32_BYTES = /^[a-fA-F0-9]{64}$/;
+// @getalby/sdk checks secret against /^[0-9a-f]{64}$/; query values are not
+// case-folded like URL hosts, so uppercase hex must be rejected here.
 const NWC_SECRET_HEX = /^[0-9a-f]{64}$/;
-const NWC_RELAY_URL = /^wss?:\/\/\S+$/i;
 
 interface ValidationOptions {
     requireHttps?: boolean;
@@ -84,7 +85,17 @@ const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
 };
 
 const isValidNwcRelayUrl = (relay: string): boolean => {
-    return typeof relay === 'string' && NWC_RELAY_URL.test(relay);
+    if (typeof relay !== 'string') return false;
+    try {
+        const parsed = new URL(relay);
+        // ws:// allowed for local/regtest relays; wss:// for production.
+        return (
+            (parsed.protocol === 'wss:' || parsed.protocol === 'ws:') &&
+            !!parsed.host
+        );
+    } catch {
+        return false;
+    }
 };
 
 const isValidNostrWalletConnectUrl = (url: string): boolean => {
