@@ -2047,6 +2047,7 @@
     "views.Settings.NostrWalletConnect.connectionSecret": "连接密钥",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "扫描此二维码，或在您的 Nostr 应用中复制连接密钥，以建立此连接。",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "正在等待应用程序建立连接……",
+    "views.Settings.NostrWalletConnect.waitingToFinishPendingRequest": "Waiting to finish a pending request...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "我们未收到您的 Nostr 客户端发送的任何事件，但您仍可关闭此界面并使用当前连接。当您的 Nostr 客户端发送请求后，连接将恢复正常。",
     "views.Settings.NostrWalletConnect.connectionTimeout": "连接超时",
     "views.Settings.NostrWalletConnect.keepWaiting": "继续等待",
