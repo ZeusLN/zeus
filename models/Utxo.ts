@@ -10,7 +10,7 @@ interface Outpoint {
 export default class Utxo extends BaseModel {
     @observable address: string;
     account: string;
-    confirmations: string;
+    confirmations?: string | number;
     outpoint: Outpoint;
     txid: string;
     output: string | number;
@@ -32,7 +32,7 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getConfs(): number {
-        return Number(this.confirmations);
+        return Number(this.confirmations) || 0;
     }
 
     @computed public get getOutpoint(): string {

@@ -285,7 +285,9 @@ export const getChainTransactions = async () => {
                 return {
                     amount: -Math.abs(withdrawal[3]) / 1000,
                     block_height: withdrawal[6],
-                    num_confirmations: getinfo.blockheight - withdrawal[6],
+                    num_confirmations: withdrawal[6]
+                        ? getinfo.blockheight - withdrawal[6] + 1
+                        : 0,
                     time_stamp: withdrawal[5],
                     txid: tx.hash,
                     dest_addresses: tx.dest_addresses
@@ -296,7 +298,9 @@ export const getChainTransactions = async () => {
                 return {
                     amount: deposit[3] / 1000,
                     block_height: deposit[6],
-                    num_confirmations: getinfo.blockheight - deposit[6],
+                    num_confirmations: deposit[6]
+                        ? getinfo.blockheight - deposit[6] + 1
+                        : 0,
                     time_stamp: deposit[5],
                     txid: tx.hash,
                     dest_addresses: tx.dest_addresses
@@ -312,5 +316,40 @@ export const getChainTransactions = async () => {
 
     return {
         transactions
+    };
+};
+
+// listfunds outputs carry a blockheight but no confirmation count, so derive
+// one from the current tip. Outputs still in the mempool have no blockheight
+// and report 0; if the tip is unknown the count is left off entirely rather
+// than claiming the output is unconfirmed.
+export const getUTXOs = async () => {
+    const results = await Promise.allSettled([
+        api.postRequest('/v1/listfunds'),
+        api.postRequest('/v1/getinfo')
+    ]);
+    const [listfundsResult, getinfoResult]: any = results;
+
+    if (listfundsResult.status !== 'fulfilled') {
+        throw listfundsResult.reason;
+    }
+
+    const listfunds = listfundsResult.value;
+    const tip =
+        getinfoResult.status === 'fulfilled'
+            ? getinfoResult.value.blockheight
+            : undefined;
+
+    return {
+        ...listfunds,
+        outputs: (listfunds.outputs || []).map((output: any) => {
+            if (!tip) return output;
+            return {
+                ...output,
+                confirmations: output.blockheight
+                    ? tip - output.blockheight + 1
+                    : 0
+            };
+        })
     };
 };
