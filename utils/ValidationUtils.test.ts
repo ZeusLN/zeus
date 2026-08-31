@@ -377,6 +377,43 @@ describe('isValidNostrWalletConnectUrl', () => {
         ).toBe(true);
     });
 
+    it('accepts a trailing slash after the pubkey', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}/?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('accepts uppercase hex pubkeys', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex.toUpperCase()}?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(true);
+    });
+
+    it('rejects uppercase hex secrets', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret.toUpperCase()}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects relay URLs with embedded spaces', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://a b&secret=${secret}`
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=wss://a+b.io&secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
     it('rejects empty, whitespace-only, null, and undefined URLs', () => {
         expect(ValidationUtils.isValidNostrWalletConnectUrl('')).toBe(false);
         expect(ValidationUtils.isValidNostrWalletConnectUrl('   ')).toBe(false);

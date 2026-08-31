@@ -2053,12 +2053,10 @@ export default class WalletConfiguration extends React.Component<
                                                 marginRight: 15
                                             }}
                                             onChangeText={(text: string) => {
-                                                const nostrWalletConnectUrl =
-                                                    text
-                                                        .trim()
-                                                        .replace(/\s+/g, ' ');
                                                 this.setState({
-                                                    nostrWalletConnectUrl,
+                                                    nostrWalletConnectUrl: text
+                                                        .trim()
+                                                        .replace(/\s+/g, ' '),
                                                     saved: false
                                                 });
                                             }}

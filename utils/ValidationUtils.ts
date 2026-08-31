@@ -6,7 +6,8 @@ const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
 const PORT_REGEX = /^:\d+$/;
 const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
 const NWC_HEX_32_BYTES = /^[a-fA-F0-9]{64}$/;
-const NWC_RELAY_URL = /^wss?:\/\/.+/i;
+const NWC_SECRET_HEX = /^[0-9a-f]{64}$/;
+const NWC_RELAY_URL = /^wss?:\/\/\S+$/i;
 
 interface ValidationOptions {
     requireHttps?: boolean;
@@ -88,23 +89,26 @@ const isValidNwcRelayUrl = (relay: string): boolean => {
 
 const isValidNostrWalletConnectUrl = (url: string): boolean => {
     if (!url || typeof url !== 'string') return false;
-    const normalizedUrl = url.trim().replace(/\s+/g, ' ');
+    const normalizedUrl = url.trim();
     if (!normalizedUrl.startsWith(NOSTR_WALLET_CONNECT_PREFIX)) return false;
 
-    const pathAndQuery = normalizedUrl.slice(
-        NOSTR_WALLET_CONNECT_PREFIX.length
-    );
-    const queryIndex = pathAndQuery.indexOf('?');
-    if (queryIndex === -1) return false;
+    let parsed: URL;
+    try {
+        // Swap in a special scheme so the pubkey parses as a host, the way
+        // NWCClient.parseWalletConnectUrl does in @getalby/sdk.
+        parsed = new URL(
+            `http://${normalizedUrl.slice(NOSTR_WALLET_CONNECT_PREFIX.length)}`
+        );
+    } catch {
+        return false;
+    }
 
-    const walletPubKeyHex = pathAndQuery.slice(0, queryIndex);
-    if (!NWC_HEX_32_BYTES.test(walletPubKeyHex)) return false;
+    if (!NWC_HEX_32_BYTES.test(parsed.host)) return false;
 
-    const params = new URLSearchParams(pathAndQuery.slice(queryIndex + 1));
-    const relays = params.getAll('relay');
-    const secret = params.get('secret');
+    const relays = parsed.searchParams.getAll('relay');
+    const secret = parsed.searchParams.get('secret');
 
-    if (!secret || !NWC_HEX_32_BYTES.test(secret)) return false;
+    if (!secret || !NWC_SECRET_HEX.test(secret)) return false;
     if (relays.length === 0 || !relays.every(isValidNwcRelayUrl)) return false;
 
     return true;
