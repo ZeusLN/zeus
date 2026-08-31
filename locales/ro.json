@@ -2047,6 +2047,7 @@
     "views.Settings.NostrWalletConnect.connectionSecret": "Secretul conexiunii",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "Scan this QR code or copy the connection secret in your Nostr app to link this connection.",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "Se așteaptă conectarea aplicației...",
+    "views.Settings.NostrWalletConnect.waitingToFinishPendingRequest": "Waiting to finish a pending request...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "Nu am primit niciun eveniment de la clientul dvs. Nostr, dar puteți totuși închide acest ecran și utiliza conexiunea. Conexiunea va funcționa după ce clientul dvs. Nostr trimite o solicitare.",
     "views.Settings.NostrWalletConnect.connectionTimeout": "Expirare conexiune",
     "views.Settings.NostrWalletConnect.keepWaiting": "Keep Waiting",
