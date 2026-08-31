@@ -1,6 +1,11 @@
 import * as React from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
+import Animated, {
+    interpolate,
+    SharedValue,
+    useAnimatedStyle
+} from 'react-native-reanimated';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -8,7 +13,7 @@ interface SwipeableRowActionProps {
     text: string;
     // translateX offset the action slides in from
     x: number;
-    progress: Animated.AnimatedInterpolation<number>;
+    progress: SharedValue<number>;
     icon: React.ReactNode;
     onPress: () => void;
 }
@@ -25,23 +30,15 @@ const SwipeableRowAction: React.FC<SwipeableRowActionProps> = ({
     icon,
     onPress
 }) => {
-    const transTranslateX = progress.interpolate({
-        inputRange: [0.25, 1],
-        outputRange: [x, 0]
-    });
-    const transOpacity = progress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 1]
-    });
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(progress.value, [0.25, 1], [x, 0]) }
+        ],
+        opacity: interpolate(progress.value, [0, 1], [0, 1])
+    }));
 
     return (
-        <Animated.View
-            style={{
-                flex: 1,
-                transform: [{ translateX: transTranslateX }],
-                opacity: transOpacity
-            }}
-        >
+        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
             <RectButton style={[styles.action]} onPress={onPress}>
                 <View
                     style={[styles.view]}

@@ -9,11 +9,11 @@ import {
     initialWindowMetrics
 } from 'react-native-safe-area-context';
 import {
+    AppState,
     BackHandler,
     NativeEventSubscription,
     Platform,
-    StatusBar,
-    AppState
+    StatusBar
 } from 'react-native';
 
 import {

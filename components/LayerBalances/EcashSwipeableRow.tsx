@@ -1,11 +1,6 @@
 import React, { Component } from 'react';
-import {
-    Alert,
-    Animated,
-    View,
-    I18nManager,
-    TouchableOpacity
-} from 'react-native';
+import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
+import { SharedValue } from 'react-native-reanimated';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
@@ -46,7 +41,7 @@ export default class EcashSwipeableRow extends Component<
     {}
 > {
     private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>,
+        progress: SharedValue<number>,
         close: () => void
     ) => {
         const { account, navigation } = this.props;

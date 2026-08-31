@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, Text, TouchableOpacity } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Spacer } from '../../components/layout/Spacer';
@@ -24,8 +24,8 @@ interface OrderListProps {
 }
 
 export default class OrderList extends React.PureComponent<OrderListProps> {
-    private rows: Array<Swipeable | null> = [];
-    private prevOpenedRow: Swipeable | null = null;
+    private rows: Array<SwipeableMethods | null> = [];
+    private prevOpenedRow: SwipeableMethods | null = null;
 
     private closeRow = (index: number) => {
         if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
@@ -67,7 +67,7 @@ export default class OrderList extends React.PureComponent<OrderListProps> {
                 data={orders}
                 renderItem={({ item, index }) => (
                     <SwipeableOrderItem
-                        ref={(ref: Swipeable | null) => {
+                        ref={(ref: SwipeableMethods | null) => {
                             this.rows[index] = ref;
                         }}
                         onSwipeableOpen={() => this.closeRow(index)}

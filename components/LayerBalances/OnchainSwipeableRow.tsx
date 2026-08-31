@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Animated, View, I18nManager, TouchableOpacity } from 'react-native';
+import { View, I18nManager, TouchableOpacity } from 'react-native';
+import { SharedValue } from 'react-native-reanimated';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
@@ -37,7 +38,7 @@ export default class OnchainSwipeableRow extends Component<
     {}
 > {
     private renderActions = (
-        progress: Animated.AnimatedInterpolation<number>,
+        progress: SharedValue<number>,
         close: () => void
     ) => {
         const { account, navigation } = this.props;
