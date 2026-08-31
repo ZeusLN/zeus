@@ -56,6 +56,7 @@ export default class NWCConnectionDetails extends React.Component<
     NWCConnectionDetailsState
 > {
     private unsubscribeFocus?: () => void;
+    private isUnmounted = false;
     constructor(props: NWCConnectionDetailsProps) {
         super(props);
         this.state = {
@@ -169,6 +170,7 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     componentWillUnmount() {
+        this.isUnmounted = true;
         if (this.unsubscribeFocus) {
             this.unsubscribeFocus();
         }
@@ -297,17 +299,21 @@ export default class NWCConnectionDetails extends React.Component<
                     this.setState({ deleting: true, error: null });
                     NostrWalletConnectStore.deleteConnection(connection.id)
                         .then(() => {
-                            navigation.goBack();
+                            if (!this.isUnmounted) {
+                                navigation.goBack();
+                            }
                         })
                         .catch((error) => {
                             console.error(
                                 'Failed to delete connection:',
                                 error
                             );
-                            this.setState({
-                                error: 'Failed to delete connection',
-                                deleting: false
-                            });
+                            if (!this.isUnmounted) {
+                                this.setState({
+                                    error: 'Failed to delete connection',
+                                    deleting: false
+                                });
+                            }
                         });
                 }
             },
@@ -322,7 +328,10 @@ export default class NWCConnectionDetails extends React.Component<
         const { navigation, NostrWalletConnectStore } = this.props;
         const { loading, regenerating, deleting, error, connection } =
             this.state;
-        const { loading: storeLoading } = NostrWalletConnectStore;
+        const { loading: storeLoading, waitingForInFlightHandlers } =
+            NostrWalletConnectStore;
+        const showInFlightWait =
+            waitingForInFlightHandlers && (deleting || regenerating);
 
         return (
             <Screen>
@@ -691,12 +700,31 @@ export default class NWCConnectionDetails extends React.Component<
                         </ScrollView>
 
                         <View style={styles.bottomContainer}>
+                            {showInFlightWait && (
+                                <View style={styles.inFlightWaitContainer}>
+                                    <LoadingIndicator size={24} />
+                                    <Text
+                                        style={[
+                                            styles.inFlightWaitText,
+                                            {
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.Settings.NostrWalletConnect.waitingToFinishPendingRequest'
+                                        )}
+                                    </Text>
+                                </View>
+                            )}
                             <Button
                                 title={localeString(
                                     'views.Settings.NostrWalletConnect.regenerateConnection'
                                 )}
                                 onPress={this.confirmRegenerateConnection}
-                                disabled={regenerating}
+                                disabled={regenerating || deleting}
                                 secondary={regenerating}
                                 noUppercase
                             />
@@ -708,7 +736,7 @@ export default class NWCConnectionDetails extends React.Component<
                                     this.deleteConnection(connection)
                                 }
                                 warning
-                                disabled={loading || deleting}
+                                disabled={loading || deleting || regenerating}
                                 secondary={deleting}
                                 noUppercase
                             />
@@ -766,5 +794,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 15,
         gap: 10
+    },
+    inFlightWaitContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        paddingVertical: 4
+    },
+    inFlightWaitText: {
+        flexShrink: 1,
+        fontSize: 14,
+        fontFamily: 'PPNeueMontreal-Book',
+        textAlign: 'center'
     }
 });

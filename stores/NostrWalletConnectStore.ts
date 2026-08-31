@@ -147,6 +147,7 @@ export default class NostrWalletConnectStore {
         new Map();
     @observable private publishedRelays: Set<string> = new Set();
     @observable public waitingForConnection = false;
+    @observable public waitingForInFlightHandlers = false;
     @observable public currentConnectionId?: string;
     @observable public connectionJustSucceeded = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
@@ -436,6 +437,7 @@ export default class NostrWalletConnectStore {
                 this.walletServiceKeys = null;
                 this.errorMessage = '';
                 this.waitingForConnection = false;
+                this.waitingForInFlightHandlers = false;
                 this.currentConnectionId = undefined;
                 this.connectionJustSucceeded = false;
                 this.lastConnectionAttempt = 0;
@@ -666,9 +668,21 @@ export default class NostrWalletConnectStore {
                     connectionId
                 );
                 this.makeInvoiceTimestampsByConnection.delete(connectionId);
-                const hadInFlight = await this.awaitInFlightHandlers(
-                    connectionId
-                );
+                let hadInFlight = false;
+                if (this.inFlightHandlersByConnection.get(connectionId)?.size) {
+                    runInAction(() => {
+                        this.waitingForInFlightHandlers = true;
+                    });
+                    try {
+                        hadInFlight = await this.awaitInFlightHandlers(
+                            connectionId
+                        );
+                    } finally {
+                        runInAction(() => {
+                            this.waitingForInFlightHandlers = false;
+                        });
+                    }
+                }
                 await this.deleteClientKeys(connection.pubkey);
                 const { index: liveIndex } = this.getConnection({
                     connectionId

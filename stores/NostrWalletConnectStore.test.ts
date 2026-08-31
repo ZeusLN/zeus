@@ -1170,6 +1170,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         await new Promise((resolve) => setImmediate(resolve));
         expect(deleted).toBe(false);
         expect(store.connections).toHaveLength(1);
+        expect(store.waitingForInFlightHandlers).toBe(true);
 
         const lateResponse = await (store as any).withGlobalHandler(
             connection.id,
@@ -1186,6 +1187,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         expect(deleted).toBe(true);
         expect(store.connections).toHaveLength(0);
+        expect(store.waitingForInFlightHandlers).toBe(false);
     });
 
     it('defers relay release when delete awaited in-flight handlers', async () => {
