@@ -87,6 +87,14 @@
             <category android:name="android.intent.category.DEFAULT" />
             <data android:scheme="lightning" />
             <data android:scheme="LIGHTNING" />
+            <data android:scheme="bitcoin" />
+            <data android:scheme="BITCOIN" />
+            <data android:scheme="lnurl" />
+            <data android:scheme="lnurlw" />
+            <data android:scheme="lnurlc" />
+            <data android:scheme="lnurlp" />
+            <data android:scheme="cashu" />
+            <data android:scheme="lndconnect" />
         </intent-filter>
         <intent-filter>
             <action android:name="android.intent.action.SEND" />
