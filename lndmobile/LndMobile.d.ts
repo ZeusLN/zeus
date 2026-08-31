@@ -114,7 +114,8 @@ export interface ILndMobileTools {
     saveChannelsBackup(base64Backups: string): Promise<string>;
     saveChannelBackupFile(network: string): Promise<boolean>;
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
-    DEBUG_resetGraphDb(lndDir: string, network: string): Promise<boolean>;
+    repairGraphDb(lndDir: string, network: string): Promise<string>;
+    resetGraphDb(lndDir: string, network: string): Promise<string>;
     DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
     DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
     deleteLndDirectory(lndDir: string): Promise<null>;
