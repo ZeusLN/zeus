@@ -107,6 +107,8 @@ const isValidNostrWalletConnectUrl = (url: string): boolean => {
     try {
         // Swap in a special scheme so the pubkey parses as a host, the way
         // NWCClient.parseWalletConnectUrl does in @getalby/sdk.
+        // Relay values with unencoded ? or & in the outer query can confuse
+        // URL parsing; wallets almost always percent-encode those.
         parsed = new URL(
             `http://${normalizedUrl.slice(NOSTR_WALLET_CONNECT_PREFIX.length)}`
         );
