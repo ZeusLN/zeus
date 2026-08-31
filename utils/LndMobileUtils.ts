@@ -340,8 +340,9 @@ export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     }
 }
 
-export async function expressGraphSync() {
+export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
     return await new Promise(async (resolve) => {
+        let resetFailed = false;
         syncStore.setExpressGraphSyncStatus(true);
         const start = new Date();
 
@@ -350,7 +351,7 @@ export async function expressGraphSync() {
             console.log('Express graph sync cancelling...');
             cancelGossipSync();
             console.log('Express graph sync cancelled...');
-            resolve(true);
+            resolve({ resetFailed });
         });
 
         if (settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
@@ -370,11 +371,17 @@ export async function expressGraphSync() {
                         settingsStore?.embeddedLndNetwork === 'Mainnet'
                             ? 'mainnet'
                             : 'testnet';
-                    await NativeModules.LndMobileTools.DEBUG_resetGraphDb(
-                        lndDir,
-                        network
-                    );
+                    const status =
+                        await NativeModules.LndMobileTools.resetGraphDb(
+                            lndDir,
+                            network
+                        );
+                    log.d(`Graph database reset: ${status}`);
                 } catch (error) {
+                    // The reset runs in a single transaction, so a failure
+                    // leaves the database untouched. Report it so the reset
+                    // flag is kept and retried on the next startup.
+                    resetFailed = true;
                     log.e('Graph database reset failed', [error]);
                 }
             }
@@ -394,11 +401,11 @@ export async function expressGraphSync() {
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
             syncStore.setExpressGraphSyncStatus(false);
-            resolve(true);
+            resolve({ resetFailed });
         } catch (e) {
             log.e('GossipSync exception!', [e]);
             syncStore.setExpressGraphSyncStatus(false);
-            resolve(true);
+            resolve({ resetFailed });
         }
     });
 }
@@ -418,6 +425,23 @@ export async function initializeLnd({
 }) {
     const { initialize } = lndMobile.index;
     await writeLndConfig({ lndDir, isTestnet, rescan, compactDb, isSqlite });
+
+    if (isSqlite) {
+        // Repair graph databases damaged by the pre-v13.2.1 EGS reset
+        // (issue #4524) before anything opens lnd.sqlite.
+        try {
+            const status = await NativeModules.LndMobileTools.repairGraphDb(
+                lndDir,
+                isTestnet ? 'testnet' : 'mainnet'
+            );
+            if (status === 'repaired') {
+                log.i('Repaired damaged graph database');
+            }
+        } catch (error) {
+            log.e('Graph database repair failed', [error]);
+        }
+    }
+
     await initialize();
 }
 

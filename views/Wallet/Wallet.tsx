@@ -876,7 +876,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 '[Performance] Express Graph Sync starting...'
                             );
 
-                            await expressGraphSync();
+                            const { resetFailed } = await expressGraphSync();
 
                             const expressGraphSyncDuration =
                                 new Date().getTime() - expressGraphSyncStart;
@@ -884,7 +884,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 `[Performance] Express Graph Sync completed in ${expressGraphSyncDuration}ms`
                             );
 
-                            if (settings.resetExpressGraphSyncOnStartup) {
+                            // Keep the reset flag if the graph reset failed
+                            // so it is retried on the next startup
+                            if (
+                                settings.resetExpressGraphSyncOnStartup &&
+                                !resetFailed
+                            ) {
                                 await updateSettings({
                                     resetExpressGraphSyncOnStartup: false
                                 });
