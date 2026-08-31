@@ -1,4 +1,4 @@
-import CashuDevKit, { CDKToken } from '../cashu-cdk';
+import CashuDevKit, { CDKToken, CDKTransaction } from '../cashu-cdk';
 
 export enum MintPaymentStatus {
     IDLE = 'idle',
@@ -96,6 +96,40 @@ export const classifyCashuSeedOrigin = (
 
     return CashuSeedOrigin.Independent;
 };
+
+// Structural subset of a persisted CashuPayment; kept duck-typed so this
+// module does not import models (which would cycle back through stores)
+export interface LocalCashuPaymentRecord {
+    payment_preimage?: string;
+    amount?: number | string;
+    meltResponse?: { quote?: { quote?: string } };
+}
+
+/**
+ * True if an outgoing CDK melt transaction is already represented by a
+ * locally persisted CashuPayment. Matches on melt quote id, falling back
+ * to payment preimage + amount: MPP segments are recorded locally under
+ * the planner's quote id while CDK records the mint-side MPP quote id.
+ */
+export function isCdkMeltTrackedLocally(
+    tx: CDKTransaction,
+    payments: LocalCashuPaymentRecord[]
+): boolean {
+    return payments.some((p) => {
+        const localQuoteId = p.meltResponse?.quote?.quote;
+        if (tx.quote_id && localQuoteId && localQuoteId === tx.quote_id) {
+            return true;
+        }
+        if (
+            tx.payment_proof &&
+            p.payment_preimage === tx.payment_proof &&
+            (p.amount === undefined || Number(p.amount) === Number(tx.amount))
+        ) {
+            return true;
+        }
+        return false;
+    });
+}
 
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;

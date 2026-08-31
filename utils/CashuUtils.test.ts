@@ -9,10 +9,12 @@ jest.mock('../cashu-cdk', () => ({
 }));
 
 import CashuDevKit from '../cashu-cdk';
+import type { CDKTransaction } from '../cashu-cdk';
 import CashuUtils, {
     cashuTokenPrefixes,
     CashuSeedOrigin,
-    classifyCashuSeedOrigin
+    classifyCashuSeedOrigin,
+    isCdkMeltTrackedLocally
 } from './CashuUtils';
 
 const mockIsValidToken = CashuDevKit.isValidToken as jest.Mock;
@@ -406,5 +408,84 @@ describe('CashuUtils', () => {
                 CashuSeedOrigin.DerivedFromWalletSeed
             );
         });
+    });
+});
+
+describe('isCdkMeltTrackedLocally', () => {
+    const cdkMelt = (overrides: Partial<CDKTransaction> = {}): CDKTransaction =>
+        ({
+            id: 'a'.repeat(64),
+            direction: 'outgoing',
+            amount: 1000,
+            fee: 2,
+            mint_url: 'https://mint.example.com',
+            timestamp: 1756200000,
+            quote_id: 'quote-1',
+            payment_proof: 'preimage-1',
+            ...overrides
+        } as CDKTransaction);
+
+    it('returns false with no local payments', () => {
+        expect(isCdkMeltTrackedLocally(cdkMelt(), [])).toBe(false);
+    });
+
+    it('matches a local payment by melt quote id', () => {
+        const payments = [
+            {
+                amount: 999999,
+                meltResponse: { quote: { quote: 'quote-1' } }
+            }
+        ];
+        expect(isCdkMeltTrackedLocally(cdkMelt(), payments)).toBe(true);
+    });
+
+    it('falls back to preimage + amount when quote ids differ (MPP)', () => {
+        const payments = [
+            {
+                amount: 1000,
+                payment_preimage: 'preimage-1',
+                meltResponse: { quote: { quote: 'planner-quote' } }
+            }
+        ];
+        expect(
+            isCdkMeltTrackedLocally(
+                cdkMelt({ quote_id: 'mint-mpp-quote' }),
+                payments
+            )
+        ).toBe(true);
+    });
+
+    it('does not match on preimage alone when amounts differ', () => {
+        const payments = [
+            {
+                amount: 400,
+                payment_preimage: 'preimage-1',
+                meltResponse: { quote: { quote: 'planner-quote' } }
+            }
+        ];
+        expect(
+            isCdkMeltTrackedLocally(
+                cdkMelt({ quote_id: 'mint-mpp-quote' }),
+                payments
+            )
+        ).toBe(false);
+    });
+
+    it('matches by preimage when the local record has no amount', () => {
+        const payments = [{ payment_preimage: 'preimage-1' }];
+        expect(
+            isCdkMeltTrackedLocally(cdkMelt({ quote_id: undefined }), payments)
+        ).toBe(true);
+    });
+
+    it('returns false for an untracked melt', () => {
+        const payments = [
+            {
+                amount: 1000,
+                payment_preimage: 'other-preimage',
+                meltResponse: { quote: { quote: 'other-quote' } }
+            }
+        ];
+        expect(isCdkMeltTrackedLocally(cdkMelt(), payments)).toBe(false);
     });
 });

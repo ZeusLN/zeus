@@ -5,6 +5,7 @@ import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { Proof } from './CashuToken';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import type { CDKTransaction } from '../cashu-cdk';
 
 // Quote structure used in meltResponse
 export interface MeltQuote {
@@ -33,8 +34,30 @@ export default class CashuPayment extends Payment {
     public mintUrl: string;
     public proofs: Proof[];
 
+    // CDK transaction fields (for melts recovered from CDK history)
+    public fromCDK?: boolean;
+    public cdkTransactionId?: string;
+    public cdkQuoteId?: string;
+
     constructor(data?: any) {
         super(data);
+    }
+
+    /**
+     * Create CashuPayment from CDK transaction (outgoing melt)
+     */
+    static fromCDKTransaction(tx: CDKTransaction): CashuPayment {
+        return new CashuPayment({
+            payment_request: tx.payment_request,
+            payment_preimage: tx.payment_proof,
+            amount: tx.amount,
+            fee: tx.fee || 0,
+            mintUrl: tx.mint_url,
+            timestamp: tx.timestamp,
+            fromCDK: true,
+            cdkTransactionId: tx.id,
+            cdkQuoteId: tx.quote_id
+        });
     }
 
     @computed public get model(): string {

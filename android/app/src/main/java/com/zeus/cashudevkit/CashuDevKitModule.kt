@@ -1636,8 +1636,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                val txDirection = direction?.let {
-                    if (it == "incoming") TransactionDirection.INCOMING else TransactionDirection.OUTGOING
+                val txDirection = when (direction) {
+                    "incoming" -> TransactionDirection.INCOMING
+                    "outgoing" -> TransactionDirection.OUTGOING
+                    else -> null
                 }
 
                 val transactions = db!!.listTransactions(
@@ -1649,13 +1651,27 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val result = JSONArray()
                 transactions.forEach { tx ->
                     val txJson = JSONObject().apply {
-                        put("id", tx.id.toString())
+                        put("id", tx.id.hex)
                         put("direction", if (tx.direction == TransactionDirection.INCOMING) "incoming" else "outgoing")
                         put("amount", tx.amount.value.toLong())
                         put("mint_url", tx.mintUrl.url)
                         put("timestamp", tx.timestamp)
-                        tx.fee?.let { put("fee", it.value.toLong()) }
+                        put("fee", tx.fee.value.toLong())
+                        put("unit", currencyUnitToString(tx.unit))
                         tx.memo?.let { put("memo", it) }
+                        tx.quoteId?.let { put("quote_id", it) }
+                        tx.paymentRequest?.let { put("payment_request", it) }
+                        tx.paymentProof?.let { put("payment_proof", it) }
+                        tx.paymentMethod?.let {
+                            put(
+                                "payment_method",
+                                when (it) {
+                                    is PaymentMethod.Bolt11 -> "bolt11"
+                                    is PaymentMethod.Bolt12 -> "bolt12"
+                                    is PaymentMethod.Custom -> it.method
+                                }
+                            )
+                        }
                     }
                     result.put(txJson)
                 }
