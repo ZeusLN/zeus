@@ -2047,6 +2047,7 @@
     "views.Settings.NostrWalletConnect.connectionSecret": "Secret pro připojení",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "Naskenujte tento QR kód, nebo zkopírujte secret pro připojení ve vaší aplikaci Nostr, abyste toto připojení propojili.",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "Čekání na připojení aplikace...",
+    "views.Settings.NostrWalletConnect.waitingToFinishPendingRequest": "Waiting to finish a pending request...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "Neobdrželi jsme žádnou událost z vašeho Nostr klienta, ale přesto můžete tuto obrazovku zavřít a použít vaše připojení. Toto připojení bude fungovat, jakmile váš Nostr klient odešle požadavek.",
     "views.Settings.NostrWalletConnect.connectionTimeout": "Vypršel čas připojení",
     "views.Settings.NostrWalletConnect.keepWaiting": "Vydržte",
