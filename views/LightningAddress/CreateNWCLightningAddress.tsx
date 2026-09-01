@@ -66,9 +66,10 @@ export default class CreateNWCLightningAddress extends React.Component<
 
         const loading = this.state.loading || LightningAddressStore.loading;
 
+        const nwcConnectionStringValid =
+            ValidationUtils.isValidNostrWalletConnectUrl(nwcConnectionString);
         const nwcConnectionStringInvalid =
-            !!nwcConnectionString &&
-            !ValidationUtils.isValidNostrWalletConnectUrl(nwcConnectionString);
+            !!nwcConnectionString && !nwcConnectionStringValid;
 
         const InfoButton = () => (
             <View>
@@ -156,13 +157,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         ) =>
                                                             this.setState({
                                                                 nwcConnectionString:
-                                                                    text
-                                                                        .trim()
-                                                                        .replace(
-                                                                            /\s+/g,
-                                                                            ' '
-                                                                        ),
-                                                                tested: false
+                                                                    text.trim()
                                                             })
                                                         }
                                                         autoCapitalize="none"
@@ -246,10 +241,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                             }
                                         }}
                                         disabled={
-                                            loading ||
-                                            !ValidationUtils.isValidNostrWalletConnectUrl(
-                                                nwcConnectionString
-                                            )
+                                            loading || !nwcConnectionStringValid
                                         }
                                     />
                                 </View>

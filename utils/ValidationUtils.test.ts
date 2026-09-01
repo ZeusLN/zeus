@@ -385,12 +385,13 @@ describe('isValidNostrWalletConnectUrl', () => {
         ).toBe(true);
     });
 
-    it('accepts uppercase hex pubkeys', () => {
+    it('rejects uppercase hex pubkeys', () => {
+        // React Native's URL polyfill preserves host case, unlike Node's URL.
         expect(
             ValidationUtils.isValidNostrWalletConnectUrl(
                 `nostr+walletconnect://${walletPubKeyHex.toUpperCase()}?relay=wss://relay.example.com&secret=${secret}`
             )
-        ).toBe(true);
+        ).toBe(false);
     });
 
     it('rejects uppercase hex secrets', () => {
@@ -444,6 +445,22 @@ describe('isValidNostrWalletConnectUrl', () => {
         expect(
             ValidationUtils.isValidNostrWalletConnectUrl(
                 `nostr+walletconnect:${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects legacy nostrwalletconnect scheme', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostrwalletconnect://${walletPubKeyHex}?relay=wss://relay.example.com&secret=${secret}`
+            )
+        ).toBe(false);
+    });
+
+    it('rejects non-WebSocket relay URLs', () => {
+        expect(
+            ValidationUtils.isValidNostrWalletConnectUrl(
+                `nostr+walletconnect://${walletPubKeyHex}?relay=http://relay.example.com&secret=${secret}`
             )
         ).toBe(false);
     });

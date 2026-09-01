@@ -5,10 +5,9 @@ const HOST_REGEX =
 const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
 const PORT_REGEX = /^:\d+$/;
 const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
-const NWC_HEX_32_BYTES = /^[a-fA-F0-9]{64}$/;
-// @getalby/sdk checks secret against /^[0-9a-f]{64}$/; query values are not
-// case-folded like URL hosts, so uppercase hex must be rejected here.
-const NWC_SECRET_HEX = /^[0-9a-f]{64}$/;
+// @getalby/sdk checks both the wallet pubkey and secret against this pattern.
+// React Native's URL polyfill does not case-fold hosts like Node's URL does.
+const NWC_HEX64 = /^[0-9a-f]{64}$/;
 
 interface ValidationOptions {
     requireHttps?: boolean;
@@ -116,12 +115,17 @@ const isValidNostrWalletConnectUrl = (url: string): boolean => {
         return false;
     }
 
-    if (!NWC_HEX_32_BYTES.test(parsed.host)) return false;
+    // Check the raw pubkey as Node's URL lowercases hosts while React Native's
+    // URL polyfill preserves their case.
+    const pubkey = normalizedUrl
+        .slice(NOSTR_WALLET_CONNECT_PREFIX.length)
+        .split(/[/?#]/, 1)[0];
+    if (!NWC_HEX64.test(pubkey)) return false;
 
     const relays = parsed.searchParams.getAll('relay');
     const secret = parsed.searchParams.get('secret');
 
-    if (!secret || !NWC_SECRET_HEX.test(secret)) return false;
+    if (!secret || !NWC_HEX64.test(secret)) return false;
     if (relays.length === 0 || !relays.every(isValidNwcRelayUrl)) return false;
 
     return true;
