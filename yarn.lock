@@ -2795,11 +2795,6 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.12.18.tgz#1d3ca764718915584fcd9f6344621b7672665c67"
   integrity sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==
 
-"@types/node@^17.0.0":
-  version "17.0.45"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.45.tgz#2c0fafd78705e7a18b7906b5201a522719dc5190"
-  integrity sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==
-
 "@types/object-hash@1.3.4":
   version "1.3.4"
   resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-1.3.4.tgz#079ba142be65833293673254831b5e3e847fe58b"
@@ -6757,14 +6752,13 @@ joi@^17.2.1:
     "@sideway/formula" "^3.0.1"
     "@sideway/pinpoint" "^2.0.0"
 
-js-lnurl@0.5.1:
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/js-lnurl/-/js-lnurl-0.5.1.tgz#d755a2fbefa5dfd2764d65addee64253c60c6108"
-  integrity sha512-nNGiRInXfjw9EnzF/nfzqMCOeT2fqgyzB3iXuPSxktPa3UGV3HRHuhTSUid+G/GwblZj1o9y27gi6sdZTNO+7Q==
+js-lnurl@0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/js-lnurl/-/js-lnurl-0.6.0.tgz#eabaabbe4feb4799a647da9601449e49679d4bd0"
+  integrity sha512-U4hnInqlHVM9DyYMnOLk0IqlD293A7GVen8JBNWbXrq7C1IigQpTfoal+Fgz/eTZOsYtIEFEOyW9mKgFD/Oc0w==
   dependencies:
     "@types/aes-js" "^3.1.1"
     "@types/base64-js" "^1.2.5"
-    "@types/node" "^17.0.0"
     aes-js "^3.1.2"
     base64-js "^1.3.1"
     bech32 "^1.1.4"

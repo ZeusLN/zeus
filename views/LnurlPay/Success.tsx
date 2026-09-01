@@ -9,7 +9,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
+import { LNURLPaySuccessAction } from 'js-lnurl';
+import { decipherAES } from 'js-lnurl/lib/helpers';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 

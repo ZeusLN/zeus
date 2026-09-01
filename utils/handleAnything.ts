@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
-import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
+import { getParams as getlnurlParams } from 'js-lnurl';
+import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
