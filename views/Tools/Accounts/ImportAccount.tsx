@@ -318,6 +318,8 @@ export default class ImportAccount extends React.Component<
                             numberOfLines={4}
                             multiline
                             style={{ paddingBottom: 10 }}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                         <>
                             <Text
@@ -339,6 +341,8 @@ export default class ImportAccount extends React.Component<
                                     })
                                 }
                                 error={masterKeyFingerprintInvalid}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
                         </>
                         <DropdownSetting
