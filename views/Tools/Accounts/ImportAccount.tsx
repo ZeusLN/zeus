@@ -156,8 +156,28 @@ export default class ImportAccount extends React.Component<
             addresses_to_generate,
             understood
         } = this.state;
-        const { errorMsg } = UTXOsStore;
+        const { errorMsg, importingAccount } = UTXOsStore;
         const { implementation } = SettingsStore;
+
+        const trimmedName = name.trim();
+        const trimmedExtendedPublicKey = extended_public_key.trim();
+        const trimmedMasterKeyFingerprint = master_key_fingerprint.trim();
+
+        // the fingerprint is optional, but when one is supplied it has to be
+        // exactly four bytes - reverseMfpBytes drops any trailing nibble, so
+        // a malformed value would be imported as a silently wrong fingerprint
+        const masterKeyFingerprintInvalid =
+            !!trimmedMasterKeyFingerprint &&
+            !/^[0-9a-fA-F]{8}$/.test(trimmedMasterKeyFingerprint);
+
+        // lnd needs both a name and a key to import an account, and a zero
+        // birthday height would kick off a rescan from the genesis block
+        const importDisabled =
+            importingAccount ||
+            !trimmedName ||
+            !trimmedExtendedPublicKey ||
+            masterKeyFingerprintInvalid ||
+            (existing_account && block_height < 1);
 
         const ScanBadge = () => (
             <TouchableOpacity
@@ -318,6 +338,7 @@ export default class ImportAccount extends React.Component<
                                         master_key_fingerprint: text
                                     })
                                 }
+                                error={masterKeyFingerprintInvalid}
                             />
                         </>
                         <DropdownSetting
@@ -455,20 +476,22 @@ export default class ImportAccount extends React.Component<
                         title={localeString(
                             'views.ImportAccount.importAccount'
                         )}
+                        disabled={importDisabled}
                         onPress={() =>
                             this.props.UTXOsStore.importAccount({
-                                name,
-                                extended_public_key,
+                                name: trimmedName,
+                                extended_public_key: trimmedExtendedPublicKey,
                                 address_type: address_type
                                     ? Number(address_type)
                                     : undefined,
-                                master_key_fingerprint: master_key_fingerprint
-                                    ? Base64Utils.hexToBase64(
-                                          Base64Utils.reverseMfpBytes(
-                                              master_key_fingerprint
+                                master_key_fingerprint:
+                                    trimmedMasterKeyFingerprint
+                                        ? Base64Utils.hexToBase64(
+                                              Base64Utils.reverseMfpBytes(
+                                                  trimmedMasterKeyFingerprint
+                                              )
                                           )
-                                      )
-                                    : undefined,
+                                        : undefined,
                                 dry_run: true,
                                 birthday_height: existing_account
                                     ? block_height
