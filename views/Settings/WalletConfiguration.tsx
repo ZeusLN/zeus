@@ -183,7 +183,6 @@ interface WalletConfigurationState {
     portError: boolean;
     customMailboxServerError: boolean;
     pairingPhraseError: boolean;
-    nostrWalletConnectUrlError: boolean;
 }
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
@@ -266,8 +265,7 @@ export default class WalletConfiguration extends React.Component<
         macaroonHexError: false,
         portError: false,
         customMailboxServerError: false,
-        pairingPhraseError: false,
-        nostrWalletConnectUrlError: false
+        pairingPhraseError: false
     };
 
     scrollViewRef = React.createRef<ScrollView>();
@@ -1415,8 +1413,7 @@ export default class WalletConfiguration extends React.Component<
             macaroonHexError,
             portError,
             customMailboxServerError,
-            pairingPhraseError,
-            nostrWalletConnectUrlError
+            pairingPhraseError
         } = this.state;
         const {
             loading,
@@ -1440,6 +1437,12 @@ export default class WalletConfiguration extends React.Component<
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
+
+        const nostrWalletConnectUrlInvalid =
+            implementation === 'nostr-wallet-connect' &&
+            !ValidationUtils.isValidNostrWalletConnectUrl(
+                nostrWalletConnectUrl
+            );
 
         const CertInstallInstructions = () => (
             <View style={styles.button}>
@@ -2037,7 +2040,8 @@ export default class WalletConfiguration extends React.Component<
                                                 'nostr+walletconnect://'
                                             }
                                             textColor={
-                                                nostrWalletConnectUrlError
+                                                nostrWalletConnectUrlInvalid &&
+                                                nostrWalletConnectUrl
                                                     ? themeColor('error')
                                                     : themeColor('text')
                                             }
@@ -2048,18 +2052,14 @@ export default class WalletConfiguration extends React.Component<
                                                 flex: 1,
                                                 marginRight: 15
                                             }}
-                                            onChangeText={(text: string) =>
+                                            onChangeText={(text: string) => {
                                                 this.setState({
                                                     nostrWalletConnectUrl: text
                                                         .trim()
                                                         .replace(/\s+/g, ' '),
-                                                    nostrWalletConnectUrlError:
-                                                        !text.startsWith(
-                                                            'nostr+walletconnect://'
-                                                        ),
                                                     saved: false
-                                                })
-                                            }
+                                                });
+                                            }}
                                             locked={loading}
                                             autoCorrect={false}
                                         />
@@ -3404,7 +3404,7 @@ export default class WalletConfiguration extends React.Component<
                                                 !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
                                                     pairingPhrase
                                                 )) ||
-                                            nostrWalletConnectUrlError ||
+                                            nostrWalletConnectUrlInvalid ||
                                             // Required input check
                                             // Port is optional, it will fallback to 80 or 443
                                             (implementation === 'lndhub' &&

@@ -4,6 +4,10 @@ const HOST_REGEX =
 // in paths we have more allowed chars
 const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
 const PORT_REGEX = /^:\d+$/;
+const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
+// @getalby/sdk checks both the wallet pubkey and secret against this pattern.
+// React Native's URL polyfill does not case-fold hosts like Node's URL does.
+const NWC_HEX64 = /^[0-9a-f]{64}$/;
 
 interface ValidationOptions {
     requireHttps?: boolean;
@@ -77,6 +81,54 @@ const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
     const normalizedPhrase = phrase.trim().replace(/\s+/g, ' ');
     if (!/^[a-zA-Z\s]+$/.test(normalizedPhrase)) return false;
     return normalizedPhrase.split(' ').length === 10;
+};
+
+const isValidNwcRelayUrl = (relay: string): boolean => {
+    if (typeof relay !== 'string') return false;
+    try {
+        const parsed = new URL(relay);
+        // ws:// allowed for local/regtest relays; wss:// for production.
+        return (
+            (parsed.protocol === 'wss:' || parsed.protocol === 'ws:') &&
+            !!parsed.host
+        );
+    } catch {
+        return false;
+    }
+};
+
+const isValidNostrWalletConnectUrl = (url: string): boolean => {
+    if (!url || typeof url !== 'string') return false;
+    const normalizedUrl = url.trim();
+    if (!normalizedUrl.startsWith(NOSTR_WALLET_CONNECT_PREFIX)) return false;
+
+    let parsed: URL;
+    try {
+        // Swap in a special scheme so the pubkey parses as a host, the way
+        // NWCClient.parseWalletConnectUrl does in @getalby/sdk.
+        // Relay values with unencoded ? or & in the outer query can confuse
+        // URL parsing; wallets almost always percent-encode those.
+        parsed = new URL(
+            `http://${normalizedUrl.slice(NOSTR_WALLET_CONNECT_PREFIX.length)}`
+        );
+    } catch {
+        return false;
+    }
+
+    // Check the raw pubkey as Node's URL lowercases hosts while React Native's
+    // URL polyfill preserves their case.
+    const pubkey = normalizedUrl
+        .slice(NOSTR_WALLET_CONNECT_PREFIX.length)
+        .split(/[/?#]/, 1)[0];
+    if (!NWC_HEX64.test(pubkey)) return false;
+
+    const relays = parsed.searchParams.getAll('relay');
+    const secret = parsed.searchParams.get('secret');
+
+    if (!secret || !NWC_HEX64.test(secret)) return false;
+    if (relays.length === 0 || !relays.every(isValidNwcRelayUrl)) return false;
+
+    return true;
 };
 
 const validateNodePubkey = (pubkey: string): boolean => {
@@ -160,6 +212,7 @@ const ValidationUtils = {
     hasValidRuneChars,
     hasValidMacaroonChars,
     hasValidPairingPhraseCharsAndWordcount,
+    isValidNostrWalletConnectUrl,
     validateNodePubkey,
     validateNodeHost
 };

@@ -22,6 +22,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import ValidationUtils from '../../utils/ValidationUtils';
 
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
@@ -64,6 +65,11 @@ export default class CreateNWCLightningAddress extends React.Component<
         const updateConnection = route.params?.updateConnection;
 
         const loading = this.state.loading || LightningAddressStore.loading;
+
+        const nwcConnectionStringValid =
+            ValidationUtils.isValidNostrWalletConnectUrl(nwcConnectionString);
+        const nwcConnectionStringInvalid =
+            !!nwcConnectionString && !nwcConnectionStringValid;
 
         const InfoButton = () => (
             <View>
@@ -134,6 +140,15 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         placeholder={
                                                             'nostr+walletconnect://'
                                                         }
+                                                        textColor={
+                                                            nwcConnectionStringInvalid
+                                                                ? themeColor(
+                                                                      'error'
+                                                                  )
+                                                                : themeColor(
+                                                                      'text'
+                                                                  )
+                                                        }
                                                         value={
                                                             nwcConnectionString
                                                         }
@@ -142,7 +157,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         ) =>
                                                             this.setState({
                                                                 nwcConnectionString:
-                                                                    text
+                                                                    text.trim()
                                                             })
                                                         }
                                                         autoCapitalize="none"
@@ -226,7 +241,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                             }
                                         }}
                                         disabled={
-                                            !nwcConnectionString || loading
+                                            loading || !nwcConnectionStringValid
                                         }
                                     />
                                 </View>
