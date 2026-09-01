@@ -1306,7 +1306,10 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
                 error: undefined
             })
         );
-        expect(lateResponse.error?.code).toBe('UNAUTHORIZED');
+        expect(lateResponse.error).toEqual({
+            code: 'INTERNAL_ERROR',
+            message: 'stores.NostrWalletConnectStore.error.connectionUpdating'
+        });
 
         releaseHandler({ result: { ok: true } });
         await handlerDone;
@@ -1314,6 +1317,35 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         expect(updated).toBe(true);
         expect(connection.maxAmountSats).toBe(0);
+    });
+
+    it('returns an internal error when an update starts while marking a connection used', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        const handler = jest.fn();
+
+        jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
+            async () => {
+                (store as any).pendingConnectionMutations.set(
+                    connection.id,
+                    'update'
+                );
+                return true;
+            }
+        );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            handler
+        );
+
+        expect(response.error).toEqual({
+            code: 'INTERNAL_ERROR',
+            message: 'stores.NostrWalletConnectStore.error.connectionUpdating'
+        });
+        expect(handler).not.toHaveBeenCalled();
     });
 
     it('defers relay release when updateConnection awaited in-flight handlers', async () => {

@@ -187,7 +187,7 @@ export default class NostrWalletConnectStore {
         number
     >();
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
-    private pendingConnectionMutationIds = new Set<string>();
+    private pendingConnectionMutations = new Map<string, 'delete' | 'update'>();
     private inFlightHandlersByConnection = new Map<
         string,
         Set<Promise<unknown>>
@@ -655,7 +655,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            this.pendingConnectionMutationIds.add(connectionId);
+            this.pendingConnectionMutations.set(connectionId, 'delete');
             try {
                 const relayUrl = connection.relayUrl;
                 const hadActiveSubscription =
@@ -701,7 +701,7 @@ export default class NostrWalletConnectStore {
                 }
                 await this.saveConnections();
             } finally {
-                this.pendingConnectionMutationIds.delete(connectionId);
+                this.pendingConnectionMutations.delete(connectionId);
             }
         } catch (error: any) {
             runInAction(() => {
@@ -781,7 +781,7 @@ export default class NostrWalletConnectStore {
                   }
                 | undefined;
 
-            this.pendingConnectionMutationIds.add(connectionId);
+            this.pendingConnectionMutations.set(connectionId, 'update');
             try {
                 const hadActiveSubscription =
                     this.activeSubscriptions.has(connectionId);
@@ -897,7 +897,7 @@ export default class NostrWalletConnectStore {
                 await this.subscribeToConnection(connection);
                 return { success: true };
             } finally {
-                this.pendingConnectionMutationIds.delete(connectionId);
+                this.pendingConnectionMutations.delete(connectionId);
             }
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
@@ -1752,8 +1752,17 @@ export default class NostrWalletConnectStore {
                 this.unsubscribeFromConnection(connectionId);
                 return this.unauthorizedConnectionResponse<T>();
             }
-            if (this.pendingConnectionMutationIds.has(connectionId)) {
+            const mutation = this.pendingConnectionMutations.get(connectionId);
+            if (mutation === 'delete') {
                 return this.unauthorizedConnectionResponse<T>();
+            }
+            if (mutation === 'update') {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.connectionUpdating'
+                    ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                ) as T;
             }
             if (connection.isExpired) {
                 this.unsubscribeFromConnection(connectionId);
@@ -1765,11 +1774,21 @@ export default class NostrWalletConnectStore {
                 ) as T;
             }
             const marked = await this.markConnectionUsed(connectionId);
-            if (
-                !marked ||
-                this.pendingConnectionMutationIds.has(connectionId)
-            ) {
+            if (!marked) {
                 return this.unauthorizedConnectionResponse<T>();
+            }
+            const mutationAfterMark =
+                this.pendingConnectionMutations.get(connectionId);
+            if (mutationAfterMark === 'delete') {
+                return this.unauthorizedConnectionResponse<T>();
+            }
+            if (mutationAfterMark === 'update') {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.connectionUpdating'
+                    ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                ) as T;
             }
             return await handler();
         } finally {
