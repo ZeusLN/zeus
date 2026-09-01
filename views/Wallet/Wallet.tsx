@@ -1199,8 +1199,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await ChannelsStore.getChannels();
             } catch (connectionError) {
                 console.log('LNC connection failed:', connectionError);
-                NodeInfoStore.handleGetNodeInfoError();
-                setConnectingStatus(false);
+                // getNodeInfo() is the only call above that can reject, and it
+                // already sets the node info error state itself - under a
+                // staleness check this call site does not have
+                if (connecting) setConnectingStatus(false);
                 return;
             }
         } else if (implementation === 'nostr-wallet-connect') {
@@ -1216,7 +1218,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await BalanceStore.getLightningBalance(true);
             } catch (connectionError) {
                 console.log('NWC connection failed:', connectionError);
-                setConnectingStatus(false);
+                if (connecting) setConnectingStatus(false);
                 return;
             }
         } else if (implementation === 'ldk-node') {
