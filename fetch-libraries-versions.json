@@ -1,8 +1,8 @@
 {
     "embedded-lnd": {
-        "version": "v0.21.2-beta-zeus",
-        "androidSha256": "7cb3253ea27ff43746fa4eb2d81e9a35014a822a37fdb1c3831b4e52bd6e269f",
-        "iosSha256": "58320b9a3b6de5a92b25405f02ec4bb8e279c657bbf70817a8439fa7e5560168"
+        "version": "v0.21.3-beta-zeus",
+        "androidSha256": "dd42bcad91e0d48afe61cada7735b3e70d6d5a1f53a9ac3f9099530a6e81bc36",
+        "iosSha256": "f57e485ccdc479437abb6ee1339e8815a1c457030029a82b15bb42b04db95b3a"
     },
     "ldk-node": {
         "version": "v0.7.0-zeus-rl-0.2.5",
