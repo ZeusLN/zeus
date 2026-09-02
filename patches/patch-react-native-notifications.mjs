@@ -158,4 +158,24 @@ public class FcmToken implements IFcmToken {
             console.log('  - Patched react-native.config.js for RN 0.84 compatibility');
         }
     }
+
+    // Fix the release buildType for AGP 9 (RN 0.87+)
+    // AGP 9 removed getDefaultProguardFile('proguard-android.txt') because it
+    // pulls in -dontoptimize, and hard-errors at configuration time rather than
+    // warning. The library still calls it, which fails the whole Android build
+    // even though it sets minifyEnabled false.
+    const buildGradlePath =
+        './node_modules/react-native-notifications/lib/android/app/build.gradle';
+
+    if (fs.existsSync(buildGradlePath)) {
+        let buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+        if (buildGradle.includes("getDefaultProguardFile('proguard-android.txt')")) {
+            buildGradle = buildGradle.replace(
+                "getDefaultProguardFile('proguard-android.txt')",
+                "getDefaultProguardFile('proguard-android-optimize.txt')"
+            );
+            fs.writeFileSync(buildGradlePath, buildGradle);
+            console.log('  - Patched build.gradle proguard file for AGP 9');
+        }
+    }
 }
