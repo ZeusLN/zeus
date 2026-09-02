@@ -298,12 +298,29 @@ export default class Send extends React.Component<SendProps, SendState> {
         utxoBalance: number,
         account: string
     ) => {
-        this.setState((prevState) => ({
-            utxos,
-            utxoBalance,
-            account,
-            fundMax: account === 'default' ? prevState.fundMax : false
-        }));
+        const { confirmedBlockchainBalance } = this.props.BalanceStore;
+
+        this.setState((prevState) => {
+            // send max is only offered on the default account
+            const fundMax = account === 'default' ? prevState.fundMax : false;
+
+            let amount = prevState.amount;
+            let satAmount = prevState.satAmount;
+
+            if (fundMax) {
+                // send max is bound to the selection, so the amount it will
+                // send has to follow the selection as it changes
+                satAmount =
+                    utxoBalance > 0 ? utxoBalance : confirmedBlockchainBalance;
+            } else if (prevState.fundMax) {
+                // send max was just turned off, so put back the amount that
+                // was entered before it was enabled
+                amount = this.previousAmount || '';
+                satAmount = this.previousSatAmount || '0';
+            }
+
+            return { utxos, utxoBalance, account, fundMax, amount, satAmount };
+        });
     };
 
     validateAdditionalOutputFields = (
@@ -946,21 +963,39 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     forceUnit={fundMax ? 'sats' : undefined}
                                 />
 
+                                {BackendUtils.supportsCoinControl() && (
+                                    <View style={{ marginBottom: 20 }}>
+                                        <UTXOPicker
+                                            onValueChange={this.selectUTXOs}
+                                            UTXOsStore={UTXOsStore}
+                                        />
+                                    </View>
+                                )}
+
                                 {BackendUtils.supportsOnchainSendMax() &&
                                     additionalOutputs.length === 0 &&
                                     account === 'default' && (
-                                        <View style={{ marginBottom: 18 }}>
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                marginBottom: 18
+                                            }}
+                                        >
                                             <Text
                                                 style={{
-                                                    marginTop: -20,
-                                                    top: 20,
+                                                    flex: 1,
+                                                    marginRight: 12,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.OpenChannel.fundMax'
+                                                    utxos.length > 0
+                                                        ? 'views.Send.fundMaxUtxos'
+                                                        : 'views.OpenChannel.fundMax'
                                                 )}
                                             </Text>
                                             <Switch
@@ -1151,15 +1186,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             />
                                         </View>
                                     )}
-
-                                {BackendUtils.supportsCoinControl() && (
-                                    <View style={{ marginBottom: 20 }}>
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    </View>
-                                )}
 
                                 <Text
                                     style={{
