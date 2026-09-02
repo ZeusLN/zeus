@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Αυτό είναι ένα τιμολόγιο Zaplocker που θα κρατήσει την πληρωμή έως και 24 ώρες. Ανοίγετε το ZEUS τακτικά μετά την πληρωμή για να μετριάσετε τον κίνδυνο αναγκαστικού κλεισίματος καναλιού. Προχωρήστε με δική σας ευθύνη.",
     "views.Send.addOutput": "Προσθέστε έξοδο",
     "views.Send.removeOutput": "Αφαιρέστε έξοδο",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Δεν μπόρεσε να πάρει προσφορά",
     "views.Send.payBolt12.invoiceFetchFailure": "Δεν ήταν δυνατή η λήψη τιμολογίου",
     "views.Send.payBolt12.specifyAmount": "Πρέπει να προσδιοριστεί το ποσό",
