@@ -3,7 +3,7 @@
   "version": "13.2.2-alpha",
   "private": true,
   "engines": {
-    "node": ">= 22.13.0"
+    "node": "^22.13.0 || ^24.3.0 || >= 26.0.0"
   },
   "jest": {
     "preset": "@react-native/jest-preset",
@@ -105,7 +105,7 @@
     "punycode": "1.4.1",
     "querystring-es3": "0.2.1",
     "react": "19.2.8",
-    "react-native": "0.86.0",
+    "react-native": "0.87.1",
     "react-native-biometrics": "3.0.1",
     "react-native-blob-util": "0.24.10",
     "react-native-circular-progress-indicator": "4.4.2",
@@ -160,11 +160,11 @@
     "@babel/preset-typescript": "7.22.15",
     "@babel/runtime": "7.26.10",
     "@react-native-community/cli": "20.2.0",
-    "@react-native/babel-preset": "0.86.0",
-    "@react-native/eslint-config": "0.86.0",
-    "@react-native/jest-preset": "0.86.0",
-    "@react-native/metro-config": "0.86.0",
-    "@react-native/typescript-config": "0.86.0",
+    "@react-native/babel-preset": "0.87.1",
+    "@react-native/eslint-config": "0.87.1",
+    "@react-native/jest-preset": "0.87.1",
+    "@react-native/metro-config": "0.87.1",
+    "@react-native/typescript-config": "0.87.1",
     "@types/create-hash": "1.2.6",
     "@types/crypto-js": "4.1.1",
     "@types/jest": "29.5.12",
