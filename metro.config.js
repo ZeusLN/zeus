@@ -28,7 +28,27 @@ const config = {
         ],
         extraNodeModules: {
             'react-native': path.resolve(__dirname, 'node_modules/react-native')
-        }
+        },
+        // @react-native-vector-icons/common imports
+        // '@react-native/assets-registry/registry'. Up to RN 0.86 that package
+        // was pulled in by react-native itself and
+        // Libraries/Image/AssetRegistry simply re-exported it, so the app and
+        // the icon packages shared one registry instance. RN 0.87 moved the
+        // registry in-tree (react-native/asset-registry, which is also what
+        // metro-config now sets as assetRegistryPath) and dropped the
+        // dependency, so the import no longer resolves.
+        //
+        // Alias it to react-native's copy rather than installing the standalone
+        // package: a second copy would resolve fine but register assets into a
+        // different Map, so getAssetByID would silently return undefined.
+        resolveRequest: (context, moduleName, platform) =>
+            context.resolveRequest(
+                context,
+                moduleName === '@react-native/assets-registry/registry'
+                    ? 'react-native/asset-registry'
+                    : moduleName,
+                platform
+            )
     }
 };
 
