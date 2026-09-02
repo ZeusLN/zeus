@@ -231,6 +231,53 @@ describe('NostrWalletConnectStore relay rotation', () => {
         expect((store as any).publishedRelays.has(OLD_RELAY)).toBe(false);
     });
 
+    it('marks a relay-changing update as rotate, not update, while in flight', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store);
+        let markerDuringMutation: string | undefined;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            async () => {
+                markerDuringMutation = (
+                    store as any
+                ).pendingConnectionMutations.get(connection.id);
+            }
+        );
+
+        const result = await store.updateConnection(connection.id, {
+            relayUrl: NEW_RELAY
+        });
+
+        expect(result.success).toBe(true);
+        expect(markerDuringMutation).toBe('rotate');
+        expect(
+            (store as any).pendingConnectionMutations.has(connection.id)
+        ).toBe(false);
+    });
+
+    it('does not clear a concurrent delete marker when an update finishes', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store);
+
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            async () => {
+                // Simulate a delete winning the race while this update is
+                // still in its critical section.
+                (store as any).pendingConnectionMutations.set(
+                    connection.id,
+                    'delete'
+                );
+            }
+        );
+
+        await store.updateConnection(connection.id, {
+            name: 'Renamed App'
+        });
+
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toBe('delete');
+    });
+
     it('leaves relayUrl unchanged when storing the new key fails so retry can rotate', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
@@ -1307,7 +1354,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
             })
         );
         expect(lateResponse.error).toEqual({
-            code: 'INTERNAL_ERROR',
+            code: 'RATE_LIMITED',
             message: 'stores.NostrWalletConnectStore.error.connectionUpdating'
         });
 
@@ -1319,7 +1366,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         expect(connection.maxAmountSats).toBe(0);
     });
 
-    it('returns an internal error when an update starts while marking a connection used', async () => {
+    it('returns a rate-limit error when an update starts while marking a connection used', async () => {
         const store = buildStore();
         const connection = seedConnection(store, {
             expiresAt: new Date(Date.now() + 60_000)
@@ -1342,8 +1389,66 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         );
 
         expect(response.error).toEqual({
-            code: 'INTERNAL_ERROR',
+            code: 'RATE_LIMITED',
             message: 'stores.NostrWalletConnectStore.error.connectionUpdating'
+        });
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('returns UNAUTHORIZED when a delete starts while marking a connection used', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        const handler = jest.fn();
+
+        jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
+            async () => {
+                (store as any).pendingConnectionMutations.set(
+                    connection.id,
+                    'delete'
+                );
+                return true;
+            }
+        );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            handler
+        );
+
+        expect(response.error).toEqual({
+            code: 'UNAUTHORIZED',
+            message: 'stores.NostrWalletConnectStore.error.connectionNotFound'
+        });
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('returns UNAUTHORIZED when a relay rotation starts while marking a connection used', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        const handler = jest.fn();
+
+        jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
+            async () => {
+                (store as any).pendingConnectionMutations.set(
+                    connection.id,
+                    'rotate'
+                );
+                return true;
+            }
+        );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            handler
+        );
+
+        expect(response.error).toEqual({
+            code: 'UNAUTHORIZED',
+            message: 'stores.NostrWalletConnectStore.error.connectionNotFound'
         });
         expect(handler).not.toHaveBeenCalled();
     });
