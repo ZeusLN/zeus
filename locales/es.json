@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Estas son las facturas de Zaplocker que mantendrá el pago de hasta 24 horas. Abra Zeus regularmente después del pago para ayudar a mitigar el riesgo de un canal cerrado de la fuerza. Proceda bajo su propio riesgo.",
     "views.Send.addOutput": "Agregar salida",
     "views.Send.removeOutput": "Eliminar salida",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "No se pudo recuperar la oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "No se pudo recuperar la factura",
     "views.Send.payBolt12.specifyAmount": "Se debe especificar la cantidad",

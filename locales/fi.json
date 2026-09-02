@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Tämä on Zaplocker-lasku, joka pitää maksun jäädytettynä 24 tuntiin asti. Avaa ZEUS säännöllisesti maksun jälkeen auttaaksesi vähentämään riskiä kanavan pakko-sulkemisesta. Jatka omalla vastuullasi.",
     "views.Send.addOutput": "Lisää ulostulo",
     "views.Send.removeOutput": "Poista ulostulo",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Couldn't fetch offer",
     "views.Send.payBolt12.invoiceFetchFailure": "Couldn't fetch invoice",
     "views.Send.payBolt12.specifyAmount": "Määrä on määriteltävä",

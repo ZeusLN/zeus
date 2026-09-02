@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Aceasta este o factură Zaplocker care va menține plata până la 24 de ore. Deschideți Zeus în mod regulat după plată pentru a ajuta la atenuarea riscului unui canal închis de forță. Continuați -vă pe propriul dvs. risc.",
     "views.Send.addOutput": "Adăugați ieșire",
     "views.Send.removeOutput": "Eliminați ieșirea",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Nu am putut prelua oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "Nu s-a putut prelua factura",
     "views.Send.payBolt12.specifyAmount": "Suma trebuie specificată",

@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "这是一张 Zaplocker 发票，可将付款保留长达 24 小时。支付后请定期打开 ZEUS，以帮助降低通道被强制关闭的风险。操作请自行承担风险。",
     "views.Send.addOutput": "添加输出",
     "views.Send.removeOutput": "移除输出",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "无法获取报价",
     "views.Send.payBolt12.invoiceFetchFailure": "无法获取发票",
     "views.Send.payBolt12.specifyAmount": "必须指定金额",

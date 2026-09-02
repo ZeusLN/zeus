@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "這是一筆 Zaplocker 帳單，意味著可能會鎖定資金長達 24 小時。請在付款後不時開啟 ZEUS，以避免相關管道被強制關閉。要繼續請自負風險。",
     "views.Send.addOutput": "增加輸出項",
     "views.Send.removeOutput": "移除輸出項",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "無法取得供應資料",
     "views.Send.payBolt12.invoiceFetchFailure": "無法取得帳單",
     "views.Send.payBolt12.specifyAmount": "金額必須要指定",
