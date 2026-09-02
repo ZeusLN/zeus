@@ -14,7 +14,6 @@ import Slider from '@react-native-community/slider';
 import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
-import AmountInput from '../../components/AmountInput';
 import Button from '../../components/Button';
 import EcashMintPicker from '../../components/EcashMintPicker';
 import SwipeButton from '../../components/SwipeButton';
@@ -369,7 +368,6 @@ export default class CashuPaymentRequest extends React.Component<
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
         const {
-            customAmount,
             zaplockerToggle,
             slideToPayThreshold,
             donationsToggle,
@@ -627,23 +625,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                    {isNoAmountInvoice ? (
-                                        <AmountInput
-                                            amount={customAmount}
-                                            title={localeString(
-                                                'views.PaymentRequest.customAmt'
-                                            )}
-                                            onAmountChange={(
-                                                amount: string,
-                                                satAmount: string | number
-                                            ) => {
-                                                this.setState({
-                                                    customAmount: amount,
-                                                    satAmount
-                                                });
-                                            }}
-                                        />
-                                    ) : (
+                                    {!isNoAmountInvoice && (
                                         <View style={styles.center}>
                                             <Amount
                                                 sats={requestAmount}
@@ -1093,6 +1075,7 @@ export default class CashuPaymentRequest extends React.Component<
                     !loading &&
                     !loadingFeeEstimate &&
                     !payReqChanged &&
+                    !isNoAmountInvoice &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10, top: 6 }}>
                             <View

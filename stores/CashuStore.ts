@@ -4205,7 +4205,17 @@ export default class CashuStore {
 
             let totalFeeEstimate = 0;
 
-            if (isMultiMint) {
+            if (rawPaymentAmt <= 0) {
+                // Cashu melts (paying a Lightning invoice with ecash) always
+                // require a fixed amount — the mint has no notion of an
+                // amount the payer chooses. Surface this up front instead of
+                // round-tripping to the mint for a melt quote request that
+                // would fail the same way.
+                computedPayReqError = localeString(
+                    'stores.CashuStore.noAmountInvoiceNotSupported'
+                );
+                this.meltQuotes = [];
+            } else if (isMultiMint) {
                 if (paymentAmt > 0) {
                     if (__DEV__) {
                         console.log(
