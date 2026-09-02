@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "यह एक ज़ैपलॉकर इनवॉइस है जो भुगतान को 24 घंटे तक रोक सकता है। भुगतान के बाद नियमित रूप से ज़ीउस खोलें ताकि फोर्स क्लोज्ड चैनल के जोखिम को कम करने में मदद मिले। अपने जोखिम पर आगे बढ़ें।",
     "views.Send.addOutput": "आउटपुट जोड़ें",
     "views.Send.removeOutput": "आउटपुट हटाएं",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "ऑफर प्राप्त नहीं कर सका",
     "views.Send.payBolt12.invoiceFetchFailure": "इनवॉइस प्राप्त नहीं कर सका",
     "views.Send.payBolt12.specifyAmount": "राशि निर्दिष्ट की जानी चाहिए",
