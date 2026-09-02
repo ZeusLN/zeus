@@ -26,6 +26,12 @@ const runTask = async (task: () => void | Promise<void>) => {
 /**
  * Run `task` once the JS thread goes idle, or after `timeoutMs` at the latest.
  *
+ * `timeoutMs` is a deadline, not a delay. It is handed to
+ * `requestIdleCallback` as its `timeout` option, so it only bounds how long
+ * the idle scheduler may hold the task back. It has no effect on the fallback
+ * path, where there is no idle scheduler to wait on and the task runs on the
+ * next macrotask, well inside the deadline.
+ *
  * Returns a cancel function. Call it (from `componentWillUnmount`, say) to
  * drop a task that has not run yet; calling it afterwards is a no-op.
  */
@@ -61,7 +67,9 @@ export const runWhenIdle = (
 
     // No idle scheduler (Jest, legacy runtime). A macrotask at least gets the
     // work off the current call stack, which is all the deprecated
-    // `runAfterInteractions` stub did anyway.
+    // `runAfterInteractions` stub did anyway. Not `timeoutMs`: that is the
+    // latest the task may run, and with nothing to wait for there is no
+    // reason to hold it back.
     const timeoutId = setTimeout(run, 0);
     return () => {
         if (settled) return;

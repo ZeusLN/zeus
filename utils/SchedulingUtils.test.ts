@@ -116,6 +116,20 @@ describe('SchedulingUtils', () => {
             expect(task).toHaveBeenCalledTimes(1);
         });
 
+        it('does not hold the task back for the caller timeout', () => {
+            // The timeout is a deadline for the idle scheduler, not a delay.
+            // With no scheduler to wait on, the fallback runs on the next
+            // macrotask rather than at the deadline.
+            jest.useFakeTimers();
+            delete globalScope.requestIdleCallback;
+            const task = jest.fn();
+
+            runWhenIdle(task, 5000);
+            jest.advanceTimersByTime(0);
+
+            expect(task).toHaveBeenCalledTimes(1);
+        });
+
         it('cancels a pending timer', () => {
             jest.useFakeTimers();
             delete globalScope.requestIdleCallback;
