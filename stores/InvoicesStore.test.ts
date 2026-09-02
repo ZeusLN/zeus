@@ -6,6 +6,7 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         decodePaymentRequest: jest.fn(),
         getNewAddress: jest.fn(),
+        getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false)
     }
 }));
@@ -114,6 +115,14 @@ describe('InvoicesStore.getNewAddress', () => {
         });
     });
 
+    it('leaves the caller-supplied request object untouched', async () => {
+        const store = newStore();
+        const params = { account: 'SeedSigner', type: '0' };
+        await store.getNewAddress(params);
+
+        expect(params).toEqual({ account: 'SeedSigner', type: '0' });
+    });
+
     it('surfaces backend errors instead of leaving a stale address', async () => {
         (BackendUtils.getNewAddress as jest.Mock).mockRejectedValue(
             new Error('account not found')
@@ -124,5 +133,27 @@ describe('InvoicesStore.getNewAddress', () => {
 
         expect(store.onChainAddress).toBeNull();
         expect(store.error_msg).toContain('account not found');
+    });
+});
+
+describe('InvoicesStore.getNewChangeAddress', () => {
+    it('sets change without mutating the caller-supplied request object', async () => {
+        (BackendUtils.getNewChangeAddress as jest.Mock).mockResolvedValue({
+            addr: 'bcrt1qchange'
+        });
+
+        const store = newStore();
+        const params = { account: 'SeedSigner', type: 'TAPROOT_PUBKEY' };
+        await store.getNewChangeAddress(params);
+
+        expect(BackendUtils.getNewChangeAddress).toHaveBeenCalledWith({
+            account: 'SeedSigner',
+            type: 'TAPROOT_PUBKEY',
+            change: true
+        });
+        expect(params).toEqual({
+            account: 'SeedSigner',
+            type: 'TAPROOT_PUBKEY'
+        });
     });
 });

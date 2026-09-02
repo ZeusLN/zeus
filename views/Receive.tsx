@@ -895,11 +895,6 @@ export default class Receive extends React.Component<
         }
     };
 
-    getNewAddress = (params: any) => {
-        const { InvoicesStore } = this.props;
-        InvoicesStore.getNewAddress(params);
-    };
-
     updateExpirationIndex = (expirationIndex: number) => {
         if (expirationIndex === 0) {
             this.setState({

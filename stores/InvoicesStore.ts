@@ -624,16 +624,18 @@ export default class InvoicesStore {
         // ZEUS-2223 / ZEUS-2932: imported accounts exist under a single key
         // scope, and lnd requires the request's address type to match it;
         // it never infers the scope from the account name. Honor an
-        // account-derived (walletrpc) address type; drop anything else (like
+        // account-derived (walletrpc) address type; omit anything else (like
         // the user's preferred type from settings, see ZEUS-2396) so lnd's
         // default applies instead of a mismatched scope.
-        if (params.account && params.account !== 'default') {
-            const accountType = toWalletrpcAddressTypeName(params.type);
-            if (accountType) params.type = accountType;
-            else delete params.type;
-        }
+        const { type, ...rest } = params;
+        const resolvedType =
+            rest.account && rest.account !== 'default'
+                ? toWalletrpcAddressTypeName(type)
+                : type;
+        const request =
+            resolvedType === undefined ? rest : { ...rest, type: resolvedType };
         this.onChainAddress = null;
-        return BackendUtils.getNewAddress(params)
+        return BackendUtils.getNewAddress(request)
             .then((data: any) => {
                 const address =
                     data.address ||
@@ -641,8 +643,8 @@ export default class InvoicesStore {
                     data.p2tr ||
                     (data[0] && data[0].address);
                 runInAction(() => {
-                    if (!params.unified) this.onChainAddress = address;
-                    if (!params.unified) this.creatingInvoice = false;
+                    if (!request.unified) this.onChainAddress = address;
+                    if (!request.unified) this.creatingInvoice = false;
                 });
                 return address;
             })
@@ -666,15 +668,15 @@ export default class InvoicesStore {
             this.error_msg = null;
         }
 
-        params.change = true;
+        const request = { ...params, change: true };
 
         this.onChainAddress = null;
-        return BackendUtils.getNewChangeAddress(params)
+        return BackendUtils.getNewChangeAddress(request)
             .then((data: any) => {
                 const address = data.addr;
                 runInAction(() => {
-                    if (!params.unified) this.onChainAddress = address;
-                    if (!params.unified) this.creatingInvoice = false;
+                    if (!request.unified) this.onChainAddress = address;
+                    if (!request.unified) this.creatingInvoice = false;
                 });
                 return address;
             })
