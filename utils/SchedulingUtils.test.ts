@@ -32,7 +32,8 @@ describe('SchedulingUtils', () => {
             expect(task).toHaveBeenCalledTimes(1);
         });
 
-        it('passes the caller timeout as a backstop', () => {
+        it('passes the caller timeout on to the idle scheduler', () => {
+            jest.useFakeTimers();
             const requestIdle = jest.fn();
             globalScope.requestIdleCallback = requestIdle;
 
@@ -42,12 +43,64 @@ describe('SchedulingUtils', () => {
         });
 
         it('applies a default timeout when none is given', () => {
+            jest.useFakeTimers();
             const requestIdle = jest.fn();
             globalScope.requestIdleCallback = requestIdle;
 
             runWhenIdle(jest.fn());
 
-            expect(requestIdle.mock.calls[0][1]).toEqual({ timeout: 2000 });
+            expect(requestIdle.mock.calls[0][1]).toEqual({ timeout: 10000 });
+        });
+
+        it('runs the task at the deadline when idle time never comes', () => {
+            // React Native drops the `timeout` option, so the deadline has to
+            // be held by a timer of ours. Without it a busy queue can hold an
+            // idle task back well past the caller's deadline.
+            jest.useFakeTimers();
+            globalScope.requestIdleCallback = jest.fn();
+            const task = jest.fn();
+
+            runWhenIdle(task, 500);
+
+            jest.advanceTimersByTime(499);
+            expect(task).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(1);
+            expect(task).toHaveBeenCalledTimes(1);
+        });
+
+        it('runs the task once when the deadline passes after idle time', () => {
+            jest.useFakeTimers();
+            const requestIdle = jest.fn().mockReturnValue({});
+            const cancelIdle = jest.fn();
+            globalScope.requestIdleCallback = requestIdle;
+            globalScope.cancelIdleCallback = cancelIdle;
+            const task = jest.fn();
+
+            runWhenIdle(task, 500);
+            requestIdle.mock.calls[0][0]();
+            jest.runAllTimers();
+
+            expect(task).toHaveBeenCalledTimes(1);
+        });
+
+        it('drops the idle callback once the deadline has fired', () => {
+            const handle = { nativeHandle: true };
+            jest.useFakeTimers();
+            const requestIdle = jest.fn().mockReturnValue(handle);
+            const cancelIdle = jest.fn();
+            globalScope.requestIdleCallback = requestIdle;
+            globalScope.cancelIdleCallback = cancelIdle;
+            const task = jest.fn();
+
+            runWhenIdle(task, 500);
+            jest.advanceTimersByTime(500);
+
+            expect(cancelIdle).toHaveBeenCalledWith(handle);
+
+            requestIdle.mock.calls[0][0]();
+
+            expect(task).toHaveBeenCalledTimes(1);
         });
 
         it('cancels a pending task and hands the handle back', () => {
@@ -128,6 +181,29 @@ describe('SchedulingUtils', () => {
             jest.advanceTimersByTime(0);
 
             expect(task).toHaveBeenCalledTimes(1);
+        });
+
+        it('falls back to a timer when reading the global throws', () => {
+            // React Native installs the global as a lazy getter over
+            // TurboModuleRegistry.getEnforcing, so a missing native module
+            // throws on the property read rather than on the call.
+            jest.useFakeTimers();
+            Object.defineProperty(globalScope, 'requestIdleCallback', {
+                configurable: true,
+                get() {
+                    throw new Error(
+                        "TurboModuleRegistry.getEnforcing(...): 'NativeIdleCallbacksCxx' could not be found"
+                    );
+                }
+            });
+            const task = jest.fn();
+
+            expect(() => runWhenIdle(task)).not.toThrow();
+            jest.runAllTimers();
+
+            expect(task).toHaveBeenCalledTimes(1);
+
+            delete globalScope.requestIdleCallback;
         });
 
         it('cancels a pending timer', () => {
