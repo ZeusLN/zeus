@@ -68,6 +68,7 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
     LEGACY_ZEUS_SWAP_HOST_MAINNET: 'https://swaps.zeuslsp.com/api/v2',
     LEGACY_ZEUS_SWAP_HOST_TESTNET: 'https://testnet-swaps.zeuslsp.com/api/v2',
+    RETIRED_SWAP_HOSTS_MAINNET: ['https://boltz-api.eldamar.icu/v2'],
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
         'wss://relay.damus.io',
@@ -442,6 +443,119 @@ describe('MigrationUtils', () => {
 
             expect(settings.swaps.hostMainnet).toBe(
                 'https://swaps.zeuslsp.com/api/v2'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('migrateRetiredSwapHosts', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+        });
+
+        it('moves a shut-down provider back to the default mainnet host', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://boltz-api.eldamar.icu/v2',
+                    hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+                    customHost: '',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+            expect(settings.swaps.hostTestnet).toBe(
+                'https://api.testnet.boltz.exchange/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(settingsStore.setSettings.mock.calls[0][0]).toBe(settings);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-retired-eldamar',
+                'true'
+            );
+        });
+
+        it('leaves a custom host pointed at a retired provider alone', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'Custom',
+                    customHost: 'https://boltz-api.eldamar.icu/v2',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe('Custom');
+            expect(settings.swaps.customHost).toBe(
+                'https://boltz-api.eldamar.icu/v2'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-retired-eldamar',
+                'true'
+            );
+        });
+
+        it('leaves still-operating providers untouched', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://swap.coinos.io/v2',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://swap.coinos.io/v2'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-retired-eldamar',
+                'true'
+            );
+        });
+
+        it('only sets the flag when settings have no swaps block', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {};
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings).toEqual({});
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'swap-hosts-retired-eldamar',
+                'true'
+            );
+        });
+
+        it('is a no-op when the migration flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://boltz-api.eldamar.icu/v2'
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://boltz-api.eldamar.icu/v2'
             );
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();

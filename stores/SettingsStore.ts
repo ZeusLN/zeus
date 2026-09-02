@@ -347,8 +347,14 @@ export const SWAP_HOST_KEYS_MAINNET = [
         supportsRescue: true
     },
     {
-        key: 'Eldamar Swaps',
-        value: 'https://boltz-api.eldamar.icu/v2',
+        key: 'Coinos',
+        value: 'https://swap.coinos.io/v2',
+        pro: false,
+        supportsRescue: true
+    },
+    {
+        key: 'SATS Routing',
+        value: 'https://satsrouting.exchange/v2',
         pro: false,
         supportsRescue: true
     },
@@ -1383,6 +1389,9 @@ export const DEFAULT_SWAP_HOST_TESTNET =
 export const LEGACY_ZEUS_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const LEGACY_ZEUS_SWAP_HOST_TESTNET =
     'https://testnet-swaps.zeuslsp.com/api/v2';
+// Swap providers that have shut down; users pinned to one are moved
+// back to the default host by MigrationUtils.migrateRetiredSwapHosts
+export const RETIRED_SWAP_HOSTS_MAINNET = ['https://boltz-api.eldamar.icu/v2'];
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',
@@ -1941,6 +1950,7 @@ export default class SettingsStore {
                 this.settings = parsedSettings;
                 await MigrationsUtils.migrateRgsDefaultsToV2(parsedSettings);
                 await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
+                await MigrationsUtils.migrateRetiredSwapHosts(parsedSettings);
                 await MigrationsUtils.migrateInvoiceExpiryDisplay(
                     parsedSettings
                 );
