@@ -119,6 +119,24 @@ describe('Invoice.isExpired / isExpiredNow', () => {
     });
 });
 
+describe('Invoice.getMemo', () => {
+    it('decodes percent-encoded memos from LNURL-pay services (#1717)', () => {
+        const invoice = new Invoice({ memo: 'Pay%20to%20Alice' });
+        expect(invoice.getMemo).toBe('Pay to Alice');
+    });
+
+    it('leaves memos with a literal % untouched', () => {
+        const invoice = new Invoice({ memo: '50% off' });
+        expect(invoice.getMemo).toBe('50% off');
+    });
+
+    it('still splits NameDesc memos after decoding', () => {
+        const invoice = new Invoice({ memo: 'Alice:  Pay%20me' });
+        expect(invoice.getMemo).toBe('Pay me');
+        expect(invoice.getNameDescReceiver).toBe('Alice');
+    });
+});
+
 describe('Invoice.determineFormattedOriginalTimeUntilExpiry', () => {
     it('humanizes the fallback expiry seconds', () => {
         const invoice = new Invoice({
