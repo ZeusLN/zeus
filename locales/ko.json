@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "이는 24시간 동안 결제를 묶어둘 수 있는 Zaplocker 인보이스입니다. 결제 후에도 ZEUS 앱을 정기적으로 열어서 채널 강제 폐쇄의 위험을 줄일 수 있습니다. 본인의 책임 하에 진행하세요.",
     "views.Send.addOutput": "출력 추가",
     "views.Send.removeOutput": "출력 제거",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "오퍼를 가져올 수 없습니다.",
     "views.Send.payBolt12.invoiceFetchFailure": "인보이스를 가져올 수 없습니다.",
     "views.Send.payBolt12.specifyAmount": "수량을 지정해야 합니다.",
