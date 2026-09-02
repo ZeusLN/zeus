@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Ini adalah faktur Zaplocker yang akan menahan pembayaran hingga 24 jam. Buka ZEUS secara teratur setelah pembayaran untuk membantu mengurangi risiko saluran tertutup paksa. Lanjutkan dengan risiko Anda sendiri.",
     "views.Send.addOutput": "Tambahkan output",
     "views.Send.removeOutput": "Hapus output",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Tidak dapat mengambil data tawaran",
     "views.Send.payBolt12.invoiceFetchFailure": "Tidak dapat mengambil data faktur",
     "views.Send.payBolt12.specifyAmount": "Jumlah harus ditentukan",
