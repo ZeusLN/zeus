@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Hii ni ankara ya Zaplocker ambayo itashikilia malipo hadi masaa 24. Fungua ZEUS mara kwa mara baada ya malipo ili kusaidia kupunguza hatari ya kufungwa kwa lazima cha kituo. Endelea kwa hatari yako mwenyewe.",
     "views.Send.addOutput": "Add output",
     "views.Send.removeOutput": "Remove output",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Couldn't fetch offer",
     "views.Send.payBolt12.invoiceFetchFailure": "Couldn't fetch invoice",
     "views.Send.payBolt12.specifyAmount": "Amount must be specified",
