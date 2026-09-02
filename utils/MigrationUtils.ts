@@ -26,6 +26,7 @@ import {
     DEFAULT_SWAP_HOST_TESTNET,
     LEGACY_ZEUS_SWAP_HOST_MAINNET,
     LEGACY_ZEUS_SWAP_HOST_TESTNET,
+    RETIRED_SWAP_HOSTS_MAINNET,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
@@ -471,6 +472,9 @@ class MigrationsUtils {
         // migrate retired ZEUS swap server hosts to Boltz
         await this.migrateSwapHostsToBoltz(newSettings);
 
+        // move users off swap providers that have shut down
+        await this.migrateRetiredSwapHosts(newSettings);
+
         return newSettings;
     }
 
@@ -612,6 +616,32 @@ class MigrationsUtils {
 
         if (changed) await settingsStore.setSettings(settings);
         await EncryptedStorage.setItem(MOD_KEY_SWAP_HOSTS, 'true');
+        return settings;
+    }
+
+    // Move users pinned to a swap provider that has shut down back to the
+    // default host. Without this their persisted host no longer matches any
+    // entry in SWAP_HOST_KEYS_MAINNET, so the provider dropdown renders no
+    // selection while every swap request goes to a dead endpoint. Custom
+    // hosts are left alone: a retired host is only rewritten when it was
+    // picked from the dropdown, not typed in as a custom host. Must run on
+    // both the legacy and modern (zeus-settings-v2) paths.
+    public async migrateRetiredSwapHosts(settings: any) {
+        const MOD_KEY_RETIRED_SWAP_HOSTS = 'swap-hosts-retired-eldamar';
+        const mod = await EncryptedStorage.getItem(MOD_KEY_RETIRED_SWAP_HOSTS);
+        if (mod) return settings;
+
+        let changed = false;
+        if (
+            settings?.swaps?.hostMainnet &&
+            RETIRED_SWAP_HOSTS_MAINNET.includes(settings.swaps.hostMainnet)
+        ) {
+            settings.swaps.hostMainnet = DEFAULT_SWAP_HOST_MAINNET;
+            changed = true;
+        }
+
+        if (changed) await settingsStore.setSettings(settings);
+        await EncryptedStorage.setItem(MOD_KEY_RETIRED_SWAP_HOSTS, 'true');
         return settings;
     }
 

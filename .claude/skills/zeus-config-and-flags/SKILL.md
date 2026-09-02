@@ -216,8 +216,8 @@ Per-network TRIPLETS (mainnet/testnet/mutinynet). The canonical resolver is `get
 
 | Axis | Options | Default |
 |---|---|---|
-| `hostMainnet` | `SWAP_HOST_KEYS_MAINNET`: ZEUS (`https://swaps.zeuslsp.com/api/v2`), Boltz, SwapMarket, Eldamar Swaps, Custom | ZEUS host (`DEFAULT_SWAP_HOST_MAINNET`) |
-| `hostTestnet` | `SWAP_HOST_KEYS_TESTNET`: ZEUS, Boltz, Custom | `https://testnet-swaps.zeuslsp.com/api/v2` |
+| `hostMainnet` | `SWAP_HOST_KEYS_MAINNET`: Boltz, SwapMarket, Coinos, SATS Routing, Custom | `https://api.boltz.exchange/v2` (`DEFAULT_SWAP_HOST_MAINNET`) |
+| `hostTestnet` | `SWAP_HOST_KEYS_TESTNET`: Boltz, Custom | `https://api.testnet.boltz.exchange/v2` |
 | `customHost` | string | `''` |
 | `proEnabled` | bool — unlocks `pro: true` hosts (Boltz mainnet, Custom) | `false` |
 
