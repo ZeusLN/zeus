@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Esta é uma fatura Zaplocker que irá reter o pagamento em até 24 horas.  Abra o ZEUS regularmente após o pagamento para ajudar a mitigar o risco de um canal fechado à força.  Prossiga por sua conta e risco.",
     "views.Send.addOutput": "Adicionar saída",
     "views.Send.removeOutput": "Remover saída",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Não foi possível buscar a oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "Não foi possível buscar a fatura",
     "views.Send.payBolt12.specifyAmount": "O valor deve ser especificado",
