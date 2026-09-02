@@ -926,6 +926,7 @@
     "views.Send.zaplockerWarning": "Dies ist eine Zaplocker-Rechnug, mit der deine Zahlung 24 Stunden lang aufrecht erhalten wird. Nach der Zahlung sollte ZEUS von Zeit zu Zeit geöffnet werden, um das Risiko für einen Kanal-Force-Close zu minimieren. Fortfahren auf eigenes Risiko.",
     "views.Send.addOutput": "Output hinzufügen",
     "views.Send.removeOutput": "Output löschen",
+    "views.Send.fundMaxUtxos": "Use all selected UTXOs",
     "views.Send.payBolt12.offerFetchFailure": "Offer konnte nicht abgerufen werden",
     "views.Send.payBolt12.invoiceFetchFailure": "Rechnung konnte nicht abgerufen werden",
     "views.Send.payBolt12.specifyAmount": "Es muss ein Betrag eingegeben werden",
