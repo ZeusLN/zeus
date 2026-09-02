@@ -10,6 +10,7 @@ import com.facebook.react.bridge.JavaScriptContextHolder;
 import com.facebook.react.bridge.JavaScriptModule;
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.RuntimeExecutor;
 import com.facebook.react.bridge.UIManager;
 import com.facebook.react.turbomodule.core.interfaces.CallInvokerHolder;
 
@@ -101,6 +102,17 @@ public class WorkerReactContext extends ReactApplicationContext {
     @Override
     @Nullable
     public CallInvokerHolder getJSCallInvokerHolder() {
+        return null;
+    }
+
+    /**
+     * Added as an abstract method on ReactContext in RN 0.87. There is no
+     * JavaScript runtime behind a Worker context, and the contract explicitly
+     * allows null when the runtime has not been initialized.
+     */
+    @Override
+    @Nullable
+    public RuntimeExecutor getRuntimeExecutor() {
         return null;
     }
 
