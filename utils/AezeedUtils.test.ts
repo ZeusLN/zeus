@@ -8,7 +8,8 @@
 import {
     decodeAezeedEntropy,
     deriveEmbeddedNodeId,
-    deriveNodeIdFromEntropy
+    deriveNodeIdFromEntropy,
+    validateAezeedChecksum
 } from './AezeedUtils';
 
 const MNEMONIC = (
@@ -38,6 +39,37 @@ describe('decodeAezeedEntropy', () => {
         await expect(decodeAezeedEntropy(tampered)).rejects.toThrow(
             'Invalid seed checksum!'
         );
+    });
+});
+
+describe('validateAezeedChecksum', () => {
+    it('accepts an lnd-generated aezeed mnemonic', () => {
+        expect(() => validateAezeedChecksum(MNEMONIC)).not.toThrow();
+    });
+
+    it('rejects a mnemonic with a bad checksum', () => {
+        const tampered = [...MNEMONIC];
+        tampered[0] = 'ability';
+        expect(() => validateAezeedChecksum(tampered)).toThrow(
+            'Invalid seed checksum!'
+        );
+    });
+
+    it('rejects a non-zero aezeed version byte', () => {
+        // 'absurd' is wordlist index 8, putting a 1 in the leading version byte
+        const tampered = [...MNEMONIC];
+        tampered[0] = 'absurd';
+        expect(() => validateAezeedChecksum(tampered)).toThrow(
+            'Invalid seed or version!'
+        );
+    });
+
+    it('rejects a BIP39 mnemonic that is not an aezeed', () => {
+        const bip39 = (
+            'abandon abandon abandon abandon abandon abandon abandon ' +
+            'abandon abandon abandon abandon about'
+        ).split(' ');
+        expect(() => validateAezeedChecksum(bip39)).toThrow();
     });
 });
 

@@ -71,6 +71,7 @@ import {
 } from '../../utils/LdkNodeUtils';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
+import { validateAezeedChecksum } from '../../utils/AezeedUtils';
 
 import SettingsStore, {
     DEFAULT_SWAP_HOST_MAINNET,
@@ -697,6 +698,14 @@ export default class SeedRecovery extends React.PureComponent<
             filteredData.length
         );
 
+        // Typed words keep the user's raw casing/spacing for display, but
+        // checksums and key derivation are case- and whitespace-sensitive,
+        // so everything that validates, restores, or persists a seed must
+        // use this canonical form.
+        const normalizedSeedArray = seedArray.map(
+            (word: string) => word?.toLowerCase()?.trim() || ''
+        );
+
         const restore = async () => {
             this.setState({
                 errorCreatingWallet: false,
@@ -706,8 +715,8 @@ export default class SeedRecovery extends React.PureComponent<
 
             // Validate all seed words against BIP39 wordlist before attempting restore
             const invalidWords: number[] = [];
-            seedArray.forEach((word: string, i: number) => {
-                if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+            normalizedSeedArray.forEach((word: string, i: number) => {
+                if (!BIP39_WORD_LIST.includes(word)) {
                     invalidWords.push(i + 1); // 1-based index to match UI
                 }
             });
@@ -724,9 +733,7 @@ export default class SeedRecovery extends React.PureComponent<
             const { SettingsStore } = this.props;
             const { settings } = SettingsStore;
             const existingNodes = settings.nodes || [];
-            const seedWords = seedArray
-                .map((w: string) => w?.toLowerCase()?.trim())
-                .join(' ');
+            const seedWords = normalizedSeedArray.join(' ');
             const duplicateNode = existingNodes.find((node: any) => {
                 if (node.implementation === 'embedded-lnd' && node.seedPhrase) {
                     return (
@@ -753,7 +760,7 @@ export default class SeedRecovery extends React.PureComponent<
 
             if (implementation === 'ldk-node') {
                 // LDK Node restore
-                const mnemonic = seedArray.join(' ');
+                const mnemonic = normalizedSeedArray.join(' ');
 
                 // LDK seeds are BIP39, so verify the checksum up front.
                 if (!validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
@@ -853,6 +860,22 @@ export default class SeedRecovery extends React.PureComponent<
             } else {
                 // Embedded LND restore
 
+                // Aezeed carries its own version byte and CRC32 checksum, so
+                // a typo can be caught right here; without this gate it only
+                // surfaces minutes later as a raw InitWallet error, after
+                // LND has been stopped and restarted with a fresh lndDir.
+                try {
+                    validateAezeedChecksum(normalizedSeedArray);
+                } catch (e) {
+                    this.setState({
+                        loading: false,
+                        errorMsg: localeString(
+                            'views.Settings.SeedRecovery.invalidChecksum'
+                        )
+                    });
+                    return;
+                }
+
                 // Only stop LND if it's actually running — calling
                 // stopLnd when the daemon isn't up causes
                 // LndmobileStopDaemon to never call back, stalling
@@ -890,7 +913,7 @@ export default class SeedRecovery extends React.PureComponent<
                 });
                 await optimizeNeutrinoPeers(network === 'testnet');
 
-                const recoveryCipherSeed = seedArray.join(' ');
+                const recoveryCipherSeed = normalizedSeedArray.join(' ');
 
                 const lndDir = uuidv4();
 
@@ -1463,7 +1486,8 @@ export default class SeedRecovery extends React.PureComponent<
                                                     const result =
                                                         await SwapStore.getRescuableSwaps(
                                                             {
-                                                                seedArray,
+                                                                seedArray:
+                                                                    normalizedSeedArray,
                                                                 host:
                                                                     rescueHost ===
                                                                     'Custom'
@@ -1488,9 +1512,8 @@ export default class SeedRecovery extends React.PureComponent<
                                                 }
                                             );
                                         } else if (restoreRescueKey) {
-                                            const mnemonic = seedArray
-                                                .join(' ')
-                                                .trim();
+                                            const mnemonic =
+                                                normalizedSeedArray.join(' ');
 
                                             if (!isValidRescueKey(mnemonic)) {
                                                 this.setState({
