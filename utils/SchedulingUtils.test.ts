@@ -163,6 +163,27 @@ describe('SchedulingUtils', () => {
             );
         });
 
+        it('awaits a promise returned by a non-async task', async () => {
+            // Call sites hand back the promise of a store call rather than
+            // dropping it, so the rejection is logged here instead of
+            // surfacing as an unhandled rejection.
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const requestIdle = jest.fn();
+            globalScope.requestIdleCallback = requestIdle;
+            const error = new Error('melt failed');
+
+            runWhenIdle(() => Promise.reject(error));
+            requestIdle.mock.calls[0][0]();
+            await flushMicrotasks();
+
+            expect(consoleError).toHaveBeenCalledWith(
+                'runWhenIdle: deferred task failed:',
+                error
+            );
+        });
+
         it('logs a task that throws synchronously', async () => {
             const consoleError = jest
                 .spyOn(console, 'error')

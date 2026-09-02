@@ -13,9 +13,15 @@
 // first, short enough that a deferred sweep is not put off indefinitely.
 const DEFAULT_IDLE_TIMEOUT_MS = 2000;
 
+// A task may resolve to anything: the value is ignored, but the promise is
+// awaited so a rejection lands in the catch below. Typing this as
+// `Promise<void>` would reject the common `() => store.doSomething()` shape
+// and push callers into dropping the promise instead.
+type IdleTask = () => void | PromiseLike<unknown>;
+
 // Never rejects: nothing observes the result of an idle callback, so a
 // rejected task would otherwise surface as an unhandled rejection.
-const runTask = async (task: () => void | Promise<void>) => {
+const runTask = async (task: IdleTask) => {
     try {
         await task();
     } catch (error) {
@@ -34,9 +40,12 @@ const runTask = async (task: () => void | Promise<void>) => {
  *
  * Returns a cancel function. Call it (from `componentWillUnmount`, say) to
  * drop a task that has not run yet; calling it afterwards is a no-op.
+ *
+ * Return the promise from an async `task` rather than dropping it, so a
+ * rejection is logged here instead of surfacing as an unhandled rejection.
  */
 export const runWhenIdle = (
-    task: () => void | Promise<void>,
+    task: IdleTask,
     timeoutMs: number = DEFAULT_IDLE_TIMEOUT_MS
 ): (() => void) => {
     // Guards both directions: a cancel after the task ran, and a callback

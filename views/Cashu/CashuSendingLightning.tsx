@@ -114,11 +114,13 @@ export default class CashuSendingLightning extends React.Component<
         // is cancelled on unmount so a screen the user has already left never
         // starts a payment.
         CashuStore.resetPaymentState();
-        this.cancelPaymentKickoff = runWhenIdle(() => {
-            CashuStore.payLnInvoiceFromEcash({
-                amount: paymentAmount
-            });
-        }, 500);
+        this.cancelPaymentKickoff = runWhenIdle(
+            () =>
+                CashuStore.payLnInvoiceFromEcash({
+                    amount: paymentAmount
+                }),
+            500
+        );
 
         this.focusListener = navigation.addListener('focus', () => {
             const noteKey = CashuStore.noteKey;
