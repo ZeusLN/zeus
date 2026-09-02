@@ -36,7 +36,7 @@ function navigateWhenReady(routeName: string, params?: any, attempt = 0): void {
 
 export function getRouteStack() {
     if (_navigator.isReady()) {
-        return _navigator.getRootState().routes;
+        return _navigator.getRootState()?.routes ?? [];
     }
     return [];
 }
