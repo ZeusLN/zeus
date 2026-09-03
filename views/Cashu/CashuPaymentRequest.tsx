@@ -36,6 +36,7 @@ import TransactionsStore, {
 import UnitsStore from '../../stores/UnitsStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -44,6 +45,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
+    calculateTotalWithDonation,
     findDonationPercentageIndex
 } from '../../utils/DonationUtils';
 
@@ -68,6 +70,7 @@ interface CashuPaymentRequestProps {
     UnitsStore: UnitsStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface CashuPaymentRequestState {
@@ -88,7 +91,8 @@ interface CashuPaymentRequestState {
     'TransactionsStore',
     'UnitsStore',
     'LnurlPayStore',
-    'SettingsStore'
+    'SettingsStore',
+    'NodeInfoStore'
 )
 @observer
 export default class CashuPaymentRequest extends React.Component<
@@ -357,8 +361,13 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     render() {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
-            this.props;
+        const {
+            CashuStore,
+            LnurlPayStore,
+            SettingsStore,
+            NodeInfoStore,
+            navigation
+        } = this.props;
         const {
             zaplockerToggle,
             slideToPayThreshold,
@@ -375,7 +384,9 @@ export default class CashuPaymentRequest extends React.Component<
             loadingFeeEstimate,
             feeEstimate,
             clearPayReq,
-            totalBalanceSats
+            totalBalanceSats,
+            payReqMintBalance,
+            payReqAmount
         } = CashuStore;
 
         // Zaplocker
@@ -409,7 +420,6 @@ export default class CashuPaymentRequest extends React.Component<
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
-        const hasPayReqError = !!getPayReqError;
 
         // The screen renders whatever invoice is in the shared CashuStore, so
         // when the store no longer matches the pinned invoice the user has a
@@ -426,6 +436,33 @@ export default class CashuPaymentRequest extends React.Component<
             Platform.OS !== 'ios' &&
             !isNoAmountInvoice &&
             settings?.payments?.enableDonations;
+
+        // The donation is a second payment drawn from the same mint right
+        // after this one, so the balance has to cover both. Only count it
+        // under the conditions CashuSendingLightning checks before it sends
+        // the donation; anything else means nothing extra leaves the wallet.
+        const donationToCover =
+            NodeInfoStore?.nodeInfo?.isMainNet && enableDonations
+                ? Number(donationAmount) || 0
+                : 0;
+        // payReqMintBalance is 0 when the single-mint check did not run, and
+        // getPayReqError already covers the invoice falling short on its own.
+        const donationLeavesTooLittle =
+            !getPayReqError &&
+            donationToCover > 0 &&
+            payReqMintBalance > 0 &&
+            payReqMintBalance <
+                calculateTotalWithDonation(
+                    payReqAmount,
+                    feeEstimate || 0,
+                    donationToCover
+                );
+        const payReqWarning = getPayReqError
+            ? getPayReqError
+            : donationLeavesTooLittle
+            ? localeString('stores.CashuStore.notEnoughFunds')
+            : undefined;
+        const hasPayReqError = !!payReqWarning;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -607,7 +644,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                    {!!getPayReqError && (
+                                    {!!payReqWarning && (
                                         <View
                                             style={{
                                                 paddingTop: 10,
@@ -615,7 +652,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             }}
                                         >
                                             <WarningMessage
-                                                message={getPayReqError}
+                                                message={payReqWarning}
                                             />
                                         </View>
                                     )}
