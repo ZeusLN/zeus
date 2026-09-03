@@ -1304,13 +1304,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        // Auto-create Cashu Lightning address on first connection
-        // if Cashu was enabled during onboarding but no address exists yet
+        // Auto-create Cashu Lightning address on first connection if Cashu was
+        // enabled during onboarding and the user selected exactly one mint. We
+        // only bind the address when there is a single, unambiguous mint choice:
+        // the address commits all inbound payments to one custodial mint, so we
+        // never pick one on the user's behalf from a multi-mint set. Users with
+        // zero or multiple mints create the address later from Settings, where
+        // they explicitly choose the mint.
         if (
             connecting &&
             settings?.ecash?.enableCashu &&
             !lightningAddress.enabled &&
-            (settings?.ecash?.initialMintUrls?.length ?? 0) > 0 &&
+            settings?.ecash?.initialMintUrls?.length === 1 &&
             !NodeInfoStore.testnet &&
             BackendUtils.supportsCashuWallet()
         ) {
