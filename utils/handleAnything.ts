@@ -1,5 +1,4 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -11,6 +10,7 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
