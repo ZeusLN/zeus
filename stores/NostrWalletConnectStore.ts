@@ -110,6 +110,8 @@ export const DEFAULT_NOSTR_RELAYS = [
 
 type AppStateSubscription = ReturnType<typeof AppState.addEventListener>;
 
+type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
+
 interface ClientKeys {
     [pubkey: string]: string;
 }
@@ -187,7 +189,10 @@ export default class NostrWalletConnectStore {
         number
     >();
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
-    private pendingConnectionMutationIds = new Set<string>();
+    private pendingConnectionMutations = new Map<
+        string,
+        PendingConnectionMutation
+    >();
     private inFlightHandlersByConnection = new Map<
         string,
         Set<Promise<unknown>>
@@ -655,7 +660,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            this.pendingConnectionMutationIds.add(connectionId);
+            this.pendingConnectionMutations.set(connectionId, 'delete');
             try {
                 const relayUrl = connection.relayUrl;
                 const hadActiveSubscription =
@@ -701,7 +706,16 @@ export default class NostrWalletConnectStore {
                 }
                 await this.saveConnections();
             } finally {
-                this.pendingConnectionMutationIds.delete(connectionId);
+                // Only clear our own marker: an update/rotate that started
+                // while this delete was in flight leaves 'delete' in place
+                // (see updateConnection) and must not have it cleared out
+                // from under it by whichever finally runs second.
+                if (
+                    this.pendingConnectionMutations.get(connectionId) ===
+                    'delete'
+                ) {
+                    this.pendingConnectionMutations.delete(connectionId);
+                }
             }
         } catch (error: any) {
             runInAction(() => {
@@ -781,7 +795,28 @@ export default class NostrWalletConnectStore {
                   }
                 | undefined;
 
-            this.pendingConnectionMutationIds.add(connectionId);
+            // A relay change rotates the client pubkey (see below) and
+            // permanently invalidates the old pairing once it commits, so it
+            // is marked 'rotate' and treated like a delete by withGlobalHandler
+            // rather than the retryable 'update' signal.
+            const ownMutationKind: PendingConnectionMutation = relayUrlChanged
+                ? 'rotate'
+                : 'update';
+            // Never downgrade a concurrent delete or rotate: if this
+            // connection already has one of those revocation markers set,
+            // leave it in place so requests keep seeing the (correct)
+            // revocation signal instead of being demoted to retryable.
+            const existingMutation =
+                this.pendingConnectionMutations.get(connectionId);
+            if (
+                existingMutation !== 'delete' &&
+                existingMutation !== 'rotate'
+            ) {
+                this.pendingConnectionMutations.set(
+                    connectionId,
+                    ownMutationKind
+                );
+            }
             try {
                 const hadActiveSubscription =
                     this.activeSubscriptions.has(connectionId);
@@ -897,7 +932,15 @@ export default class NostrWalletConnectStore {
                 await this.subscribeToConnection(connection);
                 return { success: true };
             } finally {
-                this.pendingConnectionMutationIds.delete(connectionId);
+                // Only clear our own marker: if a concurrent delete
+                // superseded it (see above), leave that marker for
+                // deleteConnection's own finally to clear.
+                if (
+                    this.pendingConnectionMutations.get(connectionId) ===
+                    ownMutationKind
+                ) {
+                    this.pendingConnectionMutations.delete(connectionId);
+                }
             }
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
@@ -1723,6 +1766,26 @@ export default class NostrWalletConnectStore {
         ) as T;
     }
 
+    // 'delete' and 'rotate' are true revocations (the pairing is ending, or
+    // has just been rebound to a new pubkey) so they get UNAUTHORIZED.
+    // 'update' is a short, retryable critical section so it gets RATE_LIMITED
+    // rather than a signal some clients read as permanent revocation.
+    private mutationRejection<T>(connectionId: string): T | undefined {
+        const mutation = this.pendingConnectionMutations.get(connectionId);
+        if (mutation === 'delete' || mutation === 'rotate') {
+            return this.unauthorizedConnectionResponse<T>();
+        }
+        if (mutation === 'update') {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.connectionUpdating'
+                ),
+                Nip47ErrorCode.RATE_LIMITED
+            ) as T;
+        }
+        return undefined;
+    }
+
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
      * the subscription) when the connection is missing or has expired.
@@ -1752,8 +1815,9 @@ export default class NostrWalletConnectStore {
                 this.unsubscribeFromConnection(connectionId);
                 return this.unauthorizedConnectionResponse<T>();
             }
-            if (this.pendingConnectionMutationIds.has(connectionId)) {
-                return this.unauthorizedConnectionResponse<T>();
+            const mutationRejection = this.mutationRejection<T>(connectionId);
+            if (mutationRejection !== undefined) {
+                return mutationRejection;
             }
             if (connection.isExpired) {
                 this.unsubscribeFromConnection(connectionId);
@@ -1765,11 +1829,13 @@ export default class NostrWalletConnectStore {
                 ) as T;
             }
             const marked = await this.markConnectionUsed(connectionId);
-            if (
-                !marked ||
-                this.pendingConnectionMutationIds.has(connectionId)
-            ) {
+            if (!marked) {
                 return this.unauthorizedConnectionResponse<T>();
+            }
+            const mutationRejectionAfterMark =
+                this.mutationRejection<T>(connectionId);
+            if (mutationRejectionAfterMark !== undefined) {
+                return mutationRejectionAfterMark;
             }
             return await handler();
         } finally {
