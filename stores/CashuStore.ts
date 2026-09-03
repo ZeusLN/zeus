@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import { Alert, InteractionManager } from 'react-native';
+import { Alert } from 'react-native';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import url from 'url';
 import querystring from 'querystring-es3';
@@ -63,6 +63,7 @@ import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
+import { runWhenIdle } from '../utils/SchedulingUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -3084,9 +3085,14 @@ export default class CashuStore {
         });
     };
 
+    /**
+     * Fire-and-forget sweep of pending invoices and unspent sent tokens.
+     * Deferred to idle time so the mint round trips do not compete with
+     * startup work. Use checkSentTokensSpentStatus when you need to await.
+     */
     @action
     public checkPendingItems = async () => {
-        InteractionManager.runAfterInteractions(async () => {
+        runWhenIdle(async () => {
             // Skip items for mints that are no longer configured: polling
             // them goes through ensureMintAdded, which would re-add a
             // removed mint on the next boot

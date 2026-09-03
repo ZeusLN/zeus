@@ -14,8 +14,7 @@ import {
     TouchableOpacity,
     View,
     Alert,
-    AlertButton,
-    InteractionManager
+    AlertButton
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -988,11 +987,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     const batterySaverEnabled = await isBatterySaverEnabled();
                     if (batterySaverEnabled) {
                         if (Platform.OS === 'ios') {
-                            InteractionManager.runAfterInteractions(() => {
-                                setTimeout(() => {
-                                    this.showBatterySaverModal();
-                                }, 500);
-                            });
+                            // The delay is what actually lets the navigation
+                            // transition settle before the modal appears. The
+                            // InteractionManager wrapper this replaces added
+                            // nothing beyond a microtask in RN 0.86, where
+                            // runAfterInteractions no longer waits for
+                            // interactions at all.
+                            setTimeout(() => {
+                                this.showBatterySaverModal();
+                            }, 500);
                         } else {
                             this.showBatterySaverModal();
                         }
