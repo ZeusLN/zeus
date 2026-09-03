@@ -45,7 +45,8 @@ jest.mock('../utils/RatingUtils', () => ({
 
 import TransactionsStore, {
     PAYMENT_TRACK_POLL_MS,
-    PAYMENT_TRACK_MAX_FAILURES
+    PAYMENT_TRACK_MAX_FAILURES,
+    PAYMENT_TRACK_MAX_NOT_FOUND
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 
@@ -160,7 +161,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.error).toBe(false);
     });
 
-    it('releases the guard when the node has no record of the payment', async () => {
+    it('releases the guard after repeated no-record answers from the node', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
             new Error('invoice is invalid')
         );
@@ -170,9 +171,57 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         store.sendPayment({ payment_request: 'lnbc1fake' });
         await flush();
 
-        expect(store.paymentInFlight).toBe(false);
+        // the error surfaces immediately, but one no-record answer isn't
+        // proof the dispatch never reached the node (the request may still
+        // be in transit), so the guard stays held
         expect(store.error).toBe(true);
         expect(store.error_msg).toBe('invoice is invalid');
+        expect(store.paymentInFlight).toBe(true);
+
+        for (let i = 0; i < PAYMENT_TRACK_MAX_NOT_FOUND - 1; i++) {
+            await advancePoll();
+        }
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error).toBe(true);
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(
+            PAYMENT_TRACK_MAX_NOT_FOUND
+        );
+        // lookups are bounded to payments created around dispatch, so a
+        // busy node's newer payments can't evict ours from the page
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledWith({
+            payment_hash: HASH,
+            creation_date_start: expect.any(Number)
+        });
+    });
+
+    it('keeps tracking when a no-record answer precedes the payment appearing', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        // the dispatch request was still in transit when the first lookup
+        // answered; the payment then appears and settles
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({ status: 'IN_FLIGHT', payment_hash: HASH })
+            .mockResolvedValueOnce({
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: 'deadbeef'
+            });
+
+        const store = newStore();
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.paymentInFlight).toBe(true);
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.status).toBe('IN_FLIGHT');
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.error).toBe(false);
     });
 
     it('gives up after consecutive failed lookups and releases the guard', async () => {

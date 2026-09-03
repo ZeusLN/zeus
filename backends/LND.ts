@@ -378,7 +378,11 @@ export default class LND {
             route_hints: data.route_hints
         });
     getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+            creationDateStart?: number;
+        } = {
             maxPayments: 500,
             reversed: true
         }
@@ -388,6 +392,10 @@ export default class LND {
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
+            }${
+                params?.creationDateStart
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
             }`
         );
 
@@ -572,10 +580,24 @@ export default class LND {
 
         return result;
     };
-    // scans the newest payments because LND REST has no non-streaming
-    // per-payment lookup (TrackPaymentV2 streams until terminal)
-    lookupPayment = (data: { payment_hash: string }) =>
-        this.getPayments({ maxPayments: 50, reversed: true }).then(
+    // scans a payments page because LND REST has no non-streaming
+    // per-payment lookup (TrackPaymentV2 streams until terminal). With a
+    // creation_date_start bound the page is anchored at the dispatch time
+    // (ascending), so newer payments from other clients can't evict the
+    // target; without one, fall back to the newest page.
+    lookupPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        this.getPayments(
+            data.creation_date_start
+                ? {
+                      maxPayments: 50,
+                      reversed: false,
+                      creationDateStart: data.creation_date_start
+                  }
+                : { maxPayments: 50, reversed: true }
+        ).then(
             (response: any) =>
                 response?.payments?.find(
                     (payment: any) =>

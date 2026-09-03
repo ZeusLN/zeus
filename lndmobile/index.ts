@@ -631,6 +631,7 @@ export const listPeers = async (): Promise<lnrpc.ListPeersResponse> => {
 export const listPayments = async (params?: {
     maxPayments?: number;
     reversed?: boolean;
+    creationDateStart?: number;
 }): Promise<lnrpc.ListPaymentsResponse> => {
     const response = await sendCommand<
         lnrpc.IListPaymentsRequest,
@@ -643,7 +644,10 @@ export const listPayments = async (params?: {
         options: {
             include_incomplete: true,
             max_payments: Long.fromValue(params?.maxPayments ?? 1000),
-            ...(params?.reversed && { reversed: params.reversed })
+            ...(params?.reversed && { reversed: params.reversed }),
+            ...(params?.creationDateStart && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            })
         }
     });
     return response;
