@@ -37,6 +37,7 @@ const NEXT_ADDR_MAP: any = {
 export default class LightningNodeConnect {
     lnc: any;
     listener: any;
+    customMessagesListener: EmitterSubscription | null = null;
 
     // Default true: checkPerms currently forces all perms true (ZEUS-3642),
     // and it only runs after a successful connect, so uninitialized perms
@@ -164,8 +165,31 @@ export default class LightningNodeConnect {
                 data: Base64Utils.hexToBase64(data.data)
             })
             .then((data: lnrpc.SendCustomMessageResponse) => snakeize(data));
-    subscribeCustomMessages = () =>
-        this.lnc.lnd.lightning.subscribeCustomMessages({});
+    // same callback signature as the LND REST backend so callers like
+    // LSPStore can subscribe without implementation branching
+    subscribeCustomMessages = (onResponse: any, onError: any) => {
+        const streamingCall = this.lnc.lnd.lightning.subscribeCustomMessages(
+            {}
+        );
+
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        // events for this call arrive under the RPC method name, so a
+        // re-subscription reuses the same event name; drop the previous
+        // listener so messages are not handled twice
+        this.customMessagesListener?.remove();
+        this.customMessagesListener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (!event.result || event.result === 'EOF') return;
+                try {
+                    onResponse({ result: JSON.parse(event.result) });
+                } catch (error) {
+                    onError(error);
+                }
+            }
+        );
+    };
     getMyNodeInfo = async () =>
         await this.lnc.lnd.lightning
             .getInfo({})
@@ -411,7 +435,7 @@ export default class LightningNodeConnect {
             );
         });
     };
-    closeChannel = async (urlParams?: Array<string>) => {
+    closeChannel = (urlParams?: Array<string>) => {
         let params: any = {
             channel_point: {
                 funding_txid_str: urlParams && urlParams[0],
@@ -428,7 +452,42 @@ export default class LightningNodeConnect {
             params.delivery_address = urlParams[4];
         }
 
-        return this.lnc.lnd.lightning.closeChannel(params);
+        // closeChannel is a streaming RPC: the call returns the event name
+        // and updates arrive on a channel shared by every concurrent close.
+        // CloseStatusUpdate carries no request identifiers, so events cannot
+        // be correlated to a specific close; ZEUS only drives one close at a
+        // time from the UI. Resolve on the first terminal update so callers
+        // get the same promise contract as the other backends.
+        const streamingCall = this.lnc.lnd.lightning.closeChannel(params);
+
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        return new Promise((resolve, reject) => {
+            const listener = eventEmitter.addListener(
+                streamingCall,
+                (event: any) => {
+                    if (!event.result || event.result === 'EOF') return;
+                    let result;
+                    try {
+                        result = JSON.parse(event.result);
+                    } catch (e) {
+                        result = event.result;
+                    }
+                    listener.remove();
+                    if (result?.chan_close?.success || result?.close_pending) {
+                        resolve(result);
+                    } else {
+                        reject(
+                            new Error(
+                                typeof result === 'string'
+                                    ? result
+                                    : JSON.stringify(result)
+                            )
+                        );
+                    }
+                }
+            );
+        });
     };
     abandonChannel = async (
         urlParams?: Array<string | boolean | undefined>
@@ -697,6 +756,25 @@ export default class LightningNodeConnect {
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
     subscribeTransactions = () =>
         this.lnc.lnd.lightning.subscribeTransactions();
+    watchActivityUpdates = (
+        onTransaction: () => void,
+        onInvoice: () => void
+    ): (() => void) => {
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        const transactionsListener = eventEmitter.addListener(
+            this.subscribeTransactions(),
+            onTransaction
+        );
+        const invoicesListener = eventEmitter.addListener(
+            this.subscribeInvoices(),
+            onInvoice
+        );
+        return () => {
+            transactionsListener.remove();
+            invoicesListener.remove();
+        };
+    };
     watchInvoicePaid = (
         { rHash }: { rHash: string; value?: string | number },
         onPaid: (payload: {

@@ -1,13 +1,10 @@
 import * as React from 'react';
 import {
     FlatList,
-    NativeModules,
-    NativeEventEmitter,
     Text,
     TouchableOpacity,
     View,
-    StyleSheet,
-    EmitterSubscription
+    StyleSheet
 } from 'react-native';
 import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -464,8 +461,7 @@ export default class Activity extends React.PureComponent<
     ActivityProps,
     ActivityState
 > {
-    private transactionListener: EmitterSubscription;
-    private invoicesListener: EmitterSubscription;
+    private unsubscribeActivityUpdates?: () => void;
     private focusListener?: () => void;
 
     state = {
@@ -514,23 +510,15 @@ export default class Activity extends React.PureComponent<
     }
 
     componentWillUnmount() {
-        if (this.transactionListener) this.transactionListener.remove();
-        if (this.invoicesListener) this.invoicesListener.remove();
+        if (this.unsubscribeActivityUpdates) this.unsubscribeActivityUpdates();
         if (this.focusListener) this.focusListener();
     }
 
     subscribeEvents = () => {
         const { ActivityStore, SettingsStore } = this.props;
-        const { LncModule } = NativeModules;
         const locale = SettingsStore.settings.locale;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.transactionListener = eventEmitter.addListener(
-            BackendUtils.subscribeTransactions(),
-            () => ActivityStore.updateTransactions(locale)
-        );
-
-        this.invoicesListener = eventEmitter.addListener(
-            BackendUtils.subscribeInvoices(),
+        this.unsubscribeActivityUpdates = BackendUtils.watchActivityUpdates(
+            () => ActivityStore.updateTransactions(locale),
             () => ActivityStore.updateInvoices(locale)
         );
     };

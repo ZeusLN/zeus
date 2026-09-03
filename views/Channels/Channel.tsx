@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-    NativeModules,
-    NativeEventEmitter,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Button as ElementButton, Divider } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -99,7 +92,6 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
-    listener: any;
     constructor(props: ChannelProps) {
         super(props);
         const { route, ChannelsStore, LSPStore, NodeInfoStore } = props;
@@ -236,8 +228,7 @@ export default class ChannelView extends React.Component<
         forceClose?: boolean | null,
         deliveryAddress?: string | null
     ) => {
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
+        const { ChannelsStore, navigation } = this.props;
 
         let funding_txid_str, output_index;
         if (channelPoint) {
@@ -246,7 +237,7 @@ export default class ChannelView extends React.Component<
             output_index = outputIndex;
         }
 
-        const streamingCall = await ChannelsStore.closeChannel(
+        await ChannelsStore.closeChannel(
             funding_txid_str && output_index
                 ? { funding_txid_str, output_index }
                 : undefined,
@@ -256,52 +247,13 @@ export default class ChannelView extends React.Component<
             deliveryAddress ? deliveryAddress : undefined
         );
 
-        if (implementation === 'lightning-node-connect') {
-            this.subscribeChannelClose(streamingCall);
-        } else {
-            if (!ChannelsStore.closeChannelErr) navigation.popTo('Wallet');
-        }
+        if (!ChannelsStore.closeChannelErr) navigation.popTo('Wallet');
     };
 
     handleOnNavigateBack = (satPerByte: string) => {
         this.setState({
             satPerByte
         });
-    };
-
-    subscribeChannelClose = (streamingCall: string) => {
-        const { handleChannelClose, handleChannelCloseError } =
-            this.props.ChannelsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    let result;
-                    try {
-                        result = JSON.parse(event.result);
-                    } catch (e) {
-                        try {
-                            result = JSON.parse(event);
-                        } catch (e2) {
-                            result = event.result || event;
-                        }
-                    }
-                    if (
-                        result &&
-                        (result?.chan_close?.success || result?.close_pending)
-                    ) {
-                        handleChannelClose();
-                        this.listener = null;
-                        this.props.navigation.popTo('Wallet');
-                    } else {
-                        handleChannelCloseError(new Error(result));
-                        this.listener = null;
-                    }
-                }
-            }
-        );
     };
 
     render() {
