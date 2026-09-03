@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
+import { findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
@@ -9,6 +9,7 @@ import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
