@@ -37,6 +37,7 @@ jest.mock('../utils/MigrationUtils', () => ({
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     migrateRgsDefaultsToV2: jest.fn().mockResolvedValue(undefined),
     migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
+    migrateRetiredSwapHosts: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
     migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
