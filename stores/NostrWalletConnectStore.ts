@@ -802,11 +802,15 @@ export default class NostrWalletConnectStore {
             const ownMutationKind: PendingConnectionMutation = relayUrlChanged
                 ? 'rotate'
                 : 'update';
-            // Never downgrade a concurrent delete: if this connection is
-            // already being deleted, leave that marker in place so requests
-            // keep seeing the (correct) revocation signal.
+            // Never downgrade a concurrent delete or rotate: if this
+            // connection already has one of those revocation markers set,
+            // leave it in place so requests keep seeing the (correct)
+            // revocation signal instead of being demoted to retryable.
+            const existingMutation =
+                this.pendingConnectionMutations.get(connectionId);
             if (
-                this.pendingConnectionMutations.get(connectionId) !== 'delete'
+                existingMutation !== 'delete' &&
+                existingMutation !== 'rotate'
             ) {
                 this.pendingConnectionMutations.set(
                     connectionId,

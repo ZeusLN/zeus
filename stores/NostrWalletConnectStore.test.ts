@@ -278,6 +278,54 @@ describe('NostrWalletConnectStore relay rotation', () => {
         ).toBe('delete');
     });
 
+    it('does not downgrade a pre-existing delete marker when an update starts', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store);
+        (store as any).pendingConnectionMutations.set(connection.id, 'delete');
+
+        let markerDuringUpdate: string | undefined;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            async () => {
+                markerDuringUpdate = (
+                    store as any
+                ).pendingConnectionMutations.get(connection.id);
+            }
+        );
+
+        await store.updateConnection(connection.id, {
+            name: 'Renamed App'
+        });
+
+        expect(markerDuringUpdate).toBe('delete');
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toBe('delete');
+    });
+
+    it('does not downgrade a pre-existing rotate marker when a second update starts', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store);
+        (store as any).pendingConnectionMutations.set(connection.id, 'rotate');
+
+        let markerDuringUpdate: string | undefined;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            async () => {
+                markerDuringUpdate = (
+                    store as any
+                ).pendingConnectionMutations.get(connection.id);
+            }
+        );
+
+        await store.updateConnection(connection.id, {
+            name: 'Renamed App'
+        });
+
+        expect(markerDuringUpdate).toBe('rotate');
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toBe('rotate');
+    });
+
     it('leaves relayUrl unchanged when storing the new key fails so retry can rotate', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
@@ -1235,6 +1283,30 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         expect(deleted).toBe(true);
         expect(store.connections).toHaveLength(0);
         expect(store.waitingForInFlightHandlers).toBe(false);
+    });
+
+    it('does not clear a marker installed by a concurrent update when delete finishes', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        jest.spyOn(store as any, 'deleteClientKeys').mockImplementation(
+            async () => {
+                // Simulate an update overwriting the marker after this
+                // delete already committed to removing the connection.
+                (store as any).pendingConnectionMutations.set(
+                    connection.id,
+                    'update'
+                );
+            }
+        );
+
+        await store.deleteConnection(connection.id);
+
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toBe('update');
     });
 
     it('defers relay release when delete awaited in-flight handlers', async () => {
