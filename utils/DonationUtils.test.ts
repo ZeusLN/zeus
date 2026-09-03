@@ -6,6 +6,7 @@ jest.mock('react-native-blob-util', () => ({
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     calculateDonationAmount,
+    calculateTotalWithDonation,
     findDonationPercentageIndex,
     loadDonationLnurl
 } from './DonationUtils';
@@ -30,6 +31,39 @@ describe('DonationUtils', () => {
         it('should default to zero on falsy requestAmount', () => {
             expect(calculateDonationAmount(0, 10)).toBe(0);
             expect(calculateDonationAmount(undefined as any, 10)).toBe(0);
+        });
+    });
+
+    describe('calculateTotalWithDonation', () => {
+        it('should add the donation on top of the amount and the fee', () => {
+            expect(calculateTotalWithDonation(1000, 5, 100)).toBe(1105);
+        });
+
+        it('should equal amount plus fee when there is no donation', () => {
+            expect(calculateTotalWithDonation(1000, 5, 0)).toBe(1005);
+            expect(calculateTotalWithDonation(1000, 5)).toBe(1005);
+        });
+
+        it('should handle string inputs', () => {
+            expect(calculateTotalWithDonation('1000', '5', '100')).toBe(1105);
+        });
+
+        it('should default missing values to zero', () => {
+            expect(calculateTotalWithDonation(1000)).toBe(1000);
+            expect(
+                calculateTotalWithDonation(
+                    1000,
+                    undefined as any,
+                    undefined as any
+                )
+            ).toBe(1000);
+            expect(calculateTotalWithDonation(0, 0, 0)).toBe(0);
+        });
+
+        it('should stay exact on amounts that lose precision as floats', () => {
+            // 0.1 + 0.2 !== 0.3 in floating point; sats are integers, but the
+            // helper takes the same string inputs the views pass around
+            expect(calculateTotalWithDonation('0.1', '0.2', '0')).toBe(0.3);
         });
     });
 

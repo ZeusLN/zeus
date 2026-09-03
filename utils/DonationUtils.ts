@@ -24,6 +24,27 @@ export const calculateDonationAmount = (
 };
 
 /**
+ * Calculates the balance needed to pay an invoice and then send the donation
+ * that follows it. The donation is a separate payment drawn from the same
+ * balance once the invoice is paid, so a balance that only covers the invoice
+ * and its fee reserve leaves the donation unpayable.
+ * @param paymentAmount - Invoice amount, can be a number or string
+ * @param feeReserve - Fee reserve quoted for the invoice
+ * @param donationAmount - Donation sent after the payment, 0 when disabled
+ * @returns The total amount that has to be available
+ */
+export const calculateTotalWithDonation = (
+    paymentAmount: number | string,
+    feeReserve: number | string = 0,
+    donationAmount: number | string = 0
+): number => {
+    return new BigNumber(paymentAmount || 0)
+        .plus(feeReserve || 0)
+        .plus(donationAmount || 0)
+        .toNumber();
+};
+
+/**
  * Finds the index of a matching percentage in predefined percentage options.
  * @param value - The donation percentage value to find
  * @param options - The list of available percentage options
