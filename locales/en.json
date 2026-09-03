@@ -2363,6 +2363,7 @@
     "stores.CashuStore.noPaymentRequestAvailable": "No payment request available",
     "stores.CashuStore.invalidMultimintPaymentAmount": "Invalid multimint payment amount. Please use a whole sat amount.",
     "stores.CashuStore.feeExceedsAmt": "Melt fees match or exceed token amount",
+    "stores.CashuStore.selfCustodySweepFailed": "The token was redeemed to your ecash balance at {{mintName}}, but the sweep to self-custody did not complete. Your funds are safe in your ecash balance.",
     "stores.CashuStore.autoSweep": "Cashu auto-sweep",
     "stores.CashuStore.notProperlyConfigured": "Cashu wallet is not properly configured. Please add at least one mint.",
     "stores.CashuStore.errorDiscoveringMints": "Failed to discover mints from Nostr relays",
