@@ -65,19 +65,6 @@ react {
 def enableProguardInReleaseBuilds = true
 
 /**
- * The preferred build flavor of JavaScriptCore (JSC)
- *
- * For example, to use the international variant, you can use:
- * `def jscFlavor = 'org.webkit:android-jsc-intl:+'`
- *
- * The international variant includes ICU i18n library and necessary data
- * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
- * give correct results when using with locales other than en-US. Note that
- * this variant is about 6MiB larger per architecture than default.
- */
-def jscFlavor = 'io.github.nickmartens:jsc-android:2026004.+'
-
-/**
  * Set this to true to create two separate APKs instead of one:
  *   - An APK that only works on ARM devices
  *   - An APK that only works on x86 devices
@@ -275,3 +262,31 @@ protobuf {
     }
 }
 
+/**
+ * Reproducible builds: lock the release dependency graph.
+ *
+ * Only the release classpaths are locked. They alone decide what ends up in a
+ * shipped APK, and :app is the one project that resolves the full transitive
+ * closure -- project dependencies such as :lndmobile and the autolinked React
+ * Native libraries contribute their external dependencies here. Locking those
+ * projects directly is not an option: they live under node_modules/, which is
+ * gitignored and regenerated on every `yarn install`.
+ *
+ * This complements yarn.lock rather than duplicating it. yarn.lock already
+ * pins every npm package to an exact version and hash; nothing pinned the
+ * Maven side, where direct coordinates are fixed but their transitive closure
+ * was free to drift.
+ *
+ * Lock state: android/app/gradle.lockfile
+ * Regenerate with: ./build.sh --write-locks
+ *
+ * Note this uses Gradle's default lock mode, so a missing lock file resolves
+ * as usual instead of failing the build. Once android/app/gradle.lockfile is
+ * committed, this can be tightened to `dependencyLocking { lockMode =
+ * LockMode.STRICT }` so an unlocked configuration fails closed.
+ */
+configurations.matching {
+    it.name in ['releaseRuntimeClasspath', 'releaseCompileClasspath']
+}.configureEach {
+    resolutionStrategy.activateDependencyLocking()
+}

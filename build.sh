@@ -11,10 +11,16 @@ SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
 # Default options for the Docker command
 TTY_FLAG="-it"
 
+# Regenerate the Gradle dependency lock files instead of just consuming them.
+# Locks are written from inside the pinned builder image on purpose, so the
+# recorded graph matches the toolchain that actually builds releases.
+WRITE_LOCKS=""
+
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --no-tty) TTY_FLAG="" ;; # Remove -it if --no-tty is provided
+        --write-locks) WRITE_LOCKS="--write-locks" ;;
         *) echo "Unknown parameter: $1" && exit 1 ;;
     esac
     shift
@@ -24,10 +30,11 @@ done
 docker run --rm $TTY_FLAG --name $CONTAINER_NAME \
     -e SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH \
     -e GRADLE_USER_HOME=/olympus/zeus/.gradle-cache \
+    -e WRITE_LOCKS="$WRITE_LOCKS" \
     -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building ZEUS...\n********************************\n" && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
-      cd /olympus/zeus/android ; ./gradlew generateCodegenArtifactsFromSchema && ./gradlew app:assembleRelease && \
+      cd /olympus/zeus/android ; ./gradlew $WRITE_LOCKS generateCodegenArtifactsFromSchema && ./gradlew $WRITE_LOCKS app:assembleRelease && \
 
       echo -e "\n\n********************************\n**** APKs and SHA256 Hashes\n********************************\n" && \
       cd /olympus/zeus && \

@@ -32,6 +32,19 @@ buildscript {
         // LN address notifications
         classpath("com.google.gms:google-services:4.3.15")
     }
+
+    // Reproducible builds: lock the resolved build-tool classpath (AGP, the
+    // Kotlin plugin, the React Native Gradle plugin and their transitives) so
+    // the toolchain that produces a release cannot drift between rebuilds.
+    // Several of the classpath entries above are deliberately versionless --
+    // their versions come from the React Native Gradle plugin -- so the lock
+    // file is what actually records what was used.
+    //
+    // Lock state: android/gradle.lockfile
+    // Regenerate with: ./build.sh --write-locks
+    configurations.classpath {
+        resolutionStrategy.activateDependencyLocking()
+    }
 }
 
 allprojects {
