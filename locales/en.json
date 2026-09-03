@@ -1194,6 +1194,8 @@
     "views.Settings.Currency.currencies": "Currencies",
     "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Source",
+    "views.Settings.Currency.btcPayServerHost": "BTCPay Server URL",
+    "views.Settings.Currency.btcPayServerStoreId": "BTCPay Server store ID",
     "views.Settings.Currency.selectCurrency": "Select Currency",
     "views.Settings.SelectCurrency.title": "Select Currency",
     "views.Settings.Theme.title": "Theme",
