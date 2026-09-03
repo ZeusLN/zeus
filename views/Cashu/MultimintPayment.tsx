@@ -31,7 +31,10 @@ import {
     MintProgressInfo,
     MultinutPaymentStep
 } from '../../utils/CashuUtils';
-import { loadDonationLnurl } from '../../utils/DonationUtils';
+import {
+    calculateTotalWithDonation,
+    loadDonationLnurl
+} from '../../utils/DonationUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -84,7 +87,7 @@ export default class MultimintPayment extends React.Component<
     constructor(props: MultimintPaymentProps) {
         super(props);
 
-        const { CashuStore, route } = props;
+        const { CashuStore, NodeInfoStore, route } = props;
         const selectedMintUrls = CashuStore?.multiMintSelectedUrls || [];
         const selectedMintSet = new Set(selectedMintUrls);
         const availableMints = CashuStore?.getMultimintInfo() || [];
@@ -107,7 +110,21 @@ export default class MultimintPayment extends React.Component<
             CashuStore?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
         const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
-        const totalNeeded = requestAmount + feeEstimate;
+        // The donation is drawn from the same mints right after the invoice is
+        // paid, so it has to be covered before the payment starts. Mirrors the
+        // conditions componentDidMount checks before it sends the donation:
+        // anything else means no donation leaves the wallet.
+        const donationAmount =
+            NodeInfoStore?.nodeInfo?.isMainNet &&
+            route.params?.enableDonations &&
+            route.params?.donationAmount
+                ? Number(route.params.donationAmount) || 0
+                : 0;
+        const totalNeeded = calculateTotalWithDonation(
+            requestAmount,
+            feeEstimate,
+            donationAmount
+        );
 
         const hasNoMintsSelected = effectiveMints.length === 0;
         const hasInsufficientBalance =
