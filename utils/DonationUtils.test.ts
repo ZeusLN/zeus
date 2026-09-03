@@ -8,6 +8,7 @@ import {
     calculateDonationAmount,
     calculateTotalWithDonation,
     findDonationPercentageIndex,
+    getDonationToSend,
     loadDonationLnurl
 } from './DonationUtils';
 
@@ -31,6 +32,30 @@ describe('DonationUtils', () => {
         it('should default to zero on falsy requestAmount', () => {
             expect(calculateDonationAmount(0, 10)).toBe(0);
             expect(calculateDonationAmount(undefined as any, 10)).toBe(0);
+        });
+    });
+
+    describe('getDonationToSend', () => {
+        it('should return the donation when it will be sent', () => {
+            expect(getDonationToSend(true, true, 100)).toBe(100);
+            expect(getDonationToSend(true, true, '100')).toBe(100);
+        });
+
+        it('should return zero off mainnet', () => {
+            expect(getDonationToSend(false, true, 100)).toBe(0);
+            expect(getDonationToSend(undefined, true, 100)).toBe(0);
+        });
+
+        it('should return zero when donations are disabled', () => {
+            expect(getDonationToSend(true, false, 100)).toBe(0);
+            expect(getDonationToSend(true, undefined, 100)).toBe(0);
+        });
+
+        it('should return zero for a missing or unusable amount', () => {
+            expect(getDonationToSend(true, true, undefined)).toBe(0);
+            expect(getDonationToSend(true, true, 0)).toBe(0);
+            expect(getDonationToSend(true, true, '')).toBe(0);
+            expect(getDonationToSend(true, true, 'abc')).toBe(0);
         });
     });
 

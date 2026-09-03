@@ -46,7 +46,8 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
     calculateTotalWithDonation,
-    findDonationPercentageIndex
+    findDonationPercentageIndex,
+    getDonationToSend
 } from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
@@ -441,10 +442,11 @@ export default class CashuPaymentRequest extends React.Component<
         // after this one, so the balance has to cover both. Only count it
         // under the conditions CashuSendingLightning checks before it sends
         // the donation; anything else means nothing extra leaves the wallet.
-        const donationToCover =
-            NodeInfoStore?.nodeInfo?.isMainNet && enableDonations
-                ? Number(donationAmount) || 0
-                : 0;
+        const donationToCover = getDonationToSend(
+            NodeInfoStore?.nodeInfo?.isMainNet,
+            enableDonations,
+            donationAmount
+        );
         // payReqMintBalance is 0 when the single-mint check did not run, and
         // getPayReqError already covers the invoice falling short on its own.
         const donationLeavesTooLittle =

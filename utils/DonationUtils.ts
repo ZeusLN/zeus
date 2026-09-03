@@ -24,6 +24,25 @@ export const calculateDonationAmount = (
 };
 
 /**
+ * Resolves the donation that will actually leave the wallet after a payment.
+ * The sending views only send one on mainnet, with donations enabled and a
+ * non-zero amount, so every other combination costs the balance nothing and
+ * must not be counted against it.
+ * @param isMainNet - Whether the node is on mainnet
+ * @param donationsEnabled - Whether donations are enabled for this payment
+ * @param donationAmount - The donation the user picked, if any
+ * @returns The donation that will be sent, or 0
+ */
+export const getDonationToSend = (
+    isMainNet: boolean | undefined,
+    donationsEnabled: boolean | undefined,
+    donationAmount: number | string | undefined
+): number => {
+    if (!isMainNet || !donationsEnabled) return 0;
+    return Number(donationAmount) || 0;
+};
+
+/**
  * Calculates the balance needed to pay an invoice and then send the donation
  * that follows it. The donation is a separate payment drawn from the same
  * balance once the invoice is paid, so a balance that only covers the invoice
