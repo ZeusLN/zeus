@@ -103,3 +103,57 @@ describe('Payment.getAmount with partial HTLC success', () => {
         expect(payment.getAmount).toBe(50000);
     });
 });
+
+describe('Payment.isFailed', () => {
+    it('flags Core Lightning failed payments via sendpays status', () => {
+        // shaped like a canceled hold-invoice payment from the CLNRest
+        // sql getPayments query: no htlcs, no failure_reason
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'failed',
+            destination: '03abcdef',
+            created_at: 1724688000,
+            amount_sent_msat: null,
+            amount_msat: 0,
+            preimage: null
+        });
+
+        expect(payment.isFailed).toBe(true);
+    });
+
+    it('does not flag completed Core Lightning payments', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'complete',
+            amount_sent_msat: 100500,
+            amount_msat: 100000,
+            preimage:
+                'a44ef01c2a2c11c9209232f6cc8e2bd25733fbc99b1b1e0d90b465c1b2c95a92'
+        });
+
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('does not flag pending Core Lightning payments', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'pending',
+            amount_msat: 0,
+            preimage: null
+        });
+
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('still flags LND payments via failure_reason', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS',
+            value_sat: 50000,
+            htlcs: [{ status: 'FAILED', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isFailed).toBe(true);
+    });
+});
