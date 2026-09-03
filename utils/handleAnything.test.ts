@@ -106,7 +106,9 @@ jest.mock('react-native-fs', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
 const mockFindLnurl = jest.fn();
 jest.mock('js-lnurl', () => ({
-    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args),
+    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
+}));
+jest.mock('js-lnurl/lib/helpers', () => ({
     findlnurl: (...args: any[]) => mockFindLnurl(...args),
     decodelnurl: () => null
 }));
