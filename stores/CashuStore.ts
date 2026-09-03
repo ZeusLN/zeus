@@ -4209,9 +4209,22 @@ export default class CashuStore {
             let singleMeltQuote: typeof this.meltQuote;
             let computedPayReqError: string | undefined;
 
-            let totalFeeEstimate = 0;
+            // Left undefined (rather than 0) in the no-amount branch below so
+            // the fee row doesn't render "0 sats" for an invoice that can't
+            // be paid; every branch here assigns it before use.
+            let totalFeeEstimate: number | undefined;
 
-            if (isMultiMint) {
+            if (rawPaymentAmt <= 0) {
+                // Zeus doesn't yet wire up CDK's amountless-melt option
+                // (MeltOptions.Amountless) from the JS side, so a no-amount
+                // invoice can't be melted here today. Surface that up front
+                // instead of round-tripping to the mint for a melt quote
+                // request that would fail the same way.
+                computedPayReqError = localeString(
+                    'stores.CashuStore.noAmountInvoiceNotSupported'
+                );
+                this.meltQuotes = [];
+            } else if (isMultiMint) {
                 if (paymentAmt > 0) {
                     if (__DEV__) {
                         console.log(

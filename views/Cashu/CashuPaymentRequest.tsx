@@ -14,7 +14,6 @@ import Slider from '@react-native-community/slider';
 import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
-import AmountInput from '../../components/AmountInput';
 import Button from '../../components/Button';
 import EcashMintPicker from '../../components/EcashMintPicker';
 import SwipeButton from '../../components/SwipeButton';
@@ -72,8 +71,6 @@ interface CashuPaymentRequestProps {
 }
 
 interface CashuPaymentRequestState {
-    customAmount: string;
-    satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
     donationsToggle: boolean;
@@ -105,8 +102,6 @@ export default class CashuPaymentRequest extends React.Component<
     swipeResetDisposer: any;
     donationLockRequest?: string;
     state = {
-        customAmount: '',
-        satAmount: '',
         zaplockerToggle: false,
         slideToPayThreshold: 10000,
         donationsToggle: false,
@@ -227,9 +222,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({
-        amount // used only for no-amount invoices
-    }: SendPaymentReq) => {
+    sendPayment = ({ amount }: SendPaymentReq) => {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
@@ -250,7 +243,7 @@ export default class CashuPaymentRequest extends React.Component<
     triggerPayment = () => {
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
-        const { satAmount, multiMintEnabled, donationAmount } = this.state;
+        const { multiMintEnabled, donationAmount } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -281,9 +274,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
 
         const requestAmount = CashuStore.payReq?.getRequestAmount;
-        const paymentAmount = satAmount
-            ? satAmount.toString()
-            : requestAmount
+        const paymentAmount = requestAmount
             ? requestAmount.toString()
             : undefined;
 
@@ -369,7 +360,6 @@ export default class CashuPaymentRequest extends React.Component<
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
         const {
-            customAmount,
             zaplockerToggle,
             slideToPayThreshold,
             donationsToggle,
@@ -433,7 +423,9 @@ export default class CashuPaymentRequest extends React.Component<
             paymentRequest !== this.state.reviewedPaymentRequest;
 
         const enableDonations =
-            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
+            Platform.OS !== 'ios' &&
+            !isNoAmountInvoice &&
+            settings?.payments?.enableDonations;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -627,23 +619,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                    {isNoAmountInvoice ? (
-                                        <AmountInput
-                                            amount={customAmount}
-                                            title={localeString(
-                                                'views.PaymentRequest.customAmt'
-                                            )}
-                                            onAmountChange={(
-                                                amount: string,
-                                                satAmount: string | number
-                                            ) => {
-                                                this.setState({
-                                                    customAmount: amount,
-                                                    satAmount
-                                                });
-                                            }}
-                                        />
-                                    ) : (
+                                    {!isNoAmountInvoice && (
                                         <View style={styles.center}>
                                             <Amount
                                                 sats={requestAmount}
@@ -1093,6 +1069,7 @@ export default class CashuPaymentRequest extends React.Component<
                     !loading &&
                     !loadingFeeEstimate &&
                     !payReqChanged &&
+                    !isNoAmountInvoice &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10, top: 6 }}>
                             <View

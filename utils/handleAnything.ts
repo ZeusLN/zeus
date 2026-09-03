@@ -7,6 +7,7 @@ import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
+import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
@@ -16,6 +17,7 @@ import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
+import Invoice from '../models/Invoice';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
@@ -24,6 +26,17 @@ import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
+
+// Cashu melts require a fixed-amount invoice, so a no-amount bolt11 can
+// never be paid via ecash. Used to skip offering that choice at all.
+const isAmountlessInvoice = (bolt11: string): boolean => {
+    try {
+        const invoice = new Invoice(Bolt11Utils.decode(bolt11));
+        return !invoice.getRequestAmount;
+    } catch {
+        return false;
+    }
+};
 
 const attemptNip05Lookup = async (data: string) => {
     try {
@@ -303,7 +316,7 @@ const handleAnything = async (
                     );
                 }
             } else {
-                if (ecash) {
+                if (ecash && !isAmountlessInvoice(lightning)) {
                     return [
                         'ChoosePaymentMethod',
                         {
@@ -358,7 +371,7 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
-        if (ecash) {
+        if (ecash && !isAmountlessInvoice(value || lightning)) {
             return [
                 'ChoosePaymentMethod',
                 {
