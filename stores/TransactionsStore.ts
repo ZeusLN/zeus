@@ -41,6 +41,14 @@ export const PAYMENT_TRACK_MAX_MS = 10 * 60 * 1000;
 // consecutive failed lookups tolerated before giving up and releasing the
 // guard the way the timed backstop used to
 export const PAYMENT_TRACK_MAX_FAILURES = 3;
+// consecutive "node answered, no record" results required before concluding
+// the dispatch never reached the node: a single lookup can miss a payment
+// whose dispatch request is still in transit (e.g. a slow Tor circuit)
+export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
+// how far before the recorded dispatch time lookupPayment's
+// creation_date_start filter reaches, to absorb clock skew between the
+// device and the node
+export const PAYMENT_LOOKUP_CREATION_SLACK_MS = 10 * 60 * 1000;
 
 export interface SendPaymentReq {
     payment_request?: string;
@@ -106,6 +114,9 @@ export default class TransactionsStore {
     // payment hash (hex) of the guard-owning payment, when known; lets an
     // ambiguous outcome be tracked to a terminal state via lookupPayment
     private inFlightPaymentHash: string | null = null;
+    // when the guard-owning payment was dispatched (ms); bounds lookupPayment
+    // scans so a busy node's newer payments can't evict ours from the page
+    private inFlightDispatchTime: number | null = null;
     // sequence currently being tracked to a terminal state (null when none)
     private trackingSeq: number | null = null;
 
@@ -135,6 +146,7 @@ export default class TransactionsStore {
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
+        this.inFlightDispatchTime = null;
         this.error = false;
         this.error_msg = null;
         this.transactions = [];
@@ -623,6 +635,7 @@ export default class TransactionsStore {
             this.paymentInFlight = true;
             this.inFlightOwnerSeq = seq;
             this.inFlightPaymentHash = null;
+            this.inFlightDispatchTime = Date.now();
         }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
@@ -761,6 +774,7 @@ export default class TransactionsStore {
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
+        this.inFlightDispatchTime = null;
     };
 
     // true when payment `seq` still owns the guard and its terminal state
@@ -797,16 +811,32 @@ export default class TransactionsStore {
         if (this.trackingSeq === seq) return;
         const payment_hash = this.inFlightPaymentHash;
         if (!payment_hash) return;
+        // bound the scan to payments created around dispatch, so a not-found
+        // answer means "no record" rather than "evicted from the newest page
+        // by other clients' payments" (the guard only serializes this app's
+        // sends, not a shared node's)
+        const creation_date_start = this.inFlightDispatchTime
+            ? Math.max(
+                  0,
+                  Math.floor(
+                      (this.inFlightDispatchTime -
+                          PAYMENT_LOOKUP_CREATION_SLACK_MS) /
+                          1000
+                  )
+              )
+            : undefined;
         this.trackingSeq = seq;
         const deadline = Date.now() + PAYMENT_TRACK_MAX_MS;
         let failures = 0;
+        let notFound = 0;
         try {
             while (this.inFlightOwnerSeq === seq && Date.now() < deadline) {
                 let payment: any = null;
                 let lookupFailed = false;
                 try {
                     payment = await BackendUtils.lookupPayment({
-                        payment_hash
+                        payment_hash,
+                        creation_date_start
                     });
                 } catch (e) {
                     lookupFailed = true;
@@ -830,15 +860,21 @@ export default class TransactionsStore {
 
                 if (payment) {
                     failures = 0;
+                    notFound = 0;
                     if (status === 'IN_FLIGHT') {
                         // outcome is pending, not failed: don't leave a
                         // stale timeout/transport error on screen
                         this.markPaymentInTransit();
                     }
                 } else if (!lookupFailed) {
-                    // the node answered and has no record of the payment:
-                    // the dispatch never reached it, nothing can settle
-                    return;
+                    // the node answered and has no record of the payment.
+                    // One such answer isn't proof the dispatch never reached
+                    // it: the send request may still be in transit (a slow
+                    // Tor circuit can deliver it after a fresh-connection
+                    // lookup returns). Only conclude never-dispatched after
+                    // repeated no-record answers with no sighting between.
+                    failures = 0;
+                    if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) return;
                 } else if (++failures >= PAYMENT_TRACK_MAX_FAILURES) {
                     return;
                 }
