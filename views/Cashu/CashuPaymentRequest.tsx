@@ -71,8 +71,6 @@ interface CashuPaymentRequestProps {
 }
 
 interface CashuPaymentRequestState {
-    customAmount: string;
-    satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
     donationsToggle: boolean;
@@ -104,8 +102,6 @@ export default class CashuPaymentRequest extends React.Component<
     swipeResetDisposer: any;
     donationLockRequest?: string;
     state = {
-        customAmount: '',
-        satAmount: '',
         zaplockerToggle: false,
         slideToPayThreshold: 10000,
         donationsToggle: false,
@@ -226,9 +222,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({
-        amount // used only for no-amount invoices
-    }: SendPaymentReq) => {
+    sendPayment = ({ amount }: SendPaymentReq) => {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
@@ -249,7 +243,7 @@ export default class CashuPaymentRequest extends React.Component<
     triggerPayment = () => {
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
-        const { satAmount, multiMintEnabled, donationAmount } = this.state;
+        const { multiMintEnabled, donationAmount } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -280,9 +274,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
 
         const requestAmount = CashuStore.payReq?.getRequestAmount;
-        const paymentAmount = satAmount
-            ? satAmount.toString()
-            : requestAmount
+        const paymentAmount = requestAmount
             ? requestAmount.toString()
             : undefined;
 
@@ -431,7 +423,9 @@ export default class CashuPaymentRequest extends React.Component<
             paymentRequest !== this.state.reviewedPaymentRequest;
 
         const enableDonations =
-            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
+            Platform.OS !== 'ios' &&
+            !isNoAmountInvoice &&
+            settings?.payments?.enableDonations;
 
         const showZaplockerWarning =
             isZaplocker ||

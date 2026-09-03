@@ -2356,7 +2356,7 @@
     "stores.CashuStore.errorMintingToken": "Error minting token",
     "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "Not enough funds to cover payment",
-    "stores.CashuStore.noAmountInvoiceNotSupported": "This invoice has no amount. Cashu payments require a fixed amount invoice.",
+    "stores.CashuStore.noAmountInvoiceNotSupported": "This invoice has no amount, so it can't be paid with ecash. Pay it from a Lightning balance instead, or ask for an invoice with a fixed amount.",
     "stores.CashuStore.notEnoughFundsSelfSend": "Not enough funds to cover payment. {{mintName}} couldn't be used because it's this invoice's destination — pick a different mint to cover the gap.",
     "stores.CashuStore.meltFeeMismatch": "Multi-mint payment failed: {{mintName}} demanded a higher fee at melt time than it quoted ({{provided}} provided, {{needed}} needed). Top up {{mintName}}, pick a different mint, or lower the amount.",
     "stores.CashuStore.noMeltQuoteAvailable": "No melt quote available",
