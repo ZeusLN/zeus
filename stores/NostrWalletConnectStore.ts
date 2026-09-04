@@ -1106,6 +1106,42 @@ export default class NostrWalletConnectStore {
         return { connection, index };
     };
 
+    /**
+     * Rebuilds a connection's pairing URL from persisted state (the stored
+     * client private key, the wallet service pubkey, and the connection's
+     * relay) so it can be viewed again after the QR screen shown at
+     * create/regenerate time has been dismissed. Nothing about the URL is
+     * ephemeral except the route param that originally carried it. The
+     * lud16 param reflects the current lud16Enabled setting and lightning
+     * address, not whatever was in effect when the connection was created.
+     * Returns null if the connection, its client key, or the wallet
+     * service keys can no longer be found (e.g. it was created before
+     * client keys were persisted) rather than regenerating anything, since
+     * this is a read-only path.
+     */
+    public getConnectionUrl = async (
+        connectionId: string
+    ): Promise<string | null> => {
+        const { connection } = this.getConnection({ connectionId });
+        if (!connection) return null;
+
+        if (!this.walletServiceKeys?.publicKey) return null;
+
+        const clientPrivateKey = await this.getClientPrivateKey(
+            connection.pubkey
+        );
+        if (!clientPrivateKey) return null;
+
+        const lud16 = this.lud16Enabled ? this.getLightningAddress() : null;
+
+        return NostrConnectUtils.buildWalletConnectConnectionUrl(
+            this.walletServiceKeys.publicKey,
+            connection.relayUrl,
+            clientPrivateKey,
+            lud16
+        );
+    };
+
     public getActivities = async (
         connectionId: string
     ): Promise<{ name: string; activity: ConnectionActivity[] }> => {
@@ -3605,6 +3641,17 @@ export default class NostrWalletConnectStore {
                     'stores.NostrWalletConnectStore.error.failedToStorePrivateKey'
                 )
             );
+        }
+    }
+    private async getClientPrivateKey(pubkey: string): Promise<string | null> {
+        try {
+            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+            if (!storedKeys) return null;
+            const keys: ClientKeys = JSON.parse(storedKeys);
+            return keys[pubkey] || null;
+        } catch (error) {
+            console.error('Failed to read client keys:', error);
+            return null;
         }
     }
     private async deleteClientKeys(pubkey: string): Promise<void> {

@@ -24,6 +24,7 @@ import ModalStore from '../../../stores/ModalStore';
 import { confirmAction } from '../../../utils/ActionUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
+import { reAuthNavigation } from '../../../utils/NavigationUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
@@ -183,6 +184,15 @@ export default class NWCConnectionDetails extends React.Component<
         });
     };
 
+    viewConnectionSecret = (connectionId: string) => {
+        // The pairing URL is a bearer credential for this connection's
+        // permissions, so re-displaying it on demand is gated behind the
+        // same re-auth prompt used for other secret reveals (e.g. the seed).
+        reAuthNavigation(this.props.navigation, 'NWCConnectionQR', {
+            connectionId
+        });
+    };
+
     buildConnectionParams = (connection: NWCConnection): any => {
         const params: any = {
             id: connection.id,
@@ -262,7 +272,7 @@ export default class NWCConnectionDetails extends React.Component<
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
             );
-            if (nostrUrl) {
+            if (nostrUrl && !this.isUnmounted) {
                 const createdConnection =
                     NostrWalletConnectStore.connections[0];
                 navigation.navigate('NWCConnectionQR', {
@@ -719,6 +729,17 @@ export default class NWCConnectionDetails extends React.Component<
                                     </Text>
                                 </View>
                             )}
+                            <Button
+                                title={localeString(
+                                    'views.Settings.NostrWalletConnect.viewConnectionSecret'
+                                )}
+                                onPress={() =>
+                                    this.viewConnectionSecret(connection.id)
+                                }
+                                disabled={regenerating || deleting}
+                                secondary
+                                noUppercase
+                            />
                             <Button
                                 title={localeString(
                                     'views.Settings.NostrWalletConnect.regenerateConnection'

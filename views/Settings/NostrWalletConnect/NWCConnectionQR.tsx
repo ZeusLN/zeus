@@ -28,7 +28,10 @@ import SuccessAnimation from '../../../components/SuccessAnimation';
 
 interface NWCConnectionQRProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'NWCConnectionQR', { connectionId: string; nostrUrl: string }>;
+    route: Route<
+        'NWCConnectionQR',
+        { connectionId: string; nostrUrl?: string }
+    >;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
@@ -36,6 +39,9 @@ interface NWCConnectionQRState {
     isConnected: boolean;
     appState: AppStateStatus;
     showTimeoutMessage: boolean;
+    nostrUrl: string | null;
+    loadingUrl: boolean;
+    urlUnavailable: boolean;
 }
 const CONNECTION_TIMEOUT_MS = 20000;
 const CONNECTED_REDIRECT_MS = 2000;
@@ -49,37 +55,76 @@ export default class NWCConnectionQR extends React.Component<
     appStateSubscription: NativeEventSubscription | null = null;
     connectionTimeout: ReturnType<typeof setTimeout> | null = null;
     navigateBackTimeout: ReturnType<typeof setTimeout> | null = null;
+    isUnmounted = false;
+    // True when this screen was opened to re-display an existing
+    // connection's secret (no nostrUrl route param) rather than right
+    // after creating/regenerating one. In this mode the connection is
+    // already paired, so the waiting-for-first-connection flow (spinner,
+    // timeout modal, success redirect) does not apply.
+    isViewOnly: boolean;
 
     constructor(props: NWCConnectionQRProps) {
         super(props);
+        this.isViewOnly = !props.route.params.nostrUrl;
         this.state = {
             isConnected: false,
             appState: AppState.currentState,
-            showTimeoutMessage: false
+            showTimeoutMessage: false,
+            nostrUrl: props.route.params.nostrUrl ?? null,
+            loadingUrl: !props.route.params.nostrUrl,
+            urlUnavailable: false
         };
     }
 
     componentDidMount() {
         const { NostrWalletConnectStore, route } = this.props;
         const { connectionId } = route.params;
-        NostrWalletConnectStore.startWaitingForConnection(connectionId);
         this.appStateSubscription = AppState.addEventListener(
             'change',
             this.handleAppStateChange
         );
-        this.connectionTimeout = setTimeout(() => {
-            if (
-                NostrWalletConnectStore.waitingForConnection &&
-                !NostrWalletConnectStore.connectionJustSucceeded
-            ) {
-                this.setState({ showTimeoutMessage: true });
-            }
-        }, CONNECTION_TIMEOUT_MS);
+
+        if (!this.isViewOnly) {
+            NostrWalletConnectStore.startWaitingForConnection(connectionId);
+            this.connectionTimeout = setTimeout(() => {
+                if (
+                    NostrWalletConnectStore.waitingForConnection &&
+                    !NostrWalletConnectStore.connectionJustSucceeded
+                ) {
+                    this.setState({ showTimeoutMessage: true });
+                }
+            }, CONNECTION_TIMEOUT_MS);
+        }
+
+        if (!this.state.nostrUrl) {
+            NostrWalletConnectStore.getConnectionUrl(connectionId)
+                .then((nostrUrl) => {
+                    if (this.isUnmounted) return;
+                    this.setState({
+                        nostrUrl,
+                        loadingUrl: false,
+                        urlUnavailable: !nostrUrl
+                    });
+                })
+                .catch((error) => {
+                    console.error(
+                        'Failed to load NWC connection secret:',
+                        error
+                    );
+                    if (this.isUnmounted) return;
+                    this.setState({
+                        nostrUrl: null,
+                        loadingUrl: false,
+                        urlUnavailable: true
+                    });
+                });
+        }
     }
 
     componentDidUpdate() {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (
+            !this.isViewOnly &&
             NostrWalletConnectStore.connectionJustSucceeded &&
             !this.state.isConnected
         ) {
@@ -96,6 +141,7 @@ export default class NWCConnectionQR extends React.Component<
 
     componentWillUnmount() {
         const { NostrWalletConnectStore } = this.props;
+        this.isUnmounted = true;
         NostrWalletConnectStore.cancelWaitingForConnection();
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
@@ -135,7 +181,11 @@ export default class NWCConnectionQR extends React.Component<
     handleGoBack = () => {
         const { navigation } = this.props;
         this.setState({ showTimeoutMessage: false });
-        navigation.popTo('NostrWalletConnect');
+        if (this.isViewOnly) {
+            navigation.goBack();
+        } else {
+            navigation.popTo('NostrWalletConnect');
+        }
     };
 
     renderConnectedSuccess = () => (
@@ -204,14 +254,56 @@ export default class NWCConnectionQR extends React.Component<
                 <CollapsedQR value={nostrUrl} hideText={true} expanded />
             </View>
 
-            {this.renderWaitingStatus()}
+            {this.isViewOnly ? (
+                <View style={styles.goBackButton}>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={this.handleGoBack}
+                        secondary
+                        noUppercase
+                    />
+                </View>
+            ) : (
+                this.renderWaitingStatus()
+            )}
+        </>
+    );
+
+    renderLoadingUrl = () => (
+        <View style={styles.statusContainer}>
+            <LoadingIndicator size={36} />
+        </View>
+    );
+
+    renderUrlUnavailable = () => (
+        <>
+            <Text
+                style={[
+                    styles.description,
+                    { color: themeColor('secondaryText') }
+                ]}
+            >
+                {localeString(
+                    'views.Settings.NostrWalletConnect.connectionSecretUnavailable'
+                )}
+            </Text>
+            {this.isViewOnly && (
+                <View style={styles.goBackButton}>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={this.handleGoBack}
+                        secondary
+                        noUppercase
+                    />
+                </View>
+            )}
         </>
     );
 
     render() {
-        const { navigation, NostrWalletConnectStore, route } = this.props;
-        const { nostrUrl } = route.params;
-        const { isConnected } = this.state;
+        const { NostrWalletConnectStore } = this.props;
+        const { isConnected, nostrUrl, loadingUrl, urlUnavailable } =
+            this.state;
 
         return (
             <Screen>
@@ -241,10 +333,14 @@ export default class NWCConnectionQR extends React.Component<
                     >
                         {isConnected
                             ? this.renderConnectedSuccess()
+                            : loadingUrl
+                            ? this.renderLoadingUrl()
+                            : urlUnavailable || !nostrUrl
+                            ? this.renderUrlUnavailable()
                             : this.renderConnectionContent(nostrUrl)}
                     </ScrollView>
 
-                    {!isConnected && (
+                    {!isConnected && !this.isViewOnly && (
                         <View
                             style={[
                                 styles.footer,
@@ -253,9 +349,7 @@ export default class NWCConnectionQR extends React.Component<
                         >
                             <Button
                                 title={localeString('general.close')}
-                                onPress={() => {
-                                    navigation.popTo('NostrWalletConnect');
-                                }}
+                                onPress={this.handleGoBack}
                                 secondary
                                 noUppercase
                             />
@@ -368,6 +462,11 @@ const styles = StyleSheet.create({
         paddingVertical: 20,
         paddingHorizontal: 12,
         alignItems: 'center'
+    },
+    goBackButton: {
+        width: '100%',
+        maxWidth: 340,
+        marginTop: 20
     },
     statusContainer: {
         marginTop: 28,
