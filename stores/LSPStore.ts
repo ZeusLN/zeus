@@ -57,6 +57,7 @@ export default class LSPStore {
     // LSPS7
     @observable public getExtendableChannelsId: string;
     @observable public getExtendableChannelsData: any = [];
+    @observable public getExtendableChannelsError: boolean = false;
     @observable public createExtensionOrderId: string;
     @observable public createExtensionOrderResponse: any = {};
     @observable public getExtensionOrderId: string;
@@ -633,11 +634,17 @@ export default class LSPStore {
             return true;
         } else if (data.id === this.getExtendableChannelsId) {
             if (data.error) {
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    data.error
+                );
+                this.getExtendableChannelsError = true;
                 this.error = true;
                 this.error_msg = data?.error?.message
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
+                this.getExtendableChannelsError = false;
                 this.getExtendableChannelsData =
                     data?.result?.extendable_channels;
             }
@@ -1148,6 +1155,7 @@ export default class LSPStore {
                 // Normalize camelCase keys from native module to snake_case
                 // to match the JSON-RPC custom message format
                 runInAction(() => {
+                    this.getExtendableChannelsError = false;
                     this.getExtendableChannelsData = channels.map(
                         (ch: any) => ({
                             short_channel_id: ch.shortChannelId,
@@ -1162,7 +1170,12 @@ export default class LSPStore {
                 });
                 return;
             } catch (error: any) {
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    error
+                );
                 runInAction(() => {
+                    this.getExtendableChannelsError = true;
                     this.error = true;
                     this.error_msg =
                         error?.message ||
