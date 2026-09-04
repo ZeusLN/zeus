@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "There are more routes to try, but the payment timeout was exceeded.",
     "error.failureReasonNoRoute": "Не е открит маршрут",
     "error.failureReasonError": "A non-recoverable error has occured",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "Недостатъчен локален баланс",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
