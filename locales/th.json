@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "มี route อื่น ๆ ที่ยังไม่ได้ลอง แต่ว่าเวลาหมดก่อน",
     "error.failureReasonNoRoute": "ไม่พบ route วงเครือข่าย",
     "error.failureReasonError": "มีปัญหาที่ยังแก้ไม่ได้เกิดขึ้น",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "The receiving node might not accept keysend payments.",
     "error.failureReasonInsufficientBalance": "จำนวนเงินภายในมีไม่เพียงพอ",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
