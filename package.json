@@ -7,6 +7,9 @@
   },
   "jest": {
     "preset": "@react-native/jest-preset",
+    "moduleNameMapper": {
+      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
+    },
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
     ],

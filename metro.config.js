@@ -29,11 +29,12 @@ const config = {
         extraNodeModules: {
             'react-native': path.resolve(__dirname, 'node_modules/react-native')
         },
-        // @react-native-vector-icons/common imports
+        // @react-native-vector-icons/common and react-native-svg
+        // (lib/*/lib/resolveAssetUri.js) import
         // '@react-native/assets-registry/registry'. Up to RN 0.86 that package
         // was pulled in by react-native itself and
         // Libraries/Image/AssetRegistry simply re-exported it, so the app and
-        // the icon packages shared one registry instance. RN 0.87 moved the
+        // those packages shared one registry instance. RN 0.87 moved the
         // registry in-tree (react-native/asset-registry, which is also what
         // metro-config now sets as assetRegistryPath) and dropped the
         // dependency, so the import no longer resolves.
@@ -41,6 +42,11 @@ const config = {
         // Alias it to react-native's copy rather than installing the standalone
         // package: a second copy would resolve fine but register assets into a
         // different Map, so getAssetByID would silently return undefined.
+        //
+        // The jest moduleNameMapper in package.json points the same specifier
+        // at the same file (src/asset-registry.js) to keep the two resolvers
+        // in sync; jest cannot resolve the 'react-native/asset-registry'
+        // exports subpath, so it maps the file path directly.
         resolveRequest: (context, moduleName, platform) =>
             context.resolveRequest(
                 context,
