@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "Există mai multe rute de încercat, dar a fost depășit timpul de plată.",
     "error.failureReasonNoRoute": "Nu este găsit nici o rută",
     "error.failureReasonError": "A apărut o eroare nerecuperabiă",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Este posibil ca nodul receptor să nu accepte plăți prin keysend.",
     "error.failureReasonInsufficientBalance": "Soldul local insuficient",
     "error.ldk.recipientRejected": "Plată respinsă de destinatar",
