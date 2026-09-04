@@ -2178,6 +2178,9 @@ export default class LdkNode {
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    // follow-up: awaitPaymentCompletion already polls listPayments; a
+    // lookup by hash could resolve payments its timeout leaves pending
+    supportsPaymentLookup = () => false;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
