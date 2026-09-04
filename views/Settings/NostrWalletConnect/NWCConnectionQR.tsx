@@ -254,7 +254,18 @@ export default class NWCConnectionQR extends React.Component<
                 <CollapsedQR value={nostrUrl} hideText={true} expanded />
             </View>
 
-            {this.renderWaitingStatus()}
+            {this.isViewOnly ? (
+                <View style={styles.goBackButton}>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={this.handleGoBack}
+                        secondary
+                        noUppercase
+                    />
+                </View>
+            ) : (
+                this.renderWaitingStatus()
+            )}
         </>
     );
 
@@ -314,7 +325,7 @@ export default class NWCConnectionQR extends React.Component<
                             : this.renderConnectionContent(nostrUrl)}
                     </ScrollView>
 
-                    {!isConnected && (
+                    {!isConnected && !this.isViewOnly && (
                         <View
                             style={[
                                 styles.footer,
@@ -436,6 +447,11 @@ const styles = StyleSheet.create({
         paddingVertical: 20,
         paddingHorizontal: 12,
         alignItems: 'center'
+    },
+    goBackButton: {
+        width: '100%',
+        maxWidth: 340,
+        marginTop: 20
     },
     statusContainer: {
         marginTop: 28,
