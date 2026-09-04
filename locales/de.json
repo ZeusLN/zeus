@@ -2048,6 +2048,8 @@
     "views.Settings.NostrWalletConnect.publicKey": "Öffentlicher Schlüssel",
     "views.Settings.NostrWalletConnect.connectionSecret": "Connection-Secret",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "Scan this QR code or copy the connection secret in your Nostr app to link this connection.",
+    "views.Settings.NostrWalletConnect.viewConnectionSecret": "View Connection Secret",
+    "views.Settings.NostrWalletConnect.connectionSecretUnavailable": "The connection secret for this connection could not be rebuilt. Regenerate the connection to get a new pairing code.",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "Warte auf Verbindung der App...",
     "views.Settings.NostrWalletConnect.waitingToFinishPendingRequest": "Waiting to finish a pending request...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "Wir haben kein Event von deinem Nostr-Client empfangen. Du kannst diesen Bildschirm trotzdem schließen und die Verbindung nutzen. Sie funktioniert, sobald dein Nostr-Client eine Anfrage sendet.",

@@ -2048,6 +2048,8 @@
     "views.Settings.NostrWalletConnect.publicKey": "공개 키",
     "views.Settings.NostrWalletConnect.connectionSecret": "연결 시크릿",
     "views.Settings.NostrWalletConnect.connectionSecretDescription": "이 연결을 연동하려면 이 QR 코드를 스캔하거나 Nostr 앱에서 연결 시크릿을 복사하세요.",
+    "views.Settings.NostrWalletConnect.viewConnectionSecret": "View Connection Secret",
+    "views.Settings.NostrWalletConnect.connectionSecretUnavailable": "The connection secret for this connection could not be rebuilt. Regenerate the connection to get a new pairing code.",
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "앱 연결 대기 중…",
     "views.Settings.NostrWalletConnect.waitingToFinishPendingRequest": "Waiting to finish a pending request...",
     "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "Nostr 클라이언트에서 이벤트를 받지 못했습니다. 이 화면을 닫고 연결을 계속 사용할 수 있으며, Nostr 클라이언트가 요청을 보내면 연결이 작동합니다.",
