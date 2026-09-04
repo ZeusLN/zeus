@@ -185,6 +185,62 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        <>
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('general.tor')}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={embeddedTor}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                embeddedTor: !embeddedTor
+                                            });
+                                            await updateSettings({
+                                                embeddedTor: !embeddedTor
+                                            });
+                                            restartNeeded();
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
+                            <View
+                                style={{
+                                    margin: 10
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Settings.EmbeddedNode.embeddedTor.subtitle'
+                                    )} ${localeString(
+                                        'views.Settings.EmbeddedNode.embeddedTor.clearnetWarning'
+                                    )} ${localeString(
+                                        'views.Settings.EmbeddedNode.restart'
+                                    )}`}
+                                </Text>
+                            </View>
+                        </>
                         {Platform.OS === 'android' && (
                             <>
                                 <ListItem
