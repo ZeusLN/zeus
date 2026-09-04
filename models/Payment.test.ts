@@ -103,3 +103,50 @@ describe('Payment.getAmount with partial HTLC success', () => {
         expect(payment.getAmount).toBe(50000);
     });
 });
+
+describe('Payment.resolvedPaymentHash', () => {
+    // BOLT11 spec reference vector; its payment_hash is
+    // 0001020304050607080900010203040506070809000102030405060708090102
+    const specInvoice =
+        'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+    const specHash =
+        '0001020304050607080900010203040506070809000102030405060708090102';
+
+    it('passes through a string payment_hash', () => {
+        const payment = new Payment({ payment_hash: specHash });
+        expect(payment.resolvedPaymentHash).toBe(specHash);
+    });
+
+    it('converts a Buffer-style payment_hash (LndHub)', () => {
+        const payment = new Payment({
+            payment_hash: { type: 'Buffer', data: [171, 205] }
+        });
+        expect(payment.resolvedPaymentHash).toBe('abcd');
+    });
+
+    it('derives the hash from the payment request when absent', () => {
+        const payment = new Payment({ payment_request: specInvoice });
+        expect(payment.resolvedPaymentHash).toBe(specHash);
+    });
+
+    it('derives the hash from the preimage when nothing else is available', () => {
+        const payment = new Payment({
+            payment_preimage: '01'.repeat(32)
+        });
+        expect(payment.resolvedPaymentHash).toBe(
+            '72cd6e8422c407fb6d098690f1130b7ded7ec2f7f5e1d30bd9d521f015363793'
+        );
+    });
+
+    it('ignores an all-zero preimage', () => {
+        const payment = new Payment({
+            payment_preimage: '00'.repeat(32)
+        });
+        expect(payment.resolvedPaymentHash).toBeUndefined();
+    });
+
+    it('returns undefined when the hash cannot be derived', () => {
+        const payment = new Payment({ value_sat: 1000 });
+        expect(payment.resolvedPaymentHash).toBeUndefined();
+    });
+});
