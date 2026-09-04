@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "시도해 볼 다른 결제 경로들이 존재하지만, 결제 시간이 초과되었습니다.",
     "error.failureReasonNoRoute": "결제 경로를 찾을 수 없음.",
     "error.failureReasonError": "복구가 불가능한 오류가 발생하였습니다.",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "수신 노드가 키센드 결제를 허용하지 않을 수도 있습니다.",
     "error.failureReasonInsufficientBalance": "송금 잔액 부족",
     "error.ldk.recipientRejected": "수취인이 결제를 거부함",

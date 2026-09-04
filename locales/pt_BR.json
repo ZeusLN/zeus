@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "Há mais rotas para tentar, mas o tempo limite do pagamento foi excedido.",
     "error.failureReasonNoRoute": "Nenhuma rota encontrada",
     "error.failureReasonError": "Um erro não recuperável ocorreu",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "O nó receptor pode não aceitar pagamentos via keysend.",
     "error.failureReasonInsufficientBalance": "Saldo local insuficiente",
     "error.ldk.recipientRejected": "Pagamento rejeitado pelo destinatário",

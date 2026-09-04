@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "Reittejä on enemmän kokeiltavana, mutta maksun aikaraja ylittyi.",
     "error.failureReasonNoRoute": "Reittejä ei löytynyt",
     "error.failureReasonError": "Ei palautettavissa oleva virhe on tapahtunut",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Vastaanottava solmu ei ehkä hyväksy keysend-maksuja.",
     "error.failureReasonInsufficientBalance": "Riittämätön paikallinen saldo",
     "error.ldk.recipientRejected": "Payment rejected by recipient",

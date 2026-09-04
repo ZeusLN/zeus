@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "Ada lebih banyak rute untuk dicoba, tetapi batas waktu pembayaran telah terlampaui.",
     "error.failureReasonNoRoute": "Rute tidak ditemukan",
     "error.failureReasonError": "Telah terjadi kesalahan yang tidak dapat dipulihkan",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Node penerima mungkin tidak menerima pembayaran keysend.",
     "error.failureReasonInsufficientBalance": "Saldo lokal tidak cukup",
     "error.ldk.recipientRejected": "Payment rejected by recipient",

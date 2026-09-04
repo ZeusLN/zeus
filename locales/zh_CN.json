@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "还有更多路径可尝试，但支付已超过。",
     "error.failureReasonNoRoute": "未找到路径",
     "error.failureReasonError": "发生了不可恢复的错误",
-    "error.failureReasonIncorrectPaymentDetails": "支付失败是因为发票被拒、已取消或已失效。对于已取消的待处理发票，待处理的款项将被释放，您的资金将不会被转出。请查看“交易记录”以了解最终的支付状态。",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "接收节点可能不接受 Keysend 支付。",
     "error.failureReasonInsufficientBalance": "本地余额不足",
     "error.ldk.recipientRejected": "支付已被收款方拒绝",

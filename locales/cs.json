@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "Je možné vyzkoušet další cesty, ale časový limit pro platbu byl překročen.",
     "error.failureReasonNoRoute": "Nebyla nalezena žádná cesta",
     "error.failureReasonError": "Vyskytla se neopravitelná chyba",
-    "error.failureReasonIncorrectPaymentDetails": "Platba selhala, protože faktura byla odmítnuta, zrušena, nebo již není platná. V případě zrušené zadržené faktury se zadržená platba uvolní a vaše finanční prostředky nebudou odeslány. Konečný stav platby naleznete v sekci Aktivita.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "Přijímací uzel nemusí přijímat keysend platby.",
     "error.failureReasonInsufficientBalance": "Nedostatečný místní zůstatek",
     "error.ldk.recipientRejected": "Platba byla odmítnuta příjemcem",
