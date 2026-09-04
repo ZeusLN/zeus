@@ -276,13 +276,28 @@ export default class NWCConnectionQR extends React.Component<
     );
 
     renderUrlUnavailable = () => (
-        <Text
-            style={[styles.description, { color: themeColor('secondaryText') }]}
-        >
-            {localeString(
-                'views.Settings.NostrWalletConnect.connectionSecretUnavailable'
+        <>
+            <Text
+                style={[
+                    styles.description,
+                    { color: themeColor('secondaryText') }
+                ]}
+            >
+                {localeString(
+                    'views.Settings.NostrWalletConnect.connectionSecretUnavailable'
+                )}
+            </Text>
+            {this.isViewOnly && (
+                <View style={styles.goBackButton}>
+                    <Button
+                        title={localeString('general.goBack')}
+                        onPress={this.handleGoBack}
+                        secondary
+                        noUppercase
+                    />
+                </View>
             )}
-        </Text>
+        </>
     );
 
     render() {
