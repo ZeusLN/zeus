@@ -624,6 +624,7 @@
     "views.Channel.lease.lspDiscretion.explainer2": "If you would like to ensure your channel remains open, consider purchasing a channel lease.",
     "views.Channel.lease.purchaseLease": "Purchase channel lease",
     "views.Channel.lease.extendLease": "Extend channel lease",
+    "views.Channel.lease.fetchError": "Unable to fetch channel lease info from your LSP",
     "views.Channel.closureReason.unknown": "Channel closed: unknown reason",
     "views.Channel.closureReason.counterpartyForceClosed": "Channel rejected by counterparty: {{peerMessage}}",
     "views.Channel.closureReason.counterpartyForceClosedDefault": "Channel rejected: counterparty force closed",
