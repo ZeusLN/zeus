@@ -1821,7 +1821,7 @@
     "error.failureReasonTimeout": "अधिक रूट आज़माने के लिए हैं, लेकिन भुगतान का समय समाप्त हो गया।",
     "error.failureReasonNoRoute": "कोई रूट नहीं मिला",
     "error.failureReasonError": "एक गैर-पुनर्प्राप्ति योग्य त्रुटि हुई है",
-    "error.failureReasonIncorrectPaymentDetails": "Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.",
+    "error.failureReasonIncorrectPaymentDetails": "Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.",
     "error.failureReasonIncorrectPaymentDetailsKeysend": "प्राप्त करने वाला नोड कीसेंड भुगतान स्वीकार नहीं कर सकता है।",
     "error.failureReasonInsufficientBalance": "अपर्याप्त स्थानीय बैलेंस",
     "error.ldk.recipientRejected": "Payment rejected by recipient",
