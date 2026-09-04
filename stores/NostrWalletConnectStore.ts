@@ -1066,11 +1066,15 @@ export default class NostrWalletConnectStore {
     /**
      * Rebuilds a connection's pairing URL from persisted state (the stored
      * client private key, the wallet service pubkey, and the connection's
-     * relay/lud16) so it can be viewed again after the QR screen shown at
+     * relay) so it can be viewed again after the QR screen shown at
      * create/regenerate time has been dismissed. Nothing about the URL is
-     * ephemeral except the route param that originally carried it.
-     * Returns null if the connection or its client key can no longer be
-     * found (e.g. it was created before client keys were persisted).
+     * ephemeral except the route param that originally carried it. The
+     * lud16 param reflects the current lud16Enabled setting and lightning
+     * address, not whatever was in effect when the connection was created.
+     * Returns null if the connection, its client key, or the wallet
+     * service keys can no longer be found (e.g. it was created before
+     * client keys were persisted) rather than regenerating anything, since
+     * this is a read-only path.
      */
     public getConnectionUrl = async (
         connectionId: string
@@ -1078,9 +1082,6 @@ export default class NostrWalletConnectStore {
         const { connection } = this.getConnection({ connectionId });
         if (!connection) return null;
 
-        if (!this.walletServiceKeys?.publicKey) {
-            await this.loadWalletServiceKeys();
-        }
         if (!this.walletServiceKeys?.publicKey) return null;
 
         const clientPrivateKey = await this.getClientPrivateKey(
