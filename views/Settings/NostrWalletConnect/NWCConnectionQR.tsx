@@ -28,7 +28,10 @@ import SuccessAnimation from '../../../components/SuccessAnimation';
 
 interface NWCConnectionQRProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'NWCConnectionQR', { connectionId: string; nostrUrl: string }>;
+    route: Route<
+        'NWCConnectionQR',
+        { connectionId: string; nostrUrl?: string }
+    >;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
@@ -36,6 +39,9 @@ interface NWCConnectionQRState {
     isConnected: boolean;
     appState: AppStateStatus;
     showTimeoutMessage: boolean;
+    nostrUrl: string | null;
+    loadingUrl: boolean;
+    urlUnavailable: boolean;
 }
 const CONNECTION_TIMEOUT_MS = 20000;
 const CONNECTED_REDIRECT_MS = 2000;
@@ -49,13 +55,17 @@ export default class NWCConnectionQR extends React.Component<
     appStateSubscription: NativeEventSubscription | null = null;
     connectionTimeout: ReturnType<typeof setTimeout> | null = null;
     navigateBackTimeout: ReturnType<typeof setTimeout> | null = null;
+    isUnmounted = false;
 
     constructor(props: NWCConnectionQRProps) {
         super(props);
         this.state = {
             isConnected: false,
             appState: AppState.currentState,
-            showTimeoutMessage: false
+            showTimeoutMessage: false,
+            nostrUrl: props.route.params.nostrUrl ?? null,
+            loadingUrl: !props.route.params.nostrUrl,
+            urlUnavailable: false
         };
     }
 
@@ -75,6 +85,19 @@ export default class NWCConnectionQR extends React.Component<
                 this.setState({ showTimeoutMessage: true });
             }
         }, CONNECTION_TIMEOUT_MS);
+
+        if (!this.state.nostrUrl) {
+            NostrWalletConnectStore.getConnectionUrl(connectionId).then(
+                (nostrUrl) => {
+                    if (this.isUnmounted) return;
+                    this.setState({
+                        nostrUrl,
+                        loadingUrl: false,
+                        urlUnavailable: !nostrUrl
+                    });
+                }
+            );
+        }
     }
 
     componentDidUpdate() {
@@ -96,6 +119,7 @@ export default class NWCConnectionQR extends React.Component<
 
     componentWillUnmount() {
         const { NostrWalletConnectStore } = this.props;
+        this.isUnmounted = true;
         NostrWalletConnectStore.cancelWaitingForConnection();
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
@@ -208,10 +232,26 @@ export default class NWCConnectionQR extends React.Component<
         </>
     );
 
+    renderLoadingUrl = () => (
+        <View style={styles.statusContainer}>
+            <LoadingIndicator size={36} />
+        </View>
+    );
+
+    renderUrlUnavailable = () => (
+        <Text
+            style={[styles.description, { color: themeColor('secondaryText') }]}
+        >
+            {localeString(
+                'views.Settings.NostrWalletConnect.connectionSecretUnavailable'
+            )}
+        </Text>
+    );
+
     render() {
-        const { navigation, NostrWalletConnectStore, route } = this.props;
-        const { nostrUrl } = route.params;
-        const { isConnected } = this.state;
+        const { navigation, NostrWalletConnectStore } = this.props;
+        const { isConnected, nostrUrl, loadingUrl, urlUnavailable } =
+            this.state;
 
         return (
             <Screen>
@@ -241,6 +281,10 @@ export default class NWCConnectionQR extends React.Component<
                     >
                         {isConnected
                             ? this.renderConnectedSuccess()
+                            : loadingUrl
+                            ? this.renderLoadingUrl()
+                            : urlUnavailable || !nostrUrl
+                            ? this.renderUrlUnavailable()
                             : this.renderConnectionContent(nostrUrl)}
                     </ScrollView>
 
