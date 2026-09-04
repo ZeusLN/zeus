@@ -1,5 +1,14 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 
+# Build React core from source. The 0.87 prebuilt React.xcframework activates a
+# framework module map, and our Objective-C++ app-target code (LncMobile,
+# AppDelegate.mm via RCTAppDelegate's Fabric headers) fails to compile against
+# it: non-modular-include errors in module React, then module/textual
+# header-visibility conflicts once that is suppressed. Source builds keep the
+# textual header semantics we shipped through 0.86. Revisit when upstream fixes
+# prebuilt-core consumption from Objective-C++ app code.
+ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 

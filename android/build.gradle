@@ -1,11 +1,11 @@
 buildscript {
     ext {
-        buildToolsVersion = "36.0.0"
+        buildToolsVersion = "37.0.0"
         minSdkVersion = 28
-        compileSdkVersion = 36
+        compileSdkVersion = 37
         targetSdkVersion = 36
         ndkVersion = "28.0.13004108"
-        kotlinVersion = "2.1.20"
+        kotlinVersion = "2.2.0"
     }
     subprojects { subproject ->
         afterEvaluate {
@@ -15,6 +15,16 @@ buildscript {
                     compileSdkVersion rootProject.ext.compileSdkVersion
                     buildToolsVersion rootProject.ext.buildToolsVersion
                     ndkVersion rootProject.ext.ndkVersion
+                    // AGP 9 (RN 0.87+) stopped generating BuildConfig unless a
+                    // module opts in, and removed the
+                    // android.defaults.buildfeatures.buildconfig property that
+                    // used to turn it on globally. Several react-native
+                    // libraries reference their own BuildConfig.DEBUG, so
+                    // re-enable it for every Android subproject rather than
+                    // patching each package.
+                    buildFeatures {
+                        buildConfig true
+                    }
                 }
             }
         }

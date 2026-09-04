@@ -36,7 +36,21 @@
     native <methods>;
 }
 
-# JNA - Required for CDK FFI
+# LDK Node and zeus_cashu_restore - the other two JNA-backed uniffi bindings.
+# proguard-android-optimize.txt (required by AGP 9) drops the -dontoptimize
+# that proguard-android.txt carried, so R8 optimization now runs on release
+# builds; keep these whole like org.cashudevkit above.
+-keep class org.lightningdevkit.** { *; }
+-keep interface org.lightningdevkit.** { *; }
+-keep enum org.lightningdevkit.** { *; }
+-keep class uniffi.** { *; }
+-keep interface uniffi.** { *; }
+-keep enum uniffi.** { *; }
+-keepclassmembers class org.lightningdevkit.**, uniffi.** {
+    native <methods>;
+}
+
+# JNA - Required by all three uniffi FFI bindings
 -keep class com.sun.jna.** { *; }
 -keep class * implements com.sun.jna.** { *; }
 -dontwarn com.sun.jna.**
