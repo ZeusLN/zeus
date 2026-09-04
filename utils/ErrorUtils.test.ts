@@ -129,7 +129,7 @@ describe('ErrorUtils', () => {
                     ['UnhandledContext']
                 )
             ).toEqual(
-                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.'
+                'Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.'
             );
         });
 
@@ -141,7 +141,7 @@ describe('ErrorUtils', () => {
                     )
                 )
             ).toEqual(
-                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state.'
+                'Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance.'
             );
         });
 
@@ -155,7 +155,7 @@ describe('ErrorUtils', () => {
                     ['Keysend']
                 )
             ).toEqual(
-                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state. The receiving node might not accept keysend payments.'
+                'Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance. The receiving node might not accept keysend payments.'
             );
         });
 
@@ -168,7 +168,7 @@ describe('ErrorUtils', () => {
                     ['Keysend']
                 )
             ).toEqual(
-                'Payment failed because the invoice was rejected, canceled, or is no longer valid. For a canceled hold invoice, the held payment is released and your funds are not sent. Check Activity for the final payment state. The receiving node might not accept keysend payments.'
+                'Payment failed: the recipient rejected it, or the invoice was canceled or is no longer valid. Any held funds have been returned to your balance. The receiving node might not accept keysend payments.'
             );
         });
 
