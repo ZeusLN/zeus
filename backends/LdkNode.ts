@@ -2176,6 +2176,7 @@ export default class LdkNode {
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
