@@ -392,11 +392,12 @@ export default class LND {
         );
 
     getNewAddress = (data: any) => {
-        const params: any = { ...data };
-        const type = toLnrpcAddressType(params.type);
-        if (type !== undefined) params.type = type;
-        else delete params.type;
-        return this.getRequest('/v1/newaddress', params);
+        const { type, ...rest } = data;
+        const lnrpcType = toLnrpcAddressType(type);
+        return this.getRequest(
+            '/v1/newaddress',
+            lnrpcType === undefined ? rest : { ...rest, type: lnrpcType }
+        );
     };
     getNewChangeAddress = (data: any) =>
         this.postRequest('/v2/wallet/address/next', data);
