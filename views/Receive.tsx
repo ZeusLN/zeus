@@ -295,7 +295,9 @@ export default class Receive extends React.Component<
             !lightningAddressHandle &&
             BackendUtils.supportsLightningAddress()
         ) {
-            status();
+            status().catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
         }
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
