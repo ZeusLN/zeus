@@ -1,6 +1,71 @@
+import { NativeModules, Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 
-const KEY_PREFIX = 'zeus:';
+export const KEY_PREFIX = 'zeus:';
+
+/**
+ * Lists the servers of all keychain internet-password items in one
+ * partition (synchronizable or not) via the KeychainAudit native module.
+ * iOS only; resolves to [] elsewhere (Android has no partition split).
+ */
+export const getInternetPasswordServers = async (
+    synchronizable: boolean
+): Promise<string[]> => {
+    if (Platform.OS !== 'ios') return [];
+    return NativeModules.KeychainAudit.getInternetPasswordServers(
+        synchronizable
+    );
+};
+
+/**
+ * Raw, partition-explicit keychain ops on FULL server names. Unlike the
+ * Storage methods these do not apply the zeus: prefix and do not route
+ * empty values to deletion; migration and purge code must address exact
+ * servers in an exact partition.
+ *
+ * Returns null on miss, diverging from Storage.getItem's `false`, so
+ * callers can distinguish "absent" without ambiguity.
+ */
+export const getRawItem = async (
+    server: string,
+    cloudSync: boolean
+): Promise<string | null> => {
+    const response: any = await Keychain.getInternetCredentials(
+        server,
+        cloudSync ? { cloudSync: true } : undefined
+    );
+    if (response && typeof response.password === 'string') {
+        return response.password;
+    }
+    return null;
+};
+
+/**
+ * Writes a raw server into the non-synchronizable (device-local)
+ * partition. No cloudSync option is passed: with the patched
+ * react-native-keychain, absent and false both mean local, and omitting
+ * the option keeps this correct even on an unpatched build.
+ */
+export const setRawLocalItem = async (
+    server: string,
+    value: string
+): Promise<boolean> => {
+    const response = await Keychain.setInternetCredentials(
+        server,
+        server,
+        value
+    );
+    return !!response;
+};
+
+export const removeRawItem = async (
+    server: string,
+    cloudSync: boolean
+): Promise<void> => {
+    await Keychain.resetInternetCredentials(
+        cloudSync ? { server, cloudSync: true } : { server }
+    );
+};
 
 class Storage {
     // Set once a data wipe has started. The dying JS context keeps running

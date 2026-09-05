@@ -33,7 +33,7 @@ Persistence contracts for the ZEUS wallet (React Native, Bitcoin/Lightning) and 
 |---|---|
 | Keychain | The OS-level encrypted credential store (iOS Keychain / Android Keystore-backed), accessed via the `react-native-keychain` package. Survives app reinstall on iOS; the most durable storage the app has. |
 | Internet credentials | The `react-native-keychain` API flavor Zeus uses (`getInternetCredentials`/`setInternetCredentials`): each entry is keyed by a `server` string and stores a `password` string. Zeus stores JSON in the `password` field. |
-| `cloudSync` | iOS-only keychain attribute (`kSecAttrSynchronizable`). `true` = the entry syncs to the user's iCloud Keychain and follows them to new devices. Zeus writes with `cloudSync: false` — always. |
+| `cloudSync` | iOS-only keychain attribute (`kSecAttrSynchronizable`). `true` = the entry syncs to the user's iCloud Keychain and follows them to new devices. Zeus writes with `cloudSync: false` — always. WARNING: unpatched react-native-keychain 10.0.0 treated a PRESENT `cloudSync: false` as true (ObjC pointer truthiness on `@NO`), so all `zeus:*` data was actually synchronizable until `patches/patch-keychain-cloudsync.mjs`; `keychainDesyncMigration` repairs affected installs. |
 | EncryptedStorage | The `react-native-encrypted-storage` package (v4.0.3, `package.json`). Zeus's PREVIOUS storage backend. Legacy-only now. |
 | AsyncStorage | `@react-native-async-storage/async-storage` — plain unencrypted key-value storage. Non-sensitive flags only. |
 | Settings blob | ONE JSON document holding all app settings AND all wallet secrets, stored in the keychain under key `zeus-settings-v2`. |
@@ -107,7 +107,12 @@ Also note: `updateSettings` internally calls `getSettings()` first (which can tr
 
 ```
 getSettings()
-├── await MigrationsUtils.keychainCloudSyncMigration()   // ALWAYS first, before any settings read
+├── await MigrationsUtils.keychainDesyncMigration()      // ALWAYS first: copies synchronizable zeus:* items
+│                                                        // into the device-local partition (cloudSync bug repair).
+│                                                        // MUST precede keychainCloudSyncMigration, or migrateKey's
+│                                                        // Storage.getItem guard misses on the empty local partition
+│                                                        // and stale unprefixed legacy data shadows the fresher copy
+├── await MigrationsUtils.keychainCloudSyncMigration()   // before any settings read
 ├── Storage.getItem('zeus-settings-v2') exists?
 │   ├── YES (modern path): parse → migrateRgsDefaultToZeus() → migrateInvoiceExpiryDisplay()
 │   └── NO  (legacy path): EncryptedStorage.getItem('zeus-settings')
@@ -163,8 +168,8 @@ History you must know before "improving" anything here: the multi-attempt iCloud
 
 Current rules (verified against master 2026-07-06):
 
-1. **All writes are `cloudSync: false`** — enforced inside `storage/index.ts`. Never write app data with `cloudSync: true`.
-2. **Orphaned pre-migration entries are retained BY DESIGN.** `MigrationUtils.deleteFromOldKeychain` is a no-op with the delete code commented out. Old unprefixed local AND iCloud-synced entries (including seed copies) persist on purpose: the Keychain Recovery tool (`views/Tools/NodeConfigExportImport.tsx` + `utils/KeychainRecoveryUtils.ts`) scans exactly those four sources (`current` / `unprefixed-local` / `unprefixed-cloud` / `encrypted-storage`) to rescue users' lost wallets. **Do not "clean up" orphans** — that deletes the recovery path. Re-enabling deletion is maintainer-gated.
+1. **All writes are `cloudSync: false`** — enforced inside `storage/index.ts`. Never write app data with `cloudSync: true`. NOTE: `cloudSync: false` only truly means non-synchronizable because `patches/patch-keychain-cloudsync.mjs` fixes react-native-keychain's presence-check bug; the patch throws at postinstall if a dependency bump ever removes it. Do not bump react-native-keychain without re-verifying `cloudSyncValue()`.
+2. **Orphaned pre-migration entries are retained by default, deleted only with user consent.** `MigrationUtils.deleteFromOldKeychain` is still a no-op with the delete code commented out, and no MIGRATION may delete keychain data (the #3625 multi-device wipe stands as the reason). The Keychain Recovery tool (`views/Tools/NodeConfigExportImport.tsx` + `utils/KeychainRecoveryUtils.ts`) still scans `current` / `unprefixed-local` / `unprefixed-cloud` / `encrypted-storage` to rescue lost wallets. Since the KEY-004 remediation, users CAN destroy orphans (and the iCloud-synced `zeus:*` copies) via Tools > Keychain Cleanup (`utils/KeychainPurgeUtils.ts`): consent-gated, preflight-verified (live local blob must exist; a synchronizable `zeus:*` entry is never deleted while it is the only copy), and re-runnable. Post-purge, empty recovery scans for that user are expected. Any NEW deletion path is still maintainer-gated.
 3. **Explicit purges must clear BOTH sync variants and BOTH namespaces.** `DataClearUtils.clearKey` is the reference: it resets `zeus:<key>` local + cloud, and unprefixed `<key>` local + cloud, five calls total. Any new wipe path that clears fewer locations leaves secrets behind.
 4. `migrateKey` uses read → write → verify → delete ordering with 500 ms iOS sleeps around keychain ops (iCloud sync latency, `35aaf8897`) — keep that ordering and pacing if you extend it.
 
