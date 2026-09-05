@@ -418,6 +418,18 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
+
+        let brantaVerification = null;
+        if (
+            brantaId &&
+            brantaSecret &&
+            settingsStore?.settings?.branta?.enabled !== false
+        ) {
+            // Branta ZK Unified (BIP-21 address + lightning= + id/secret):
+            // look up the unsplitted URI before the user picks a rail.
+            brantaVerification = await brantaStore.verifyPayment(data);
+        }
+
         // ChoosePaymentMethod offers on-chain for any value it receives, so
         // leave out an address that is not valid on this node's network
         return [
@@ -430,7 +442,8 @@ const handleAnything = async (
                 satAmount,
                 lightning,
                 offer,
-                clinkNoffer
+                clinkNoffer,
+                brantaVerification
             }
         ];
     } else if (clinkNoffer) {

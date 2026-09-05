@@ -241,6 +241,87 @@ describe('AddressUtils', () => {
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
             });
         });
+
+        it('extracts Branta id and secret from BIP-21 query params', () => {
+            const address = 'bc1q6745z6cy3u0k9nprurh3x804c4r7u3u8vxca2n';
+            const brantaId =
+                'z15b5EsbP5LHJrFco38+Fp+HVaiopAY676NCKek8e1Q+4a370TyYhvloS8uLCUHfJ4CzeI/bOFmFDGpAQszB0gu1pJ1HOQ==';
+            const brantaSecret = 'c6e9eb30-6258-4432-9847-bdcc4fd4b0db';
+            const encodedId = encodeURIComponent(brantaId);
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?branta_id=${encodedId}&branta_secret=${brantaSecret}`
+                )
+            ).toEqual({
+                value: address,
+                brantaId,
+                brantaSecret
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `BITCOIN:${address.toUpperCase()}?BRANTA_ID=${encodedId}&BRANTA_SECRET=${brantaSecret}`
+                )
+            ).toEqual({
+                value: address.toUpperCase(),
+                brantaId,
+                brantaSecret
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?amount=0.00170003&branta_id=${encodedId}&branta_secret=${brantaSecret}`
+                )
+            ).toEqual({
+                value: address,
+                satAmount: '170003',
+                brantaId,
+                brantaSecret
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?branta_id=${encodedId}`
+                )
+            ).toEqual({
+                value: address,
+                brantaId
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?branta_secret=${brantaSecret}`
+                )
+            ).toEqual({
+                value: address,
+                brantaSecret
+            });
+
+            expect(AddressUtils.processBIP21Uri(`bitcoin:${address}`)).toEqual({
+                value: address
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'lightning:lnbc17760n1p4r4flypp5k56kq3v2935rl3glkqu9vngfueud2zj87hjcff3t0kn0yrge0pfqdzjgfexzmn5vysz6gzyv4mx2mr0wpjhygzvd9nksarwd9hxwgz6v4ex7gztdehhwmr9v3nk2gz90psk6urvv5cqzzsxq97zvuqsp5hut3t0l0s5mvp9yr06v4253kqtf452z6c65s6g9sga445hc03v6s9qxpqysgqqm430zkk9uymjgvllr3aha88hc6q59etxasfqswn8r8pfm3dstlpp46azv906xtcj3wzprxup5fxn65a5wymt7zzq9sw9qdzx8rgdhcpk80nrg'
+                )
+            ).toEqual({
+                value: 'lnbc17760n1p4r4flypp5k56kq3v2935rl3glkqu9vngfueud2zj87hjcff3t0kn0yrge0pfqdzjgfexzmn5vysz6gzyv4mx2mr0wpjhygzvd9nksarwd9hxwgz6v4ex7gztdehhwmr9v3nk2gz90psk6urvv5cqzzsxq97zvuqsp5hut3t0l0s5mvp9yr06v4253kqtf452z6c65s6g9sga445hc03v6s9qxpqysgqqm430zkk9uymjgvllr3aha88hc6q59etxasfqswn8r8pfm3dstlpp46azv906xtcj3wzprxup5fxn65a5wymt7zzq9sw9qdzx8rgdhcpk80nrg'
+            });
+
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?lightning=lnbc17760n1p4r4flypp5k56kq3v2935rl3glkqu9vngfueud2zj87hjcff3t0kn0yrge0pfqdzjgfexzmn5vysz6gzyv4mx2mr0wpjhygzvd9nksarwd9hxwgz6v4ex7gztdehhwmr9v3nk2gz90psk6urvv5cqzzsxq97zvuqsp5hut3t0l0s5mvp9yr06v4253kqtf452z6c65s6g9sga445hc03v6s9qxpqysgqqm430zkk9uymjgvllr3aha88hc6q59etxasfqswn8r8pfm3dstlpp46azv906xtcj3wzprxup5fxn65a5wymt7zzq9sw9qdzx8rgdhcpk80nrg&branta_id=${encodedId}&branta_secret=${brantaSecret}`
+                )
+            ).toEqual({
+                value: address,
+                lightning:
+                    'lnbc17760n1p4r4flypp5k56kq3v2935rl3glkqu9vngfueud2zj87hjcff3t0kn0yrge0pfqdzjgfexzmn5vysz6gzyv4mx2mr0wpjhygzvd9nksarwd9hxwgz6v4ex7gztdehhwmr9v3nk2gz90psk6urvv5cqzzsxq97zvuqsp5hut3t0l0s5mvp9yr06v4253kqtf452z6c65s6g9sga445hc03v6s9qxpqysgqqm430zkk9uymjgvllr3aha88hc6q59etxasfqswn8r8pfm3dstlpp46azv906xtcj3wzprxup5fxn65a5wymt7zzq9sw9qdzx8rgdhcpk80nrg',
+                brantaId,
+                brantaSecret
+            });
+        });
     });
 
     describe('extractBolt12Offer', () => {

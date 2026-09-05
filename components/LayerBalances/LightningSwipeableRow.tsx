@@ -20,6 +20,8 @@ import {
     settingsStore
 } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
+import { BrantaVerification } from '../../stores/BrantaStore';
+import { paymentRequestNavigationParams } from '../../utils/BrantaUtils';
 
 import SwipeableRowAction from './SwipeableRowAction';
 import SwipeableRowContainer from './SwipeableRowContainer';
@@ -39,6 +41,7 @@ interface LightningSwipeableRowProps {
     children: React.ReactNode;
     disabled?: boolean;
     SyncStore?: SyncStore;
+    brantaVerification?: BrantaVerification | null;
 }
 
 @inject('SyncStore')
@@ -235,7 +238,8 @@ export default class LightningSwipeableRow extends Component<
             offer,
             clinkNoffer,
             navigation,
-            lnurlParams
+            lnurlParams,
+            brantaVerification
         } = this.props;
         const { settings } = settingsStore;
         if (clinkNoffer) {
@@ -263,7 +267,10 @@ export default class LightningSwipeableRow extends Component<
             );
         } else {
             invoicesStore.getPayReq(lightning ?? '');
-            navigation.navigate('PaymentRequest', {});
+            navigation.navigate(
+                'PaymentRequest',
+                paymentRequestNavigationParams(brantaVerification)
+            );
         }
     };
 
