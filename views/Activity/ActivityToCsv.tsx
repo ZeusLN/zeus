@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Alert, Modal } from 'react-native';
+import { StyleSheet, View, Modal } from 'react-native';
 
 import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
@@ -18,7 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import {
     getFormattedDateTime,
     convertActivityToCsv,
-    saveCsvFile,
+    shareCsvFiles,
     CSV_KEYS
 } from '../../utils/ActivityCsvUtils';
 
@@ -75,29 +75,28 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             try {
                 const dateTime = getFormattedDateTime();
                 const baseFileName = customFileName || `zeus_${dateTime}`;
+                const files = [];
                 if (invoiceCsv)
-                    await saveCsvFile(
-                        `${baseFileName}_ln_invoices.csv`,
-                        invoiceCsv
-                    );
+                    files.push({
+                        fileName: `${baseFileName}_ln_invoices.csv`,
+                        csvData: invoiceCsv
+                    });
                 if (paymentCsv)
-                    await saveCsvFile(
-                        `${baseFileName}_ln_payments.csv`,
-                        paymentCsv
-                    );
+                    files.push({
+                        fileName: `${baseFileName}_ln_payments.csv`,
+                        csvData: paymentCsv
+                    });
                 if (transactionCsv)
-                    await saveCsvFile(
-                        `${baseFileName}_onchain.csv`,
-                        transactionCsv
-                    );
+                    files.push({
+                        fileName: `${baseFileName}_onchain.csv`,
+                        csvData: transactionCsv
+                    });
 
-                Alert.alert(
-                    localeString('general.success'),
-                    localeString('views.ActivityToCsv.csvDownloaded')
-                );
+                await shareCsvFiles(files);
+
                 closeModal();
             } catch (err) {
-                console.error('Failed to save CSV file:', err);
+                console.error('Failed to share CSV file:', err);
             } finally {
                 setIsLoading(false);
             }

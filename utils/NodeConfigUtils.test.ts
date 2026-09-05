@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
 import * as CryptoJS from 'crypto-js';
 
 import {
@@ -6,8 +8,10 @@ import {
     decryptExportData,
     decryptExportDataV2,
     isValidExportPassword,
+    purgeLegacyNodeConfigExports,
     EXPORT_FORMAT_VERSION,
-    MIN_EXPORT_PASSWORD_LENGTH
+    MIN_EXPORT_PASSWORD_LENGTH,
+    NODE_CONFIG_EXPORT_EXT
 } from './NodeConfigUtils';
 import SettingsStore, { Settings } from '../stores/SettingsStore';
 
@@ -27,13 +31,34 @@ jest.mock('react-native-fs', () => ({
         ),
     mkdir: () => Promise.resolve(),
     // Like RNFS, unlink on a directory removes its contents recursively.
-    unlink: (p: string) => {
+    unlink: jest.fn((p: string) => {
         delete mockFiles[p];
         for (const f of Object.keys(mockFiles)) {
             if (f.startsWith(`${p}/`)) delete mockFiles[f];
         }
         return Promise.resolve();
-    },
+    }),
+    // Lists the immediate children of a directory, deriving entries from the
+    // flat mockFiles map (a child containing a further '/' is a directory).
+    readDir: jest.fn((dir: string) => {
+        const prefix = `${dir}/`;
+        const seen = new Set<string>();
+        const entries: any[] = [];
+        for (const f of Object.keys(mockFiles)) {
+            if (!f.startsWith(prefix)) continue;
+            const rest = f.slice(prefix.length);
+            const name = rest.split('/')[0];
+            if (seen.has(name)) continue;
+            seen.add(name);
+            const isFile = !rest.includes('/');
+            entries.push({
+                name,
+                path: `${prefix}${name}`,
+                isFile: () => isFile
+            });
+        }
+        return Promise.resolve(entries);
+    }),
     writeFile: (p: string, data: string, enc: string) => {
         mockFiles[p] = Buffer.from(data, enc === 'base64' ? 'base64' : 'utf8');
         return Promise.resolve();
@@ -352,6 +377,76 @@ describe('NodeConfigUtils', () => {
             await expect(
                 decryptExportDataV2(envelope.data, padded)
             ).resolves.toEqual(testNodes);
+        });
+    });
+
+    describe('purgeLegacyNodeConfigExports', () => {
+        const platformDescriptor = Object.getOwnPropertyDescriptor(
+            Platform,
+            'OS'
+        )!;
+        afterEach(() => {
+            Object.defineProperty(Platform, 'OS', platformDescriptor);
+        });
+
+        it('deletes only config backups from iOS Documents', async () => {
+            const backup = `/documents/20260811-120000${NODE_CONFIG_EXPORT_EXT}`;
+            mockFiles[backup] = Buffer.from('{}');
+            mockFiles['/documents/zeus_20250212_140719_invoice.csv'] =
+                Buffer.from('csv');
+            mockFiles['/documents/ldk-node/wallet.db'] = Buffer.from('db');
+
+            await purgeLegacyNodeConfigExports();
+
+            expect(RNFS.readDir).toHaveBeenCalledWith('/documents');
+            expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+            expect(RNFS.unlink).toHaveBeenCalledWith(backup);
+            expect(mockFiles[backup]).toBeUndefined();
+            expect(
+                mockFiles['/documents/zeus_20250212_140719_invoice.csv']
+            ).toBeDefined();
+            expect(mockFiles['/documents/ldk-node/wallet.db']).toBeDefined();
+        });
+
+        it('deletes config backups from Android Downloads', async () => {
+            Object.defineProperty(Platform, 'OS', {
+                value: 'android',
+                configurable: true
+            });
+            const backup = `/downloads/20260811-120000${NODE_CONFIG_EXPORT_EXT}`;
+            mockFiles[backup] = Buffer.from('{}');
+            mockFiles['/downloads/unrelated.txt'] = Buffer.from('txt');
+
+            await purgeLegacyNodeConfigExports();
+
+            expect(RNFS.readDir).toHaveBeenCalledWith('/downloads');
+            expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+            expect(RNFS.unlink).toHaveBeenCalledWith(backup);
+            expect(mockFiles['/downloads/unrelated.txt']).toBeDefined();
+        });
+
+        it('swallows readDir and unlink errors', async () => {
+            const consoleWarnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            (RNFS.readDir as jest.Mock).mockRejectedValueOnce(
+                new Error('no access')
+            );
+            await expect(
+                purgeLegacyNodeConfigExports()
+            ).resolves.toBeUndefined();
+
+            mockFiles[`/documents/20260811-120000${NODE_CONFIG_EXPORT_EXT}`] =
+                Buffer.from('{}');
+            (RNFS.unlink as jest.Mock).mockRejectedValueOnce(
+                new Error('unlink denied')
+            );
+            await expect(
+                purgeLegacyNodeConfigExports()
+            ).resolves.toBeUndefined();
+
+            consoleWarnSpy.mockRestore();
         });
     });
 
