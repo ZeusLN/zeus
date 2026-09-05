@@ -25,6 +25,13 @@ import LoginRequest from '../models/LoginRequest';
 const LEGACY_STORAGE_KEY = 'zeus-settings';
 export const STORAGE_KEY = 'zeus-settings-v2';
 
+// Version stamp for the CONTENT of the settings blob (the storage key's
+// -v2 suffix versions the key namespace, not the content). Blobs stamped
+// with the current version skip all one-shot settings migrations at load
+// (#4470). Bump when adding a migration — see
+// MigrationUtils.runSettingsMigrations.
+export const SETTINGS_VERSION = 1;
+
 export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
 export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
 export const FAVORITE_CURRENCIES_KEY = 'zeus-favorite-currencies';
@@ -188,6 +195,8 @@ interface SwapsSettings {
 }
 
 export interface Settings {
+    // see SETTINGS_VERSION; absent on blobs predating the stamp
+    settingsVersion?: number;
     nodes?: Array<Node>;
     selectedNode?: number;
     justDeletedWallet?: boolean;
@@ -1486,6 +1495,7 @@ export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
     @observable settings: Settings = {
+        settingsVersion: SETTINGS_VERSION,
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
@@ -1948,15 +1958,8 @@ export default class SettingsStore {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
-                await MigrationsUtils.migrateRgsDefaultsToV2(parsedSettings);
-                await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
+                await MigrationsUtils.runSettingsMigrations(parsedSettings);
                 await MigrationsUtils.migrateRetiredSwapHosts(parsedSettings);
-                await MigrationsUtils.migrateInvoiceExpiryDisplay(
-                    parsedSettings
-                );
-                await MigrationsUtils.migrateOlympusHostsToZeusLsp(
-                    parsedSettings
-                );
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
