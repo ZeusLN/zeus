@@ -404,6 +404,31 @@ export default class CLNRest {
             };
         });
 
+    // Definitive point query against the full sendpays index: unlike the
+    // windowed getPayments above, listpays with a payment_hash is not
+    // subject to any row limit, so an empty result proves the node never
+    // attempted the payment. failure_reason is synthesized because the
+    // Payment model derives isFailed from it, not from CLN's status field.
+    lookupPaymentByHash = (data: { paymentHash: string }) =>
+        this.postRequest('/v1/listpays', {
+            payment_hash: data.paymentHash
+        }).then((res: any) => ({
+            payments: (res?.pays || []).map((pay: any) => ({
+                payment_hash: pay.payment_hash,
+                status: pay.status,
+                destination: pay.destination,
+                created_at: pay.created_at,
+                description: pay.description,
+                bolt11: pay.bolt11,
+                bolt12: pay.bolt12,
+                amount_sent_msat: pay.amount_sent_msat,
+                amount_msat: pay.amount_msat,
+                preimage: pay.preimage,
+                failure_reason:
+                    pay.status === 'failed' ? 'FAILURE_REASON_ERROR' : ''
+            }))
+        }));
+
     getNewAddress = (data: any) => {
         let addresstype: string | undefined;
 
@@ -859,4 +884,5 @@ export default class CLNRest {
     supportsCashuWallet = () => false;
     supportsSettingInvoiceExpiration = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsPaymentLookupByHash = () => true;
 }
