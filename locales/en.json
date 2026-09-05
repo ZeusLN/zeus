@@ -383,6 +383,7 @@
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplicate Wallet Config",
     "views.Settings.WalletConfiguration.walletInterface": "Wallet interface",
     "views.Settings.AddEditNode.useTor": "Use Tor",
+    "views.Settings.AddEditNode.torWebsocketWarning": "Tor covers this node's REST calls, but streaming operations (batch channel opens and LSP flows) use WebSockets that connect directly and are not routed over Tor. These features are unavailable for .onion nodes.",
     "views.Settings.AddEditNode.pairingPhrase": "Pairing Phrase",
     "views.Settings.AddEditNode.mailboxServer": "Mailbox Server",
     "views.Settings.AddEditNode.customMailboxServer": "Custom Mailbox Server",

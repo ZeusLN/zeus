@@ -2976,12 +2976,40 @@ export default class WalletConfiguration extends React.Component<
                                     </Text>
                                     <Switch
                                         value={enableTor}
-                                        onValueChange={() =>
+                                        onValueChange={() => {
+                                            const enabling = !enableTor;
                                             this.setState({
-                                                enableTor: !enableTor,
+                                                enableTor: enabling,
                                                 saved: false
-                                            })
-                                        }
+                                            });
+                                            // Streaming WebSocket RPCs (batch
+                                            // channel opens, LSP flows) bypass
+                                            // Tor and cannot reach .onion nodes.
+                                            // Warn remote-LND users on enable.
+                                            if (
+                                                enabling &&
+                                                implementation === 'lnd'
+                                            ) {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'general.warning'
+                                                    ),
+                                                    localeString(
+                                                        'views.Settings.AddEditNode.torWebsocketWarning'
+                                                    ),
+                                                    [
+                                                        {
+                                                            text: localeString(
+                                                                'general.ok'
+                                                            ),
+                                                            onPress: () =>
+                                                                void 0
+                                                        }
+                                                    ],
+                                                    { cancelable: false }
+                                                );
+                                            }
+                                        }}
                                     />
                                 </>
                             )}
