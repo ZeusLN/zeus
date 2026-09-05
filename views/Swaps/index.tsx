@@ -33,6 +33,7 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -219,10 +220,20 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? true
                 : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
 
+        // A reverse swap's claim is built and broadcast automatically on a
+        // websocket event using this rate, with no further chance to set
+        // one. Starting a swap without a usable rate would fall back to
+        // 2 sats/vB at claim time, which can fail to confirm before the
+        // timeout and hand the lockup back to the host, so require one up
+        // front instead. The rate is editable in the fee section above.
+        const feeRateUsable =
+            !reverse || isPlausibleSatPerVbyte(this.state.fee);
+
         const newIsValid =
             invoiceAddressValid &&
             inputAmountValidAndWithinLimits &&
-            outputGreaterThanZero;
+            outputGreaterThanZero &&
+            feeRateUsable;
 
         if (this.state.isValid !== newIsValid) {
             this.setState({ isValid: newIsValid });
@@ -485,7 +496,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             prevState.inputSats !== this.state.inputSats ||
             prevState.outputSats !== this.state.outputSats ||
             prevState.invoice !== this.state.invoice ||
-            prevState.reverse !== this.state.reverse
+            prevState.reverse !== this.state.reverse ||
+            prevState.fee !== this.state.fee
         ) {
             this.checkIsValid();
         }
