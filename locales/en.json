@@ -1145,6 +1145,7 @@
     "views.Wif.failedToDerivePubkey": "Failed to derive public key",
     "views.Wif.noUtxosFound": "No UTXOs found for the given private key",
     "views.Wif.addressTypeNotSupported": "This address type is not yet supported for sweeping",
+    "views.Wif.taprootFundsRemain": "This key also holds {{amount}} sats on a Taproot address, which cannot be swept yet. Those funds will NOT be included in this sweep. Keep the private key safe until Taproot sweeps are supported.",
     "views.Wif.insufficientFundsAfterFees": "Insufficient funds after fees",
     "views.Wif.failedToCreateTransaction": "Failed to create transaction. Please check your inputs and try again.",
     "views.Wif.errorFetchingUtxos": "Error fetching UTXOs",
