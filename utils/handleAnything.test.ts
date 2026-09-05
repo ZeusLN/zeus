@@ -1259,6 +1259,69 @@ describe('handleAnything', () => {
             ]);
         });
 
+        it('should propagate pinnedCerts from clnrest connection strings', async () => {
+            const clnrestUrl =
+                'clnrest+https://mynode.local:3010?rune=abc123&certs=xyz';
+            mockProcessBIP21Uri.mockReturnValue({ value: clnrestUrl });
+            mockProcessCLNRestConnectUrl.mockReturnValue({
+                host: 'https://mynode.local',
+                port: '3010',
+                rune: 'abc123',
+                implementation: 'cln-rest',
+                enableTor: false,
+                pinnedCerts: ['Q0EtQ0VSVA==']
+            });
+
+            const result = await handleAnything(clnrestUrl);
+
+            expect(result).toEqual([
+                'WalletConfiguration',
+                {
+                    node: {
+                        host: 'https://mynode.local',
+                        port: '3010',
+                        rune: 'abc123',
+                        implementation: 'cln-rest',
+                        enableTor: false,
+                        pinnedCerts: ['Q0EtQ0VSVA==']
+                    },
+                    newEntry: true,
+                    isValid: true
+                }
+            ]);
+        });
+
+        it('should propagate pinnedCerts from lndconnect connection strings', async () => {
+            const lndconnectUrl =
+                'lndconnect://mynode.local:10009?cert=bXktZGVyLWNlcnQ&macaroon=xyz';
+            mockProcessBIP21Uri.mockReturnValue({ value: lndconnectUrl });
+            mockProcessLndConnectUrl.mockReturnValue({
+                host: 'https://mynode.local',
+                port: '10009',
+                macaroonHex: 'abc123',
+                enableTor: false,
+                pinnedCerts: ['bXktZGVyLWNlcnQ=']
+            });
+
+            const result = await handleAnything(lndconnectUrl);
+
+            expect(result).toEqual([
+                'WalletConfiguration',
+                {
+                    node: {
+                        host: 'https://mynode.local',
+                        port: '10009',
+                        macaroonHex: 'abc123',
+                        enableTor: false,
+                        pinnedCerts: ['bXktZGVyLWNlcnQ=']
+                    },
+                    enableTor: false,
+                    newEntry: true,
+                    isValid: true
+                }
+            ]);
+        });
+
         it('should handle nostr+walletconnect:// URLs', async () => {
             const nwcUrl =
                 'nostr+walletconnect://abc123?relay=wss://relay.example.com&secret=xyz';
