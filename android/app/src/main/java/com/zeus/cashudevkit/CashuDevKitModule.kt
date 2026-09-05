@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
@@ -728,6 +729,33 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Reject loopback, private (RFC1918), link-local and other internal hosts
+     * for server-supplied mint URLs. Matches on the literal host only (no DNS
+     * resolution) to avoid a rebinding/latency side channel; this is
+     * defense-in-depth on top of the JS-side configured-mint binding.
+     */
+    private fun isDisallowedMintHost(host: String?): Boolean {
+        if (host.isNullOrBlank()) return true
+        val h = host.trim().trimStart('[').trimEnd(']').lowercase()
+        if (h == "localhost" || h.endsWith(".localhost")) return true
+        // IPv6 loopback / unique-local / link-local. The fc/fd unique-local
+        // prefix check only applies to IPv6 literals (which always contain
+        // ':') so hostnames like fc-mint.example.com are not rejected.
+        if (h == "::1" || h.startsWith("fe80:") ||
+            (h.contains(':') && (h.startsWith("fc") || h.startsWith("fd")))
+        ) {
+            return true
+        }
+        // IPv4 ranges: 127/8, 10/8, 169.254/16, 172.16/12, 192.168/16, 0/8
+        return h.startsWith("127.") ||
+            h.startsWith("10.") ||
+            h.startsWith("169.254.") ||
+            h.startsWith("192.168.") ||
+            h.startsWith("0.") ||
+            Regex("^172\\.(1[6-9]|2[0-9]|3[0-1])\\.").containsMatchIn(h)
+    }
+
+    /**
      * Check mint quote status directly from the mint's HTTP API.
      * This bypasses the local database check and works for external quotes
      * (e.g., quotes created by ZeusPay server).
@@ -738,7 +766,36 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             try {
                 // Normalize mint URL and construct the quote endpoint
                 val normalizedUrl = mintUrl.trimEnd('/')
-                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$quoteId"
+
+                // Security: this issues a raw HTTP GET against a mint URL that
+                // originates from a ZEUS Pay socket event. Refuse cleartext and
+                // internal/loopback/link-local targets so a forged event cannot
+                // downgrade the fetch or drive the device into an SSRF against
+                // the local network. quoteId is percent-encoded so it cannot
+                // alter the request path.
+                val parsed = try {
+                    URL(normalizedUrl)
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("INVALID_URL", "Invalid mint URL: $mintUrl")
+                    }
+                    return@launch
+                }
+                if (!parsed.protocol.equals("https", ignoreCase = true) ||
+                    isDisallowedMintHost(parsed.host)
+                ) {
+                    Log.e(TAG, "checkExternalMintQuote: refusing unsafe mint URL $mintUrl")
+                    withContext(Dispatchers.Main) {
+                        promise.reject(
+                            "UNSAFE_MINT_URL",
+                            "Refusing to contact non-HTTPS or internal mint host: $mintUrl"
+                        )
+                    }
+                    return@launch
+                }
+
+                val encodedQuoteId = URLEncoder.encode(quoteId, "UTF-8")
+                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$encodedQuoteId"
 
                 Log.d(TAG, "checkExternalMintQuote: Fetching $quoteUrl")
 
@@ -820,7 +877,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     "PAID" -> QuoteState.PAID
                     "PENDING" -> QuoteState.PENDING
                     "ISSUED" -> QuoteState.ISSUED
-                    else -> QuoteState.PAID // Default to PAID for external quotes
+                    // Fail closed: never assume PAID for an unrecognized state.
+                    else -> {
+                        withContext(Dispatchers.Main) {
+                            promise.reject(
+                                "INVALID_QUOTE_STATE",
+                                "Unrecognized mint quote state: $state"
+                            )
+                        }
+                        return@launch
+                    }
                 }
 
                 // Storing a key equal to cdk's seed prefix on the quote
