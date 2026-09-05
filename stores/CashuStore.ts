@@ -1845,6 +1845,8 @@ export default class CashuStore {
         this.paymentPreimage = undefined;
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
         this.meltQuotes = [];
         this.meltQuote = undefined;
         this.noteKey = undefined;
@@ -4132,6 +4134,8 @@ export default class CashuStore {
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
         this.getPayReqError = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
 
         try {
             if (__DEV__) {
