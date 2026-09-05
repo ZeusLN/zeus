@@ -431,7 +431,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                 timeoutSeconds
             );
             if (res.payment_hash) {
-                // LDK Node: payment already completed directly
+                // LDK Node: payment already completed directly. Feed the
+                // result through TransactionsStore so SendingLightning
+                // renders THIS payment's outcome; without it the screen
+                // shows whatever the previous payment left in the store
+                // (stale error, or the prior payment's preimage/fee/note).
+                // reset() first because handlePayment doesn't clear
+                // error/error_msg/payment_error on success.
+                this.props.TransactionsStore.reset();
+                this.props.TransactionsStore.handlePayment(res);
                 this.setState({ loading: false, error_msg: '' });
                 this.props.navigation.navigate('SendingLightning');
                 return;
@@ -1553,7 +1561,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
-                                disabled={!NodeInfoStore.supportsOffers}
+                                // loading: the offer payment executes
+                                // synchronously in payBolt12, so a second
+                                // tap mid-flight would fetch a fresh
+                                // invoice (new payment hash) and pay twice
+                                disabled={
+                                    !NodeInfoStore.supportsOffers || loading
+                                }
                             />
                         </View>
                     )}
