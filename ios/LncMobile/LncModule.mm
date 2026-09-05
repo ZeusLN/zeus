@@ -11,12 +11,17 @@
 @implementation LncModule
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(initLNC:(NSString *)nameSpace)
+RCT_EXPORT_METHOD(initLNC:(NSString *)nameSpace
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
     LndmobileInitLNC(nameSpace, @"info", &error);
     if (error) {
-        NSLog(@"Init error   %@",   error);
+        NSLog(@"initLNC error   %@",   error);
+        reject(@"initLNC_error", error.localizedDescription, error);
+    } else {
+        resolve(nil);
     }
 }
 
@@ -146,13 +151,18 @@ RCT_EXPORT_METHOD(connectServer:(NSString *)nameSpace
     }
 }
 
-RCT_EXPORT_METHOD(disconnect:(NSString *)nameSpace)
+RCT_EXPORT_METHOD(disconnect:(NSString *)nameSpace
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
     LndmobileDisconnect(nameSpace, &error);
     if (error) {
+        // A namespace that was never initialized is already "disconnected";
+        // callers tear down before re-initializing and must not be blocked.
         NSLog(@"disconnect error   %@",   error);
     }
+    resolve(nil);
 }
 
 RCT_EXPORT_METHOD(invokeRPC:(NSString *)nameSpace
@@ -165,7 +175,15 @@ RCT_EXPORT_METHOD(invokeRPC:(NSString *)nameSpace
     NSError *error;
     LndmobileInvokeRPC(nameSpace, route, requestData, gocb, &error);
     if (error) {
-        NSLog(@"connectServer error   %@",   error);
+        // InvokeRPC fails synchronously for "unknown namespace", "RPC
+        // connection not ready" and unknown routes, and never calls the
+        // callback in that case. Swallowing the error here left the JS
+        // promise pending forever, which surfaced as a wallet stuck on
+        // "connecting" instead of a connection error (ZEUS-4278). Route it
+        // through the same fire-once callback the Go side uses: JS treats a
+        // non-JSON payload as an error string.
+        NSLog(@"invokeRPC error   %@",   error);
+        [gocb sendResult:error.localizedDescription];
     }
 }
 
@@ -184,7 +202,11 @@ RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
     NSError *error;
     LndmobileInvokeRPC(nameSpace, eventName, request, gocb, &error);
     if (error) {
+        // Same synchronous-failure path as invokeRPC. Emit the message on the
+        // stream's own event so subscribers reject rather than wait forever;
+        // they already treat a non-JSON result as a raw Go error string.
         NSLog(@"%@ error   %@", eventName, error);
+        [gocb sendResult:error.localizedDescription];
     }
 }
 

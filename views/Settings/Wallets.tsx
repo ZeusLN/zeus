@@ -286,7 +286,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
                 const currentImplementation = implementation;
                 if (currentImplementation === 'lightning-node-connect') {
-                    BackendUtils.disconnect();
+                    // Awaited: the outgoing wallet's session must be closed
+                    // and its credential writes flushed before the incoming
+                    // wallet initializes, otherwise the old connection is
+                    // orphaned and can keep holding its mailbox session.
+                    await BackendUtils.disconnect();
                 }
 
                 if (Platform.OS === 'android') {

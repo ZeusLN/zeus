@@ -453,6 +453,13 @@ export const LNC_MAILBOX_KEYS = [
     { key: 'Custom defined mailbox', value: 'custom-defined' }
 ];
 
+// How long to wait for an LNC mailbox handshake to complete, and how many
+// times to redial before giving up. The native layer dials once and never
+// retries, so these bound the entire connection attempt.
+const LNC_CONNECT_POLL_INTERVAL_MS = 500;
+const LNC_CONNECT_MAX_POLLS = 60; // 30s per attempt
+const LNC_CONNECT_ATTEMPTS = 2;
+
 export const LOCALE_KEYS = [
     { key: 'en', value: 'English' },
     { key: 'es', value: 'Español' },
@@ -2204,43 +2211,81 @@ export default class SettingsStore {
     };
 
     // LNC
-    public connect = async () => {
-        this.loading = true;
-
-        await BackendUtils.initLNC();
-
-        const error = await BackendUtils.connect();
-        if (error) {
-            runInAction(() => {
-                this.error = true;
-                this.errorMsg = error;
-            });
-            return error;
-        }
-
-        // repeatedly check if the connection was successful
-        return new Promise<string | void>((resolve) => {
+    //
+    // ConnectServer dials in a detached goroutine: it returns immediately,
+    // makes exactly one attempt, logs on failure and exits. There is no retry
+    // and no keepalive on the native side, so both the waiting and the
+    // retrying are ours to do. The old 10s budget was routinely shorter than
+    // a mailbox handshake on a cold radio (ZEUS-4278), and a timeout was
+    // terminal because nothing ever redialed.
+    private waitForLncConnection = () =>
+        new Promise<boolean>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
                 const connected = await BackendUtils.isConnected();
                 if (connected) {
                     clearInterval(interval);
-                    this.loading = false;
-                    resolve();
-                } else if (counter > 20) {
+                    resolve(true);
+                } else if (counter >= LNC_CONNECT_MAX_POLLS) {
                     clearInterval(interval);
-                    runInAction(() => {
-                        this.error = true;
-                        this.errorMsg = localeString(
-                            'stores.SettingsStore.lncConnectError'
-                        );
-                        this.loading = false;
-                    });
-                    resolve(this.errorMsg);
+                    resolve(false);
                 }
-            }, 500);
+            }, LNC_CONNECT_POLL_INTERVAL_MS);
         });
+
+    public connect = async () => {
+        this.loading = true;
+
+        for (let attempt = 1; attempt <= LNC_CONNECT_ATTEMPTS; attempt++) {
+            let error;
+            try {
+                // initLNC tears down the previous session and hands the
+                // native layer a fresh client, so a redial is not stacked on
+                // a half-open one from the attempt that just timed out
+                await BackendUtils.initLNC();
+                error = await BackendUtils.connect();
+            } catch (e: any) {
+                // a throw means the native client could not be set up at all
+                // (storage read failure, InitLNC rejection) rather than a
+                // slow handshake
+                console.log('LNC: failed to initialize connection', e);
+                error = e?.message ?? String(e);
+            }
+
+            if (error) {
+                // rejected before the handshake even started (bad mailbox
+                // address, malformed keys) — retrying cannot help
+                runInAction(() => {
+                    this.error = true;
+                    this.errorMsg = error;
+                    this.loading = false;
+                });
+                return error;
+            }
+
+            if (await this.waitForLncConnection()) {
+                runInAction(() => {
+                    this.error = false;
+                    this.errorMsg = '';
+                    this.loading = false;
+                });
+                return;
+            }
+
+            console.log(
+                `LNC: connection attempt ${attempt}/${LNC_CONNECT_ATTEMPTS} timed out`
+            );
+        }
+
+        runInAction(() => {
+            this.error = true;
+            this.errorMsg = localeString(
+                'stores.SettingsStore.lncConnectError'
+            );
+            this.loading = false;
+        });
+        return this.errorMsg;
     };
 
     // NWC
