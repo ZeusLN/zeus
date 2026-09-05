@@ -404,6 +404,39 @@ export default class CLNRest {
             };
         });
 
+    // targeted lookup via listpays' payment_hash filter. listpays returns
+    // one entry per retry group, so prefer a settled attempt, then a
+    // pending one, over stale failed groups from earlier retries. The
+    // status is mapped to LND's enum strings so trackPaymentToTerminal
+    // and the NWC reconcile helpers read it uniformly.
+    lookupPayment = (data: { payment_hash: string }) =>
+        this.postRequest('/v1/listpays', {
+            payment_hash: data.payment_hash
+        }).then((response: any) => {
+            const pays = response?.pays || [];
+            if (pays.length === 0) return null;
+            const pay =
+                pays.find((p: any) => p.status === 'complete') ||
+                pays.find((p: any) => p.status === 'pending') ||
+                pays[pays.length - 1];
+            return {
+                payment_hash: pay.payment_hash,
+                status:
+                    pay.status === 'complete'
+                        ? 'SUCCEEDED'
+                        : pay.status === 'failed'
+                        ? 'FAILED'
+                        : 'IN_FLIGHT',
+                destination: pay.destination,
+                created_at: pay.created_at?.toString(),
+                bolt11: pay.bolt11,
+                bolt12: pay.bolt12,
+                amount_msat: pay.amount_msat,
+                amount_sent_msat: pay.amount_sent_msat,
+                preimage: pay.preimage
+            };
+        });
+
     getNewAddress = (data: any) => {
         let addresstype: string | undefined;
 
@@ -516,7 +549,10 @@ export default class CLNRest {
             forcedTimeout((timeoutSeconds + 1) * 1000, {
                 payment_error: localeString(
                     'views.SendingLightning.paymentTimedOut'
-                )
+                ),
+                // outcome unknown on the node: lets the caller track the
+                // payment to a terminal state instead of reporting failure
+                payment_timed_out: true
             }),
             call
         ]);
@@ -816,6 +852,7 @@ export default class CLNRest {
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => false;

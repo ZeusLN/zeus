@@ -9,7 +9,9 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         supportsNodeInfo: () => false,
         supportsCashuWallet: () => false,
-        supportsMessageSigning: jest.fn(() => true)
+        supportsMessageSigning: jest.fn(() => true),
+        supportsPaymentLookup: jest.fn(() => false),
+        lookupPayment: jest.fn()
     }
 }));
 
@@ -2354,6 +2356,164 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
             connection.isUnresolvedPayInvoiceActivity(connection.activity[0])
         ).toBe(true);
         expect(connection.pendingSpendSats).toBe(10000);
+    });
+});
+
+describe('NostrWalletConnectStore targeted pending payment lookup', () => {
+    const invoice = 'lnbc1targeted-lookup';
+    const paymentHash = hex64('d');
+
+    const seedPending = (
+        store: NostrWalletConnectStore,
+        activityOverrides: Record<string, unknown> = {}
+    ) =>
+        seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000),
+                    ...activityOverrides
+                }
+            ]
+        });
+
+    const mockEmptyPaymentsStore = (store: NostrWalletConnectStore) => {
+        (store as any).paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(async () => [])
+        };
+        return (store as any).paymentsStore;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockImplementation(
+            () => true
+        );
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockImplementation(
+            () => false
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockReset();
+    });
+
+    it('settles a pending pay_invoice via lookupPayment without fetching the payment list', async () => {
+        const store = buildPayInvoiceTestStore();
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 10000,
+            fee_sat: '50',
+            payment_preimage: hex64('9')
+        });
+        const paymentsStore = mockEmptyPaymentsStore(store);
+        const connection = seedPending(store);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledWith({
+            payment_hash: paymentHash
+        });
+        expect(paymentsStore.getPayments).not.toHaveBeenCalled();
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(10050);
+    });
+
+    it('falls back to the payment list scan when the backend has no lookup', async () => {
+        const store = buildPayInvoiceTestStore();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockImplementation(
+            () => false
+        );
+        const paymentsStore = mockEmptyPaymentsStore(store);
+        const connection = seedPending(store);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(paymentsStore.getPayments).toHaveBeenCalled();
+        expect(connection.activity[0].status).toBe('pending');
+    });
+
+    it('falls back to the payment list scan when a pending activity lacks a payment hash', async () => {
+        const store = buildPayInvoiceTestStore();
+        const paymentsStore = mockEmptyPaymentsStore(store);
+        const connection = seedPending(store, { paymentHash: undefined });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(paymentsStore.getPayments).toHaveBeenCalled();
+    });
+
+    it('falls back to the payment list scan when a lookup fails', async () => {
+        const store = buildPayInvoiceTestStore();
+        (BackendUtils.lookupPayment as jest.Mock).mockRejectedValue(
+            new Error('node unreachable')
+        );
+        const paymentsStore = mockEmptyPaymentsStore(store);
+        const connection = seedPending(store);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(paymentsStore.getPayments).toHaveBeenCalled();
+        expect(connection.activity[0].status).toBe('pending');
+    });
+
+    it('leaves a recent pending hold untouched when the node has no record', async () => {
+        const store = buildPayInvoiceTestStore();
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+        const paymentsStore = mockEmptyPaymentsStore(store);
+        const connection = seedPending(store);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(paymentsStore.getPayments).not.toHaveBeenCalled();
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+    });
+
+    it('looks up each unique hash once for duplicate pending activities', async () => {
+        const store = buildPayInvoiceTestStore();
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+        mockEmptyPaymentsStore(store);
+        const connection = seedPayInvoiceConnection(store, {
+            maxAmountSats: 10000,
+            totalSpendSats: 0,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                },
+                {
+                    id: `${invoice}-retry`,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
     });
 });
 
