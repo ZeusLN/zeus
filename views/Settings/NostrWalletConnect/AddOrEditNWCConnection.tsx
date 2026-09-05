@@ -32,6 +32,7 @@ import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
 } from '../../../stores/NostrWalletConnectStore';
 import ModalStore from '../../../stores/ModalStore';
+import SettingsStore from '../../../stores/SettingsStore';
 
 import NWCConnection, {
     PermissionType,
@@ -46,6 +47,7 @@ interface AddOrEditNWCConnectionProps {
     >;
     NostrWalletConnectStore: NostrWalletConnectStore;
     ModalStore: ModalStore;
+    SettingsStore: SettingsStore;
 }
 
 interface AddOrEditNWCConnectionState {
@@ -68,7 +70,7 @@ interface AddOrEditNWCConnectionState {
     maxBudgetLimit: number;
 }
 
-@inject('NostrWalletConnectStore', 'ModalStore')
+@inject('NostrWalletConnectStore', 'ModalStore', 'SettingsStore')
 @observer
 export default class AddOrEditNWCConnection extends React.Component<
     AddOrEditNWCConnectionProps,
@@ -120,12 +122,55 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
-        const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
+        const maxLimit = Math.max(0, NostrWalletConnectStore.maxBudgetLimit);
         const existingBudgetValue = this.state.budgetValue || 0;
         this.setState({
-            maxBudgetLimit: Math.max(0, maxLimit),
-            budgetValue: existingBudgetValue
+            maxBudgetLimit: maxLimit,
+            budgetValue: Math.min(existingBudgetValue, maxLimit)
         });
+    };
+
+    toggleCashuWallet = async (value: boolean) => {
+        const { NostrWalletConnectStore } = this.props;
+        try {
+            await NostrWalletConnectStore.setCashuEnabled(value);
+            await NostrWalletConnectStore.loadMaxBudget();
+            await this.updateMaxBudgetLimit();
+        } catch (error) {
+            this.setState({ error: (error as Error).message });
+        }
+    };
+
+    // Explains *why* the budget is empty and, when another funded balance
+    // is one switch away, tells the user exactly what to do about it.
+    getBudgetEmptyStateText = (): string => {
+        const { NostrWalletConnectStore, SettingsStore } = this.props;
+        const cashuAvailable =
+            BackendUtils.supportsCashuWallet() &&
+            SettingsStore.settings.ecash.enableCashu;
+        const usingCashu = NostrWalletConnectStore.isCashuConfigured;
+        const cashuBalance =
+            Number(NostrWalletConnectStore.cashuStore.totalBalanceSats) || 0;
+        const lightningBalance =
+            Number(NostrWalletConnectStore.balanceStore.lightningBalance) || 0;
+
+        if (cashuAvailable && !usingCashu && cashuBalance > 0) {
+            return localeString(
+                'views.Settings.NostrWalletConnect.noLightningBalanceHasCashu',
+                { amount: numberWithCommas(cashuBalance.toString()) }
+            );
+        }
+
+        if (cashuAvailable && usingCashu && lightningBalance > 0) {
+            return localeString(
+                'views.Settings.NostrWalletConnect.noCashuBalanceHasLightning',
+                { amount: numberWithCommas(lightningBalance.toString()) }
+            );
+        }
+
+        return localeString(
+            'views.Settings.NostrWalletConnect.noBalanceAvailable'
+        );
     };
 
     componentWillUnmount() {
@@ -802,7 +847,8 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, NostrWalletConnectStore, SettingsStore } =
+            this.props;
         const {
             connectionName,
             selectedBudgetRenewalIndex,
@@ -1052,6 +1098,45 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     </Body>
                                 </View>
 
+                                {BackendUtils.supportsCashuWallet() &&
+                                    SettingsStore.settings.ecash
+                                        .enableCashu && (
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                marginHorizontal: 15,
+                                                marginTop: 10
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                <Body>
+                                                    {localeString(
+                                                        'views.Settings.NostrWalletConnect.switchToCashuWallet'
+                                                    )}
+                                                </Body>
+                                            </View>
+                                            <View
+                                                style={{
+                                                    alignSelf: 'center'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={
+                                                        NostrWalletConnectStore.cashuEnabled
+                                                    }
+                                                    onValueChange={
+                                                        this.toggleCashuWallet
+                                                    }
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+
                                 {/* Budget Input and Slider */}
                                 <View
                                     style={{
@@ -1062,6 +1147,30 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 >
                                     {maxBudgetLimit > 0 ? (
                                         <>
+                                            {BackendUtils.supportsCashuWallet() &&
+                                                SettingsStore.settings.ecash
+                                                    .enableCashu && (
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            fontSize: 12,
+                                                            marginHorizontal: 10,
+                                                            marginBottom: 8
+                                                        }}
+                                                    >
+                                                        {NostrWalletConnectStore.isCashuConfigured
+                                                            ? localeString(
+                                                                  'views.Settings.NostrWalletConnect.budgetFundedByCashu'
+                                                              )
+                                                            : localeString(
+                                                                  'views.Settings.NostrWalletConnect.budgetFundedByLightning'
+                                                              )}
+                                                    </Text>
+                                                )}
                                             {/* Custom Budget Input */}
                                             <TextInput
                                                 placeholder={localeString(
@@ -1173,12 +1282,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                     ),
                                                     fontFamily:
                                                         'PPNeueMontreal-Book',
-                                                    fontSize: 14
+                                                    fontSize: 14,
+                                                    textAlign: 'center'
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.noBalanceAvailable'
-                                                )}
+                                                {this.getBudgetEmptyStateText()}
                                             </Text>
                                         </View>
                                     )}
