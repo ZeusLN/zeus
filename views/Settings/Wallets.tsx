@@ -73,6 +73,7 @@ const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
+    private walletSwitchInFlight = false;
 
     state = {
         nodes: [],
@@ -200,6 +201,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             updateSettings,
             setConnectingStatus,
             setInitialStart,
+            setWalletSelectionPending,
             implementation,
             initialStart
         } = SettingsStore;
@@ -265,6 +267,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             nodeIndex: number,
             nodeActive: boolean
         ) => {
+            // A switch is still committing: ignore repeat taps. A second
+            // tap would take the nodeActive branch and drop the latch
+            // before the first tap's settings assignment lands.
+            if (this.walletSwitchInFlight) return;
             if (SettingsStore.settings?.justDeletedWallet) {
                 await this.handleJustDeletedWallet(nodeIndex);
                 return;
@@ -273,6 +279,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 setInitialStart(false);
             }
             if (nodeActive) {
+                // This branch skips connecting, so it is the one path that
+                // never reaches setConnectingStatus, which clears the latch
+                // everywhere else. Clearing it any earlier would drop the
+                // latch before updateSettings assigns settings, and the
+                // BalanceStore reaction would fire while the credentials
+                // still belong to the previously used wallet.
+                setWalletSelectionPending(false);
                 // if already on selected node, just pop to
                 // the Wallet view, skip connecting procedures
                 this.navigateAfterWalletSelection();
@@ -321,13 +334,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     });
                 }
 
-                await updateSettings({
-                    nodes,
-                    selectedNode: nodeIndex
-                }).then(() => {
-                    setConnectingStatus(true);
-                    this.navigateAfterWalletSelection();
-                });
+                this.walletSwitchInFlight = true;
+                try {
+                    await updateSettings({
+                        nodes,
+                        selectedNode: nodeIndex
+                    }).then(() => {
+                        setConnectingStatus(true);
+                        this.navigateAfterWalletSelection();
+                    });
+                } finally {
+                    this.walletSwitchInFlight = false;
+                }
             }
         };
 
