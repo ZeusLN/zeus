@@ -11,6 +11,7 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -1367,9 +1368,9 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1415,9 +1416,9 @@ export default class LdkNode {
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
         const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1807,18 +1808,27 @@ export default class LdkNode {
         return { offer_id, active: false };
     };
 
-    fetchInvoiceFromOffer = async (
-        bolt12: string,
-        amountSatoshis: string,
-        timeoutSeconds?: number | string
-    ): Promise<any> => {
-        const paymentTimeoutSecs = timeoutSeconds
-            ? Number(timeoutSeconds)
+    decodeOffer = async ({ offer }: { offer: string }): Promise<any> =>
+        LdkNodeInjection.bolt12.bolt12DecodeOffer({ offer });
+
+    // ldk-node has no fetch-invoice-only API for offers: send/sendUsingAmount
+    // dispatch the invoice_request and pay the returned invoice internally.
+    // This method therefore executes the payment, and must only be reached
+    // from the offer review screen (via TransactionsStore), never from a
+    // "fetch" call site.
+    payOffer = async (data: any): Promise<any> => {
+        const paymentTimeoutSecs = data.timeout_seconds
+            ? Number(data.timeout_seconds)
             : undefined;
 
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
-            offer: bolt12,
-            amountMsat: Number(amountSatoshis) * 1000,
+            offer: data.offer,
+            amountMsat: Number(data.amt) * 1000,
+            maxTotalRoutingFeeMsat,
             paymentTimeoutSecs
         });
 
@@ -2211,6 +2221,9 @@ export default class LdkNode {
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages
     supportsLSPS7native = () => true;
     supportsOffers = () => true;
+    // Paying an offer dispatches the payment directly (no invoice is handed
+    // back), so the UI must route it through the offer review screen
+    supportsOffersDirectPay = () => true;
     supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;

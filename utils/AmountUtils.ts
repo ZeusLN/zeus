@@ -353,6 +353,25 @@ export function millisatsToSats(millisats: number): number {
 }
 
 /**
+ * Converts a routing fee limit in satoshis into the `maxTotalRoutingFeeMsat`
+ * value ldk-node expects.
+ *
+ * Returns undefined when no limit was supplied or the value is unusable, so
+ * ldk-node applies its own default rather than being handed a nonsense cap.
+ * Note that an explicitly supplied '0' is a real cap of zero, not "no limit".
+ *
+ * @param feeLimitSat - Fee limit in satoshis, as collected by FeeLimit
+ * @returns Fee limit in millisatoshis, or undefined if none applies
+ */
+export function feeLimitSatsToMaxRoutingFeeMsat(
+    feeLimitSat?: string | number | null
+): number | undefined {
+    if (!feeLimitSat) return undefined;
+    const msats = satsToMillisats(Number(feeLimitSat));
+    return Number.isFinite(msats) && msats >= 0 ? msats : undefined;
+}
+
+/**
  * Converts an amount in the current display unit (sats, BTC, or fiat) to satoshis
  * @param amount - The amount to convert (as string or number)
  * @param forceUnit - Optional unit override ('sats', 'BTC', or 'fiat')
