@@ -222,7 +222,9 @@ export {
     doTorRequest,
     torHttpRequest,
     restartTor,
+    ensureTorStarted,
     isOnionHttpsUrl,
-    RequestMethod
+    RequestMethod,
+    SOCKS_PORT
 };
 export type { TorHttpRequest, TorHttpResponse };
