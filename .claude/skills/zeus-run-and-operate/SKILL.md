@@ -93,15 +93,25 @@ Everything in this section verified by reading `build.sh`, `android/app/build.gr
 `./build.sh` (repo root) runs the whole Android release build inside Docker — requires only Docker, no local Android SDK:
 
 ```bash
-./build.sh            # interactive terminal
-./build.sh --no-tty   # CI / non-interactive (only flag the script accepts)
+./build.sh                        # interactive terminal
+./build.sh --no-tty               # CI / non-interactive / any agent session
+./build.sh --low-memory           # build on a machine with ~4GB RAM
+./build.sh --gradle-cache DIR     # share one Gradle cache across checkouts
 ```
+
+**Two failure modes here are environmental, not build bugs. Both look like build bugs.**
+
+1. **No TTY.** `build.sh` defaults to `docker run -it`, so without `--no-tty` it dies immediately with *"the input device is not a TTY"*. Any non-interactive context needs the flag: CI, `nohup`, and every agent session.
+2. **Not enough RAM.** `android/gradle.properties` requests `org.gradle.jvmargs=-Xmx8192m -XX:MaxMetaspaceSize=4096m`. Where that is not available the Gradle daemon is OOM-killed and Gradle reports **"daemon disappeared unexpectedly"**. This surfaces *after* `yarn install` and codegen have both succeeded, so it reads as a compile failure; check free memory before debugging the build. `--low-memory` caps the heap at ~2.2GB, uses one worker and in-process Kotlin compilation; a v13.2.1 build on a 3.8GB / 2-core box took **~51 minutes** end to end this way (Gradle's own timer reported 43m) and reproduced the published hashes exactly.
+
+`--low-memory` passes its overrides on the gradlew command line, which outranks every `gradle.properties`, so **the source tree stays pristine** (necessary when building a signed tag for verification) and nothing is written to the Gradle cache directory, meaning the setting can never go silently sticky across builds. It deliberately does not touch `org.gradle.parallel`.
 
 What it does (all in `build.sh`):
 - Docker image pinned **by sha256 digest**: `reactnativecommunity/react-native-android@sha256:c390bfb...` (comment says tag 18.0). Digest pinning = byte-identical toolchain for every builder.
 - Exports `SOURCE_DATE_EPOCH` (default `0`, overridable via env) so embedded timestamps are deterministic.
 - Mounts the repo at `/olympus/zeus`, runs `yarn install --frozen-lockfile`, then `./gradlew generateCodegenArtifactsFromSchema && ./gradlew app:assembleRelease`.
 - Renames `app-*-release-unsigned.apk` → `zeus-*.apk` and prints `sha256sum` for each to stdout (hashes are printed, not written to a file).
+- **Disk:** the Gradle cache is `.gradle-cache` *inside the repo* (`GRADLE_USER_HOME`), so every checkout pays for its own: ~6GB of cache, ~5GB of `node_modules` and ~7GB of Android build output, about **18GB per built checkout**, against a 5.6GB builder image shared between them. `--gradle-cache DIR` points them at one shared cache. This matters most under agent worktrees, where checkouts multiply quietly.
 
 Reproducibility support in the Gradle config: `org.gradle.parallel=false` in `android/gradle.properties` (comment: parallel execution causes non-deterministic file ordering) and `reproducibleFileOrder = true` / `preserveFileTimestamps = false` on all Zip tasks in `android/app/build.gradle`.
 
