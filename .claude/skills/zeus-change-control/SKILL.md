@@ -134,7 +134,6 @@ Rules:
 - Subject ≤ ~50 chars where possible; body wrapped at 72, explaining problem + why this approach (CONTRIBUTING.md).
 - Atomic commits; each should ideally pass `yarn verify` independently.
 - Version bumps are exactly `Version bump: vX.Y.Z[-alpha|-beta1]` (e.g. `Version bump: v13.1.3-alpha`) — maintainer-only.
-- **NO AI co-author lines** (`Co-Authored-By: Claude ...` or similar) in any commit — maintainer rule, stated 2026-07-06, not in any doc.
 - Branch names: `feature/...`, `fix/...`, `refactor/...`.
 - When citing hashes in commit messages or discussions, use first-parent master hashes: `git log --all` contains duplicated/grafted merge hashes (e.g. PR #3444 appears as both `28bc50f5e` and `f47ef1acf`).
 
@@ -181,13 +180,13 @@ CI runs on ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`.
 2. `yarn verify` green locally.
 3. Manually tested on iOS AND Android (Rule 4); backends exercised and recorded.
 4. New strings in `locales/en.json` only; no other locale files touched.
-5. Commits: CONTRIBUTING.md component-prefix style (conventional-commit-ish prefixes are tolerated in practice), atomic, no AI co-author lines, rebased on master.
+5. Commits: CONTRIBUTING.md component-prefix style (conventional-commit-ish prefixes are tolerated in practice), atomic, rebased on master.
 6. PR template fully filled in — not deleted; screenshots for UI changes (mandatory for first-timers).
 7. If a dependency changed: was it discussed first?
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha). Maintainer-stated rules (Section 1, no-AI-co-author) confirmed verbally 2026-07-06 — they appear in no repo document; everything else was verified by reading the cited files or running the commands below.
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha). Maintainer-stated rules (Section 1) confirmed verbally 2026-07-06 — they appear in no repo document; everything else was verified by reading the cited files or running the commands below.
 
 Re-verify volatile facts:
 
