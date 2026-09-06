@@ -31,6 +31,19 @@ jest.mock('../storage', () => ({
     blockWrites: jest.fn()
 }));
 
+// Native CDK bridge. Both wipe paths must drop the SQLite handles before
+// unlinking, so isAvailable() defaults to true here: with the real (absent)
+// native module it returns false and the dispose branches would never run in
+// this suite.
+jest.mock('../cashu-cdk', () => ({
+    __esModule: true,
+    default: {
+        isAvailable: jest.fn().mockReturnValue(true),
+        getDatabasePath: jest.fn().mockResolvedValue(''),
+        deleteWalletDatabase: jest.fn().mockResolvedValue(true)
+    }
+}));
+
 // The functions under regression - assert clearAllData delegates to them.
 jest.mock('./LndMobileUtils', () => ({
     deleteLndWallet: jest.fn().mockResolvedValue(true)
@@ -143,6 +156,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import fs from 'fs';
 import path from 'path';
 
+import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
@@ -810,12 +824,26 @@ describe('CDK database deletion', () => {
     const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
     const unlinkedPaths = () => mockedUnlink.mock.calls.map((call) => call[0]);
 
+    const mockedIsAvailable = CashuDevKit.isAvailable as jest.Mock;
+    const mockedGetDatabasePath = CashuDevKit.getDatabasePath as jest.Mock;
+    const mockedDeleteWalletDatabase =
+        CashuDevKit.deleteWalletDatabase as jest.Mock;
+
+    // Dispose must precede every unlink: a POSIX unlink under a live handle
+    // succeeds while leaving the proofs readable through that connection.
+    const disposedBeforeFirstUnlink = () =>
+        mockedDeleteWalletDatabase.mock.invocationCallOrder[0] <
+        mockedUnlink.mock.invocationCallOrder[0];
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockedStorageGetItem.mockResolvedValue(null);
         mockedLs.mockResolvedValue([]);
         mockedExists.mockResolvedValue(false);
         mockedUnlink.mockResolvedValue(undefined);
+        mockedIsAvailable.mockReturnValue(true);
+        mockedGetDatabasePath.mockResolvedValue('');
+        mockedDeleteWalletDatabase.mockResolvedValue(true);
     });
 
     describe('clearCDKDatabase (full-wipe sweep)', () => {
@@ -848,6 +876,42 @@ describe('CDK database deletion', () => {
             await clearCDKDatabase();
 
             expect(mockedUnlink).toHaveBeenCalledTimes(2);
+        });
+
+        it('drops the live CDK handles before unlinking anything', async () => {
+            mockedLs.mockResolvedValue(['cashu_wallet_a.db']);
+
+            await clearCDKDatabase();
+
+            expect(mockedDeleteWalletDatabase).toHaveBeenCalled();
+            expect(disposedBeforeFirstUnlink()).toBe(true);
+        });
+
+        // The prefix sweep is strictly broader than the native delete (it
+        // catches every wallet's hashed db, not just the tracked one), so a
+        // dispose failure must never abort it.
+        it('still sweeps when disposing the handles throws', async () => {
+            mockedDeleteWalletDatabase.mockRejectedValue(
+                new Error('NO_WALLET')
+            );
+            mockedLs.mockResolvedValue([
+                'cashu_wallet_a.db',
+                'cashu_wallet_b.db'
+            ]);
+
+            await clearCDKDatabase();
+
+            expect(mockedUnlink).toHaveBeenCalledTimes(2);
+        });
+
+        it('sweeps without disposing when the native module is absent', async () => {
+            mockedIsAvailable.mockReturnValue(false);
+            mockedLs.mockResolvedValue(['cashu_wallet_a.db']);
+
+            await clearCDKDatabase();
+
+            expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+            expect(mockedUnlink).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -972,6 +1036,100 @@ describe('CDK database deletion', () => {
             });
 
             expect(mockedUnlink).not.toHaveBeenCalled();
+            expect(mockedGetDatabasePath).not.toHaveBeenCalled();
+        });
+
+        // This runs for the ACTIVE wallet too: deleteNodeConfig stops
+        // LND/LDK first, neither of which closes the CDK connection.
+        describe('native handle disposal', () => {
+            const seedWords = ['abandon', 'ability', 'able', 'about'];
+            const seedDbFile = `cashu_wallet_${walletDbHash(
+                seedWords.join(' ')
+            )}.db`;
+            // Native reports the resolved absolute path (Android filesDir),
+            // which never string-matches the `${DocumentDir}/../files` form
+            // built on the JS side - hence the basename comparison.
+            const nativeDir = '/data/user/0/app.zeusln.zeus/files';
+
+            const deleteThisWallet = () =>
+                clearCDKDatabaseForNode({
+                    implementation: 'embedded-lnd',
+                    lndDir: 'lnd-abc'
+                });
+
+            beforeEach(() => {
+                mockedStorageGetItem.mockImplementation((key: string) =>
+                    key === 'lnd-abc-cashu-seed-phrase'
+                        ? Promise.resolve(JSON.stringify(seedWords))
+                        : Promise.resolve(null)
+                );
+                mockedExists.mockResolvedValue(true);
+            });
+
+            it('disposes before unlinking when CDK has this wallet open', async () => {
+                mockedGetDatabasePath.mockResolvedValue(
+                    `${nativeDir}/${seedDbFile}`
+                );
+
+                await deleteThisWallet();
+
+                expect(mockedDeleteWalletDatabase).toHaveBeenCalled();
+                expect(disposedBeforeFirstUnlink()).toBe(true);
+            });
+
+            // Data-loss regression: deleteWalletDatabase() takes no argument
+            // and unlinks whatever db the native module currently has open
+            // (currentDbPath). Calling it while another wallet is warm would
+            // destroy THAT wallet's proofs. Nothing is open on this file, so
+            // the plain unlink below is already safe.
+            it('never disposes when a different wallet is the open one', async () => {
+                mockedGetDatabasePath.mockResolvedValue(
+                    `${nativeDir}/cashu_wallet_ffffffffffffffff.db`
+                );
+
+                await deleteThisWallet();
+
+                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
+
+            it('skips the dispose when no database was opened this session', async () => {
+                mockedGetDatabasePath.mockResolvedValue('');
+
+                await deleteThisWallet();
+
+                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+                expect(mockedUnlink).toHaveBeenCalled();
+            });
+
+            it('still unlinks when the dispose call throws', async () => {
+                mockedGetDatabasePath.mockResolvedValue(
+                    `${nativeDir}/${seedDbFile}`
+                );
+                mockedDeleteWalletDatabase.mockRejectedValue(
+                    new Error('NO_WALLET')
+                );
+
+                await deleteThisWallet();
+
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
+
+            it('unlinks without disposing when the native module is absent', async () => {
+                mockedIsAvailable.mockReturnValue(false);
+
+                await deleteThisWallet();
+
+                expect(mockedGetDatabasePath).not.toHaveBeenCalled();
+                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
         });
     });
 });

@@ -337,6 +337,9 @@ export async function clearCDKDatabase(): Promise<void> {
  * rules match clearNodeKeychainData: only embedded-lnd and ldk-node have an
  * unambiguous namespace; remote nodes share the 'lnd' default, so deleting
  * "their" database could destroy another wallet's proofs.
+ *
+ * Disposes the native CDK handles first, but only when the open database is
+ * this wallet's - see the path-match guard below.
  */
 export async function clearCDKDatabaseForNode(node: any): Promise<void> {
     if (!node) return;
@@ -371,8 +374,42 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
             .digest('hex')
             .slice(0, 16);
         const dbDir = cdkDatabaseDir();
+        const dbFile = `cashu_wallet_${hash}.db`;
+
+        // Close the live CDK handle before unlinking, same reason as
+        // clearCDKDatabase: this runs for the ACTIVE wallet too
+        // (WalletConfiguration.deleteNodeConfig stops LND/LDK first, neither
+        // of which touches CDK), and a POSIX unlink under an open handle
+        // leaves the proofs readable through that connection for the rest of
+        // the session.
+        //
+        // Guarded by a path match because deleteWalletDatabase() takes no
+        // argument: it drops the handles and unlinks whatever single database
+        // the native module currently has open (currentDbPath in
+        // CashuDevKitModule.kt/.swift). Calling it while a DIFFERENT wallet is
+        // warm would delete that wallet's proof database instead - deleting
+        // wallet B would destroy wallet A's ecash. Matching on basename, not
+        // the full path: dbDir here is `${DocumentDir}/../files` on Android
+        // while native reports the resolved absolute filesDir, so the strings
+        // never compare equal. CDK holds one database open at a time, so a
+        // non-match proves nothing is open on this file and the plain unlink
+        // below is already safe.
+        try {
+            if (CashuDevKit.isAvailable()) {
+                const openPath = await CashuDevKit.getDatabasePath();
+                if (openPath && openPath.split('/').pop() === dbFile) {
+                    await CashuDevKit.deleteWalletDatabase();
+                }
+            }
+        } catch (e) {
+            console.warn(
+                '[ClearData] Error disposing CDK database handles for node:',
+                e
+            );
+        }
+
         for (const suffix of ['', '-wal', '-shm']) {
-            const path = `${dbDir}/cashu_wallet_${hash}.db${suffix}`;
+            const path = `${dbDir}/${dbFile}${suffix}`;
             try {
                 if (await ReactNativeBlobUtil.fs.exists(path)) {
                     await ReactNativeBlobUtil.fs.unlink(path);
