@@ -5,6 +5,7 @@ import {
     isOnionHttpsUrl,
     RequestMethod
 } from '../utils/TorUtils';
+import TorWebSocket from '../utils/TorWebSocket';
 import Invoice from './../models/Invoice';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
@@ -150,51 +151,15 @@ export default class LND {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
-    wsReq = (route: string, method: string, data?: any) => {
-        const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            settingsStore;
-
-        const auth = macaroonHex || accessToken;
-        const headers: any = this.getHeaders(auth, true);
-        const methodRoute = `${route}?method=${method}`;
-        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
-
-        return new Promise(function (resolve, reject) {
-            const ws: any = new WebSocket(url, null, {
-                headers
-            });
-
-            // keep pulling in responses until the socket closes
-            let resp: any;
-
-            ws.addEventListener('open', () => {
-                // connection opened
-                ws.send(JSON.stringify(data)); // send a message
-            });
-
-            ws.addEventListener('message', (e: any) => {
-                // a message was received
-                const data = JSON.parse(e.data);
-                if (data.error) {
-                    reject(data.error);
-                } else {
-                    resp = e.data;
-                }
-            });
-
-            ws.addEventListener('error', (e: any) => {
-                const certWarning = localeString('backends.LND.wsReq.warning');
-                // an error occurred
-                reject(
-                    e.message ? `${certWarning} (${e.message})` : certWarning
-                );
-            });
-
-            ws.addEventListener('close', () => {
-                // connection closed
-                resolve(JSON.parse(resp));
-            });
-        });
+    // React Native's global WebSocket has no proxy support, so when Tor
+    // is enabled the streaming endpoints must use the SOCKS-proxied
+    // native transport or they would silently leak the node host and the
+    // user's IP with a direct clearnet connection.
+    createWebSocket = (url: string, headers: any): any => {
+        if (settingsStore.enableTor) {
+            return new TorWebSocket(url, headers);
+        }
+        return new WebSocket(url, null, { headers });
     };
 
     getHeaders = (macaroonHex: string, ws?: boolean): any => {
@@ -318,9 +283,7 @@ export default class LND {
         const methodRoute = `${route}?method=${method}`;
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
-        const ws: any = new WebSocket(url, null, {
-            headers
-        });
+        const ws: any = this.createWebSocket(url, headers);
 
         ws.addEventListener('open', () => {
             // connection opened
@@ -483,10 +446,9 @@ export default class LND {
         const methodRoute = '/v1/channels/stream?method=POST';
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
+        const createWebSocket = this.createWebSocket;
         return new Promise(function (resolve, reject) {
-            const ws: any = new WebSocket(url, null, {
-                headers
-            });
+            const ws: any = createWebSocket(url, headers);
 
             // keep pulling in responses until the socket closes
             let resp: any;
@@ -858,9 +820,7 @@ export default class LND {
             true
         );
 
-        const ws: any = new WebSocket(url, null, {
-            headers
-        });
+        const ws: any = this.createWebSocket(url, headers);
 
         // keep pulling in responses until the socket closes
         let resp: any;
