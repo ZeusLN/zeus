@@ -256,3 +256,47 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
 
     return { ok: true };
 };
+
+/**
+ * Bind an LNURL-auth callback to the domain that is displayed to the user
+ * and used to derive the service-specific linking key. js-lnurl's getDomain
+ * and the url parser used for transmission disagree on URLs containing
+ * backslashes or userinfo: getDomain splits on the last '@' but not on '\',
+ * while url.parse (like WHATWG parsers and native HTTP stacks) treats '\'
+ * as a path delimiter. A crafted
+ * "https://attacker.example\@victim.example/?tag=login&k1=..." therefore
+ * displays and signs for victim.example while transmitting the signature to
+ * attacker.example, handing the attacker a valid login for the victim's
+ * account. Reject the ambiguous constructs outright and require the host
+ * that will actually be contacted to equal the displayed domain.
+ */
+export const verifyLnurlAuthCallback = (
+    callback: string,
+    expectedDomain: string
+): LnurlCheckResult => {
+    if (typeof callback === 'string' && callback.includes('\\')) {
+        return { ok: false, reason: 'callback URL contains a backslash' };
+    }
+
+    const allowed = isLnurlCallbackAllowed(callback);
+    if (!allowed.ok) return allowed;
+
+    const parsed = url.parse(callback);
+    if (parsed.auth) {
+        return { ok: false, reason: 'callback URL contains userinfo' };
+    }
+
+    const hostname = (parsed.hostname || '').toLowerCase();
+    if (
+        typeof expectedDomain !== 'string' ||
+        expectedDomain.length === 0 ||
+        hostname !== expectedDomain.toLowerCase()
+    ) {
+        return {
+            ok: false,
+            reason: `callback host "${hostname}" does not match signing domain "${expectedDomain}"`
+        };
+    }
+
+    return { ok: true };
+};
