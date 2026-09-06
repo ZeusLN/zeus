@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
     Alert,
+    AppState,
     Modal,
+    NativeEventSubscription,
     ScrollView,
     StyleSheet,
     Text,
@@ -76,6 +78,7 @@ interface SeedState {
     isDeleteModalVisible: boolean;
     isChannelExporting: boolean;
     channelExportMessage: string;
+    revealResetKey: number;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -134,13 +137,37 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         showModal: false,
         isDeleteModalVisible: false,
         isChannelExporting: false,
-        channelExportMessage: ''
+        channelExportMessage: '',
+        revealResetKey: 0
     };
+
+    private appStateSubscription: NativeEventSubscription | undefined;
 
     componentDidMount() {
         // make sure we have latest settings and the seed phrase is accessible
         this.props.SettingsStore.getSettings();
+
+        // The background lock pushes Lockscreen over this view without
+        // unmounting it, so revealed words must not survive backgrounding
+        this.appStateSubscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
     }
+
+    componentWillUnmount() {
+        this.appStateSubscription?.remove();
+    }
+
+    handleAppStateChange = (nextAppState: string) => {
+        if (nextAppState === 'background') {
+            this.setState((prevState) => ({
+                understood: this.props.route.params?.skipWarning ?? false,
+                showModal: false,
+                revealResetKey: prevState.revealResetKey + 1
+            }));
+        }
+    };
 
     renderDeleteModal = () => {
         const { navigation } = this.props;
@@ -244,7 +271,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             understood,
             showModal,
             isChannelExporting,
-            channelExportMessage
+            channelExportMessage,
+            revealResetKey
         } = this.state;
         // Prefer an explicit seed for the wallet being viewed. SettingsStore
         // only mirrors the active node, so inactive wallets must pass
@@ -589,7 +617,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             <MnemonicWord
                                                 index={index}
                                                 word={word}
-                                                key={`mnemonic-${index}`}
+                                                key={`mnemonic-${revealResetKey}-${index}`}
                                             />
                                         ))}
                             </View>
@@ -606,7 +634,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                                     )
                                                 }
                                                 word={word}
-                                                key={`mnemonic-${
+                                                key={`mnemonic-${revealResetKey}-${
                                                     index +
                                                     Math.ceil(
                                                         seedPhrase.length / 2
