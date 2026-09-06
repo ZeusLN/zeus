@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { BackHandler, Platform } from 'react-native';
+import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 
 import {
@@ -287,6 +288,21 @@ function cdkDatabaseDir(): string {
  * this destroys every wallet's ecash state.
  */
 export async function clearCDKDatabase(): Promise<void> {
+    // Close any live CDK handles (and delete the currently tracked db)
+    // before sweeping by filename, mirroring deleteCashuData's
+    // dispose-then-unlink order: unlinking under an open handle succeeds on
+    // POSIX but leaves the proof data reachable through the still-open
+    // connection until restart. Best effort: the sweep below is strictly
+    // broader (it catches every wallet's hashed db, not just the tracked
+    // one) and must run regardless.
+    try {
+        if (CashuDevKit.isAvailable()) {
+            await CashuDevKit.deleteWalletDatabase();
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error disposing CDK database handles:', e);
+    }
+
     try {
         const dbDir = cdkDatabaseDir();
         const entries: string[] = await ReactNativeBlobUtil.fs.ls(dbDir);
