@@ -93,11 +93,11 @@ export default class LnurlChannel extends React.Component<
             connectingToPeer: false,
             peerSuccess: false,
             lnurlChannelSuccess: false,
-            errorMsgPeer: 'Error'
+            errorMsgPeer: ''
         };
     }
 
-    triggerConnect() {
+    triggerConnect(onSuccess?: () => void) {
         const { node_pubkey_string, host } = this.state;
         this.setState({ connectingToPeer: true });
 
@@ -105,11 +105,14 @@ export default class LnurlChannel extends React.Component<
             addr: {
                 pubkey: node_pubkey_string,
                 host
-            }
+            },
+            // don't persist a peer the user hasn't opened a channel with
+            perm: false
         })
             .then(() => {
                 this.setState({ connectingToPeer: false });
                 this.setState({ peerSuccess: true });
+                if (onSuccess) onSuccess();
             })
             .catch((error: any) => {
                 // handle error
@@ -121,11 +124,9 @@ export default class LnurlChannel extends React.Component<
                     this.state.errorMsgPeer.includes('already')
                 ) {
                     this.setState({ peerSuccess: true });
+                    if (onSuccess) onSuccess();
                 }
             });
-    }
-    componentDidMount() {
-        this.triggerConnect();
     }
 
     sendValues() {
@@ -276,9 +277,17 @@ export default class LnurlChannel extends React.Component<
                                 color: themeColor('background')
                             }}
                             onPress={() => {
-                                this.sendValues();
+                                // only contact the service-supplied peer
+                                // after explicit user confirmation
+                                if (this.state.peerSuccess) {
+                                    this.sendValues();
+                                } else {
+                                    this.triggerConnect(() =>
+                                        this.sendValues()
+                                    );
+                                }
                             }}
-                            disabled={!peerSuccess}
+                            disabled={this.state.connectingToPeer}
                         />
                     </View>
 
