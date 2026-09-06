@@ -2195,7 +2195,7 @@ export default class LdkNode {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsNestedSegWit = () => false;
-    supportsTaproot = () => true;
+    supportsTaproot = () => false; // LDK Node's BDK wallet uses BIP-84 descriptors, so it can only hand out P2WPKH addresses
     supportsBumpFee = () => false;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
