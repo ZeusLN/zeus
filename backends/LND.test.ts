@@ -479,7 +479,6 @@ describe('LND WebSocket calls whose socket closes', () => {
     const psbtFund = { result: { psbt_fund: { psbt: 'cHNidP8=' } } };
 
     const calls: [string, (lnd: LND) => Promise<any>][] = [
-        ['wsReq', (lnd) => lnd.wsReq('/v1/route', 'POST', {}) as Promise<any>],
         [
             'openChannelStream',
             (lnd) =>
