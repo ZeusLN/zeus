@@ -34,6 +34,7 @@ interface PaymentMethodListProps {
     clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
+    lightningBalanceLabel?: string;
     onchainBalance?: number | string;
     ecashBalance?: number | string;
     accounts?: Array<{
@@ -53,6 +54,7 @@ type DataRow = {
     subtitle?: string;
     disabled?: boolean;
     balance?: number | string;
+    balanceLabel?: string;
     account?: string;
     hidden?: boolean;
     satAmount?: number;
@@ -158,6 +160,20 @@ const Row = ({ item }: { item: DataRow }) => {
                                     : themeColor('buttonText')
                             }
                         />
+                        {item.balanceLabel && (
+                            <Text
+                                style={[
+                                    styles.balanceLabel,
+                                    {
+                                        color:
+                                            themeColor('buttonTextSecondary') ||
+                                            themeColor('secondaryText')
+                                    }
+                                ]}
+                            >
+                                {item.balanceLabel}
+                            </Text>
+                        )}
                     </View>
                 )}
             </LinearGradient>
@@ -312,6 +328,7 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning',
                 subtitle,
                 balance: lightningBalance,
+                balanceLabel: this.props.lightningBalanceLabel,
                 disabled: false,
                 isWithdraw,
                 satAmount
@@ -337,6 +354,7 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning address',
                 subtitle: lightningAddress,
                 balance: lightningBalance,
+                balanceLabel: this.props.lightningBalanceLabel,
                 disabled: false,
                 satAmount
             });
@@ -348,6 +366,7 @@ export default class PaymentMethodList extends Component<
                 subtitle: offer,
                 disabled: !nodeInfoStore.supportsOffers,
                 balance: lightningBalance,
+                balanceLabel: this.props.lightningBalanceLabel,
                 satAmount
             });
         }
@@ -508,6 +527,12 @@ const styles = StyleSheet.create({
         flexShrink: 0,
         marginLeft: 10,
         maxWidth: '40%'
+    },
+    balanceLabel: {
+        fontSize: 12,
+        fontFamily: 'PPNeueMontreal-Medium',
+        textAlign: 'right',
+        marginTop: 2
     },
     separator: {
         backgroundColor: 'transparent',

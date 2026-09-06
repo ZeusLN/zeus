@@ -17,6 +17,7 @@ import RescanStatus from '../components/RescanStatus';
 import FeeEstimate from '../components/FeeEstimate';
 
 import BalanceStore from '../stores/BalanceStore';
+import ChannelsStore from '../stores/ChannelsStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
@@ -42,6 +43,7 @@ interface ChoosePaymentMethodProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<'ChoosePaymentMethod', RouteParams>;
     BalanceStore?: BalanceStore;
+    ChannelsStore?: ChannelsStore;
     CashuStore?: CashuStore;
     UTXOsStore?: UTXOsStore;
     InvoicesStore?: InvoicesStore;
@@ -58,7 +60,13 @@ interface ChoosePaymentMethodState {
     feeRate: string;
 }
 
-@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
+@inject(
+    'BalanceStore',
+    'ChannelsStore',
+    'CashuStore',
+    'UTXOsStore',
+    'InvoicesStore'
+)
 @observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
@@ -176,9 +184,23 @@ export default class ChoosePaymentMethod extends React.Component<
         await Promise.all(tasks);
     };
 
+    get usesSendingCapacity() {
+        return (
+            this.state.lnurlParams?.tag !== 'withdrawRequest' &&
+            BackendUtils.supportsChannelManagement() &&
+            !!this.props.ChannelsStore?.hasSendingCapacity
+        );
+    }
+
+    get lightningPaymentBalance() {
+        return this.usesSendingCapacity
+            ? this.props.ChannelsStore!.totalOutbound
+            : this.props.BalanceStore!.lightningBalance;
+    }
+
     hasInsufficientFunds = () => {
         const { BalanceStore, CashuStore } = this.props;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBlockchainBalance } = BalanceStore!;
         const { totalBalanceSats: ecashBalance } = CashuStore!;
         const {
             value,
@@ -196,7 +218,7 @@ export default class ChoosePaymentMethod extends React.Component<
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
-        const lightning_ = Number(lightningBalance);
+        const lightning_ = Number(this.lightningPaymentBalance);
         const ecash = Number(ecashBalance);
         const total = onchain + lightning_ + ecash;
 
@@ -245,7 +267,7 @@ export default class ChoosePaymentMethod extends React.Component<
         } = this.state;
 
         const { accounts } = UTXOsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBlockchainBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
 
         const isWithdraw = lnurlParams?.tag === 'withdrawRequest';
@@ -339,7 +361,14 @@ export default class ChoosePaymentMethod extends React.Component<
                     clinkNoffer={clinkNoffer}
                     lnurlParams={lnurlParams}
                     // balance data
-                    lightningBalance={lightningBalance}
+                    lightningBalance={this.lightningPaymentBalance}
+                    lightningBalanceLabel={
+                        this.usesSendingCapacity
+                            ? localeString(
+                                  'views.ChoosePaymentMethod.availableToSend'
+                              )
+                            : undefined
+                    }
                     onchainBalance={totalBlockchainBalance}
                     ecashBalance={totalBalanceSats}
                     accounts={accounts}

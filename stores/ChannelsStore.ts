@@ -83,6 +83,7 @@ export default class ChannelsStore {
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
+    @observable public hasSendingCapacity = false;
     @observable public totalInbound = 0;
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
@@ -198,6 +199,7 @@ export default class ChannelsStore {
     @action
     public reset = () => {
         this.resetOpenChannel();
+        this.hasSendingCapacity = false;
         this.haveAnnouncedChannels = false;
         this.nodes = {};
         this.channels = [];
@@ -502,6 +504,7 @@ export default class ChannelsStore {
 
     @action
     private getChannelsError = () => {
+        this.hasSendingCapacity = false;
         this.channels = [];
         this.error = true;
         this.loading = false;
@@ -510,6 +513,7 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
+        this.hasSendingCapacity = false;
         this.loading = true;
         this.channels = [];
         this.largestChannelSats = 0;
@@ -547,6 +551,7 @@ export default class ChannelsStore {
                     }
                 });
                 this.channels = channels;
+                this.hasSendingCapacity = true;
             })
         ];
 
