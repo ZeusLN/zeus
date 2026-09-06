@@ -16,6 +16,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import UrlUtils from '../../../utils/UrlUtils';
 
 import { resetMissionControl } from '../../../lndmobile';
 import LdkNode from '../../../ldknode/LdkNodeInjection';
@@ -99,6 +100,10 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
         const isEmbeddedLnd = implementation === 'embedded-lnd';
         const isLdkNode = implementation === 'ldk-node';
 
+        // Most of what this screen offers is also written up, with the
+        // surrounding context, in the FAQ for the wallet in use.
+        const faqUrl = UrlUtils.getLocalWalletFaqUrl(implementation);
+
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -125,6 +130,22 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                         navigation={navigation}
                     />
                     <ScrollView>
+                        {faqUrl && (
+                            <View style={{ marginTop: 20, marginBottom: 5 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.EmbeddedNode.Troubleshooting.faq'
+                                    )}
+                                    onPress={() => UrlUtils.goToUrl(faqUrl)}
+                                    icon={{
+                                        name: 'life-buoy',
+                                        type: 'feather',
+                                        size: 25
+                                    }}
+                                    secondary
+                                />
+                            </View>
+                        )}
                         {isEmbeddedLnd && (
                             <>
                                 <>

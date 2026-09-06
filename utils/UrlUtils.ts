@@ -177,6 +177,19 @@ const goToBlockExplorerChannelId = (channelId: string, testnet?: boolean) =>
 const goToBlockExplorerPubkey = (pubKey: string, testnet?: boolean) =>
     goToBlockExplorer('lightning/node', pubKey, testnet);
 
+const LOCAL_WALLET_FAQ_URLS: { [implementation: string]: string } = {
+    'embedded-lnd':
+        'https://docs.zeusln.app/for-users/local-wallets/embedded-lnd/faq',
+    'ldk-node': 'https://docs.zeusln.app/for-users/local-wallets/ldk-node/faq'
+};
+
+/**
+ * FAQ page for the local wallet implementation in use. Returns undefined for
+ * remote nodes, where neither local wallet FAQ applies.
+ */
+const getLocalWalletFaqUrl = (implementation?: string): string | undefined =>
+    implementation ? LOCAL_WALLET_FAQ_URLS[implementation] : undefined;
+
 const goToUrl = (url: string) => {
     modalStore.setUrl(url);
     modalStore.setClipboardValue(url);
@@ -215,6 +228,7 @@ export default {
     goToBlockExplorerBlockHash,
     goToBlockExplorerChannelId,
     goToBlockExplorerPubkey,
+    getLocalWalletFaqUrl,
     goToUrl,
     goToEmailAddress
 };

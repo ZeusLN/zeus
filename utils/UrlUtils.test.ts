@@ -404,4 +404,22 @@ describe('UrlUtils', () => {
             ).toBe(true);
         });
     });
+
+    describe('getLocalWalletFaqUrl', () => {
+        it('returns the FAQ for each local wallet implementation', () => {
+            expect(UrlUtils.getLocalWalletFaqUrl('embedded-lnd')).toBe(
+                'https://docs.zeusln.app/for-users/local-wallets/embedded-lnd/faq'
+            );
+            expect(UrlUtils.getLocalWalletFaqUrl('ldk-node')).toBe(
+                'https://docs.zeusln.app/for-users/local-wallets/ldk-node/faq'
+            );
+        });
+
+        it('returns undefined for remote nodes and unset implementations', () => {
+            expect(UrlUtils.getLocalWalletFaqUrl('lnd')).toBeUndefined();
+            expect(UrlUtils.getLocalWalletFaqUrl('cln-rest')).toBeUndefined();
+            expect(UrlUtils.getLocalWalletFaqUrl(undefined)).toBeUndefined();
+            expect(UrlUtils.getLocalWalletFaqUrl('')).toBeUndefined();
+        });
+    });
 });

@@ -6,6 +6,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
+import { settingsStore } from '../../stores/Stores';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -26,6 +28,12 @@ function Help(props: HelpProps) {
         />
     );
 
+    // Only surfaced on local wallets, where the FAQ covers the node running on
+    // the device. Remote node users get the general docs entry above it.
+    const localWalletFaqUrl = UrlUtils.getLocalWalletFaqUrl(
+        settingsStore.implementation
+    );
+
     const HELP_ITEMS = [
         {
             label: localeString('views.Settings.Help.docs').replace(
@@ -34,6 +42,14 @@ function Help(props: HelpProps) {
             ),
             url: 'https://docs.zeusln.app'
         },
+        ...(localWalletFaqUrl
+            ? [
+                  {
+                      label: localeString('views.Settings.Help.faq'),
+                      url: localWalletFaqUrl
+                  }
+              ]
+            : []),
         {
             label: localeString('views.Settings.Help.github'),
             url: 'https://github.com/ZeusLN/zeus/issues'
