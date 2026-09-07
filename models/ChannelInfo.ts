@@ -10,7 +10,7 @@ export interface RoutingPolicy {
     inbound_fee_rate_milli_msat?: string;
     disabled: boolean;
     max_htlc_msat: string;
-    last_update: number;
+    last_update?: number;
 }
 
 export default class ChannelInfo extends BaseModel {

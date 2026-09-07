@@ -43,9 +43,7 @@ describe('listFormattedDate', () => {
     });
 
     it('falls back to N/A if timestamp is undefined', () => {
-        const result = DateTimeUtils.listFormattedDate(
-            undefined as unknown as string
-        );
+        const result = DateTimeUtils.listFormattedDate(undefined);
 
         expect(result).toEqual('N/A');
     });

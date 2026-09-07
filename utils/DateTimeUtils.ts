@@ -1,11 +1,11 @@
 import dateFormat from 'dateformat';
 
 class DateTimeUtils {
-    listDate = (timestamp: number | string) =>
+    listDate = (timestamp: number | string | undefined) =>
         new Date(Number(timestamp) * 1000);
 
     listFormattedDate = (
-        timestamp: number | string,
+        timestamp: number | string | undefined,
         format = "ddd, mmm d 'yy, HH:MM Z"
     ) => {
         try {

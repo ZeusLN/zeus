@@ -1334,7 +1334,10 @@ export default class ChannelsStore {
             fee_rate_milli_msat: chanInfo.fee_per_millionth.toString(),
             disabled: false,
             max_htlc_msat: chanInfo.htlc_maximum_msat.toString(),
-            last_update: Number(chanInfo.last_update?.toString())
+            last_update:
+                chanInfo.last_update != null
+                    ? Number(chanInfo.last_update)
+                    : undefined
         };
     };
 

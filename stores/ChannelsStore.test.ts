@@ -196,4 +196,18 @@ describe('ChannelsStore.getNodePolicy', () => {
             last_update: 1700000000
         });
     });
+
+    it('leaves last_update undefined instead of NaN when absent', () => {
+        const store = makeStore();
+        store.chanInfo['789'] = new ChannelInfo({
+            short_channel_id: '789',
+            delay: 34,
+            htlc_minimum_msat: 1000,
+            htlc_maximum_msat: 990000000,
+            base_fee_millisatoshi: 1000,
+            fee_per_millionth: 10
+        });
+
+        expect(store.getNodePolicy('789')?.last_update).toBeUndefined();
+    });
 });
