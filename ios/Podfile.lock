@@ -1,5 +1,5 @@
 PODS:
-  - CashuDevKit (0.17.4)
+  - CashuDevKit (0.18.1)
   - CocoaAsyncSocket (7.6.5)
   - FBLazyVector (0.86.0)
   - hermes-engine (250829098.0.14):
@@ -2962,7 +2962,7 @@ EXTERNAL SOURCES:
     :path: "."
 
 SPEC CHECKSUMS:
-  CashuDevKit: aca7feab2317e80d84a980f3f5ab5f174f18e8ee
+  CashuDevKit: 70dbd2fc68f8213a7e270e9de19b50b0bcc9c548
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
   hermes-engine: 21af757fa4a1057c2de9dbb4da7b3880f61ef7f3
