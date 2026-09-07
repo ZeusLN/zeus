@@ -391,9 +391,12 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
         // wallet B would destroy wallet A's ecash. Matching on basename, not
         // the full path: dbDir here is `${DocumentDir}/../files` on Android
         // while native reports the resolved absolute filesDir, so the strings
-        // never compare equal. CDK holds one database open at a time, so a
-        // non-match proves nothing is open on this file and the plain unlink
-        // below is already safe.
+        // never compare equal. CDK holds one database open at a time and
+        // destroys the outgoing wallet's handles when a new one is
+        // initialized (initializeWallet in CashuDevKitModule.kt/.swift), so a
+        // non-match proves no connection is open on this file and the plain
+        // unlink below is already safe - including after a wallet switch,
+        // where the wallet being deleted is no longer the tracked one.
         try {
             if (CashuDevKit.isAvailable()) {
                 const openPath = await CashuDevKit.getDatabasePath();

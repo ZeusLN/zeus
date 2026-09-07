@@ -454,7 +454,6 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let dbPath = getDatabasePath(for: mnemonic)
-                self.currentDbPath = dbPath
                 let sqliteDb = try WalletSqliteDatabase(filePath: dbPath)
 
                 let currencyUnit = parseCurrencyUnit(unit)
@@ -467,11 +466,24 @@ class CashuDevKitModule: RCTEventEmitter {
                     store: .custom(db: sqliteDb)
                 )
 
+                // ARC releases the outgoing wallet's handles as soon as these
+                // assignments drop the last reference, so the previous
+                // SQLite connection closes here (the Kotlin module has to
+                // destroy() its uniffi handles by hand - see disposeHandles).
+                // preparedSends is cleared for the same reason: a send
+                // prepared against the previous wallet must not outlive it.
                 walletQueue.sync {
                     self.db = sqliteDb
                     self.repo = newRepo
                     self.walletUnit = currencyUnit
                     self.wallets.removeAll()
+                    self.preparedSends.removeAll()
+                    // Publish the path only now that these are the handles
+                    // actually open: clearCDKDatabaseForNode keys its
+                    // dispose-before-unlink decision off getDatabasePath(),
+                    // so a path published before construction succeeded would
+                    // point the guard at a database never opened here
+                    self.currentDbPath = dbPath
                     self.isInitialized = true
                 }
 

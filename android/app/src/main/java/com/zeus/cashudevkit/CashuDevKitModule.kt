@@ -40,11 +40,101 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private var isInitialized = false
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Guards the swap of the handle set above. destroy() is idempotent, so
+    // this only has to keep two teardowns from taking the same handles, and
+    // a teardown from racing an initialization
+    private val handleLock = Any()
+
     companion object {
         private const val TAG = "CashuDevKitModule"
     }
 
     override fun getName(): String = "CashuDevKitModule"
+
+    // ========================================================================
+    // Handle Lifecycle
+    // ========================================================================
+
+    /**
+     * Removes every CDK handle from the module's state and returns them for
+     * destruction. Call under handleLock.
+     *
+     * Order matters: the per-mint Wallet handles and any outstanding
+     * PreparedSend hold their own references to the repository and database,
+     * so the SQLite connection is not released until those are destroyed
+     * first.
+     */
+    private fun takeHandlesLocked(): List<Disposable> {
+        val taken = mutableListOf<Disposable>()
+        taken.addAll(preparedSends.values)
+        preparedSends.clear()
+        taken.addAll(wallets.values)
+        wallets.clear()
+        repo?.let { taken.add(it) }
+        repo = null
+        db?.let { taken.add(it) }
+        db = null
+        isInitialized = false
+        currentDbPath = null
+        return taken
+    }
+
+    private fun destroyHandles(handles: List<Disposable>) {
+        for (handle in handles) {
+            try {
+                handle.destroy()
+            } catch (e: Exception) {
+                // Best effort: one handle failing to release must not strand
+                // the others, and destroy() is a no-op if it already ran
+                Log.w(
+                    TAG,
+                    "destroyHandles: failed to destroy ${handle.javaClass.simpleName}",
+                    e
+                )
+            }
+        }
+    }
+
+    /**
+     * Runs [block] on a transient CDK handle and destroys the handle after,
+     * success or not.
+     *
+     * Same reasoning as disposeHandles: a prepared melt or send holds its own
+     * reference to the wallet's database, so one left for the Cleaner keeps
+     * the SQLite connection alive past a teardown that destroyed everything
+     * the module tracks. Inline so suspending calls inside the block stay
+     * legal.
+     */
+    private inline fun <T : Disposable, R> T.useHandle(block: (T) -> R): R {
+        try {
+            return block(this)
+        } finally {
+            destroyHandles(listOf(this))
+        }
+    }
+
+    /**
+     * Destroys every live CDK handle and resets the module to uninitialized.
+     *
+     * The uniffi bindings are Disposable: dropping the Kotlin reference alone
+     * leaves the Rust object - and the SQLite connection it owns - alive
+     * until the Cleaner next runs after a GC. An unlinked database file
+     * therefore keeps its blocks allocated for an unbounded time, which is
+     * the reachability the wipe paths exist to close. iOS has no equivalent
+     * gap: ARC frees the handle as soon as the last reference goes.
+     *
+     * In-flight work is aborted rather than left to finish. uniffi keeps an
+     * already-started call alive (the Rust side holds its own reference), but
+     * the next call on a destroyed handle throws IllegalStateException, which
+     * the per-method catch turns into a promise rejection. That is the
+     * intended outcome: every caller here has either torn the wallet down or
+     * switched to a different one, and the methods below re-read repo/db
+     * between steps, so letting a half-finished flow continue would mean
+     * operating on a mix of the outgoing and incoming wallet's state.
+     */
+    private fun disposeHandles() {
+        destroyHandles(synchronized(handleLock) { takeHandlesLocked() })
+    }
 
     // ========================================================================
     // Helper Methods
@@ -168,6 +258,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         return wallet
     }
 
+    @Volatile
     private var currentDbPath: String? = null
 
     private fun getDatabasePath(mnemonic: String): String {
@@ -370,7 +461,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val dbPath = getDatabasePath(mnemonic)
-                currentDbPath = dbPath
                 val database = WalletSqliteDatabase(dbPath)
 
                 val currencyUnit = parseCurrencyUnit(unit)
@@ -383,11 +473,27 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     store = WalletStore.Custom(database)
                 )
 
-                db = database
-                repo = newRepo
-                walletUnit = currencyUnit
-                wallets.clear()
-                isInitialized = true
+                // Swap atomically and destroy what we replaced. Switching
+                // wallets does not restart the app, so without this the
+                // outgoing wallet's SQLite connection stays open for the rest
+                // of the session and its database file survives deletion as
+                // unreclaimed blocks. Building the new handles first keeps a
+                // construction failure from tearing down a working wallet.
+                val outgoing = synchronized(handleLock) {
+                    val previous = takeHandlesLocked()
+                    db = database
+                    repo = newRepo
+                    walletUnit = currencyUnit
+                    // Publish the path only now that these are the handles
+                    // actually open: clearCDKDatabaseForNode keys its
+                    // dispose-before-unlink decision off getDatabasePath(),
+                    // so a path published before construction succeeded would
+                    // point the guard at a database the module never opened
+                    currentDbPath = dbPath
+                    isInitialized = true
+                    previous
+                }
+                destroyHandles(outgoing)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
@@ -1044,8 +1150,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val wallet = getWallet(mintUrl)
-                val prepared = wallet.prepareMelt(quoteId)
-                val melted = prepared.confirm()
+                val melted = wallet.prepareMelt(quoteId).useHandle { it.confirm() }
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())
@@ -1109,8 +1214,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 }
 
                 // Step 3: Two-phase melt with the selected proofs
-                val prepared = wallet.prepareMeltProofs(quote.id, mintProofs)
-                val melted = prepared.confirm()
+                val melted = wallet.prepareMeltProofs(quote.id, mintProofs)
+                    .useHandle { it.confirm() }
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())
@@ -1241,8 +1346,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     promise.reject("CONFIRM_SEND_ERROR", e.message, e)
                 }
             } finally {
-                // Always clean up prepared send, whether success or failure
-                preparedSends.remove(preparedSendId)
+                // Always clean up prepared send, whether success or failure.
+                // Destroy it rather than only dropping the reference: the
+                // handle holds the wallet's database open until the Cleaner
+                // runs (see disposeHandles)
+                preparedSends.remove(preparedSendId)?.let {
+                    destroyHandles(listOf(it))
+                }
             }
         }
     }
@@ -1273,8 +1383,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     promise.reject("CANCEL_SEND_ERROR", e.message, e)
                 }
             } finally {
-                // Always clean up prepared send, whether success or failure
-                preparedSends.remove(preparedSendId)
+                // Always clean up prepared send, whether success or failure.
+                // Destroy it rather than only dropping the reference: the
+                // handle holds the wallet's database open until the Cleaner
+                // runs (see disposeHandles)
+                preparedSends.remove(preparedSendId)?.let {
+                    destroyHandles(listOf(it))
+                }
             }
         }
     }
@@ -1776,19 +1891,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     /**
      * Closes the repository/database handles and deletes the proof db (and its
      * WAL/SHM sidecars) from disk. Used by "Delete Cashu data" so plaintext
-     * bearer proofs do not survive the user's deletion. Nulling the repository
-     * and db references (and dropping the per-mint wallet handles) releases the
-     * underlying SQLite connection before the files are unlinked. Resolves
-     * false if no database was opened this session.
+     * bearer proofs do not survive the user's deletion. disposeHandles()
+     * destroys the uniffi handles rather than only dropping the references, so
+     * the SQLite connection is closed before the files are unlinked: unlinking
+     * under a live connection succeeds but leaves the blocks allocated to it.
+     * Resolves false if no database was opened this session.
      */
     @ReactMethod
     fun deleteWalletDatabase(promise: Promise) {
         val path = currentDbPath
-        repo = null
-        db = null
-        wallets.clear()
-        preparedSends.clear()
-        isInitialized = false
+        disposeHandles()
         if (path == null) {
             promise.resolve(false)
             return
@@ -1800,7 +1912,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.w(TAG, "deleteWalletDatabase: failed to delete $p", e)
             }
         }
-        currentDbPath = null
         promise.resolve(true)
     }
 
@@ -1810,10 +1921,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     override fun onCatalystInstanceDestroy() {
         scope.cancel()
-        repo = null
-        db = null
-        wallets.clear()
-        preparedSends.clear()
-        isInitialized = false
+        // Destroy, not just dereference: a bridge teardown that is not a
+        // process restart (an iOS-style JS reload, a dev reload) would
+        // otherwise leave the previous instance's connection open
+        disposeHandles()
     }
 }
