@@ -602,6 +602,10 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     Lockscreen
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Accounts" // @ts-ignore:next-line
