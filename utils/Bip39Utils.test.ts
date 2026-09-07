@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { BIP39_WORD_LIST } from '.././utils/Bip39Utils';
 
 /**
@@ -13,6 +15,20 @@ import { BIP39_WORD_LIST } from '.././utils/Bip39Utils';
  * Reference: https://github.com/bitcoin/bips/blob/master/bip-0039/bip-0039-wordlists.md
  */
 describe('BIP39_WORD_LIST', () => {
+    it('matches the canonical BIP39 English wordlist', () => {
+        // sha256 of bitcoin/bips bip-0039/english.txt. This pins word
+        // *identity*, which the structural checks below cannot: a substitution
+        // that keeps sort position, case, length and its four-character prefix
+        // -- 'absurd' -> 'absurdly', say -- passes every one of them, and that
+        // is precisely the corruption that would break seed restores.
+        const digest = createHash('sha256')
+            .update(BIP39_WORD_LIST.join('\n') + '\n')
+            .digest('hex');
+        expect(digest).toBe(
+            '2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda'
+        );
+    });
+
     it('contains exactly 2048 words', () => {
         // 2048 = 2^11, so each word encodes exactly 11 bits of entropy. Any
         // other length makes the mnemonic encoding wrong, not merely unusual.
