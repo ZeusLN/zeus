@@ -1,6 +1,9 @@
 import { Linking } from 'react-native';
 import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
-import { DEFAULT_MEMPOOL_INSTANCE } from '../stores/SettingsStore';
+import {
+    DEFAULT_MEMPOOL_INSTANCE,
+    Implementations
+} from '../stores/SettingsStore';
 
 /**
  * Bare hosts are treated as https. Zeus has accepted scheme-less hosts
@@ -177,7 +180,7 @@ const goToBlockExplorerChannelId = (channelId: string, testnet?: boolean) =>
 const goToBlockExplorerPubkey = (pubKey: string, testnet?: boolean) =>
     goToBlockExplorer('lightning/node', pubKey, testnet);
 
-const LOCAL_WALLET_FAQ_URLS: { [implementation: string]: string } = {
+const LOCAL_WALLET_FAQ_URLS: Partial<Record<Implementations, string>> = {
     'embedded-lnd':
         'https://docs.zeusln.app/for-users/local-wallets/embedded-lnd/faq',
     'ldk-node': 'https://docs.zeusln.app/for-users/local-wallets/ldk-node/faq'
@@ -187,7 +190,9 @@ const LOCAL_WALLET_FAQ_URLS: { [implementation: string]: string } = {
  * FAQ page for the local wallet implementation in use. Returns undefined for
  * remote nodes, where neither local wallet FAQ applies.
  */
-const getLocalWalletFaqUrl = (implementation?: string): string | undefined =>
+const getLocalWalletFaqUrl = (
+    implementation?: Implementations
+): string | undefined =>
     implementation ? LOCAL_WALLET_FAQ_URLS[implementation] : undefined;
 
 const goToUrl = (url: string) => {

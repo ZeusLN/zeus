@@ -419,7 +419,7 @@ describe('UrlUtils', () => {
             expect(UrlUtils.getLocalWalletFaqUrl('lnd')).toBeUndefined();
             expect(UrlUtils.getLocalWalletFaqUrl('cln-rest')).toBeUndefined();
             expect(UrlUtils.getLocalWalletFaqUrl(undefined)).toBeUndefined();
-            expect(UrlUtils.getLocalWalletFaqUrl('')).toBeUndefined();
+            expect(UrlUtils.getLocalWalletFaqUrl('' as any)).toBeUndefined();
         });
     });
 });
