@@ -12,7 +12,7 @@ class DateTimeUtils {
             const date = this.listDate(timestamp);
             return dateFormat(date, format).toString();
         } catch (error) {
-            return timestamp.toString() || 'N/A';
+            return timestamp?.toString() ?? 'N/A';
         }
     };
 

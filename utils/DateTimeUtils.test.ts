@@ -41,6 +41,14 @@ describe('listFormattedDate', () => {
 
         expect(result).toMatch(/^Thu, Dec 26 '24, 21:21/);
     });
+
+    it('falls back to N/A if timestamp is undefined', () => {
+        const result = DateTimeUtils.listFormattedDate(
+            undefined as unknown as string
+        );
+
+        expect(result).toEqual('N/A');
+    });
 });
 
 describe('listFormattedDateShort', () => {
