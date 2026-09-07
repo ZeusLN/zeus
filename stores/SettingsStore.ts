@@ -1947,7 +1947,15 @@ export default class SettingsStore {
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
-                this.settings = parsedSettings;
+                // only swap the settings reference on a real change:
+                // BalanceStore reacts to every reassignment with a pair of
+                // node requests, and getSettings runs several times per
+                // boot/focus against an unchanged blob; each no-op swap
+                // fired probes whose only visible effect was raising the
+                // connection error on a slow network
+                if (!isEqual(this.settings, parsedSettings)) {
+                    this.settings = parsedSettings;
+                }
                 await MigrationsUtils.migrateRgsDefaultsToV2(parsedSettings);
                 await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
                 await MigrationsUtils.migrateRetiredSwapHosts(parsedSettings);
@@ -1957,7 +1965,12 @@ export default class SettingsStore {
                 await MigrationsUtils.migrateOlympusHostsToZeusLsp(
                     parsedSettings
                 );
-                this.settings = parsedSettings;
+                // second pass picks up in-place mutations the migrations
+                // made to parsedSettings, which the observable copy taken
+                // above does not see
+                if (!isEqual(this.settings, parsedSettings)) {
+                    this.settings = parsedSettings;
+                }
             } else {
                 console.log('attempting to load legacy settings');
 
