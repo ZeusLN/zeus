@@ -19,6 +19,7 @@ import { autorun } from 'mobx';
 
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
+import ChannelInfo from '../models/ChannelInfo';
 
 const channel = (
     localBalance: number,
@@ -147,5 +148,52 @@ describe('ChannelsStore.getChannels', () => {
         expect(store.totalOffline).toBe(0);
         expect(store.channels).toEqual([]);
         expect(store.error).toBe(true);
+    });
+});
+
+describe('ChannelsStore.getNodePolicy', () => {
+    it('returns undefined for LND-shaped channel info missing CLNRest fields (issue #4591)', () => {
+        const store = makeStore();
+        // lnd getChanInfo response for a channel where neither side's
+        // policy is in the graph yet: policies are null, and none of the
+        // CLNRest fields (delay, htlc_minimum_msat, ...) exist
+        store.chanInfo['123x456x0'] = new ChannelInfo({
+            channel_id: '123x456x0',
+            node1_pub: 'node1',
+            node2_pub: 'node2',
+            node1_policy: null,
+            node2_policy: null
+        });
+
+        expect(store.getNodePolicy('123x456x0')).toBeUndefined();
+    });
+
+    it('returns undefined when channel info is missing entirely', () => {
+        const store = makeStore();
+
+        expect(store.getNodePolicy('unknown')).toBeUndefined();
+    });
+
+    it('builds a policy from CLNRest-shaped channel info', () => {
+        const store = makeStore();
+        store.chanInfo['456'] = new ChannelInfo({
+            short_channel_id: '456',
+            delay: 34,
+            htlc_minimum_msat: 1000,
+            htlc_maximum_msat: 990000000,
+            base_fee_millisatoshi: 1000,
+            fee_per_millionth: 10,
+            last_update: 1700000000
+        });
+
+        expect(store.getNodePolicy('456')).toEqual({
+            time_lock_delta: 34,
+            min_htlc: '1000',
+            fee_base_msat: '1000',
+            fee_rate_milli_msat: '10',
+            disabled: false,
+            max_htlc_msat: '990000000',
+            last_update: 1700000000
+        });
     });
 });
