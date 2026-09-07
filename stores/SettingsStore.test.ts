@@ -85,6 +85,8 @@ jest.mock('../storage', () => {
     };
 });
 
+import { reaction } from 'mobx';
+
 import SettingsStore, {
     DEFAULT_SETTINGS,
     PosEnabled,
@@ -570,6 +572,46 @@ describe('SettingsStore.getSettings', () => {
         expect(settings.nodes?.[0].host).toEqual('example.com');
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
+    });
+
+    // getSettings used to reassign this.settings with a fresh JSON.parse
+    // result on every call, so every observer of the settings reference
+    // re-ran on each of the several loads per boot/focus even though
+    // nothing changed. Each no-op swap blocked the JS thread for
+    // 330-480 ms on a Galaxy S20+ (measured in review of #4594).
+    it('does not refire settings reactions when the stored blob is unchanged', async () => {
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        await store.getSettings();
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(0);
+    });
+
+    it('still swaps the settings when the stored blob changed', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        seedSettings({ fiat: 'EUR' });
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(1);
+        expect(store.settings.fiat).toEqual('EUR');
     });
 });
 
