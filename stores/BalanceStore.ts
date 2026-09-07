@@ -117,6 +117,12 @@ export default class BalanceStore {
                     this.totalBlockchainBalanceAccounts =
                         totalBlockchainBalanceAccounts;
                 }
+                // a successful fetch proves the node is reachable; without
+                // this, an error from one timed-out request (e.g. over a
+                // VPN that was still establishing) keeps the full-screen
+                // connection error up forever, since reset() only runs on
+                // reconnect
+                this.error = false;
                 this.loadingBlockchainBalance = false;
             });
             return {
@@ -145,6 +151,8 @@ export default class BalanceStore {
                     this.lightningBalance = lightningBalance;
                 }
 
+                // see getBlockchainBalance: reachability clears the error
+                this.error = false;
                 this.loadingLightningBalance = false;
             });
 
