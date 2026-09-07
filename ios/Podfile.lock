@@ -1,7 +1,7 @@
 PODS:
   - boost (1.84.0):
     - ReactNativeDependencies
-  - CashuDevKit (0.17.4)
+  - CashuDevKit (0.18.1)
   - CocoaAsyncSocket (7.6.5)
   - DoubleConversion (1.1.6):
     - ReactNativeDependencies
@@ -2905,7 +2905,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   boost: 8502bfdc46e2804408af2e163049ece181009af4
-  CashuDevKit: aca7feab2317e80d84a980f3f5ab5f174f18e8ee
+  CashuDevKit: 70dbd2fc68f8213a7e270e9de19b50b0bcc9c548
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4
