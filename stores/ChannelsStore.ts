@@ -83,7 +83,15 @@ export default class ChannelsStore {
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
-    @observable public hasSendingCapacity = false;
+    // Local balance sitting in channels that are currently inactive. These
+    // sats cannot be routed right now but are not lost: the peer may be
+    // momentarily disconnected. Tracked separately so callers can tell
+    // "no money" apart from "money you cannot reach at this instant".
+    @observable public totalOutboundOffline = 0;
+    // Whether a channel fetch has ever succeeded for this node. Callers use
+    // it to decide if the totals above are meaningful; it says nothing about
+    // whether there is any capacity.
+    @observable public hasChannelData = false;
     @observable public totalInbound = 0;
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
@@ -199,7 +207,7 @@ export default class ChannelsStore {
     @action
     public reset = () => {
         this.resetOpenChannel();
-        this.hasSendingCapacity = false;
+        this.hasChannelData = false;
         this.haveAnnouncedChannels = false;
         this.nodes = {};
         this.channels = [];
@@ -214,6 +222,7 @@ export default class ChannelsStore {
         this.filteredPeers = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
+        this.totalOutboundOffline = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
         this.channelsType = ChannelsType.Open;
@@ -504,8 +513,13 @@ export default class ChannelsStore {
 
     @action
     private getChannelsError = () => {
-        this.hasSendingCapacity = false;
+        this.hasChannelData = false;
         this.channels = [];
+        this.largestChannelSats = 0;
+        this.totalOutbound = 0;
+        this.totalOutboundOffline = 0;
+        this.totalInbound = 0;
+        this.totalOffline = 0;
         this.error = true;
         this.loading = false;
         this.closingChannel = false;
@@ -513,19 +527,23 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
-        this.hasSendingCapacity = false;
         this.loading = true;
-        this.channels = [];
-        this.largestChannelSats = 0;
-        this.totalOutbound = 0;
-        this.totalInbound = 0;
-        this.totalOffline = 0;
 
         const loadPromises = [
+            // The channel list and its totals are accumulated into locals and
+            // published in one go once the fetch succeeds. Zeroing them up
+            // front would make every refresh briefly report an empty wallet to
+            // observers (payment method selection, Receive's inbound checks,
+            // the channels header), and refreshes are frequent.
             BackendUtils.getChannels().then((data: any) => {
                 const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
                 );
+                let largestChannelSats = new BigNumber(0);
+                let totalInbound = new BigNumber(0);
+                let totalOutbound = new BigNumber(0);
+                let totalOutboundOffline = new BigNumber(0);
+                let totalOffline = new BigNumber(0);
                 channels.forEach((channel: Channel) => {
                     const channelRemoteBalance = new BigNumber(
                         channel.receivingCapacity
@@ -535,23 +553,26 @@ export default class ChannelsStore {
                     );
                     const channelTotal =
                         channelRemoteBalance.plus(channelLocalBalance);
-                    if (channelTotal.gt(this.largestChannelSats))
-                        this.largestChannelSats = channelTotal.toNumber();
+                    if (channelTotal.gt(largestChannelSats))
+                        largestChannelSats = channelTotal;
                     if (!channel.isActive) {
-                        this.totalOffline = new BigNumber(this.totalOffline)
-                            .plus(channelTotal)
-                            .toNumber();
+                        totalOffline = totalOffline.plus(channelTotal);
+                        totalOutboundOffline =
+                            totalOutboundOffline.plus(channelLocalBalance);
                     } else {
-                        this.totalInbound = new BigNumber(this.totalInbound)
-                            .plus(channelRemoteBalance)
-                            .toNumber();
-                        this.totalOutbound = new BigNumber(this.totalOutbound)
-                            .plus(channelLocalBalance)
-                            .toNumber();
+                        totalInbound = totalInbound.plus(channelRemoteBalance);
+                        totalOutbound = totalOutbound.plus(channelLocalBalance);
                     }
                 });
-                this.channels = channels;
-                this.hasSendingCapacity = true;
+                runInAction(() => {
+                    this.largestChannelSats = largestChannelSats.toNumber();
+                    this.totalInbound = totalInbound.toNumber();
+                    this.totalOutbound = totalOutbound.toNumber();
+                    this.totalOutboundOffline = totalOutboundOffline.toNumber();
+                    this.totalOffline = totalOffline.toNumber();
+                    this.channels = channels;
+                    this.hasChannelData = true;
+                });
             })
         ];
 

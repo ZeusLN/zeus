@@ -35,6 +35,9 @@ interface PaymentMethodListProps {
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningBalance?: number | string;
     lightningBalanceLabel?: string;
+    // Balance the lightning rows are judged against, when it differs from the
+    // one displayed (e.g. capacity locked in a momentarily offline channel).
+    lightningEligibilityBalance?: number | string;
     onchainBalance?: number | string;
     ecashBalance?: number | string;
     accounts?: Array<{
@@ -55,6 +58,9 @@ type DataRow = {
     disabled?: boolean;
     balance?: number | string;
     balanceLabel?: string;
+    // Defaults to `balance`. Set when the row should be judged against a
+    // different figure than the one it shows.
+    eligibilityBalance?: number | string;
     account?: string;
     hidden?: boolean;
     satAmount?: number;
@@ -94,10 +100,15 @@ const hasInsufficientBalance = (
     Number(balance) === 0 ||
     (satAmount !== undefined && satAmount > Number(balance));
 
+const isRowInsufficient = (item: DataRow) =>
+    !item.isWithdraw &&
+    hasInsufficientBalance(
+        item.eligibilityBalance ?? item.balance,
+        item.satAmount
+    );
+
 const Row = ({ item }: { item: DataRow }) => {
-    const insufficient =
-        !item.isWithdraw &&
-        hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient = isRowInsufficient(item);
     const layerLabel = LAYER_LOCALE_MAP[item.layer]
         ? localeString(LAYER_LOCALE_MAP[item.layer])
         : item.layer;
@@ -205,9 +216,7 @@ const SwipeableRow = ({
     clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
-    const insufficient =
-        !item.isWithdraw &&
-        hasInsufficientBalance(item.balance, item.satAmount);
+    const insufficient = isRowInsufficient(item);
     const rowDisabled = item.disabled || insufficient;
     if (item.layer === 'Lightning') {
         return (
@@ -312,11 +321,15 @@ export default class PaymentMethodList extends Component<
             clinkNoffer,
             lnurlParams,
             lightningBalance,
+            lightningEligibilityBalance,
             onchainBalance,
             ecashBalance,
             accounts
         } = this.props;
         let DATA: DataRow[] = [];
+
+        const lightningEligibility =
+            lightningEligibilityBalance ?? lightningBalance;
 
         const isWithdraw = lnurlParams?.tag === 'withdrawRequest';
         const subtitle = isWithdraw
@@ -329,6 +342,7 @@ export default class PaymentMethodList extends Component<
                 subtitle,
                 balance: lightningBalance,
                 balanceLabel: this.props.lightningBalanceLabel,
+                eligibilityBalance: lightningEligibility,
                 disabled: false,
                 isWithdraw,
                 satAmount
@@ -355,6 +369,7 @@ export default class PaymentMethodList extends Component<
                 subtitle: lightningAddress,
                 balance: lightningBalance,
                 balanceLabel: this.props.lightningBalanceLabel,
+                eligibilityBalance: lightningEligibility,
                 disabled: false,
                 satAmount
             });
@@ -367,6 +382,7 @@ export default class PaymentMethodList extends Component<
                 disabled: !nodeInfoStore.supportsOffers,
                 balance: lightningBalance,
                 balanceLabel: this.props.lightningBalanceLabel,
+                eligibilityBalance: lightningEligibility,
                 satAmount
             });
         }
@@ -431,14 +447,19 @@ export default class PaymentMethodList extends Component<
                 Number(lightningBalance ?? 0),
                 ecashAvailable ? Number(ecashBalance ?? 0) : 0
             );
+            const clinkEligibility = Math.max(
+                Number(lightningEligibility ?? 0),
+                ecashAvailable ? Number(ecashBalance ?? 0) : 0
+            );
             DATA.push({
                 layer: 'CLINK',
                 subtitle: clinkNoffer,
                 // No funds in either bucket means no path to pay,
                 // regardless of the noffer's pricing type.
-                disabled: clinkBalance === 0,
+                disabled: clinkEligibility === 0,
                 ...(embeddedAmount !== undefined && {
                     balance: clinkBalance,
+                    eligibilityBalance: clinkEligibility,
                     // Compare against the noffer's embedded price (the
                     // amount that will actually be paid) rather than any
                     // BIP21 `amount=` that may have come in separately.

@@ -60,14 +60,22 @@ function expectLightningBalance(
 describe('ChoosePaymentMethod sending capacity', () => {
     let view: ChoosePaymentMethod;
     let balances: { lightningBalance: number; totalBlockchainBalance: number };
-    let channels: { hasSendingCapacity: boolean; totalOutbound: number };
+    let channels: {
+        hasChannelData: boolean;
+        totalOutbound: number;
+        totalOutboundOffline: number;
+    };
 
     beforeEach(() => {
         jest.mocked(BackendUtils.supportsChannelManagement).mockReturnValue(
             true
         );
         balances = { lightningBalance: 12291, totalBlockchainBalance: 0 };
-        channels = { hasSendingCapacity: true, totalOutbound: 11243 };
+        channels = {
+            hasChannelData: true,
+            totalOutbound: 11243,
+            totalOutboundOffline: 0
+        };
         view = new ChoosePaymentMethod({
             navigation: {},
             route: { params: {} },
@@ -103,7 +111,7 @@ describe('ChoosePaymentMethod sending capacity', () => {
     it.each(['unavailable', 'missing', 'unsupported'])(
         'falls back to the balance when channel data is %s',
         (scenario) => {
-            if (scenario === 'unavailable') channels.hasSendingCapacity = false;
+            if (scenario === 'unavailable') channels.hasChannelData = false;
             if (scenario === 'missing') {
                 const state = view.state;
                 view = new ChoosePaymentMethod({
@@ -124,6 +132,68 @@ describe('ChoosePaymentMethod sending capacity', () => {
             expect(view.hasInsufficientFunds()).toBe(true);
         }
     );
+
+    describe('with channels whose peer is offline', () => {
+        // A disconnected peer is routine for the first seconds after
+        // foregrounding. That capacity is unreachable right now but the
+        // wallet is not out of money, so it must not read as
+        // "not enough funds".
+        it('does not report insufficient funds when offline capacity covers the payment', () => {
+            channels.totalOutbound = 0;
+            channels.totalOutboundOffline = 11243;
+            view.state.satAmount = '11000';
+
+            expect(view.hasInsufficientFunds()).toBe(false);
+            expect(view.hasOfflineCapacityGap).toBe(true);
+        });
+
+        it('still reports insufficient funds when even the offline capacity falls short', () => {
+            channels.totalOutbound = 0;
+            channels.totalOutboundOffline = 11243;
+            view.state.satAmount = '12000';
+
+            expect(view.hasInsufficientFunds()).toBe(true);
+        });
+
+        it('flags the gap when the payment exceeds only the active capacity', () => {
+            channels.totalOutbound = 5000;
+            channels.totalOutboundOffline = 7000;
+            view.state.satAmount = '11000';
+
+            expect(view.hasInsufficientFunds()).toBe(false);
+            expect(view.hasOfflineCapacityGap).toBe(true);
+            // the row still shows what is actually spendable right now
+            expectLightningBalance(view, 5000, true);
+            expect(view.lightningSpendableBalance).toBe(12000);
+        });
+
+        it('does not flag a gap when the active capacity already covers it', () => {
+            channels.totalOutbound = 11243;
+            channels.totalOutboundOffline = 7000;
+            view.state.satAmount = '11000';
+
+            expect(view.hasInsufficientFunds()).toBe(false);
+            expect(view.hasOfflineCapacityGap).toBe(false);
+        });
+
+        it('passes the offline-inclusive figure to the list for eligibility only', () => {
+            channels.totalOutbound = 0;
+            channels.totalOutboundOffline = 11243;
+            view.state.satAmount = '11000';
+
+            const list = React.Children.toArray(
+                view.render().props.children
+            ).find(
+                (child) =>
+                    React.isValidElement(child) &&
+                    child.type === PaymentMethodList
+            ) as React.ReactElement<
+                React.ComponentProps<typeof PaymentMethodList>
+            >;
+            expect(list.props.lightningBalance).toBe(0);
+            expect(list.props.lightningEligibilityBalance).toBe(11243);
+        });
+    });
 
     it.each([12291, 0])(
         'keeps the original balance %i and never reports insufficient funds for LNURL withdraw',

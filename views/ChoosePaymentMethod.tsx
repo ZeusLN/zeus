@@ -10,7 +10,10 @@ import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../components/SuccessErrorMessage';
 import SyncingStatus from '../components/SyncingStatus';
 import RecoveryStatus from '../components/RecoveryStatus';
 import RescanStatus from '../components/RescanStatus';
@@ -188,14 +191,48 @@ export default class ChoosePaymentMethod extends React.Component<
         return (
             this.state.lnurlParams?.tag !== 'withdrawRequest' &&
             BackendUtils.supportsChannelManagement() &&
-            !!this.props.ChannelsStore?.hasSendingCapacity
+            !!this.props.ChannelsStore?.hasChannelData
         );
     }
 
+    /**
+     * What the wallet can route right now, and what gets displayed under the
+     * "Available to send" label. Excludes channels whose peer is currently
+     * disconnected.
+     */
     get lightningPaymentBalance() {
         return this.usesSendingCapacity
             ? this.props.ChannelsStore!.totalOutbound
             : this.props.BalanceStore!.lightningBalance;
+    }
+
+    /**
+     * What the wallet could route once every channel is connected. Used for
+     * eligibility rather than display: a peer that is offline for a few
+     * seconds after foregrounding should not turn into "not enough funds"
+     * for a payment the wallet can actually afford.
+     */
+    get lightningSpendableBalance() {
+        if (!this.usesSendingCapacity)
+            return this.props.BalanceStore!.lightningBalance;
+        const { totalOutbound, totalOutboundOffline } =
+            this.props.ChannelsStore!;
+        return totalOutbound + totalOutboundOffline;
+    }
+
+    /**
+     * True when the payment only fits if offline channels come back. The row
+     * stays selectable in that case, but the user is told why the payment may
+     * not go through yet.
+     */
+    get hasOfflineCapacityGap() {
+        if (!this.usesSendingCapacity) return false;
+        const { totalOutbound, totalOutboundOffline } =
+            this.props.ChannelsStore!;
+        if (totalOutboundOffline <= 0) return false;
+        if (totalOutbound === 0) return true;
+        const satAmount = Number(this.state.satAmount);
+        return !isNaN(satAmount) && satAmount > totalOutbound;
     }
 
     hasInsufficientFunds = () => {
@@ -218,7 +255,7 @@ export default class ChoosePaymentMethod extends React.Component<
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
-        const lightning_ = Number(this.lightningPaymentBalance);
+        const lightning_ = Number(this.lightningSpendableBalance);
         const ecash = Number(ecashBalance);
         const total = onchain + lightning_ + ecash;
 
@@ -348,6 +385,15 @@ export default class ChoosePaymentMethod extends React.Component<
                         />
                     </View>
                 )}
+                {!hasInsufficientFunds && this.hasOfflineCapacityGap && (
+                    <View style={styles.errorSection}>
+                        <WarningMessage
+                            message={localeString(
+                                'views.ChoosePaymentMethod.channelsOffline'
+                            )}
+                        />
+                    </View>
+                )}
 
                 <PaymentMethodList
                     navigation={navigation}
@@ -362,6 +408,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     lnurlParams={lnurlParams}
                     // balance data
                     lightningBalance={this.lightningPaymentBalance}
+                    lightningEligibilityBalance={this.lightningSpendableBalance}
                     lightningBalanceLabel={
                         this.usesSendingCapacity
                             ? localeString(
