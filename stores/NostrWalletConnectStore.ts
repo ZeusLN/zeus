@@ -189,9 +189,15 @@ export default class NostrWalletConnectStore {
         number
     >();
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
+    // A list, not a single slot: overlapping mutations of the same kind
+    // (e.g. two updates, or two rotations) on one connection must each keep
+    // their own marker alive for the duration of their own critical section.
+    // A single overwritable slot lets the first one's cleanup clear the
+    // second one's marker out from under it, leaving its window unguarded.
+    // See pushPendingMutation/popPendingMutation/mutationRejection below.
     private pendingConnectionMutations = new Map<
         string,
-        PendingConnectionMutation
+        PendingConnectionMutation[]
     >();
     private inFlightHandlersByConnection = new Map<
         string,
@@ -660,7 +666,7 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            this.pendingConnectionMutations.set(connectionId, 'delete');
+            this.pushPendingMutation(connectionId, 'delete');
             try {
                 const relayUrl = connection.relayUrl;
                 const hadActiveSubscription =
@@ -706,16 +712,10 @@ export default class NostrWalletConnectStore {
                 }
                 await this.saveConnections();
             } finally {
-                // Only clear our own marker: an update/rotate that started
-                // while this delete was in flight leaves 'delete' in place
-                // (see updateConnection) and must not have it cleared out
-                // from under it by whichever finally runs second.
-                if (
-                    this.pendingConnectionMutations.get(connectionId) ===
-                    'delete'
-                ) {
-                    this.pendingConnectionMutations.delete(connectionId);
-                }
+                // Pop only our own 'delete' entry: a concurrent update/rotate
+                // that pushed its own marker while this delete was in flight
+                // (see updateConnection) keeps its marker in the list.
+                this.popPendingMutation(connectionId, 'delete');
             }
         } catch (error: any) {
             runInAction(() => {
@@ -802,21 +802,12 @@ export default class NostrWalletConnectStore {
             const ownMutationKind: PendingConnectionMutation = relayUrlChanged
                 ? 'rotate'
                 : 'update';
-            // Never downgrade a concurrent delete or rotate: if this
-            // connection already has one of those revocation markers set,
-            // leave it in place so requests keep seeing the (correct)
-            // revocation signal instead of being demoted to retryable.
-            const existingMutation =
-                this.pendingConnectionMutations.get(connectionId);
-            if (
-                existingMutation !== 'delete' &&
-                existingMutation !== 'rotate'
-            ) {
-                this.pendingConnectionMutations.set(
-                    connectionId,
-                    ownMutationKind
-                );
-            }
+            // Push our own marker regardless of what else is pending: a
+            // concurrent delete/rotate keeps its own entry in the list (see
+            // mutationRejection, which reports the most severe kind present),
+            // and a second overlapping update/rotate gets its own entry too
+            // so this mutation's finally can't clear it out early.
+            this.pushPendingMutation(connectionId, ownMutationKind);
             try {
                 const hadActiveSubscription =
                     this.activeSubscriptions.has(connectionId);
@@ -932,15 +923,10 @@ export default class NostrWalletConnectStore {
                 await this.subscribeToConnection(connection);
                 return { success: true };
             } finally {
-                // Only clear our own marker: if a concurrent delete
-                // superseded it (see above), leave that marker for
-                // deleteConnection's own finally to clear.
-                if (
-                    this.pendingConnectionMutations.get(connectionId) ===
-                    ownMutationKind
-                ) {
-                    this.pendingConnectionMutations.delete(connectionId);
-                }
+                // Pop only our own entry: a concurrent delete or another
+                // overlapping update/rotate keeps its marker in the list
+                // until its own finally runs.
+                this.popPendingMutation(connectionId, ownMutationKind);
             }
         } catch (error: any) {
             console.error('Failed to update NWC connection:', error);
@@ -1802,24 +1788,55 @@ export default class NostrWalletConnectStore {
         ) as T;
     }
 
+    // Adds one occurrence of `kind` to the connection's pending-mutation
+    // list. See the field declaration for why this is a list, not a slot.
+    private pushPendingMutation(
+        connectionId: string,
+        kind: PendingConnectionMutation
+    ): void {
+        const existing = this.pendingConnectionMutations.get(connectionId);
+        if (existing) {
+            existing.push(kind);
+        } else {
+            this.pendingConnectionMutations.set(connectionId, [kind]);
+        }
+    }
+
+    // Removes exactly one occurrence of `kind` (the caller's own mutation),
+    // leaving any other pending mutations of the same or different kind
+    // untouched.
+    private popPendingMutation(
+        connectionId: string,
+        kind: PendingConnectionMutation
+    ): void {
+        const existing = this.pendingConnectionMutations.get(connectionId);
+        if (!existing) return;
+        const index = existing.indexOf(kind);
+        if (index !== -1) {
+            existing.splice(index, 1);
+        }
+        if (existing.length === 0) {
+            this.pendingConnectionMutations.delete(connectionId);
+        }
+    }
+
     // 'delete' and 'rotate' are true revocations (the pairing is ending, or
     // has just been rebound to a new pubkey) so they get UNAUTHORIZED.
     // 'update' is a short, retryable critical section so it gets RATE_LIMITED
     // rather than a signal some clients read as permanent revocation.
+    // When multiple mutations overlap, the most severe kind present wins.
     private mutationRejection<T>(connectionId: string): T | undefined {
-        const mutation = this.pendingConnectionMutations.get(connectionId);
-        if (mutation === 'delete' || mutation === 'rotate') {
+        const mutations = this.pendingConnectionMutations.get(connectionId);
+        if (!mutations?.length) return undefined;
+        if (mutations.includes('delete') || mutations.includes('rotate')) {
             return this.unauthorizedConnectionResponse<T>();
         }
-        if (mutation === 'update') {
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.connectionUpdating'
-                ),
-                Nip47ErrorCode.RATE_LIMITED
-            ) as T;
-        }
-        return undefined;
+        return NostrConnectUtils.createNip47Error(
+            localeString(
+                'stores.NostrWalletConnectStore.error.connectionUpdating'
+            ),
+            Nip47ErrorCode.RATE_LIMITED
+        ) as T;
     }
 
     /**

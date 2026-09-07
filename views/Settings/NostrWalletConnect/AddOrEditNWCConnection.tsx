@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { BackHandler, View, StyleSheet, ScrollView, Text } from 'react-native';
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -99,6 +99,31 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     private unsubscribeFocus?: () => void;
     private scrollViewRef = React.createRef<ScrollView>();
+    private releaseNavGuard?: () => void;
+
+    // Hiding the header Back button (see render()) doesn't stop the
+    // hardware back button or the iOS swipe-back gesture from leaving
+    // mid-save, which is the entry path for the overlapping-mutation races
+    // in NostrWalletConnectStore (two saves in flight on one connection id).
+    // Mirrors utils/DataClearUtils.ts's blockNavigationDuringWipe, but
+    // releases once the save settles instead of holding until app restart.
+    private blockNavigation = (): (() => void) => {
+        const { navigation } = this.props;
+        navigation.setOptions({ gestureEnabled: false });
+        const backSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            () => true
+        );
+        const removeBeforeRemove = navigation.addListener(
+            'beforeRemove',
+            (e: any) => e.preventDefault()
+        );
+        return () => {
+            navigation.setOptions({ gestureEnabled: true });
+            backSubscription.remove();
+            removeBeforeRemove();
+        };
+    };
 
     loadData = async () => {
         const { route, NostrWalletConnectStore } = this.props;
@@ -131,6 +156,9 @@ export default class AddOrEditNWCConnection extends React.Component<
     componentWillUnmount() {
         if (this.unsubscribeFocus) {
             this.unsubscribeFocus();
+        }
+        if (this.releaseNavGuard) {
+            this.releaseNavGuard();
         }
     }
 
@@ -560,6 +588,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         const { connectionId, isEdit } = route.params ?? {};
 
         this.setState({ loading: true, error: '' });
+        this.releaseNavGuard = this.blockNavigation();
 
         try {
             const params = await this.buildConnectionParams(
@@ -611,6 +640,10 @@ export default class AddOrEditNWCConnection extends React.Component<
             this.setState({ error: (error as Error).message, loading: false });
         } finally {
             this.setState({ loading: false });
+            if (this.releaseNavGuard) {
+                this.releaseNavGuard();
+                this.releaseNavGuard = undefined;
+            }
         }
     };
 
@@ -856,7 +889,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent="Back"
+                    leftComponent={loading ? undefined : 'Back'}
                     centerComponent={{
                         text: route.params?.isEdit
                             ? localeString(
