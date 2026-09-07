@@ -80,6 +80,8 @@ jest.mock('../storage', () => {
     };
 });
 
+import { reaction } from 'mobx';
+
 import SettingsStore, {
     DEFAULT_LSP_MAINNET,
     DEFAULT_LSP_MUTINYNET,
@@ -352,6 +354,48 @@ describe('SettingsStore.getSettings', () => {
         expect(settings.nodes?.[0].host).toEqual('example.com');
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
+    });
+
+    // Regression coverage for issue #4593: getSettings reassigned
+    // this.settings with a fresh JSON.parse result on every call, so MobX
+    // reactions on the settings reference (BalanceStore's fires a pair of
+    // node requests) re-ran on each of the several loads per boot/focus
+    // even though nothing changed. On a slow network those no-op probes
+    // were the requests that timed out and raised the connection error
+    // pane.
+    it('does not refire settings reactions when the stored blob is unchanged', async () => {
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        await store.getSettings();
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(0);
+    });
+
+    it('still swaps the settings when the stored blob changed', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        seedSettings({ fiat: 'EUR' });
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(1);
+        expect(store.settings.fiat).toEqual('EUR');
     });
 });
 
