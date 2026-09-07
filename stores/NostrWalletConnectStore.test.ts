@@ -1694,6 +1694,32 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
         expect(handler).not.toHaveBeenCalled();
     });
 
+    it('rejects with UNAUTHORIZED when delete is not the first entry in the pending list', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        const handler = jest.fn();
+
+        // 'update' pushed first (still running), 'delete' pushed second by
+        // a mutation that started concurrently: mutationRejection must
+        // scan the whole list for the most severe kind, not just check the
+        // first entry.
+        (store as any).pushPendingMutation(connection.id, 'update');
+        (store as any).pushPendingMutation(connection.id, 'delete');
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            handler
+        );
+
+        expect(response.error).toEqual({
+            code: 'UNAUTHORIZED',
+            message: 'stores.NostrWalletConnectStore.error.connectionNotFound'
+        });
+        expect(handler).not.toHaveBeenCalled();
+    });
+
     it('defers relay release when updateConnection awaited in-flight handlers', async () => {
         jest.useFakeTimers();
         const store = buildStore();

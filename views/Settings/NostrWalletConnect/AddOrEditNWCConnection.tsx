@@ -584,6 +584,14 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     createOrUpdateConnection = async () => {
+        // this.state.loading is stale until the next render, so a second
+        // tap landing before that re-render disables the button would
+        // otherwise re-enter this method and overwrite releaseNavGuard,
+        // orphaning the first guard's cleanup (leaked global
+        // hardwareBackPress/beforeRemove listeners). This field is set
+        // synchronously below, so it closes the race the state flag can't.
+        if (this.releaseNavGuard) return;
+
         const { NostrWalletConnectStore, route, navigation } = this.props;
         const { connectionId, isEdit } = route.params ?? {};
 
