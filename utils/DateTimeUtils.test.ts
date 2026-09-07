@@ -49,6 +49,20 @@ describe('listFormattedDate', () => {
 
         expect(result).toEqual('N/A');
     });
+
+    it('returns the raw value if timestamp is not date-coercible', () => {
+        const result = DateTimeUtils.listFormattedDate('not-a-date');
+
+        expect(result).toEqual('not-a-date');
+    });
+
+    it('formats an empty string as the epoch rather than N/A', () => {
+        // Number('') is 0, so '' stays on the happy path as a valid date
+        const result = DateTimeUtils.listFormattedDate('');
+
+        expect(result).not.toEqual('N/A');
+        expect(result).toMatch(/'69|'70/);
+    });
 });
 
 describe('listFormattedDateShort', () => {
