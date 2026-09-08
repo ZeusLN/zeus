@@ -8404,6 +8404,16 @@ react-native-nfc-manager@3.17.2:
   resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-3.17.2.tgz#81924946b7fe381bbf85bfb16af90cb05cac4944"
   integrity sha512-0NryP/Iw2hzw4MVH5KCngoRerNUrnRok6VfLrlFcFZRKyTQ7KTgpsdDxCB6cR33qYNyEDrWGBayfAI+ym5gt8Q==
 
+react-native-nitro-image@0.15.2:
+  version "0.15.2"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-image/-/react-native-nitro-image-0.15.2.tgz#d7807f4a12ee7ecbc94990b2290d83b16fef9165"
+  integrity sha512-WiaGnORmfNIIqtRJW76TWYNet1YZx1MWDlSOxd0jfcIBN4KjkVVMDVpvO01eCfpxKVG0ez9nA2iLQkPVlGFj+A==
+
+react-native-nitro-modules@0.37.1:
+  version "0.37.1"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.37.1.tgz#368bda3038ebe796b219d98e0a364f9166e2cc7c"
+  integrity sha512-KpW6EQVQ/bfegpCGxN9Be+ndvsfj56t4IESEvCASu9gWpJa/NDfHpIeIwCOvZQ3eXmLEj6YD4wCLqcC1FJPr2w==
+
 react-native-nitro-tor@0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/react-native-nitro-tor/-/react-native-nitro-tor-0.6.0.tgz#30ab0ab07ce71f1147fe91ddf2da4e79095a3ab8"
@@ -8545,10 +8555,15 @@ react-native-view-shot@5.1.1:
   dependencies:
     html2canvas "^1.4.1"
 
-react-native-vision-camera@4.7.3:
-  version "4.7.3"
-  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-4.7.3.tgz#ed03cedabcaec54774f5aa40e69afa30069924d4"
-  integrity sha512-g1/neOyjSqn1kaAa2FxI/qp5KzNvPcF0bnQw6NntfbxH6tm0+8WFZszlgb5OV+iYlB6lFUztCbDtyz5IpL47OA==
+react-native-vision-camera-barcode-scanner@5.2.3:
+  version "5.2.3"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera-barcode-scanner/-/react-native-vision-camera-barcode-scanner-5.2.3.tgz#247e5fa2a3d37266bb75d0406322c104dde0b78a"
+  integrity sha512-p8SyswRlr9Ty5gFcQ1qM8gmU8hKbHyRLyu9TKFMD7oUXsZDF93NKGvcr4Qdr16Z+AIj3HYA/fW1NgoeY+L353g==
+
+react-native-vision-camera@5.2.3:
+  version "5.2.3"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-5.2.3.tgz#8b489ae2939dbebc441917069fc0c3146f49aa93"
+  integrity sha512-OHjgM8BPzxppTqbF1FEltj+fxvisj4xdghM7ypoT1p6cOe28HByhOJP1c7LkBiUiZuotbsdbQwGdJ8nU7ZvPzA==
 
 react-native-worklets@0.12.1:
   version "0.12.1"
