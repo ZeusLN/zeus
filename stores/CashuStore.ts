@@ -1611,9 +1611,10 @@ export default class CashuStore {
      * against sentTokens at next startup.
      */
     private finalizePendingOfflineSend = async (
-        encodedToken: string
+        encodedToken: string,
+        nodeDir?: string
     ): Promise<void> => {
-        const key = this.pendingOfflineSendsKey();
+        const key = this.pendingOfflineSendsKey(nodeDir);
         return this.enqueueOfflineProofOp(async () => {
             const records = await this.loadPendingOfflineSends(key);
             const remaining = records.filter(
@@ -1783,7 +1784,8 @@ export default class CashuStore {
         p2pkPubkey?: string,
         locktime?: number,
         sendKind?: CDKSendKind,
-        tolerance?: number
+        tolerance?: number,
+        nodeDir?: string
     ): Promise<CDKToken> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
@@ -1824,11 +1826,22 @@ export default class CashuStore {
             }
             // Capture the storage key before queueing so a wallet switch
             // can't redirect a queued send to another node's namespace.
-            const pendingKey = this.pendingOfflineSendsKey(this.getNodeDir());
+            // mintToken passes the dir it pinned before its first await;
+            // fall back to the current dir for direct callers.
+            const sendNodeDir = nodeDir ?? this.getNodeDir();
+            const pendingKey = this.pendingOfflineSendsKey(sendNodeDir);
             // The critical section is serialized so overlapping sends can't
             // select the same proofs: the second send re-reads the database
             // only after the first send's proofs have been removed.
             return this.enqueueOfflineProofOp(async () => {
+                // The queue can run after a wallet switch; selecting from
+                // the now-active wallet would burn its proofs under a
+                // record pinned to the original wallet. Abort instead.
+                if (this.getNodeDir() !== sendNodeDir) {
+                    throw new Error(
+                        'Active wallet changed during offline send'
+                    );
+                }
                 const allProofs = await CashuDevKit.getUnspentProofs(mintUrl);
                 const { selected, total } = this.selectProofsForAmount(
                     allProofs,
@@ -5720,6 +5733,13 @@ export default class CashuStore {
         });
 
         const mintUrl = this.selectedMintUrl;
+        // Everything this send persists must land under the wallet that
+        // initiated it. The method awaits several times (overpay Alert,
+        // CDK calls) and the active wallet can change underneath those
+        // awaits, so capture the namespace once up front and thread it
+        // through the pending record, the sent-tokens write, and the
+        // finalize step.
+        const nodeDir = this.getNodeDir();
 
         try {
             // Check balance via CDK
@@ -5788,7 +5808,10 @@ export default class CashuStore {
                 Number(value),
                 memo,
                 pubkey,
-                lockTime
+                lockTime,
+                undefined,
+                undefined,
+                nodeDir
             );
 
             const token = cdkToken.encoded;
@@ -5806,17 +5829,37 @@ export default class CashuStore {
             });
 
             // Record sent token activity
-            this.sentTokens?.push(decoded);
-            await Storage.setItem(
-                `${this.getNodeDir()}-cashu-sent-tokens`,
-                this.sentTokens
-            );
+            if (this.getNodeDir() === nodeDir) {
+                this.sentTokens?.push(decoded);
+                await Storage.setItem(
+                    `${nodeDir}-cashu-sent-tokens`,
+                    this.sentTokens
+                );
+            } else {
+                // The active wallet changed while the send was in flight,
+                // so this.sentTokens now holds the other wallet's history.
+                // Append to the initiating wallet's stored list instead of
+                // pushing to (and persisting) the wrong one.
+                const sentKey = `${nodeDir}-cashu-sent-tokens`;
+                let storedTokens: any[] = [];
+                try {
+                    const stored = await Storage.getItem(sentKey);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        if (Array.isArray(parsed)) storedTokens = parsed;
+                    }
+                } catch (e) {
+                    console.warn('Failed to load sent tokens:', e);
+                }
+                storedTokens.push(decoded);
+                await Storage.setItem(sentKey, storedTokens);
+            }
 
             // The token is now durably recorded; drop the offline pending
             // record. Must never fail the send at this point: a leftover
             // record is cleaned up at next startup.
             try {
-                await this.finalizePendingOfflineSend(token);
+                await this.finalizePendingOfflineSend(token, nodeDir);
             } catch (e) {
                 console.warn('Failed to finalize pending offline send:', e);
             }
