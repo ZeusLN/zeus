@@ -17,12 +17,17 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 jest.mock('react-native-vision-camera', () => ({
-    Camera: Object.assign(() => null, {
-        getCameraPermissionStatus: () => 'denied',
-        requestCameraPermission: () => Promise.resolve('denied')
-    }),
+    Camera: () => null,
     useCameraDevice: () => undefined,
-    useCodeScanner: () => ({})
+    useCameraPermission: () => ({
+        hasPermission: false,
+        canRequestPermission: false,
+        requestPermission: () => Promise.resolve(false)
+    })
+}));
+
+jest.mock('react-native-vision-camera-barcode-scanner', () => ({
+    useBarcodeScannerOutput: () => ({})
 }));
 
 import CalculatorApp from './CalculatorApp';
