@@ -62,6 +62,12 @@ jest.mock('./SleepUtils', () => ({
 jest.mock('../stores/ChannelBackupStore', () => ({
     BACKUPS_HOST: 'https://backups.example.com'
 }));
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { enableTor: false }
+}));
+jest.mock('./NetworkUtils', () => ({
+    networkFetch: jest.fn()
+}));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
     getItem: jest.fn().mockResolvedValue(null)
