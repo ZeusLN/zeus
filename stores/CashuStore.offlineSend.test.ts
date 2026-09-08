@@ -212,6 +212,33 @@ describe('CashuStore offline send safety', () => {
             expect(tokenA.encoded).not.toBe(tokenB.encoded);
         });
 
+        it('aborts a queued send when the active wallet changed before proof selection', async () => {
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            // Simulate a wallet switch between the pin (mintToken entry)
+            // and the queued critical section running.
+            (store as any).settingsStore.lndDir = 'othernode';
+
+            await expect(
+                store.sendTokenCDK(
+                    MINT_URL,
+                    16,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    NODE_DIR
+                )
+            ).rejects.toThrow('Active wallet changed');
+
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
+            expect(getPendingRecords()).toEqual([]);
+            expect(
+                mockBacking['othernode-cashu-pending-offline-sends']
+            ).toBeUndefined();
+        });
+
         it('fails the second concurrent send when the pool is exhausted', async () => {
             mockProofPool.current = [proof(16, 'a')];
             const store = buildStore();
@@ -245,6 +272,32 @@ describe('CashuStore offline send safety', () => {
             );
             expect(sentWrite).toBeGreaterThanOrEqual(0);
             expect(finalizeWrite).toBeGreaterThan(sentWrite);
+        });
+
+        it('keeps all writes in the initiating wallet namespace when the wallet switches mid-send', async () => {
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            // Switch wallets inside the critical section, after the guard
+            // and the pending-record write but while the send is still in
+            // flight: the sent token and the finalize must both target the
+            // initiating node, and the new wallet's in-memory list must
+            // stay untouched.
+            mockRemoveProofs.mockImplementationOnce(async (ys: string[]) => {
+                mockCallLog.push(`removeProofs:${ys.join(',')}`);
+                mockProofPool.current = mockProofPool.current.filter(
+                    (p) => !ys.includes(p.y)
+                );
+                (store as any).settingsStore.lndDir = 'othernode';
+            });
+
+            const result = await store.mintToken({ memo: '', value: '16' });
+
+            expect(result).toBeDefined();
+            expect(getSentTokens()).toHaveLength(1);
+            expect(getSentTokens()[0].encodedToken).toBe(result!.token);
+            expect(mockBacking['othernode-cashu-sent-tokens']).toBeUndefined();
+            expect(getPendingRecords()).toEqual([]);
+            expect(store.sentTokens).toHaveLength(0);
         });
 
         it('refuses re-entry while a send is already in flight', async () => {
