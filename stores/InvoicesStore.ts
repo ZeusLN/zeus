@@ -186,6 +186,7 @@ export default class InvoicesStore {
         addressType,
         customPreimage,
         noLsp,
+        forceLsp,
         skipOnchain
     }: {
         memo: string;
@@ -199,6 +200,7 @@ export default class InvoicesStore {
         addressType?: string;
         customPreimage?: string;
         noLsp?: boolean;
+        forceLsp?: boolean;
         skipOnchain?: boolean;
     }) => {
         this.creatingInvoice = true;
@@ -213,7 +215,8 @@ export default class InvoicesStore {
             routeHintChannels,
             unified: true,
             customPreimage,
-            noLsp
+            noLsp,
+            forceLsp
         })
             .then((result) => {
                 if (!result?.rHash || !result?.paymentRequest) {
@@ -279,7 +282,8 @@ export default class InvoicesStore {
         routeHintChannels,
         unified,
         customPreimage,
-        noLsp
+        noLsp,
+        forceLsp
     }: {
         memo: string;
         value: string;
@@ -292,6 +296,7 @@ export default class InvoicesStore {
         unified?: boolean;
         customPreimage?: string;
         noLsp?: boolean;
+        forceLsp?: boolean;
     }) => {
         this.lspStore?.resetFee();
         this.payment_request = null;
@@ -372,7 +377,7 @@ export default class InvoicesStore {
 
         if (
             BackendUtils.supportsFlowLSP() &&
-            this.settingsStore.settings?.enableLSP &&
+            (this.settingsStore.settings?.enableLSP || forceLsp) &&
             value &&
             value !== '0' &&
             !noLsp
@@ -447,7 +452,7 @@ export default class InvoicesStore {
                 let jit_bolt11: string = '';
                 if (
                     BackendUtils.supportsFlowLSP() &&
-                    this.settingsStore.settings?.enableLSP &&
+                    (this.settingsStore.settings?.enableLSP || forceLsp) &&
                     value !== '0' &&
                     !noLsp
                 ) {
