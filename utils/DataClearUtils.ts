@@ -527,6 +527,7 @@ export const CASHU_KEY_SUFFIXES = [
     'offline-pending-tokens',
     'offline-spent-tokens',
     'pending-melts',
+    'pending-offline-sends',
     'seed-version',
     'seed-phrase',
     'seed',
