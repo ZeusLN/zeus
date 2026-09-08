@@ -18,6 +18,11 @@ RCT_EXTERN_METHOD(getDatabasePath:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(deleteWalletDatabase:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Atomic check-and-dispose of the handles for one wallet's db (no unlink)
+RCT_EXTERN_METHOD(closeWalletDatabase:(NSString *)dbFileName
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Wallet Management
 RCT_EXTERN_METHOD(initializeWallet:(NSString *)mnemonic
                   unit:(NSString *)unit

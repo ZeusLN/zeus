@@ -479,10 +479,10 @@ class CashuDevKitModule: RCTEventEmitter {
                     self.wallets.removeAll()
                     self.preparedSends.removeAll()
                     // Publish the path only now that these are the handles
-                    // actually open: clearCDKDatabaseForNode keys its
-                    // dispose-before-unlink decision off getDatabasePath(),
-                    // so a path published before construction succeeded would
-                    // point the guard at a database never opened here
+                    // actually open: closeWalletDatabase keys its
+                    // dispose-before-unlink decision off this path, so one
+                    // published before construction succeeded would point
+                    // the guard at a database never opened here
                     self.currentDbPath = dbPath
                     self.isInitialized = true
                 }
@@ -1660,13 +1660,19 @@ class CashuDevKitModule: RCTEventEmitter {
     @objc(deleteWalletDatabase:rejecter:)
     func deleteWalletDatabase(_ resolve: @escaping RCTPromiseResolveBlock,
                               reject: @escaping RCTPromiseRejectBlock) {
-        let path = self.currentDbPath
-        walletQueue.sync {
+        // Read the path in the same queue block that drops the handles:
+        // read outside it, a concurrent initializeWallet could swap wallets
+        // in between, disposing one wallet's handles and unlinking another's
+        // files
+        let path: String? = walletQueue.sync {
+            let open = self.currentDbPath
             self.repo = nil
             self.db = nil
             self.wallets.removeAll()
             self.preparedSends.removeAll()
             self.isInitialized = false
+            self.currentDbPath = nil
+            return open
         }
         guard let dbPath = path else {
             resolve(false)
@@ -1682,8 +1688,38 @@ class CashuDevKitModule: RCTEventEmitter {
                 }
             }
         }
-        self.currentDbPath = nil
         resolve(true)
+    }
+
+    /// Disposes the open CDK handles if, and only if, the database currently
+    /// open is `dbFileName`, compared by basename because the JS side cannot
+    /// reconstruct the absolute path this module resolves. The compare and
+    /// the teardown happen inside one walletQueue block, so a wallet switch
+    /// cannot land between the check and the act - the check-then-act gap a
+    /// JS-side getDatabasePath() + deleteWalletDatabase() pair has, where a
+    /// switch in the gap retargets the dispose (and its unlink) at the newly
+    /// opened wallet's database. Unlinks nothing: the caller owns file
+    /// deletion. ARC closes the SQLite connection as the last references
+    /// drop. Resolves true if the handles were disposed, false when no
+    /// database or a different wallet's is open.
+    @objc(closeWalletDatabase:resolver:rejecter:)
+    func closeWalletDatabase(_ dbFileName: String,
+                             resolve: @escaping RCTPromiseResolveBlock,
+                             reject: @escaping RCTPromiseRejectBlock) {
+        let disposed: Bool = walletQueue.sync {
+            guard let open = self.currentDbPath,
+                  (open as NSString).lastPathComponent == dbFileName else {
+                return false
+            }
+            self.repo = nil
+            self.db = nil
+            self.wallets.removeAll()
+            self.preparedSends.removeAll()
+            self.isInitialized = false
+            self.currentDbPath = nil
+            return true
+        }
+        resolve(disposed)
     }
 
     // MARK: - Cleanup

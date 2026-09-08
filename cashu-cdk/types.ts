@@ -336,4 +336,8 @@ export interface CashuDevKitNativeModule {
     // Closes the wallet/db handles and deletes the proof db (+ WAL/SHM).
     // Resolves false if no database was opened this session.
     deleteWalletDatabase(): Promise<boolean>;
+    // Disposes the handles iff the open db's basename is dbFileName, with
+    // the check and the teardown atomic under the native module's lock.
+    // Never unlinks files. Resolves whether it disposed.
+    closeWalletDatabase(dbFileName: string): Promise<boolean>;
 }

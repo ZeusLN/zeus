@@ -383,26 +383,25 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
         // leaves the proofs readable through that connection for the rest of
         // the session.
         //
-        // Guarded by a path match because deleteWalletDatabase() takes no
-        // argument: it drops the handles and unlinks whatever single database
-        // the native module currently has open (currentDbPath in
-        // CashuDevKitModule.kt/.swift). Calling it while a DIFFERENT wallet is
-        // warm would delete that wallet's proof database instead - deleting
-        // wallet B would destroy wallet A's ecash. Matching on basename, not
-        // the full path: dbDir here is `${DocumentDir}/../files` on Android
-        // while native reports the resolved absolute filesDir, so the strings
-        // never compare equal. CDK holds one database open at a time and
-        // destroys the outgoing wallet's handles when a new one is
-        // initialized (initializeWallet in CashuDevKitModule.kt/.swift), so a
-        // non-match proves no connection is open on this file and the plain
-        // unlink below is already safe - including after a wallet switch,
-        // where the wallet being deleted is no longer the tracked one.
+        // closeWalletDatabase(dbFile) disposes the handles only if the
+        // database the native module currently has open IS this one, with
+        // the check and the teardown atomic under the native module's lock
+        // (CashuDevKitModule.kt/.swift). An unconditional dispose here would
+        // be a data-loss bug: deleteWalletDatabase() takes no argument and
+        // unlinks whatever database is open, so deleting wallet B while A is
+        // warm would destroy A's ecash. A JS-side getDatabasePath() check
+        // has the same flaw one window narrower: a wallet switch landing
+        // between the check and the dispose retargets the teardown at the
+        // newly opened wallet's database. The native compare is on basename
+        // because dbDir here is `${DocumentDir}/../files` on Android while
+        // native tracks the resolved absolute filesDir, so full paths never
+        // string-match. CDK holds one database open at a time and destroys
+        // the outgoing wallet's handles on switch (initializeWallet), so a
+        // non-match resolves false without touching anything: no connection
+        // is open on this file and the plain unlink below is already safe.
         try {
             if (CashuDevKit.isAvailable()) {
-                const openPath = await CashuDevKit.getDatabasePath();
-                if (openPath && openPath.split('/').pop() === dbFile) {
-                    await CashuDevKit.deleteWalletDatabase();
-                }
+                await CashuDevKit.closeWalletDatabase(dbFile);
             }
         } catch (e) {
             console.warn(

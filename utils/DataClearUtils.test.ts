@@ -40,7 +40,8 @@ jest.mock('../cashu-cdk', () => ({
     default: {
         isAvailable: jest.fn().mockReturnValue(true),
         getDatabasePath: jest.fn().mockResolvedValue(''),
-        deleteWalletDatabase: jest.fn().mockResolvedValue(true)
+        deleteWalletDatabase: jest.fn().mockResolvedValue(true),
+        closeWalletDatabase: jest.fn().mockResolvedValue(true)
     }
 }));
 
@@ -825,14 +826,15 @@ describe('CDK database deletion', () => {
     const unlinkedPaths = () => mockedUnlink.mock.calls.map((call) => call[0]);
 
     const mockedIsAvailable = CashuDevKit.isAvailable as jest.Mock;
-    const mockedGetDatabasePath = CashuDevKit.getDatabasePath as jest.Mock;
     const mockedDeleteWalletDatabase =
         CashuDevKit.deleteWalletDatabase as jest.Mock;
+    const mockedCloseWalletDatabase =
+        CashuDevKit.closeWalletDatabase as jest.Mock;
 
     // Dispose must precede every unlink: a POSIX unlink under a live handle
     // succeeds while leaving the proofs readable through that connection.
-    const disposedBeforeFirstUnlink = () =>
-        mockedDeleteWalletDatabase.mock.invocationCallOrder[0] <
+    const disposedBeforeFirstUnlink = (disposeMock: jest.Mock) =>
+        disposeMock.mock.invocationCallOrder[0] <
         mockedUnlink.mock.invocationCallOrder[0];
 
     beforeEach(() => {
@@ -842,8 +844,8 @@ describe('CDK database deletion', () => {
         mockedExists.mockResolvedValue(false);
         mockedUnlink.mockResolvedValue(undefined);
         mockedIsAvailable.mockReturnValue(true);
-        mockedGetDatabasePath.mockResolvedValue('');
         mockedDeleteWalletDatabase.mockResolvedValue(true);
+        mockedCloseWalletDatabase.mockResolvedValue(true);
     });
 
     describe('clearCDKDatabase (full-wipe sweep)', () => {
@@ -884,7 +886,9 @@ describe('CDK database deletion', () => {
             await clearCDKDatabase();
 
             expect(mockedDeleteWalletDatabase).toHaveBeenCalled();
-            expect(disposedBeforeFirstUnlink()).toBe(true);
+            expect(disposedBeforeFirstUnlink(mockedDeleteWalletDatabase)).toBe(
+                true
+            );
         });
 
         // The prefix sweep is strictly broader than the native delete (it
@@ -1036,20 +1040,23 @@ describe('CDK database deletion', () => {
             });
 
             expect(mockedUnlink).not.toHaveBeenCalled();
-            expect(mockedGetDatabasePath).not.toHaveBeenCalled();
+            expect(mockedCloseWalletDatabase).not.toHaveBeenCalled();
         });
 
         // This runs for the ACTIVE wallet too: deleteNodeConfig stops
-        // LND/LDK first, neither of which closes the CDK connection.
+        // LND/LDK first, neither of which closes the CDK connection. The
+        // "is this the open database" check lives in closeWalletDatabase on
+        // the native side, atomic with the teardown under the module's lock:
+        // a JS-side getDatabasePath() check would leave a window where a
+        // wallet switch retargets the dispose at the newly opened wallet's
+        // database. What this suite can prove is the call shape - the
+        // basename argument, the ordering against the unlinks, and the
+        // failure paths; the atomicity itself is native.
         describe('native handle disposal', () => {
             const seedWords = ['abandon', 'ability', 'able', 'about'];
             const seedDbFile = `cashu_wallet_${walletDbHash(
                 seedWords.join(' ')
             )}.db`;
-            // Native reports the resolved absolute path (Android filesDir),
-            // which never string-matches the `${DocumentDir}/../files` form
-            // built on the JS side - hence the basename comparison.
-            const nativeDir = '/data/user/0/app.zeusln.zeus/files';
 
             const deleteThisWallet = () =>
                 clearCDKDatabaseForNode({
@@ -1066,49 +1073,36 @@ describe('CDK database deletion', () => {
                 mockedExists.mockResolvedValue(true);
             });
 
-            it('disposes before unlinking when CDK has this wallet open', async () => {
-                mockedGetDatabasePath.mockResolvedValue(
-                    `${nativeDir}/${seedDbFile}`
-                );
-
+            // Basename, not a path: native tracks the resolved absolute
+            // filesDir while JS builds `${DocumentDir}/../files`, so any
+            // path form would never match on the native side.
+            it('disposes via the atomic check-and-close, basename only, before unlinking', async () => {
                 await deleteThisWallet();
 
-                expect(mockedDeleteWalletDatabase).toHaveBeenCalled();
-                expect(disposedBeforeFirstUnlink()).toBe(true);
+                expect(mockedCloseWalletDatabase).toHaveBeenCalledWith(
+                    seedDbFile
+                );
+                expect(
+                    disposedBeforeFirstUnlink(mockedCloseWalletDatabase)
+                ).toBe(true);
+                // The blunt instrument stays reserved for the full wipe: it
+                // unlinks whatever db is open, so calling it here while a
+                // different wallet is warm would destroy that wallet's proofs
+                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
             });
 
-            // Data-loss regression: deleteWalletDatabase() takes no argument
-            // and unlinks whatever db the native module currently has open
-            // (currentDbPath). Calling it while another wallet is warm would
-            // destroy THAT wallet's proofs. Nothing is open on this file, so
-            // the plain unlink below is already safe.
-            it('never disposes when a different wallet is the open one', async () => {
-                mockedGetDatabasePath.mockResolvedValue(
-                    `${nativeDir}/cashu_wallet_ffffffffffffffff.db`
-                );
+            it('still unlinks when nothing was disposed (different or no wallet open)', async () => {
+                mockedCloseWalletDatabase.mockResolvedValue(false);
 
                 await deleteThisWallet();
 
-                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
                 expect(
                     unlinkedPaths().some((p) => p.endsWith(seedDbFile))
                 ).toBe(true);
             });
 
-            it('skips the dispose when no database was opened this session', async () => {
-                mockedGetDatabasePath.mockResolvedValue('');
-
-                await deleteThisWallet();
-
-                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
-                expect(mockedUnlink).toHaveBeenCalled();
-            });
-
             it('still unlinks when the dispose call throws', async () => {
-                mockedGetDatabasePath.mockResolvedValue(
-                    `${nativeDir}/${seedDbFile}`
-                );
-                mockedDeleteWalletDatabase.mockRejectedValue(
+                mockedCloseWalletDatabase.mockRejectedValue(
                     new Error('NO_WALLET')
                 );
 
@@ -1124,11 +1118,62 @@ describe('CDK database deletion', () => {
 
                 await deleteThisWallet();
 
-                expect(mockedGetDatabasePath).not.toHaveBeenCalled();
-                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+                expect(mockedCloseWalletDatabase).not.toHaveBeenCalled();
                 expect(
                     unlinkedPaths().some((p) => p.endsWith(seedDbFile))
                 ).toBe(true);
+            });
+
+            // Lockstep guards in the style of the filename-hashing scans
+            // above: the wrapper calls closeWalletDatabase, so its absence
+            // from either native module (or the ObjC bridge) would fail only
+            // on-device. Assert the atomicity carrier too - the compare must
+            // sit inside the same synchronized/queue block as the teardown.
+            it('is implemented atomically in the Android module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+                    ),
+                    'utf8'
+                );
+                expect(source).toContain('fun closeWalletDatabase');
+                const body = source.slice(
+                    source.indexOf('fun closeWalletDatabase')
+                );
+                expect(
+                    body.indexOf('synchronized(handleLock)')
+                ).toBeGreaterThan(-1);
+                expect(body.indexOf('synchronized(handleLock)')).toBeLessThan(
+                    body.indexOf('takeHandlesLocked()')
+                );
+            });
+
+            it('is implemented atomically in the iOS module and bridged', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.swift'
+                    ),
+                    'utf8'
+                );
+                expect(source).toContain('func closeWalletDatabase');
+                const body = source.slice(
+                    source.indexOf('func closeWalletDatabase')
+                );
+                expect(body.indexOf('walletQueue.sync')).toBeGreaterThan(-1);
+                expect(body.indexOf('walletQueue.sync')).toBeLessThan(
+                    body.indexOf('lastPathComponent')
+                );
+
+                const bridge = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.m'
+                    ),
+                    'utf8'
+                );
+                expect(bridge).toContain('closeWalletDatabase:');
             });
         });
     });

@@ -485,10 +485,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     repo = newRepo
                     walletUnit = currencyUnit
                     // Publish the path only now that these are the handles
-                    // actually open: clearCDKDatabaseForNode keys its
-                    // dispose-before-unlink decision off getDatabasePath(),
-                    // so a path published before construction succeeded would
-                    // point the guard at a database the module never opened
+                    // actually open: closeWalletDatabase keys its
+                    // dispose-before-unlink decision off this path, so one
+                    // published before construction succeeded would point
+                    // the guard at a database the module never opened
                     currentDbPath = dbPath
                     isInitialized = true
                     previous
@@ -1899,8 +1899,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
      */
     @ReactMethod
     fun deleteWalletDatabase(promise: Promise) {
-        val path = currentDbPath
-        disposeHandles()
+        // Read the path in the same critical section that takes the handles:
+        // read outside it, a concurrent initializeWallet could swap wallets
+        // in between, disposing one wallet's handles and unlinking another's
+        // files
+        val (path, taken) = synchronized(handleLock) {
+            Pair(currentDbPath, takeHandlesLocked())
+        }
+        destroyHandles(taken)
         if (path == null) {
             promise.resolve(false)
             return
@@ -1912,6 +1918,36 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.w(TAG, "deleteWalletDatabase: failed to delete $p", e)
             }
         }
+        promise.resolve(true)
+    }
+
+    /**
+     * Disposes the open CDK handles if, and only if, the database currently
+     * open is [dbFileName], compared by basename because the JS side cannot
+     * reconstruct the absolute path this module resolves. The compare and the
+     * handle swap happen under one handleLock acquisition, so a wallet switch
+     * cannot land between the check and the teardown - the check-then-act gap
+     * a JS-side getDatabasePath() + deleteWalletDatabase() pair has, where a
+     * switch in the gap retargets the dispose (and its unlink) at the newly
+     * opened wallet's database. Unlinks nothing: the caller owns file
+     * deletion. Resolves true if the handles were disposed, false when no
+     * database or a different wallet's is open.
+     */
+    @ReactMethod
+    fun closeWalletDatabase(dbFileName: String, promise: Promise) {
+        val taken = synchronized(handleLock) {
+            val open = currentDbPath
+            if (open != null && File(open).name == dbFileName) {
+                takeHandlesLocked()
+            } else {
+                null
+            }
+        }
+        if (taken == null) {
+            promise.resolve(false)
+            return
+        }
+        destroyHandles(taken)
         promise.resolve(true)
     }
 
