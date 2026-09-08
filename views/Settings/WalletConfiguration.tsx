@@ -895,7 +895,11 @@ export default class WalletConfiguration extends React.Component<
                         ),
                         justDeletedWallet: active
                     };
-                }
+                },
+                // Deleting the last wallet legitimately leaves `nodes`
+                // empty; every other empty write is refused so a failed
+                // settings load cannot wipe the wallet list.
+                { allowEmptyNodes: true }
             );
             const remainingNodes = newSettings?.nodes || [];
 
