@@ -103,7 +103,7 @@ android {
         versionName "13.2.2-alpha"
         multiDexEnabled true
         ndk {
-            abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
         }
     }
     signingConfigs {
@@ -121,7 +121,7 @@ android {
             reset()
             enable enableSeparateBuildPerCPUArchitecture
             universalApk true  // If true, also generate a universal APK
-            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+            include "armeabi-v7a", "arm64-v8a", "x86_64"
         }
     }
     buildTypes {
@@ -145,8 +145,11 @@ android {
         variant.outputs.each { output ->
             // For each separate APK per architecture, set a unique version code as described here:
             // https://developer.android.com/studio/build/configure-apk-splits.html
-            // Example: versionCode 1 will generate 1001 for armeabi-v7a, 1002 for x86, etc.
-            def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
+            // Example: versionCode 1 will generate 1001 for armeabi-v7a, 1003 for arm64-v8a, etc.
+            // These suffixes are permanent: never renumber them, or Play will see a
+            // lower versionCode for an ABI than the one already published. 2 is
+            // retired (it belonged to the dropped x86 ABI) and must stay unused.
+            def versionCodes = ["armeabi-v7a": 1, "arm64-v8a": 3, "x86_64": 4]
             def abi = output.getFilter(OutputFile.ABI)
             if (abi != null) {  // null for the universal-debug, universal-release variants
                 output.versionCodeOverride =
@@ -158,24 +161,20 @@ android {
     packagingOptions {
         pickFirst "lib/armeabi-v7a/libc++_shared.so"
         pickFirst "lib/arm64-v8a/libc++_shared.so"
-        pickFirst "lib/x86/libc++_shared.so"
         pickFirst "lib/x86_64/libc++_shared.so"
 
         pickFirst "lib/armeabi-v7a/libgojni.so"
         pickFirst "lib/arm64-v8a/libgojni.so"
-        pickFirst "lib/x86/libgojni.so"
         pickFirst "lib/x86_64/libgojni.so"
 
         // CashuDevKit native libraries (Rust FFI)
         pickFirst "lib/armeabi-v7a/libcdk_ffi.so"
         pickFirst "lib/arm64-v8a/libcdk_ffi.so"
-        pickFirst "lib/x86/libcdk_ffi.so"
         pickFirst "lib/x86_64/libcdk_ffi.so"
 
         // Zeus Cashu Restore native libraries (Rust FFI)
         pickFirst "lib/armeabi-v7a/libuniffi_zeus_cashu_restore.so"
         pickFirst "lib/arm64-v8a/libuniffi_zeus_cashu_restore.so"
-        pickFirst "lib/x86/libuniffi_zeus_cashu_restore.so"
         pickFirst "lib/x86_64/libuniffi_zeus_cashu_restore.so"
 
         jniLibs {
