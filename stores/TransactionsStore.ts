@@ -2,7 +2,6 @@ const bitcoin = require('bitcoinjs-lib');
 
 import { action, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
@@ -21,6 +20,7 @@ import {
     deriveExpectedPaymentHash,
     normalizePaymentHash
 } from '../utils/LncPayUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import {
     isNodeResponse,
     isPaymentLookupInconclusive,
@@ -315,7 +315,13 @@ export default class TransactionsStore {
                 this.nodeInfoStore.nodeInfo
             )}/tx`;
 
-            return ReactNativeBlobUtil.fetch('POST', url, headers, tx_hex)
+            return networkFetch({
+                method: 'post',
+                url,
+                headers,
+                body: tx_hex,
+                enableTor: this.settingsStore.enableTor
+            })
                 .then((response: any) => {
                     const status = response.info().status;
                     const data = response.data;
@@ -1555,7 +1561,13 @@ export default class TransactionsStore {
         const url = `${UrlUtils.getMempoolApiUrl(
             this.nodeInfoStore.nodeInfo
         )}/tx`;
-        return ReactNativeBlobUtil.fetch('POST', url, headers, raw_tx_hex)
+        return networkFetch({
+            method: 'post',
+            url,
+            headers,
+            body: raw_tx_hex,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response: any) => {
                 const status = response.info().status;
                 const data = response.data;
