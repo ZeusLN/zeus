@@ -307,6 +307,8 @@
     "views.Accounts.select": "Select payment method",
     "views.Accounts.fetchTxFees": "Fetch on-chain transaction fees",
     "views.ChoosePaymentMethod.selectReceiveMethod": "Select receive method",
+    "views.ChoosePaymentMethod.availableToSend": "Available to send",
+    "views.ChoosePaymentMethod.channelsOffline": "Some channels are offline. This payment may fail until they reconnect.",
     "views.EditFee.title": "Edit network fee",
     "views.EditFee.titleDisplayOnly": "Transaction fees",
     "views.LnurlPay.LnurlPay.amount": "Amount to pay",
