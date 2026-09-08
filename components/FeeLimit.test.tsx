@@ -21,7 +21,7 @@ jest.mock('./TextInput', () => {
 });
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import FeeLimit from './FeeLimit';
 import BackendUtils from '../utils/BackendUtils';
@@ -248,5 +248,121 @@ describe('FeeLimit fee estimate warning', () => {
         await renderFeeLimit({ feeEstimate: '150' });
 
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+    });
+});
+
+describe('FeeLimit mode synchronization', () => {
+    const settings = {
+        payments: { defaultFeeFixed: '20', defaultFeePercentage: '0.5' }
+    };
+    const deferredSettings = () => {
+        let resolve!: (value: typeof settings) => void;
+        const promise = new Promise<typeof settings>((done) => {
+            resolve = done;
+        });
+        return { promise, resolve };
+    };
+
+    it.each(['child-first', 'parent-first', 'together'])(
+        'uses percentage when the parent selects it after mount (%s)',
+        async (order) => {
+            const childSettings = deferredSettings();
+            const parentSettings = deferredSettings();
+            const caps = jest.fn();
+            let screenState: { feeOption: string; feeLimitSat: string } = {
+                feeOption: 'fixed',
+                feeLimitSat: '1000'
+            };
+            // PaymentRequest renders the already-decoded LNURL invoice with
+            // fixed mode, then selects percent after its own settings await.
+            class PaymentScreen extends React.Component {
+                state = { feeOption: 'fixed', feeLimitSat: '1000' };
+                async componentDidMount() {
+                    await parentSettings.promise;
+                    this.setState({ feeOption: 'percent' });
+                    this.setState({ feeLimitSat: '20' });
+                }
+                componentDidUpdate() {
+                    screenState = this.state;
+                }
+                render() {
+                    return (
+                        <FeeLimit
+                            {...({
+                                satAmount: 100000,
+                                feeOption: this.state.feeOption,
+                                SettingsStore: {
+                                    getSettings: () => childSettings.promise
+                                },
+                                InvoicesStore: {},
+                                onFeeLimitSatChange: (feeLimitSat: string) => {
+                                    caps(feeLimitSat);
+                                    this.setState({ feeLimitSat });
+                                }
+                            } as any)}
+                        />
+                    );
+                }
+            }
+            await render(<PaymentScreen />);
+            if (order === 'together') {
+                await act(async () => {
+                    childSettings.resolve(settings);
+                    parentSettings.resolve(settings);
+                });
+            } else {
+                const first =
+                    order === 'child-first' ? childSettings : parentSettings;
+                const second =
+                    order === 'child-first' ? parentSettings : childSettings;
+                await act(async () => first.resolve(settings));
+                await act(async () => second.resolve(settings));
+            }
+            expect(caps).toHaveBeenLastCalledWith('500');
+            expect(screenState.feeLimitSat).toBe('500');
+        }
+    );
+
+    it('handles mode and amount changing together in both directions', async () => {
+        const { onFeeLimitSatChange, rerender } = await renderFeeLimit({
+            satAmount: 1000,
+            feeOption: 'fixed',
+            payments: settings.payments
+        });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('20');
+
+        await rerender({ satAmount: 1001, feeOption: 'percent' });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('5');
+
+        await rerender({ satAmount: 999 });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('20');
+    });
+
+    it('preserves a manual selection on amount changes and unrelated renders', async () => {
+        const { onFeeLimitSatChange, rerender } = await renderFeeLimit({
+            satAmount: 100000,
+            feeOption: 'percent',
+            payments: settings.payments,
+            onFeeOptionChange: undefined
+        });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('500');
+
+        // Some callers do not supply onFeeOptionChange. An unchanged prop
+        // must not override the local selection on the next amount update.
+        await fireEvent(fixedField(), 'pressIn');
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('20');
+
+        await rerender({ satAmount: 200000, onFeeOptionChange: undefined });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('20');
+
+        await rerender({
+            satAmount: 200000,
+            onFeeOptionChange: undefined,
+            displayFeeRecommendation: false
+        });
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('20');
+
+        await fireEvent(percentField(), 'pressIn');
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('1000');
     });
 });
