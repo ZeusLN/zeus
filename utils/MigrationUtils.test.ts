@@ -957,6 +957,8 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateCertVerificationDefault(settings);
 
             expect(settings).toEqual(afterFirst);
+            // the repeat run rewrites nothing, so it must not persist again
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
 
         it('handles settings without nodes', async () => {
@@ -966,7 +968,7 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateCertVerificationDefault(settings);
 
             expect(settings).toEqual({ fiat: 'USD' });
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'cert-verification-default-v1',
                 'true'

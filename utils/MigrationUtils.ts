@@ -756,14 +756,16 @@ class MigrationsUtils {
         );
         if (modCertVerification) return settings;
 
+        let changed = false;
         if (settings?.nodes && Array.isArray(settings.nodes)) {
             for (const node of settings.nodes) {
                 if (node && node.certVerification === undefined) {
                     node.certVerification = false;
+                    changed = true;
                 }
             }
         }
-        await settingsStore.setSettings(settings);
+        if (changed) await settingsStore.setSettings(settings);
         await EncryptedStorage.setItem(MOD_KEY_CERT_VERIFICATION, 'true');
         return settings;
     }
