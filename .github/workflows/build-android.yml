@@ -71,13 +71,6 @@ jobs:
         path: android/app/build/outputs/apk/release/zeus-universal.apk
         retention-days: 5
 
-    - name: 'Archive x86'
-      uses: actions/upload-artifact@v7
-      with:
-        name: x86
-        path: android/app/build/outputs/apk/release/zeus-x86.apk
-        retention-days: 5
-
     - name: 'Archive x86_64'
       uses: actions/upload-artifact@v7
       with:
