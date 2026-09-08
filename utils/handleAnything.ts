@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -37,6 +37,156 @@ const isAmountlessInvoice = (bolt11: string): boolean => {
         return false;
     }
 };
+
+// The numeric range checks below only apply to literal dotted-quad IPv4
+// addresses. The WHATWG parser canonicalizes every real IPv4 host to that
+// form (127.1 and 0x7f.0.0.1 both become 127.0.0.1), so anything else dotted
+// is a DNS name; 127.evil.com is a legal subdomain and must not classify as
+// loopback.
+const isIPv4Literal = (host: string): boolean => {
+    const octets = host.split('.');
+    return (
+        octets.length === 4 &&
+        octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) < 256)
+    );
+};
+
+// Loopback hosts resolve to the device itself; a cleartext fetch to one never
+// leaves the phone, so it needs neither an unencrypted-transport warning nor
+// Tor routing.
+const isLoopbackHost = (host: string): boolean =>
+    host === 'localhost' ||
+    host === '::1' ||
+    (isIPv4Literal(host) && host.startsWith('127.'));
+
+// Private / non-routable hosts (loopback, RFC 1918, link-local, IPv6 ULA,
+// mDNS .local). The Tor SOCKS proxy cannot reach these, so a BTCPay server on
+// one must be contacted directly rather than routed over Tor.
+const isPrivateHost = (host: string): boolean =>
+    isLoopbackHost(host) ||
+    host === '0.0.0.0' ||
+    (isIPv4Literal(host) &&
+        (/^10\./.test(host) ||
+            /^192\.168\./.test(host) ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+            /^169\.254\./.test(host))) ||
+    /^f[cd][0-9a-f]{2}:/.test(host) || // IPv6 unique-local fc00::/7
+    /^fe[89ab][0-9a-f]:/.test(host) || // IPv6 link-local fe80::/10
+    host.endsWith('.local');
+
+// Classifies the URL embedded in a scanned BTCPay pairing QR before ZEUS
+// contacts it, using the WHATWG URL parser (react-native-url-polyfill) so the
+// host ZEUS displays is exactly the host it will fetch. `valid` is true only
+// for a well-formed, credential-free http(s) URL with a host; `url` is the
+// canonicalized URL to fetch; `isCleartext` flags an http:// host that is
+// neither a Tor onion service nor loopback, i.e. one carried over the network
+// unencrypted.
+const classifyBtcPayConfigUrl = (
+    urlString?: string
+): {
+    valid: boolean;
+    url: string;
+    host: string;
+    isOnion: boolean;
+    isLoopback: boolean;
+    isPrivate: boolean;
+    isCleartext: boolean;
+} => {
+    const invalid = {
+        valid: false,
+        url: '',
+        host: '',
+        isOnion: false,
+        isLoopback: false,
+        isPrivate: false,
+        isCleartext: false
+    };
+    if (!urlString) return invalid;
+
+    let parsed: URL;
+    try {
+        parsed = new URL(urlString.trim());
+    } catch {
+        return invalid;
+    }
+
+    const protocol = parsed.protocol.toLowerCase();
+    const isHttp = protocol === 'http:';
+    const isHttps = protocol === 'https:';
+    if (!isHttp && !isHttps) return invalid;
+
+    // Embedded credentials let the host ZEUS displays diverge from the host it
+    // actually contacts (https://btcpay.trusted.com@evil.example), so refuse
+    // them outright instead of trying to render a "safe" host string.
+    if (parsed.username || parsed.password) return invalid;
+
+    // IPv6 hostnames come back bracketed ([::1]); strip so range checks match.
+    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    if (!host) return invalid;
+
+    const isOnion = host.endsWith('.onion');
+    const isLoopback = isLoopbackHost(host);
+    const isPrivate = isPrivateHost(host);
+
+    return {
+        valid: true,
+        // The canonicalized, credential-free URL is what gets fetched, so one
+        // parser decides both what the user sees and what ZEUS contacts.
+        url: parsed.href,
+        host,
+        isOnion,
+        isLoopback,
+        isPrivate,
+        isCleartext: isHttp && !isOnion && !isLoopback
+    };
+};
+
+// Promise-wrapped confirmation so the scan-time BTCPay fetch can be gated on
+// explicit user consent (the QR content controls the endpoint). Resolves true
+// when the user proceeds, false when they cancel.
+const confirmBtcPayFetch = (
+    host: string,
+    { isCleartext, isLan }: { isCleartext: boolean; isLan: boolean }
+): Promise<boolean> =>
+    new Promise((resolve) => {
+        const base = localeString(
+            'stores.SettingsStore.btcPayFetchConfirmMessage'
+        ).replace('{host}', host);
+        const notes: string[] = [];
+        if (isCleartext) {
+            notes.push(
+                localeString('stores.SettingsStore.btcPayFetchCleartextWarning')
+            );
+        }
+        if (isLan) {
+            notes.push(
+                localeString('stores.SettingsStore.btcPayFetchLocalNetworkNote')
+            );
+        }
+        const message =
+            notes.length > 0 ? `${base}\n\n${notes.join('\n\n')}` : base;
+
+        const proceedButton = {
+            text: localeString('general.proceed'),
+            style: 'destructive' as const,
+            onPress: () => resolve(true)
+        };
+        const cancelButton = {
+            text: localeString('general.cancel'),
+            style: 'cancel' as const,
+            onPress: () => resolve(false)
+        };
+
+        Alert.alert(
+            localeString('general.warning'),
+            message,
+            // iOS honors button style; Android orders by index (cancel left).
+            Platform.OS === 'ios'
+                ? [proceedButton, cancelButton]
+                : [cancelButton, proceedButton],
+            { cancelable: false, onDismiss: () => resolve(false) }
+        );
+    });
 
 const attemptNip05Lookup = async (data: string) => {
     try {
@@ -735,8 +885,43 @@ const handleAnything = async (
     } else if (value.includes('config=') && value.includes('lnd.config')) {
         // BTCPay pairing QR
         if (isClipboardValue) return true;
+
+        // The QR content controls the endpoint ZEUS is about to contact, so
+        // validate it locally and require explicit consent BEFORE any network
+        // request (prevents a scan-time IP/timing beacon to an attacker URL).
+        const configRoute = value.split('config=')[1];
+        const {
+            valid,
+            url,
+            host,
+            isOnion,
+            isLoopback,
+            isPrivate,
+            isCleartext
+        } = classifyBtcPayConfigUrl(configRoute);
+        if (!valid) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('stores.SettingsStore.btcPayInvalidConfigUrl'),
+                [
+                    {
+                        text: localeString('general.ok'),
+                        onPress: () => void 0
+                    }
+                ],
+                { cancelable: false }
+            );
+            return false;
+        }
+
+        const confirmed = await confirmBtcPayFetch(host, {
+            isCleartext,
+            isLan: isPrivate && !isLoopback
+        });
+        if (!confirmed) return false;
+
         return settingsStore
-            .fetchBTCPayConfig(value)
+            .fetchBTCPayConfig(url, isOnion, isPrivate)
             .then((node: any) => {
                 if (settingsStore.btcPayError) {
                     Alert.alert(
@@ -1080,5 +1265,10 @@ const handleAnything = async (
     }
 };
 
-export { isClipboardValue, convertMerchantQRToLightningAddress, isMerchantQR };
+export {
+    isClipboardValue,
+    convertMerchantQRToLightningAddress,
+    isMerchantQR,
+    classifyBtcPayConfigUrl
+};
 export default handleAnything;
