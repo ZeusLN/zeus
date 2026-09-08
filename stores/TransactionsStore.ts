@@ -3,7 +3,6 @@ const bitcoin = require('bitcoinjs-lib');
 import { action, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
@@ -18,6 +17,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import {
     isNodeResponse,
     isPaymentLookupInconclusive,
@@ -291,7 +291,13 @@ export default class TransactionsStore {
                 this.nodeInfoStore.nodeInfo
             )}/tx`;
 
-            return ReactNativeBlobUtil.fetch('POST', url, headers, tx_hex)
+            return networkFetch({
+                method: 'post',
+                url,
+                headers,
+                body: tx_hex,
+                enableTor: this.settingsStore.enableTor
+            })
                 .then((response: any) => {
                     const status = response.info().status;
                     const data = response.data;
@@ -1452,12 +1458,13 @@ export default class TransactionsStore {
             'Access-Control-Allow-Origin': '*',
             'Content-Type': 'text/plain'
         };
-        return ReactNativeBlobUtil.fetch(
-            'POST',
-            `${UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)}/tx`,
+        return networkFetch({
+            method: 'post',
+            url: `${UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)}/tx`,
             headers,
-            raw_tx_hex
-        )
+            body: raw_tx_hex,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response: any) => {
                 const status = response.info().status;
                 const data = response.data;
