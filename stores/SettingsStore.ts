@@ -1878,7 +1878,14 @@ export default class SettingsStore {
             this.dismissCustodialWarning = node.dismissCustodialWarning;
             this.implementation = node.implementation || 'lnd';
             this.certVerification = node.certVerification || false;
-            this.enableTor = node.enableTor;
+            // embeddedTor torifies the embedded node's own traffic; extend it
+            // to enableTor so ancillary HTTP calls (channel backups, sync
+            // block-tip checks, migration) don't leak clearnet alongside a
+            // torified node. Remote nodes keep their per-node toggle.
+            this.enableTor =
+                node.enableTor ||
+                (node.implementation === 'embedded-lnd' &&
+                    !!settings.embeddedTor);
             // LNC
             this.pairingPhrase = node.pairingPhrase;
             this.mailboxServer = node.mailboxServer;
