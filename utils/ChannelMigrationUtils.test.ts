@@ -59,6 +59,12 @@ jest.mock('./SleepUtils', () => ({
 jest.mock('../stores/ChannelBackupStore', () => ({
     BACKUPS_HOST: 'https://backups.example.com'
 }));
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { enableTor: false }
+}));
+jest.mock('./NetworkUtils', () => ({
+    networkFetch: jest.fn()
+}));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
     getItem: jest.fn().mockResolvedValue(null)
@@ -70,9 +76,9 @@ jest.mock('react-native', () => ({
 }));
 
 import { Alert } from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
+import { networkFetch } from './NetworkUtils';
 import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
 import {
     graphDataExists,
@@ -84,7 +90,7 @@ import {
 } from './ChannelMigrationUtils';
 import { sourceMethods } from '../backends/lncTestUtils';
 
-const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const mockFetch = networkFetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
 const mockAlert = Alert.alert as jest.Mock;
 
@@ -103,7 +109,7 @@ const signMessageMock = (BackendUtils as any).signMessage as jest.Mock;
 // every other path with a successful reply.
 const serveChallenges = (challenges: any[], statusBody: any = {}) => {
     const queue = [...challenges];
-    mockFetch.mockImplementation(async (_m: string, url: string) => {
+    mockFetch.mockImplementation(async ({ url }: { url: string }) => {
         const path = url.replace(BACKUPS, '');
         const body =
             path === '/api/auth'
@@ -118,7 +124,7 @@ const serveChallenges = (challenges: any[], statusBody: any = {}) => {
 };
 
 const fetchedPaths = () =>
-    mockFetch.mock.calls.map(([, url]) => url.replace(BACKUPS, ''));
+    mockFetch.mock.calls.map(([{ url }]) => url.replace(BACKUPS, ''));
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -481,10 +487,9 @@ describe('ChannelMigrationUtils', () => {
             expect(mockSignNodePubkey).toHaveBeenCalledTimes(1);
             expect(mockFetch).toHaveBeenCalledTimes(3);
             expect(mockFetch).not.toHaveBeenCalledWith(
-                'POST',
-                expect.stringContaining('/api/restore-channels'),
-                expect.anything(),
-                expect.anything()
+                expect.objectContaining({
+                    url: expect.stringContaining('/api/restore-channels')
+                })
             );
         });
     });
