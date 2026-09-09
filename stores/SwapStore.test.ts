@@ -44,7 +44,7 @@ jest.mock('bitcoinjs-lib', () => ({
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
-    DEFAULT_SWAP_HOST_MAINNET: 'https://api.boltz.exchange/v2',
+    DEFAULT_SWAP_HOST_MAINNET: 'https://satsrouting.exchange/v2',
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
     SWAP_HOST_KEYS_MAINNET: [],
     SWAP_HOST_KEYS_TESTNET: []
