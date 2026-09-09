@@ -335,10 +335,14 @@ proofs); paying Lightning from proofs = **melt quote**. Tokens serialize as
 
 ## 9. Swaps — Boltz protocol v2, `stores/SwapStore.ts`
 
-Zeus speaks the Boltz v2 REST API; default provider is ZEUS's own instance
-(`DEFAULT_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2'` in
-`stores/SettingsStore.ts`), with Boltz (`https://api.boltz.exchange/v2`) selectable.
-Endpoints used: `/swap/submarine`, `/swap/reverse`, `/swap/restore`.
+Zeus speaks the Boltz v2 REST API, but no longer against Boltz itself: the default
+provider is SATS Routing (`DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2'`
+in `stores/SettingsStore.ts`), with Coinos (`https://swap.coinos.io/v2`) and Custom
+selectable. Both run forks of `boltz-backend`, so the wire protocol is unchanged.
+Boltz suspended its swap service on 2026-08-03 and ZEUS retired its own instance
+(`swaps.zeuslsp.com`) after an August 2026 security incident; both are in
+`RETIRED_SWAP_HOSTS_MAINNET`. Endpoints used: `/swap/submarine`, `/swap/reverse`,
+`/swap/restore`.
 
 **Deterministic rescue key** — the design goal is that a single mnemonic can recover any
 in-flight swap:
