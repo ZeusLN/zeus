@@ -67,6 +67,23 @@ export const deriveVerifier = async (
     };
 };
 
+/**
+ * Fixed, well-formed verifier used to equalize verification cost when a slot
+ * (e.g. duress) has no credential configured. Verifying an attempt against it
+ * runs the full scrypt derivation, so unlock latency does not reveal whether
+ * a duress credential exists, but it can never match: the stored hash is a
+ * constant, not the digest of any secret under this salt.
+ */
+export const DUMMY_VERIFIER: VerifierRecord = {
+    v: 1,
+    kdf: 'scrypt',
+    n: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+    salt: '00'.repeat(SALT_LEN),
+    hash: '00'.repeat(KEY_LEN)
+};
+
 /** True when `record` is a well-formed verifier (used for UI/gate presence). */
 export const hasVerifier = (record?: VerifierRecord | null): boolean =>
     !!record &&

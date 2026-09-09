@@ -7,6 +7,7 @@ import {
     deriveVerifier,
     verifySecret,
     hasVerifier,
+    DUMMY_VERIFIER,
     VerifierRecord
 } from './LockVerifierUtils';
 
@@ -70,6 +71,20 @@ describe('LockVerifierUtils', () => {
                     salt: 'zz',
                     hash: 'zz'
                 } as unknown as VerifierRecord)
+            ).toBe(false);
+        });
+    });
+
+    describe('DUMMY_VERIFIER', () => {
+        it('is well-formed, so verifying against it runs the full derivation', () => {
+            expect(hasVerifier(DUMMY_VERIFIER)).toBe(true);
+        });
+
+        it('never matches an attempt', async () => {
+            expect(await verifySecret('1234', DUMMY_VERIFIER)).toBe(false);
+            expect(await verifySecret('0000', DUMMY_VERIFIER)).toBe(false);
+            expect(
+                await verifySecret('correct horse battery', DUMMY_VERIFIER)
             ).toBe(false);
         });
     });

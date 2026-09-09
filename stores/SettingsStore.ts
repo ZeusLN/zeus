@@ -2145,6 +2145,16 @@ export default class SettingsStore {
                         this.settings,
                         fromQueue
                     );
+                // iOS one-shot: rewrite pre-existing keychain items so
+                // write-once keys pick up the non-migratable accessibility
+                // class. Modern path only: the legacy path's
+                // storageMigrationV2 freshly writes every item, which
+                // stamps them correctly already.
+                this.settings =
+                    await MigrationsUtils.restampKeychainAccessibility(
+                        this.settings,
+                        fromQueue
+                    );
             } else {
                 console.log('attempting to load legacy settings');
 
