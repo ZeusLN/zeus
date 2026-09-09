@@ -1,6 +1,88 @@
 import CLNRest from './CLNRest';
 import AddressUtils from '../utils/AddressUtils';
 
+// Response shapes for the Core Lightning RPCs this module consumes.
+//
+// Typed from the schemas shipped with CLN (doc/schemas), cross-checked between
+// v24.11 - the oldest release CLNRest.supports() gates on - and v26.06.7. A
+// field is only non-optional here when the schema marks it required in both,
+// so anything optional below really can be missing from a node Zeus supports.
+// `*_msat` values arrive as plain JSON numbers, not "1234msat" strings.
+//
+// These describe what the handlers below read, not the full CLN response.
+
+export interface IClnChannelType {
+    bits: number[];
+    names: string[];
+}
+
+// lightning-listpeerchannels
+export interface IClnPeerChannel {
+    // one of the 14 values in the schema's `state` enum, e.g. CHANNELD_NORMAL
+    state: string;
+    peer_connected: boolean;
+    peer_id: string;
+    // A channel that is not funded yet carries no balances, no funding txid
+    // and no ids, so everything below can be absent.
+    funding_txid?: string;
+    channel_id?: string;
+    short_channel_id?: string;
+    total_msat?: number;
+    to_us_msat?: number;
+    out_fulfilled_msat?: number;
+    in_fulfilled_msat?: number;
+    in_payments_offered?: number;
+    out_payments_offered?: number;
+    our_to_self_delay?: number;
+    private?: boolean;
+    our_reserve_msat?: number;
+    their_reserve_msat?: number;
+    // only when a close address was negotiated
+    close_to_addr?: string;
+}
+
+// lightning-listclosedchannels
+export interface IClnClosedChannel {
+    channel_id: string;
+    opener: 'local' | 'remote';
+    private: boolean;
+    funding_txid: string;
+    total_msat: number;
+    final_to_us_msat: number;
+    min_to_us_msat: number;
+    max_to_us_msat: number;
+    total_htlcs_sent: number;
+    close_cause:
+        | 'unknown'
+        | 'local'
+        | 'user'
+        | 'remote'
+        | 'protocol'
+        | 'onchain';
+    // "can be missing with pre-v23.05 closes", per the schema
+    peer_id?: string;
+    short_channel_id?: string;
+    // absent for channels that never had a commitment tx, and the fee below
+    // is the fee on that same tx
+    last_commitment_txid?: string;
+    last_commitment_fee_msat?: number;
+    // only present if the channel was closed by one of the two sides
+    closer?: 'local' | 'remote';
+    // required from v26.06 on, absent on older nodes
+    channel_type?: IClnChannelType;
+    last_stable_connection?: number;
+}
+
+// lightning-listpeers
+export interface IClnPeer {
+    id: string;
+    connected: boolean;
+    num_channels: number;
+    // the schema requires these only while `connected` is true
+    netaddr?: string[];
+    features?: string;
+}
+
 const api = new CLNRest();
 
 // Returns onchain balance of core-lightning node
@@ -70,9 +152,11 @@ export const getOffchainBalance = (data: any) => {
 };
 
 // Get your peers and the channel info for core lightning node
-export const listPeerChannels = async (data: any) => {
+export const listPeerChannels = async (data: {
+    channels: IClnPeerChannel[];
+}) => {
     const formattedChannels = data.channels
-        .map((peer: any) => {
+        .map((peer: IClnPeerChannel) => {
             if (
                 peer.state === 'ONCHAIN' ||
                 peer.state === 'CLOSED' ||
@@ -87,27 +171,31 @@ export const listPeerChannels = async (data: any) => {
                 channel_point: peer.funding_txid,
                 chan_id: peer.channel_id,
                 short_channel_id: peer.short_channel_id,
-                capacity: Number(peer.total_msat / 1000).toString(),
-                local_balance: Number(peer.to_us_msat / 1000).toString(),
+                // These are absent until the channel is funded, and this
+                // mapper is reached in states where that is still true, so
+                // fall back to 0 rather than reporting "NaN" sats.
+                capacity: Number((peer.total_msat ?? 0) / 1000).toString(),
+                local_balance: Number((peer.to_us_msat ?? 0) / 1000).toString(),
                 remote_balance: Number(
-                    (peer.total_msat - peer.to_us_msat) / 1000
+                    ((peer.total_msat ?? 0) - (peer.to_us_msat ?? 0)) / 1000
                 ).toString(),
                 total_satoshis_sent: Number(
-                    peer.out_fulfilled_msat / 1000
+                    (peer.out_fulfilled_msat ?? 0) / 1000
                 ).toString(),
                 total_satoshis_received: Number(
-                    peer.in_fulfilled_msat / 1000
+                    (peer.in_fulfilled_msat ?? 0) / 1000
                 ).toString(),
                 num_updates: (
-                    peer.in_payments_offered + peer.out_payments_offered
+                    (peer.in_payments_offered ?? 0) +
+                    (peer.out_payments_offered ?? 0)
                 ).toString(),
                 csv_delay: peer.our_to_self_delay,
                 private: peer.private,
                 local_chan_reserve_sat: Number(
-                    peer.our_reserve_msat / 1000
+                    (peer.our_reserve_msat ?? 0) / 1000
                 ).toString(),
                 remote_chan_reserve_sat: Number(
-                    peer.their_reserve_msat / 1000
+                    (peer.their_reserve_msat ?? 0) / 1000
                 ).toString(),
                 close_address: peer.close_to_addr
             };
@@ -132,8 +220,10 @@ export const listPeerChannels = async (data: any) => {
 };
 
 // Returns a list of closed Lightning Network channels
-export const listClosedChannels = (data: any) => {
-    const formattedClosedChannels = data.closedchannels.map((channel: any) => ({
+export const listClosedChannels = (data: {
+    closedchannels: IClnClosedChannel[];
+}) => {
+    const formattedClosedChannels = data.closedchannels.map((channel) => ({
         remote_pubkey: channel.peer_id,
         capacity: Number(channel.total_msat / 1000).toString(),
         channel_id: channel.channel_id,
@@ -150,8 +240,9 @@ export const listClosedChannels = (data: any) => {
         max_to_us_satoshis: Number(channel.max_to_us_msat / 1000).toString(),
         total_htlcs_sent: channel.total_htlcs_sent.toString(),
         close_cause: channel.close_cause,
+        // absent when the channel had no commitment tx to pay a fee on
         last_commitment_fee_satoshis: Number(
-            channel.last_commitment_fee_msat / 1000
+            (channel.last_commitment_fee_msat ?? 0) / 1000
         ).toString(),
         last_stable_connection: channel.last_stable_connection
     }));
@@ -159,8 +250,8 @@ export const listClosedChannels = (data: any) => {
     return { channels: formattedClosedChannels };
 };
 
-export const listPeers = async (data: any) => {
-    const formattedPeers = data.peers.map((peer: any) => {
+export const listPeers = async (data: { peers: IClnPeer[] }) => {
+    const formattedPeers = data.peers.map((peer) => {
         return {
             id: peer.id,
             connected: peer.connected,
