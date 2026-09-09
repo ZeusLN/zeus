@@ -78,6 +78,15 @@ const NODE_PUBKEY = 'test-node-pubkey';
 const OLD_RELAY = 'wss://relay.old.example';
 const NEW_RELAY = 'wss://relay.new.example';
 
+// Drains a generous number of microtask turns so an in-progress async call
+// has a chance to run every step up to its next real (mocked) await point,
+// without pinning the test to the exact number of internal awaits.
+async function flushMicrotasks(turns = 20) {
+    for (let i = 0; i < turns; i++) {
+        await Promise.resolve();
+    }
+}
+
 describe('NostrWalletConnectStore relay rotation', () => {
     let clientKeys: Record<string, string>;
 
@@ -234,12 +243,14 @@ describe('NostrWalletConnectStore relay rotation', () => {
     it('marks a relay-changing update as rotate, not update, while in flight', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
-        let markerDuringMutation: string | undefined;
+        let markerDuringMutation: string[] | undefined;
         jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
             async () => {
-                markerDuringMutation = (
-                    store as any
-                ).pendingConnectionMutations.get(connection.id);
+                markerDuringMutation = [
+                    ...((store as any).pendingConnectionMutations.get(
+                        connection.id
+                    ) ?? [])
+                ];
             }
         );
 
@@ -248,7 +259,7 @@ describe('NostrWalletConnectStore relay rotation', () => {
         });
 
         expect(result.success).toBe(true);
-        expect(markerDuringMutation).toBe('rotate');
+        expect(markerDuringMutation).toEqual(['rotate']);
         expect(
             (store as any).pendingConnectionMutations.has(connection.id)
         ).toBe(false);
@@ -262,10 +273,7 @@ describe('NostrWalletConnectStore relay rotation', () => {
             async () => {
                 // Simulate a delete winning the race while this update is
                 // still in its critical section.
-                (store as any).pendingConnectionMutations.set(
-                    connection.id,
-                    'delete'
-                );
+                (store as any).pushPendingMutation(connection.id, 'delete');
             }
         );
 
@@ -275,20 +283,22 @@ describe('NostrWalletConnectStore relay rotation', () => {
 
         expect(
             (store as any).pendingConnectionMutations.get(connection.id)
-        ).toBe('delete');
+        ).toEqual(['delete']);
     });
 
     it('does not downgrade a pre-existing delete marker when an update starts', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
-        (store as any).pendingConnectionMutations.set(connection.id, 'delete');
+        (store as any).pushPendingMutation(connection.id, 'delete');
 
-        let markerDuringUpdate: string | undefined;
+        let markerDuringUpdate: string[] | undefined;
         jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
             async () => {
-                markerDuringUpdate = (
-                    store as any
-                ).pendingConnectionMutations.get(connection.id);
+                markerDuringUpdate = [
+                    ...((store as any).pendingConnectionMutations.get(
+                        connection.id
+                    ) ?? [])
+                ];
             }
         );
 
@@ -296,23 +306,25 @@ describe('NostrWalletConnectStore relay rotation', () => {
             name: 'Renamed App'
         });
 
-        expect(markerDuringUpdate).toBe('delete');
+        expect(markerDuringUpdate).toEqual(['delete', 'update']);
         expect(
             (store as any).pendingConnectionMutations.get(connection.id)
-        ).toBe('delete');
+        ).toEqual(['delete']);
     });
 
     it('does not downgrade a pre-existing rotate marker when a second update starts', async () => {
         const store = buildStore();
         const connection = seedConnection(store);
-        (store as any).pendingConnectionMutations.set(connection.id, 'rotate');
+        (store as any).pushPendingMutation(connection.id, 'rotate');
 
-        let markerDuringUpdate: string | undefined;
+        let markerDuringUpdate: string[] | undefined;
         jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
             async () => {
-                markerDuringUpdate = (
-                    store as any
-                ).pendingConnectionMutations.get(connection.id);
+                markerDuringUpdate = [
+                    ...((store as any).pendingConnectionMutations.get(
+                        connection.id
+                    ) ?? [])
+                ];
             }
         );
 
@@ -320,10 +332,82 @@ describe('NostrWalletConnectStore relay rotation', () => {
             name: 'Renamed App'
         });
 
-        expect(markerDuringUpdate).toBe('rotate');
+        expect(markerDuringUpdate).toEqual(['rotate', 'update']);
         expect(
             (store as any).pendingConnectionMutations.get(connection.id)
-        ).toBe('rotate');
+        ).toEqual(['rotate']);
+    });
+
+    it('keeps a second overlapping rotate guarded after the first rotate finishes', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store);
+
+        // A third relay, distinct from OLD_RELAY and NEW_RELAY: the first
+        // rotation's cleanup releases OLD_RELAY (closing its wallet service
+        // and unpublishing it), so routing the second overlapping rotation
+        // back to OLD_RELAY would exercise the real, unmocked
+        // publish-wallet-service-info/retry path instead of the mocked one
+        // this test wants to isolate.
+        const THIRD_RELAY = 'wss://relay.third.example';
+        (store as any).nwcWalletServices.set(THIRD_RELAY, {
+            connected: true,
+            close: jest.fn()
+        });
+        (store as any).publishedRelays.add(THIRD_RELAY);
+
+        let releaseFirst: () => void = () => undefined;
+        let releaseSecond: () => void = () => undefined;
+        let calls = 0;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    calls += 1;
+                    if (calls === 1) {
+                        releaseFirst = resolve;
+                    } else {
+                        releaseSecond = resolve;
+                    }
+                })
+        );
+
+        const firstDone = store.updateConnection(connection.id, {
+            relayUrl: NEW_RELAY
+        });
+        await flushMicrotasks();
+
+        expect(connection.relayUrl).toBe(NEW_RELAY);
+
+        const secondDone = store.updateConnection(connection.id, {
+            relayUrl: THIRD_RELAY
+        });
+        await flushMicrotasks();
+
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toEqual(['rotate', 'rotate']);
+
+        releaseFirst();
+        await firstDone;
+
+        // The second rotation's pubkey rebind / deleteClientKeys window is
+        // still open: a request arriving now must still see UNAUTHORIZED,
+        // not fall through because the first rotate's finally cleared the
+        // only marker slot.
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toEqual(['rotate']);
+        const midResponse = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({ result: { should: 'not-run' }, error: undefined })
+        );
+        expect(midResponse.error?.code).toBe('UNAUTHORIZED');
+
+        releaseSecond();
+        await secondDone;
+
+        expect(
+            (store as any).pendingConnectionMutations.has(connection.id)
+        ).toBe(false);
     });
 
     it('leaves relayUrl unchanged when storing the new key fails so retry can rotate', async () => {
@@ -1293,12 +1377,9 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         jest.spyOn(store as any, 'deleteClientKeys').mockImplementation(
             async () => {
-                // Simulate an update overwriting the marker after this
+                // Simulate an update starting concurrently after this
                 // delete already committed to removing the connection.
-                (store as any).pendingConnectionMutations.set(
-                    connection.id,
-                    'update'
-                );
+                (store as any).pushPendingMutation(connection.id, 'update');
             }
         );
 
@@ -1306,7 +1387,104 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         expect(
             (store as any).pendingConnectionMutations.get(connection.id)
-        ).toBe('update');
+        ).toEqual(['update']);
+    });
+
+    it('keeps a second overlapping update guarded after the first update finishes', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        let releaseFirst: () => void = () => undefined;
+        let releaseSecond: () => void = () => undefined;
+        let calls = 0;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    calls += 1;
+                    if (calls === 1) {
+                        releaseFirst = resolve;
+                    } else {
+                        releaseSecond = resolve;
+                    }
+                })
+        );
+
+        const firstDone = store.updateConnection(connection.id, {
+            name: 'First'
+        });
+        await flushMicrotasks();
+
+        const secondDone = store.updateConnection(connection.id, {
+            name: 'Second'
+        });
+        await flushMicrotasks();
+
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toEqual(['update', 'update']);
+
+        releaseFirst();
+        await firstDone;
+
+        // The second update's own critical section is still running: a
+        // request arriving now must still see RATE_LIMITED, not be let
+        // through because the first update's finally cleared the marker.
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toEqual(['update']);
+        const midResponse = await (store as any).withGlobalHandler(
+            connection.id,
+            async () => ({ result: { should: 'not-run' }, error: undefined })
+        );
+        expect(midResponse.error).toEqual({
+            code: 'RATE_LIMITED',
+            message: 'stores.NostrWalletConnectStore.error.connectionUpdating'
+        });
+
+        releaseSecond();
+        await secondDone;
+
+        expect(
+            (store as any).pendingConnectionMutations.has(connection.id)
+        ).toBe(false);
+    });
+
+    it('does not let a mid-delete failure clear a concurrent update marker', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+
+        let releaseUpdate: () => void = () => undefined;
+        jest.spyOn(store as any, 'subscribeToConnection').mockImplementation(
+            () => new Promise<void>((resolve) => (releaseUpdate = resolve))
+        );
+
+        const updateDone = store.updateConnection(connection.id, {
+            name: 'Renamed'
+        });
+        await flushMicrotasks();
+
+        jest.spyOn(store as any, 'deleteClientKeys').mockRejectedValue(
+            new Error('delete failed mid-way')
+        );
+
+        await expect(store.deleteConnection(connection.id)).rejects.toThrow();
+
+        // The failed delete's finally must only remove its own 'delete'
+        // entry, leaving the still-running update's marker in place.
+        expect(
+            (store as any).pendingConnectionMutations.get(connection.id)
+        ).toEqual(['update']);
+
+        releaseUpdate();
+        await updateDone;
+
+        expect(
+            (store as any).pendingConnectionMutations.has(connection.id)
+        ).toBe(false);
     });
 
     it('defers relay release when delete awaited in-flight handlers', async () => {
@@ -1447,10 +1625,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
             async () => {
-                (store as any).pendingConnectionMutations.set(
-                    connection.id,
-                    'update'
-                );
+                (store as any).pushPendingMutation(connection.id, 'update');
                 return true;
             }
         );
@@ -1476,10 +1651,7 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
             async () => {
-                (store as any).pendingConnectionMutations.set(
-                    connection.id,
-                    'delete'
-                );
+                (store as any).pushPendingMutation(connection.id, 'delete');
                 return true;
             }
         );
@@ -1505,13 +1677,36 @@ describe('NostrWalletConnectStore connection expiry enforcement', () => {
 
         jest.spyOn(store as any, 'markConnectionUsed').mockImplementation(
             async () => {
-                (store as any).pendingConnectionMutations.set(
-                    connection.id,
-                    'rotate'
-                );
+                (store as any).pushPendingMutation(connection.id, 'rotate');
                 return true;
             }
         );
+
+        const response = await (store as any).withGlobalHandler(
+            connection.id,
+            handler
+        );
+
+        expect(response.error).toEqual({
+            code: 'UNAUTHORIZED',
+            message: 'stores.NostrWalletConnectStore.error.connectionNotFound'
+        });
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('rejects with UNAUTHORIZED when delete is not the first entry in the pending list', async () => {
+        const store = buildStore();
+        const connection = seedConnection(store, {
+            expiresAt: new Date(Date.now() + 60_000)
+        });
+        const handler = jest.fn();
+
+        // 'update' pushed first (still running), 'delete' pushed second by
+        // a mutation that started concurrently: mutationRejection must
+        // scan the whole list for the most severe kind, not just check the
+        // first entry.
+        (store as any).pushPendingMutation(connection.id, 'update');
+        (store as any).pushPendingMutation(connection.id, 'delete');
 
         const response = await (store as any).withGlobalHandler(
             connection.id,
