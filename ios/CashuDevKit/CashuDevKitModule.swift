@@ -180,7 +180,20 @@ class CashuDevKitModule: RCTEventEmitter {
             try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
             wallet = try await repo.getWallet(mintUrl: url, unit: unit)
         }
-        walletQueue.sync { wallets[normalized] = wallet }
+        // Insert under the queue with a staleness check: this is the one map
+        // write that can land after a teardown drained the map (the repo was
+        // read before the create above, outside the queue), and an
+        // unconditional insert would park an orphaned Wallet - keeping the
+        // closed database alive via its own reference - in the map until the
+        // next initializeWallet drains it
+        let inserted = walletQueue.sync { () -> Bool in
+            guard self.repo === repo else { return false }
+            wallets[normalized] = wallet
+            return true
+        }
+        guard inserted else {
+            throw FfiError.Internal(errorMessage: "Wallet not initialized")
+        }
         return wallet
     }
 

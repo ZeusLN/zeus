@@ -254,7 +254,25 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             currentRepo.createWallet(url, walletUnit, null)
             currentRepo.getWallet(url, walletUnit)
         }
-        wallets[normalized] = wallet
+        // Insert under handleLock with a staleness check: this is the one
+        // map write that can land after a teardown drained the map (the repo
+        // was read before the create above, outside the lock), and an
+        // unconditional insert would park an undestroyed Wallet - holding
+        // its own reference to the closed database - in the map until the
+        // next initializeWallet drains it, briefly reopening the
+        // reachability window the wipe paths exist to close
+        val inserted = synchronized(handleLock) {
+            if (repo === currentRepo) {
+                wallets[normalized] = wallet
+                true
+            } else {
+                false
+            }
+        }
+        if (!inserted) {
+            destroyHandles(listOf(wallet))
+            throw FfiException.Internal("Wallet not initialized")
+        }
         return wallet
     }
 

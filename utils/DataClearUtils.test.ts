@@ -1175,6 +1175,52 @@ describe('CDK database deletion', () => {
                 );
                 expect(bridge).toContain('closeWalletDatabase:');
             });
+
+            // getWallet's lazy insert is the one wallet-map write outside
+            // the locked teardown/init paths: created from a repo read taken
+            // before the lock, it can land after a teardown drained the map
+            // and park an undestroyed handle that keeps the unlinked
+            // database open until the next init. Assert the insert sits
+            // behind a same-repo check inside the lock/queue.
+            it('guards the lazy wallet-map insert in the Android module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+                    ),
+                    'utf8'
+                );
+                const body = source.slice(
+                    source.indexOf('suspend fun getWallet')
+                );
+                expect(
+                    body.indexOf('synchronized(handleLock)')
+                ).toBeGreaterThan(-1);
+                expect(body.indexOf('repo === currentRepo')).toBeGreaterThan(
+                    -1
+                );
+                expect(body.indexOf('synchronized(handleLock)')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+                expect(body.indexOf('repo === currentRepo')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+            });
+
+            it('guards the lazy wallet-map insert in the iOS module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.swift'
+                    ),
+                    'utf8'
+                );
+                const body = source.slice(source.indexOf('func getWallet'));
+                expect(body.indexOf('self.repo === repo')).toBeGreaterThan(-1);
+                expect(body.indexOf('self.repo === repo')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+            });
         });
     });
 });
