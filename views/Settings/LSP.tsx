@@ -356,7 +356,11 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     label: localeString(
                                         'views.Settings.LSP.createWrappedInvoice'
                                     ),
-                                    nav: 'Receive'
+                                    nav: 'Receive',
+                                    params: {
+                                        forceLsp: true,
+                                        selectedIndex: 1
+                                    }
                                 },
                                 {
                                     label: localeString(
@@ -379,7 +383,10 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     }}
                                     onPress={() => {
                                         if (item.nav)
-                                            navigation.navigate(item.nav);
+                                            navigation.navigate(
+                                                item.nav,
+                                                item.params
+                                            );
                                         if (item.url)
                                             UrlUtils.goToUrl(item.url);
                                     }}

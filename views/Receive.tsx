@@ -117,6 +117,7 @@ interface ReceiveProps {
             autoGenerateChange?: boolean;
             forceLn?: boolean; // when coming from the LN balance slider action
             forceOnChain?: boolean; // when coming from the on-chain balance slider action
+            forceLsp?: boolean; // when coming from Create a wrapped invoice in LSP settings
             account: string;
             addressType?: string;
             selectedIndex: number;
@@ -281,6 +282,7 @@ export default class Receive extends React.Component<
             InvoicesStore,
             SettingsStore,
             LightningAddressStore,
+            LSPStore,
             NodeInfoStore,
             route
         } = this.props;
@@ -307,8 +309,10 @@ export default class Receive extends React.Component<
 
         const expirationIndex = expirationIndexFromSeconds(newExpirySeconds);
 
+        const forceLsp = !!route.params?.forceLsp;
+
         const lspIsActive =
-            settings?.enableLSP &&
+            (settings?.enableLSP || forceLsp) &&
             BackendUtils.supportsFlowLSP() &&
             !flowLspNotConfigured;
 
@@ -339,10 +343,16 @@ export default class Receive extends React.Component<
             routeHints,
             ampInvoice,
             blindedPaths,
-            enableLSP: settings?.enableLSP,
+            enableLSP: settings?.enableLSP || forceLsp,
             lspIsActive,
             flowLspNotConfigured
         });
+
+        // Wallet only fetches LSP info (and peers with the LSP) when the
+        // persisted setting is enabled, so a forced session fetches it here
+        if (forceLsp && lspIsActive && !LSPStore.info?.pubkey) {
+            LSPStore.getLSPInfo().catch(() => {});
+        }
 
         const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
@@ -635,6 +645,7 @@ export default class Receive extends React.Component<
                     ? addressType || '1'
                     : undefined,
                 noLsp: !effectiveLspIsActive,
+                forceLsp: !!this.props.route.params?.forceLsp,
                 skipOnchain
             })
                 .then(
@@ -734,6 +745,7 @@ export default class Receive extends React.Component<
                             expirySeconds: '3600',
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive,
+                            forceLsp: !!this.props.route.params?.forceLsp,
                             skipOnchain
                         })
                             .then(
@@ -2095,7 +2107,19 @@ export default class Receive extends React.Component<
                                                                 value={
                                                                     enableLSP
                                                                 }
+                                                                disabled={
+                                                                    !!route
+                                                                        .params
+                                                                        ?.forceLsp
+                                                                }
                                                                 onValueChange={async () => {
+                                                                    // never persist a change while the LSP is forced on
+                                                                    if (
+                                                                        route
+                                                                            .params
+                                                                            ?.forceLsp
+                                                                    )
+                                                                        return;
                                                                     this.setState(
                                                                         {
                                                                             enableLSP:
@@ -2906,6 +2930,9 @@ export default class Receive extends React.Component<
                                                                     ? customPreimage
                                                                     : undefined,
                                                             noLsp: !lspIsActive,
+                                                            forceLsp:
+                                                                !!route.params
+                                                                    ?.forceLsp,
                                                             skipOnchain
                                                         })
                                                             .then(
