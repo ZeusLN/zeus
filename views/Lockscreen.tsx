@@ -33,6 +33,7 @@ import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
     hasVerifier,
+    DUMMY_VERIFIER,
     VerifierRecord
 } from '../utils/LockVerifierUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -314,125 +315,148 @@ export default class Lockscreen extends React.Component<
             verifying: true
         });
 
-        // Verify against the salted verifier for the active method. The normal
-        // and duress checks are both computed (equal cost) before branching so
-        // response time never reveals which credential matched - keeping the
-        // duress credential indistinguishable from a normal login attempt.
+        // Verify against the salted verifier for the active method. Both the
+        // normal and duress checks always run a full scrypt derivation - a
+        // dummy record stands in when no duress credential is configured -
+        // so response time reveals neither which credential matched nor
+        // whether a duress credential exists at all. (verifySecret would
+        // otherwise return early on a missing record, and scrypt-js is
+        // CPU-bound on the JS thread, so the derivations serialize: one vs
+        // two would be a measurable tell.)
         const attempt =
             authMethod === 'passphrase' ? passphraseAttempt : pinAttempt;
         const primaryVerifier =
             authMethod === 'passphrase' ? passphraseVerifier : pinVerifier;
-        const duressVerifier =
+        const configuredDuressVerifier =
             authMethod === 'passphrase'
                 ? duressPassphraseVerifier
                 : duressPinVerifier;
+        const duressVerifier = hasVerifier(configuredDuressVerifier)
+            ? configuredDuressVerifier
+            : DUMMY_VERIFIER;
 
-        const [primaryMatch, duressMatch] = await Promise.all([
-            verifySecret(attempt, primaryVerifier),
-            verifySecret(attempt, duressVerifier)
-        ]);
+        try {
+            const [primaryMatch, duressMatch] = await Promise.all([
+                verifySecret(attempt, primaryVerifier),
+                verifySecret(attempt, duressVerifier)
+            ]);
 
-        if (primaryMatch) {
-            SettingsStore.setLoginStatus(true);
+            if (primaryMatch) {
+                SettingsStore.setLoginStatus(true);
 
-            // Check if we're modifying security settings first
-            if (modifySecurityScreen) {
-                this.resetAuthenticationAttempts();
-                navigation.popTo(modifySecurityScreen);
-                return;
-            } else if (deletePassword) {
-                this.deletePassword();
-                return;
-            } else if (deletePin) {
-                this.deletePin();
-                return;
-            } else if (deleteDuressPassword) {
-                this.deleteDuressPassword();
-                return;
-            } else if (deleteDuressPin) {
-                this.deleteDuressPin();
-                return;
-            } else if (route.params?.pendingNavigation) {
-                // must be handled before selectNodeOnStartup, which would
-                // otherwise drop the re-auth target and land on the wallet
-                // picker
-                if (
-                    (SettingsStore.settings?.pos?.posEnabled ||
-                        PosEnabled.Disabled) !== PosEnabled.Disabled
-                ) {
-                    setPosStatus('inactive');
+                // Check if we're modifying security settings first
+                if (modifySecurityScreen) {
+                    this.resetAuthenticationAttempts();
+                    navigation.popTo(modifySecurityScreen);
+                    return;
+                } else if (deletePassword) {
+                    this.deletePassword();
+                    return;
+                } else if (deletePin) {
+                    this.deletePin();
+                    return;
+                } else if (deleteDuressPassword) {
+                    this.deleteDuressPassword();
+                    return;
+                } else if (deleteDuressPin) {
+                    this.deleteDuressPin();
+                    return;
+                } else if (route.params?.pendingNavigation) {
+                    // must be handled before selectNodeOnStartup, which would
+                    // otherwise drop the re-auth target and land on the wallet
+                    // picker
+                    if (
+                        (SettingsStore.settings?.pos?.posEnabled ||
+                            PosEnabled.Disabled) !== PosEnabled.Disabled
+                    ) {
+                        setPosStatus('inactive');
+                    }
+                    this.resetAuthenticationAttempts();
+                    const { pendingNavigation } = route.params;
+                    this.proceed(
+                        pendingNavigation.screen,
+                        pendingNavigation.params
+                    );
+                    return;
+                } else if (SettingsStore.settings.selectNodeOnStartup) {
+                    // Only handle wallet selection when NOT modifying security
+                    this.resetAuthenticationAttempts();
+
+                    const shareIntentData = route.params?.shareIntentData;
+
+                    if (shareIntentData) {
+                        navigation.replace('Wallets', {
+                            fromStartup: true,
+                            shareIntentData
+                        });
+                    } else {
+                        navigation.replace('Wallets', { fromStartup: true });
+                    }
+                    return;
                 }
-                this.resetAuthenticationAttempts();
-                const { pendingNavigation } = route.params;
-                this.proceed(
-                    pendingNavigation.screen,
-                    pendingNavigation.params
-                );
-                return;
-            } else if (SettingsStore.settings.selectNodeOnStartup) {
-                // Only handle wallet selection when NOT modifying security
-                this.resetAuthenticationAttempts();
-
-                const shareIntentData = route.params?.shareIntentData;
-
-                if (shareIntentData) {
-                    navigation.replace('Wallets', {
-                        fromStartup: true,
-                        shareIntentData
-                    });
-                } else {
-                    navigation.replace('Wallets', { fromStartup: true });
+                if (!SettingsStore.settings.selectNodeOnStartup) {
+                    if (
+                        (SettingsStore.settings?.pos?.posEnabled ||
+                            PosEnabled.Disabled) !== PosEnabled.Disabled
+                    ) {
+                        setPosStatus('inactive');
+                    }
+                    this.resetAuthenticationAttempts();
+                    this.proceed();
                 }
-                return;
-            }
-            if (!SettingsStore.settings.selectNodeOnStartup) {
-                if (
-                    (SettingsStore.settings?.pos?.posEnabled ||
-                        PosEnabled.Disabled) !== PosEnabled.Disabled
-                ) {
-                    setPosStatus('inactive');
-                }
-                this.resetAuthenticationAttempts();
-                this.proceed();
-            }
-        } else if (
-            // duress creds only trigger the wipe on a genuine login attempt -
-            // in security management flows they count as an incorrect entry
-            !this.isSecurityManagementFlow &&
-            duressMatch
-        ) {
-            // never mark the session logged in here: the wipe takes long
-            // enough that an unlocked app would expose the wallet UI (and
-            // the configs being wiped) before the restart lands. Keeping
-            // loggedIn false holds every auth gate shut for the duration,
-            // and the wipe guard pins the user to the wiping screen.
-            this.setState({ wiping: true });
-            await this.deleteNodes();
-        } else {
-            // need to fetch updated settings to get incremented value of
-            // authenticationAttempts, in case there are multiple failed attempts in a row
-            const updatedSettings = await getSettings();
-            let authenticationAttempts = 1;
-            if (updatedSettings?.authenticationAttempts) {
-                authenticationAttempts =
-                    updatedSettings.authenticationAttempts + 1;
-            }
-            this.setState({
-                authenticationAttempts
-            });
-            if (authenticationAttempts >= maxAuthenticationAttempts) {
-                // see the duress branch: loggedIn must stay false so the
-                // wallet UI stays gated while the wipe runs
+            } else if (
+                // duress creds only trigger the wipe on a genuine login
+                // attempt - in security management flows they count as an
+                // incorrect entry
+                !this.isSecurityManagementFlow &&
+                duressMatch
+            ) {
+                // never mark the session logged in here: the wipe takes long
+                // enough that an unlocked app would expose the wallet UI (and
+                // the configs being wiped) before the restart lands. Keeping
+                // loggedIn false holds every auth gate shut for the duration,
+                // and the wipe guard pins the user to the wiping screen.
                 this.setState({ wiping: true });
-                // wipe node configs, passwords, and pins
-                await this.authenticationFailure();
+                await this.deleteNodes();
             } else {
-                await updateSettings({ authenticationAttempts }).then(() => {
+                // need to fetch updated settings to get incremented value of
+                // authenticationAttempts, in case there are multiple failed
+                // attempts in a row
+                const updatedSettings = await getSettings();
+                let authenticationAttempts = 1;
+                if (updatedSettings?.authenticationAttempts) {
+                    authenticationAttempts =
+                        updatedSettings.authenticationAttempts + 1;
+                }
+                this.setState({
+                    authenticationAttempts
+                });
+                if (authenticationAttempts >= maxAuthenticationAttempts) {
+                    // see the duress branch: loggedIn must stay false so the
+                    // wallet UI stays gated while the wipe runs
+                    this.setState({ wiping: true });
+                    // wipe node configs, passwords, and pins
+                    await this.authenticationFailure();
+                } else {
+                    await updateSettings({ authenticationAttempts });
                     this.setState({
                         error: true,
                         pinAttempt: '',
                         verifying: false
                     });
+                }
+            }
+        } catch (e) {
+            // A rejected settings read/write (updateSettings deliberately
+            // re-throws to its caller) must not leave the tap-swallowing
+            // overlay up with the re-entrancy guard armed - that would lock
+            // the user out until force-quit. The wipe branches keep the
+            // guard armed on purpose: the overlay pins the user to the
+            // wiping screen until restart.
+            if (!this.state.wiping) {
+                this.setState({
+                    error: true,
+                    verifying: false
                 });
             }
         }

@@ -1,6 +1,7 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { settingsStore } from '../stores/Stores';
+import { hasVerifier } from './LockVerifierUtils';
 
 const protectedNavigation = async (
     navigation: NativeStackNavigationProp<any, any>,
@@ -9,7 +10,12 @@ const protectedNavigation = async (
     routeParams?: any
 ) => {
     const { posStatus, settings, setPosStatus } = settingsStore;
-    const loginRequired = settings && (settings.passphrase || settings.pin);
+    // credentials are stored as verifier records; the plaintext
+    // passphrase/pin fields no longer exist post-migration
+    const loginRequired =
+        settings &&
+        (hasVerifier(settings.passphraseVerifier) ||
+            hasVerifier(settings.pinVerifier));
     const posEnabled = posStatus === 'active';
 
     if (posEnabled && loginRequired) {

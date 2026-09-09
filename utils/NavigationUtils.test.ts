@@ -73,9 +73,21 @@ describe('NavigationUtils', () => {
     });
 
     describe('protectedNavigation', () => {
-        it('routes via Lockscreen when POS is active and a pin is set', async () => {
+        // Credentials persist as verifier records post-migration; the gate
+        // must read those, not the removed plaintext pin/passphrase fields.
+        const verifier = {
+            v: 1,
+            kdf: 'scrypt',
+            n: 32768,
+            r: 8,
+            p: 1,
+            salt: 'aa'.repeat(16),
+            hash: 'bb'.repeat(32)
+        };
+
+        it('routes via Lockscreen when POS is active and a pin verifier is set', async () => {
             mockSettingsStore.posStatus = 'active';
-            mockSettingsStore.settings = { pin: '1234' };
+            mockSettingsStore.settings = { pinVerifier: verifier };
 
             await protectedNavigation(navigation, 'Menu');
 
@@ -84,9 +96,29 @@ describe('NavigationUtils', () => {
             });
         });
 
+        it('routes via Lockscreen when POS is active and a passphrase verifier is set', async () => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.settings = { passphraseVerifier: verifier };
+
+            await protectedNavigation(navigation, 'Menu');
+
+            expect(navigation.navigate).toHaveBeenCalledWith('Lockscreen', {
+                pendingNavigation: { screen: 'Menu', params: undefined }
+            });
+        });
+
+        it('navigates directly when POS is active but no credential is configured', async () => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.settings = {};
+
+            await protectedNavigation(navigation, 'Menu');
+
+            expect(navigation.navigate).toHaveBeenCalledWith('Menu', undefined);
+        });
+
         it('navigates directly when POS is inactive', async () => {
             mockSettingsStore.posStatus = 'inactive';
-            mockSettingsStore.settings = { pin: '1234' };
+            mockSettingsStore.settings = { pinVerifier: verifier };
 
             await protectedNavigation(navigation, 'Menu');
 

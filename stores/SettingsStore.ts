@@ -1993,6 +1993,14 @@ export default class SettingsStore {
                 await MigrationsUtils.migrateLockCredentialsToVerifiers(
                     parsedSettings
                 );
+                // iOS one-shot: rewrite pre-existing keychain items so
+                // write-once keys pick up the non-migratable accessibility
+                // class. Modern path only: the legacy path's
+                // storageMigrationV2 freshly writes every item, which
+                // stamps them correctly already.
+                await MigrationsUtils.restampKeychainAccessibility(
+                    parsedSettings
+                );
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');

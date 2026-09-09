@@ -522,10 +522,66 @@ class MigrationsUtils {
         }
 
         if (changed) {
-            await settingsStore.setSettings(settings);
+            const persisted = await settingsStore.setSettings(settings);
+            if (!persisted) {
+                // The write failed (wipe write-latch engaged, or the keychain
+                // call itself failed). Leave the MOD flag unset so the
+                // migration re-runs on the next load: stamping it now would
+                // strand a persisted blob that still holds plaintext
+                // credentials and no verifiers, and the app would boot with
+                // no lock configured at all.
+                return settings;
+            }
         }
+
+        // The pre-v2 'zeus-settings' blob is copied forward by
+        // storageMigrationV2 but never deleted, so for anyone who came
+        // through the legacy path it still holds the plaintext credentials
+        // this migration exists to remove. Rewrite it stripped rather than
+        // deleting it, since KeychainRecoveryUtils still lists it as a
+        // recovery source. Runs before the flag is stamped so a failure here
+        // retries on the next load.
+        await this.stripLegacyLockCredentials();
+
         await EncryptedStorage.setItem(MOD_KEY_LOCK_VERIFIER, 'true');
         return settings;
+    }
+
+    // Remove plaintext app-lock credentials from the legacy 'zeus-settings'
+    // EncryptedStorage blob, leaving everything else in place.
+    private async stripLegacyLockCredentials() {
+        const LEGACY_SETTINGS_KEY = 'zeus-settings';
+        const legacy = await EncryptedStorage.getItem(LEGACY_SETTINGS_KEY);
+        if (!legacy) return;
+
+        let parsed: any;
+        try {
+            parsed = JSON.parse(legacy);
+        } catch (e) {
+            // an unparseable legacy blob holds no strippable fields; leave
+            // it for KeychainRecoveryUtils to surface
+            return;
+        }
+        if (!parsed || typeof parsed !== 'object') return;
+
+        let changed = false;
+        for (const field of [
+            'pin',
+            'duressPin',
+            'passphrase',
+            'duressPassphrase'
+        ]) {
+            if (parsed[field] !== undefined) {
+                delete parsed[field];
+                changed = true;
+            }
+        }
+        if (changed) {
+            await EncryptedStorage.setItem(
+                LEGACY_SETTINGS_KEY,
+                JSON.stringify(parsed)
+            );
+        }
     }
 
     // Rewrite persisted v1 RGS endpoints to their v2 equivalents in a
@@ -1326,6 +1382,181 @@ class MigrationsUtils {
             if (legacyValue !== null && legacyValue !== undefined) {
                 await Storage.setItem(nodeKey, legacyValue);
             }
+        }
+    }
+
+    // Rewrite one keychain item in place so it picks up the current write
+    // options (accessibility class). Returns false only on a failed write;
+    // an unset key is success.
+    private async restampKey(key: string): Promise<boolean> {
+        try {
+            const value = await Storage.getItem(key);
+            // false covers unset and empty values; nothing to rewrite
+            if (value === false || value == null) return true;
+            const written = await Storage.setItem(key, value);
+            return written !== false;
+        } catch (e) {
+            console.error(`[Restamp] Failed to rewrite ${key}:`, e);
+            return false;
+        }
+    }
+
+    // One-shot iOS pass: rewrite existing keychain items in place so they
+    // pick up AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY. The accessibility class
+    // only applies when an item is written, so anything persisted before
+    // that option was added - including write-once secrets such as LNC
+    // credentials, Cashu seed material, NWC nostr keys, contacts and notes -
+    // would otherwise keep the migratable AFTER_FIRST_UNLOCK class and ride
+    // an encrypted backup to a new device. Walks the same key inventory as
+    // keychainCloudSyncMigration. Entries with no index (lnurlpay:<hash>,
+    // pos-<orderId>) cannot be enumerated from JS and are accepted as
+    // residual: they hold payment metadata, not key material. The flag is
+    // only stamped once every rewrite succeeds, so a partial failure retries
+    // on the next load; rewrites are idempotent.
+    public async restampKeychainAccessibility(settings: any) {
+        // Only iOS uses kSecAttrAccessible; Android backup exclusion is
+        // already handled by allowBackup="false"
+        if (Platform.OS !== 'ios') return;
+
+        const RESTAMP_KEY = 'ios-keychain-accessible-restamp-v1';
+        const done = await EncryptedStorage.getItem(RESTAMP_KEY);
+        if (done === 'true') return;
+
+        console.log('Re-stamping keychain items as this-device-only...');
+
+        const keys: string[] = [
+            CONTACTS_KEY,
+            NOTES_KEY,
+            LAST_CHANNEL_BACKUP_STATUS,
+            LAST_CHANNEL_BACKUP_TIME,
+            ADDRESS_ACTIVATED_STRING,
+            HASHES_STORAGE_STRING,
+            POS_HIDDEN_KEY,
+            POS_STANDALONE_KEY,
+            CATEGORY_KEY,
+            PRODUCT_KEY,
+            UNIT_KEY,
+            HIDDEN_ACCOUNTS_KEY,
+            CURRENCY_CODES_KEY,
+            ACTIVITY_FILTERS_KEY,
+            IS_BACKED_UP_KEY,
+            LSPS_ORDERS_KEY,
+            SWAPS_KEY,
+            REVERSE_SWAPS_KEY,
+            SWAPS_RESCUE_KEY,
+            SWAPS_LAST_USED_KEY,
+            // Literal historical key names: importing these stores here
+            // would pull their module graphs into every suite that mocks
+            // this file, and a one-shot migration should pin the names it
+            // ran against anyway
+            'zeus-nwc-connections',
+            'zeus-nwc-client-keys', // nostr secret keys
+            'zeus-nwc-service-keys', // nostr secret keys
+            'zeus-nwc-cashu-enabled',
+            'zeus-nwc-lud16-enabled',
+            'persistentNWCServicesEnabled',
+            'zeus-favorite-currencies',
+            'successfulPaymentCount',
+            'ratingDismissedPermanently'
+        ];
+
+        // per-note entries are listed in the notes index
+        try {
+            const notesListJson = await Storage.getItem(NOTES_KEY);
+            if (notesListJson) {
+                const noteKeys = JSON.parse(notesListJson);
+                if (Array.isArray(noteKeys)) keys.push(...noteKeys);
+            }
+        } catch (e) {
+            console.warn('[Restamp] Could not read notes index:', e);
+        }
+
+        const nodes = Array.isArray(settings?.nodes) ? settings.nodes : [];
+        for (const node of nodes) {
+            // LNC credentials: write-once local/remote keys + macaroon,
+            // stored under a hash of the pairing phrase
+            if (
+                node?.implementation === 'lightning-node-connect' &&
+                node.pairingPhrase
+            ) {
+                const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                    node.pairingPhrase
+                )}`;
+                keys.push(baseKey, `${baseKey}:host`);
+            }
+
+            // Cashu data (including seed material) is namespaced per node dir
+            if (
+                node?.implementation === 'embedded-lnd' ||
+                node?.implementation === 'ldk-node'
+            ) {
+                const nodeDir =
+                    node.implementation === 'ldk-node'
+                        ? node.ldkNodeDir || 'ldk'
+                        : node.lndDir || 'lnd';
+                keys.push(
+                    `${nodeDir}-cashu-mintUrls`,
+                    `${nodeDir}-cashu-selectedMintUrl`,
+                    `${nodeDir}-cashu-totalBalanceSats`,
+                    `${nodeDir}-cashu-invoices`,
+                    `${nodeDir}-cashu-payments`,
+                    `${nodeDir}-cashu-received-tokens`,
+                    `${nodeDir}-cashu-sent-tokens`,
+                    `${nodeDir}-cashu-seed-version`,
+                    `${nodeDir}-cashu-seed-phrase`,
+                    `${nodeDir}-cashu-seed`
+                );
+
+                // per-mint wallet keys hang off the mintUrls list
+                try {
+                    const mintUrlsJson = await Storage.getItem(
+                        `${nodeDir}-cashu-mintUrls`
+                    );
+                    if (mintUrlsJson) {
+                        const mintUrls = JSON.parse(mintUrlsJson);
+                        if (Array.isArray(mintUrls)) {
+                            for (const mintUrl of mintUrls) {
+                                const walletId = `${nodeDir}==${mintUrl}`;
+                                keys.push(
+                                    `${walletId}-mintInfo`,
+                                    `${walletId}-counter`,
+                                    `${walletId}-proofs`,
+                                    `${walletId}-balance`,
+                                    `${walletId}-pubkey`
+                                );
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn(
+                        `[Restamp] Could not read mintUrls for ${nodeDir}:`,
+                        e
+                    );
+                }
+            }
+        }
+
+        let allSucceeded = true;
+        for (const key of [...new Set(keys)]) {
+            const ok = await this.restampKey(key);
+            if (!ok) allSucceeded = false;
+        }
+
+        // The settings blob itself is rewritten through the store rather
+        // than restampKey so a raw read-modify-write can't race a queued
+        // settings update
+        if (settings) {
+            const persisted = await settingsStore.setSettings(settings);
+            if (!persisted) allSucceeded = false;
+        }
+
+        if (allSucceeded) {
+            await EncryptedStorage.setItem(RESTAMP_KEY, 'true');
+            console.log('Keychain accessibility re-stamp complete.');
+        } else {
+            console.warn(
+                'Keychain re-stamp incomplete; will retry on next launch.'
+            );
         }
     }
 
