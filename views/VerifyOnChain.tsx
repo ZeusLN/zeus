@@ -10,10 +10,12 @@ import Screen from '../components/Screen';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
+import LoadingIndicator from '../components/LoadingIndicator';
 import SwipeButton from '../components/SwipeButton';
 import Button from '../components/Button';
 import Text from '../components/Text';
 
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -45,6 +47,8 @@ interface VerifyOnChainProps {
 interface VerifyOnChainState {
     bitcoinUnits: 'sats' | 'BTC';
     slideToPayThreshold: number;
+    estimatedFee: number | null;
+    loadingFeeEstimate: boolean;
 }
 
 @inject('TransactionsStore', 'SettingsStore', 'UnitsStore')
@@ -52,7 +56,9 @@ interface VerifyOnChainState {
 export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     state: VerifyOnChainState = {
         bitcoinUnits: 'sats',
-        slideToPayThreshold: 10000
+        slideToPayThreshold: 10000,
+        estimatedFee: null,
+        loadingFeeEstimate: false
     };
 
     async componentDidMount() {
@@ -61,7 +67,72 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
+        this.fetchFeeEstimate();
     }
+
+    fetchFeeEstimate = async () => {
+        const { route } = this.props;
+        const {
+            destination,
+            fee,
+            satAmount,
+            amount,
+            utxos,
+            account,
+            additionalOutputs,
+            fundMax
+        } = route?.params || {};
+
+        if (!BackendUtils.supportsOnchainFeeEstimation()) return;
+        // the dry-run coin selection behind the estimate can't be
+        // constrained to manually selected UTXOs, a non-default account,
+        // or a send-max spend, so an estimate would mislead there
+        if (fundMax) return;
+        if (Array.isArray(utxos) && utxos.length > 0) return;
+        if (account && account !== 'default') return;
+
+        const userRate = Number(fee);
+        const primaryAmount = Number(satAmount || amount || 0);
+        if (!destination || !(primaryAmount > 0) || !(userRate > 0)) return;
+
+        const addr_to_amount: { [address: string]: string } = {
+            [destination]: primaryAmount.toString()
+        };
+        if (Array.isArray(additionalOutputs)) {
+            for (const output of additionalOutputs) {
+                const outputAmount = Number(
+                    output?.satAmount || output?.amount || 0
+                );
+                if (!output?.address || !(outputAmount > 0)) return;
+                addr_to_amount[output.address] = (
+                    Number(addr_to_amount[output.address] || 0) + outputAmount
+                ).toString();
+            }
+        }
+
+        this.setState({ loadingFeeEstimate: true });
+        try {
+            const result = await BackendUtils.estimateOnchainFee({
+                addr_to_amount,
+                target_conf: 6,
+                spend_unconfirmed: true
+            });
+            const feeSat = Number(String(result?.fee_sat ?? ''));
+            const nodeRate = Number(String(result?.sat_per_vbyte ?? ''));
+            if (feeSat > 0 && nodeRate > 0) {
+                // the node derives its own rate from target_conf, so
+                // rescale its total by vsize to match the user's rate
+                this.setState({
+                    estimatedFee: Math.ceil((feeSat / nodeRate) * userRate),
+                    loadingFeeEstimate: false
+                });
+            } else {
+                this.setState({ loadingFeeEstimate: false });
+            }
+        } catch (e) {
+            this.setState({ loadingFeeEstimate: false });
+        }
+    };
 
     toggleBitcoinUnits = () => {
         const { UnitsStore } = this.props;
@@ -337,7 +408,12 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         const { navigation, route } = this.props;
         const { destination, fee, satAmount, amount, account, fundMax } =
             route?.params;
-        const { slideToPayThreshold } = this.state;
+        const {
+            bitcoinUnits,
+            slideToPayThreshold,
+            estimatedFee,
+            loadingFeeEstimate
+        } = this.state;
 
         const totalAmount = this.getTotalAmount();
         const shouldUseSwipeButton = totalAmount >= slideToPayThreshold;
@@ -370,6 +446,48 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                         keyValue={localeString('views.Send.feeSatsVbyte')}
                         value={fee}
                     />
+
+                    {loadingFeeEstimate && (
+                        <View style={{ marginTop: 10 }}>
+                            <LoadingIndicator size={30} />
+                        </View>
+                    )}
+
+                    {estimatedFee !== null && (
+                        <>
+                            <TouchableOpacity onPress={this.toggleBitcoinUnits}>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.feeEstimate'
+                                    )}
+                                    value={
+                                        <Amount
+                                            fixedUnits={bitcoinUnits}
+                                            sats={estimatedFee}
+                                        />
+                                    }
+                                    infoModalText={localeString(
+                                        'views.VerifyOnChain.feeEstimateInfo'
+                                    )}
+                                    disableCopy
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={this.toggleBitcoinUnits}>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'general.totalAmount'
+                                    )}
+                                    value={
+                                        <Amount
+                                            fixedUnits={bitcoinUnits}
+                                            sats={totalAmount + estimatedFee}
+                                        />
+                                    }
+                                    disableCopy
+                                />
+                            </TouchableOpacity>
+                        </>
+                    )}
 
                     {this.renderInputs()}
 

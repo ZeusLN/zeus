@@ -241,9 +241,20 @@ export default class KeyValue extends React.Component<KeyValueProps> {
         const KeyValueRow = () => (
             <Row justify="space-between">
                 <View style={rtl ? styles.rtlValue : styles.key}>
-                    <Text style={{ color: themeColor('secondaryText') }}>
-                        {rtl ? Value : Key}
-                    </Text>
+                    {infoModalText ? (
+                        // the touchable is a native view; nesting it inline
+                        // in Text gets it clipped to a too-narrow measured
+                        // frame on iOS, cutting off the info glyph
+                        rtl ? (
+                            Value
+                        ) : (
+                            Key
+                        )
+                    ) : (
+                        <Text style={{ color: themeColor('secondaryText') }}>
+                            {rtl ? Value : Key}
+                        </Text>
+                    )}
                 </View>
                 <View style={rtl ? styles.rtlKey : styles.value}>
                     {rtl ? Key : Value}
