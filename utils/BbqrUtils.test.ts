@@ -8,7 +8,7 @@ import {
     splitQRs,
     validateSplitOptions,
     versionToChars
-} from '.././utils/BbqrUtils';
+} from './BbqrUtils';
 
 /**
  * BBQr is the format Zeus uses to move a PSBT (or any payload too large for one
@@ -81,6 +81,35 @@ describe('BbqrUtils', () => {
                 validateSplitOptions({ encoding: 'H', maxSplit: 10 })
             ).toEqual(expect.objectContaining({ encoding: 'H', maxSplit: 10 }));
         });
+
+        it('rejects a version range that is inverted or out of bounds', () => {
+            // An inverted range is expressible in the type system.
+            expect(() =>
+                validateSplitOptions({ minVersion: 20, maxVersion: 10 })
+            ).toThrow('min/max version out of range');
+
+            // 0 and 41 are not: Version is a union of the real QR versions, so
+            // isValidVersion only fires for callers that arrive without types,
+            // which is what the cast stands in for here.
+            expect(() =>
+                validateSplitOptions({ minVersion: 0 as any })
+            ).toThrow('min/max version out of range');
+            expect(() =>
+                validateSplitOptions({ maxVersion: 41 as any })
+            ).toThrow('min/max version out of range');
+        });
+
+        it('rejects a split range that is inverted or out of bounds', () => {
+            expect(() =>
+                validateSplitOptions({ minSplit: 10, maxSplit: 2 })
+            ).toThrow('min/max split out of range');
+            expect(() => validateSplitOptions({ minSplit: 0 })).toThrow(
+                'min/max split out of range'
+            );
+            expect(() => validateSplitOptions({ maxSplit: 1296 })).toThrow(
+                'min/max split out of range'
+            );
+        });
     });
 
     describe('encodeData', () => {
@@ -143,6 +172,21 @@ describe('BbqrUtils', () => {
             });
         });
 
+        it('refuses a payload that cannot be made to fit', () => {
+            // One part at version 1 cannot hold 4 KB, so no (version, count)
+            // pair satisfies the constraints and there is nothing to choose.
+            const tooBig = new Uint8Array(4096).map((_, i) => i % 256);
+
+            expect(() =>
+                splitQRs(tooBig, 'T', {
+                    encoding: 'H',
+                    minVersion: 1,
+                    maxVersion: 1,
+                    maxSplit: 1
+                })
+            ).toThrow('Cannot make it fit');
+        });
+
         it('rejects a file type outside the spec', () => {
             expect(() => splitQRs(payload, 'Q' as any)).toThrow(
                 'Invalid value for fileType'
@@ -161,10 +205,16 @@ describe('BbqrUtils', () => {
             // shown, whichever encoding was negotiated.
             const original = new Uint8Array(600).map((_, i) => (i * 7) % 256);
 
-            const { parts } = splitQRs(original, 'P', {
+            const { parts, encoding: used } = splitQRs(original, 'P', {
                 encoding: encoding as any,
                 maxVersion: 10
             });
+
+            // A payload that stopped compressing would silently fall back from
+            // 'Z' to '2', the round trip would still pass, and pako.inflate
+            // would no longer be exercised by anything.
+            expect(used).toBe(encoding);
+
             const { raw, fileType } = joinQRs(parts);
 
             expect(fileType).toBe('P');
@@ -183,6 +233,99 @@ describe('BbqrUtils', () => {
             expect(parts.length).toBeGreaterThan(5);
             expect(fileType).toBe('T');
             expect(Array.from(raw)).toEqual(Array.from(original));
+        });
+    });
+
+    describe('joinQRs rejects a malformed scan', () => {
+        // joinQRs is the only function here fed by whatever the camera reads,
+        // so its rejections are the ones that matter. Each case starts from a
+        // real split and corrupts it, rather than hand-writing a header, so
+        // these stay honest if the header layout ever changes.
+        //
+        // Header is B$<encoding><fileType><numParts><index>, two base36
+        // characters each for the last two: 'B$HT0500' is hex, filetype T,
+        // five parts, index zero.
+        const payload = new Uint8Array(300).map((_, i) => (i * 11) % 256);
+        const freshParts = () =>
+            splitQRs(payload, 'T', { encoding: 'H', maxVersion: 5 }).parts;
+
+        it('rejects parts whose headers disagree', () => {
+            const parts = freshParts();
+            // Same data, but this part claims a different file type.
+            parts[1] = 'B$HU' + parts[1].slice(4);
+
+            expect(() => joinQRs(parts)).toThrow(
+                'conflicting/variable filetype/encodings/sizes'
+            );
+        });
+
+        it('rejects a header that does not start with B$', () => {
+            const parts = freshParts().map((p) => 'XX' + p.slice(2));
+
+            expect(() => joinQRs(parts)).toThrow(
+                'fixed header not found, expected B$'
+            );
+        });
+
+        it('rejects an unknown encoding byte', () => {
+            const parts = freshParts().map(
+                (p) => p.slice(0, 2) + 'Q' + p.slice(3)
+            );
+
+            expect(() => joinQRs(parts)).toThrow('bad encoding: Q');
+        });
+
+        it('rejects an unknown file type byte', () => {
+            const parts = freshParts().map(
+                (p) => p.slice(0, 3) + 'Q' + p.slice(4)
+            );
+
+            expect(() => joinQRs(parts)).toThrow('bad file type: Q');
+        });
+
+        it('rejects a declared part count of zero', () => {
+            const parts = freshParts().map(
+                (p) => p.slice(0, 4) + '00' + p.slice(6)
+            );
+
+            expect(() => joinQRs(parts)).toThrow('zero parts?');
+        });
+
+        it('rejects a part index beyond the declared count', () => {
+            const parts = freshParts();
+            // Index 9 in a five-part set.
+            parts[2] = parts[2].slice(0, 6) + '09' + parts[2].slice(8);
+
+            expect(() => joinQRs(parts)).toThrow(
+                'got part 9 but only expecting 5'
+            );
+        });
+
+        it('rejects a duplicate index carrying different content', () => {
+            const parts = freshParts();
+            // Re-label part 3 as part 2, so index 2 arrives twice with
+            // different payloads. An identical duplicate is allowed by design
+            // -- the same QR scanned twice is not an error -- so the content
+            // has to differ for this to be a conflict.
+            parts[3] = parts[2].slice(0, 8) + parts[3].slice(8);
+
+            expect(() => joinQRs(parts)).toThrow(
+                'Duplicate part 0x2 has wrong content'
+            );
+        });
+
+        it('accepts the same part scanned twice', () => {
+            const parts = freshParts();
+            const { raw } = joinQRs([...parts, parts[0], parts[2]]);
+
+            expect(Array.from(raw)).toEqual(Array.from(payload));
+        });
+
+        it('rejects a set with a part missing', () => {
+            const parts = freshParts();
+            parts.splice(2, 1);
+
+            expect(() => joinQRs(parts)).toThrow('Part 2 is missing');
         });
     });
 });
