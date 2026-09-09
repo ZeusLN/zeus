@@ -1978,8 +1978,21 @@ export default class SettingsStore {
     public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
-            await MigrationsUtils.keychainCloudSyncMigration();
-            await MigrationsUtils.purgeRescueKeyFiles();
+            try {
+                await MigrationsUtils.keychainCloudSyncMigration();
+                await MigrationsUtils.purgeRescueKeyFiles();
+            } catch (error) {
+                // These run before the settings are read and depend on
+                // EncryptedStorage (migration flags) and the filesystem.
+                // EncryptedStorage rejects persistently on Android when
+                // its keystore-backed store cannot initialize, and
+                // purgeRescueKeyFiles has no error handling of its own,
+                // so letting the throw escape would abort the load
+                // before the keychain is ever read and leave the store
+                // on its defaults - the exact state that then gets
+                // persisted over the user's wallet list.
+                console.error('Could not complete pre-load migrations', error);
+            }
 
             let modernSettings: any;
             try {
@@ -2027,15 +2040,21 @@ export default class SettingsStore {
                 console.log('attempting to load legacy settings');
 
                 // Retrieve the settings
-                let settings: string | null;
+                let settings: string | null = null;
                 try {
                     settings = await EncryptedStorage.getItem(
                         LEGACY_STORAGE_KEY
                     );
                 } catch (error) {
-                    this.settingsLoadFailed = true;
+                    // Reaching this branch means the modern read
+                    // succeeded and found nothing, so no populated blob
+                    // exists for a later write to clobber. Latching here
+                    // would refuse every settings write for as long as
+                    // the legacy read keeps failing, which on a device
+                    // whose EncryptedStorage cannot initialize is
+                    // forever - it would block onboarding on a fresh
+                    // install. Treat it as "no legacy data".
                     console.error('Could not read legacy settings', error);
-                    return this.settings;
                 }
                 this.settingsLoadFailed = false;
                 if (settings) {
@@ -2145,6 +2164,13 @@ export default class SettingsStore {
         this.settingsUpdateInProgress = true;
         try {
             const existingSettings = await this.getSettings();
+            // Snapshot before the updater runs. `existingSettings` is the
+            // live `this.settings` object, so an updater that mutates
+            // nested state in place (rather than copying it) would
+            // otherwise compare equal to its own result below and have
+            // its write silently skipped. Comparing serialized forms can
+            // only cost a redundant write, never drop one.
+            const existingSnapshot = JSON.stringify(existingSettings);
             // Functional updates read the settings inside the critical
             // section, so callers whose new value depends on the current
             // one (delete node X from the array) cannot act on a snapshot
@@ -2170,7 +2196,7 @@ export default class SettingsStore {
             // is not free - it destroys and recreates the user's wallet
             // list for nothing. The launch-time biometry refresh in
             // views/Wallet/Wallet.tsx is the common case.
-            if (isEqual(existingSettings, newSettings)) {
+            if (JSON.stringify(newSettings) === existingSnapshot) {
                 return existingSettings;
             }
 

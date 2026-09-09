@@ -317,6 +317,53 @@ describe('SettingsStore write guards', () => {
         expect(store.settingsLoadFailed).toEqual(false);
     });
 
+    it('keeps writing when the legacy read fails on a fresh install', async () => {
+        // EncryptedStorage rejects persistently when its Android
+        // keystore-backed store cannot initialize, so refusing writes
+        // here would block onboarding forever.
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        EncryptedStorage.getItem.mockRejectedValueOnce(
+            new Error('Could not initialize SharedPreferences')
+        );
+        const store = new SettingsStore();
+
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        expect(result.fiat).toEqual('EUR');
+        expect(persistedSettings().fiat).toEqual('EUR');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('loads the settings blob even when a pre-read migration throws', async () => {
+        seedSettings({ nodes: [nodeA, nodeB], fiat: 'USD' });
+        const MigrationUtils = require('../utils/MigrationUtils');
+        MigrationUtils.purgeRescueKeyFiles.mockRejectedValueOnce(
+            new Error('EncryptedStorage unavailable')
+        );
+        const store = new SettingsStore();
+
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        // The blob lives in the keychain and is still readable: a failed
+        // migration flag lookup must not strand the store on defaults.
+        expect(result.nodes).toHaveLength(2);
+        expect(persistedSettings().nodes).toHaveLength(2);
+        expect(persistedSettings().fiat).toEqual('EUR');
+    });
+
+    it('persists an update whose updater mutates settings in place', async () => {
+        seedSettings({ nodes: [nodeA], fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await store.updateSettings((currentSettings: any) => {
+            currentSettings.nodes[0].macaroonHex = 'cccc';
+            return { nodes: currentSettings.nodes };
+        });
+
+        expect(persistedSettings().nodes[0].macaroonHex).toEqual('cccc');
+    });
+
     it('skips the write when nothing changed', async () => {
         seedSettings({ nodes: [nodeA], fiat: 'USD' });
         const store = new SettingsStore();
