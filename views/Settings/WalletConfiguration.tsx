@@ -1456,6 +1456,7 @@ export default class WalletConfiguration extends React.Component<
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
+        const hasPinnedCerts = (pinnedCerts?.length ?? 0) > 0;
 
         const nostrWalletConnectUrlInvalid =
             implementation === 'nostr-wallet-connect' &&
@@ -3033,44 +3034,74 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <Switch
-                                        value={certVerification}
+                                        value={
+                                            hasPinnedCerts
+                                                ? true
+                                                : certVerification
+                                        }
+                                        disabled={hasPinnedCerts}
                                         onValueChange={() => {
-                                            if (
-                                                certVerification &&
-                                                (pinnedCerts?.length ?? 0) === 0
-                                            ) {
+                                            if (certVerification) {
                                                 // Turning verification off
                                                 // exposes the connection to
-                                                // MITM — require the warning
-                                                // modal before applying
-                                                // (pinned configs stay
-                                                // authenticated regardless)
+                                                // MITM, so require the
+                                                // warning modal before
+                                                // applying
                                                 this.setState({
                                                     showCertModal: true,
                                                     certModalSavesConfig: false
                                                 });
                                             } else {
                                                 this.setState({
-                                                    certVerification:
-                                                        !certVerification,
+                                                    certVerification: true,
                                                     saved: false
                                                 });
                                             }
                                         }}
                                     />
-                                    {(pinnedCerts?.length ?? 0) > 0 && (
-                                        <Text
-                                            style={{
-                                                top: 20,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.certificatePinned'
-                                            )}
-                                        </Text>
+                                    {hasPinnedCerts && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.certificatePinned'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    ...styles.button,
+                                                    marginTop: 30
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Settings.AddEditNode.removePinnedCertificate'
+                                                    )}
+                                                    onPress={() =>
+                                                        // Fail safe: dropping
+                                                        // the pin falls back
+                                                        // to CA verification,
+                                                        // never to the
+                                                        // stored trust-all
+                                                        // opt-out
+                                                        this.setState({
+                                                            pinnedCerts:
+                                                                undefined,
+                                                            certVerification:
+                                                                true,
+                                                            saved: false
+                                                        })
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
+                                        </>
                                     )}
                                 </>
                             )}
@@ -3406,8 +3437,7 @@ export default class WalletConfiguration extends React.Component<
                                             if (
                                                 !saved &&
                                                 !certVerification &&
-                                                (pinnedCerts?.length ?? 0) ===
-                                                    0 &&
+                                                !hasPinnedCerts &&
                                                 !enableTor &&
                                                 !isLocalImpl &&
                                                 implementation !==
