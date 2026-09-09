@@ -2173,6 +2173,16 @@ export default class SettingsStore {
                         migratedSettings,
                         fromQueue
                     );
+                // iOS one-shot: rewrite pre-existing keychain items so
+                // write-once keys pick up the non-migratable accessibility
+                // class. Modern path only: the legacy path's
+                // storageMigrationV2 freshly writes every item, which
+                // stamps them correctly already.
+                migratedSettings =
+                    await MigrationsUtils.restampKeychainAccessibility(
+                        migratedSettings,
+                        fromQueue
+                    );
                 // second pass picks up whatever the migrations produced,
                 // in-place edits to the snapshot included, which the
                 // reference taken above does not see
