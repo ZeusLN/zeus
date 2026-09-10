@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import NfcManager from 'react-native-nfc-manager';
 
 import CollapsedQR from '../../components/CollapsedQR';

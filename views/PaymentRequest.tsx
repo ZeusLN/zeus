@@ -11,7 +11,7 @@ import { reaction } from 'mobx';
 import Slider from '@react-native-community/slider';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../components/GlassButtonGroup';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
