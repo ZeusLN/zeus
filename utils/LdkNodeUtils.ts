@@ -4,6 +4,7 @@
  * Utility functions for creating and managing embedded LDK Node wallets.
  */
 
+import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
@@ -82,16 +83,49 @@ const LDK_NODE_NOT_INITIALIZED = 'Node not initialized';
 const LDK_NODE_NOT_RUNNING_YET = 'LDK Node not running yet';
 
 /**
+ * Get the shared base directory that holds every wallet's LDK Node data
+ */
+export function getLdkNodeBaseDirectory(): string {
+    return `${RNFS.DocumentDirectoryPath}/ldk-node`;
+}
+
+/**
  * Get the storage directory path for LDK Node data
  */
 export function getLdkNodeStoragePath(nodeDir: string): string {
-    return `${RNFS.DocumentDirectoryPath}/ldk-node/${nodeDir}`;
+    return `${getLdkNodeBaseDirectory()}/${nodeDir}`;
+}
+
+/**
+ * Exclude the shared ldk-node base directory, and thereby every wallet's
+ * subdirectory, from iOS iCloud/iTunes backups. RNFS.mkdir with
+ * NSURLIsExcludedFromBackupKey creates intermediate directories and
+ * (re)applies the flag even when the directory already exists, so this is
+ * safe to run idempotently on every node start. Non-fatal by design: a
+ * failure to set the flag must never prevent the node from starting; it
+ * is retried on the next start. No-op on Android, where
+ * allowBackup="false" already keeps app data out of backups.
+ */
+export async function ensureLdkNodeBackupExclusion(): Promise<void> {
+    if (Platform.OS !== 'ios') return;
+    try {
+        await RNFS.mkdir(getLdkNodeBaseDirectory(), {
+            NSURLIsExcludedFromBackupKey: true
+        });
+    } catch (e) {
+        console.warn(
+            'LDK Node: failed to exclude data directory from backups:',
+            e
+        );
+    }
 }
 
 /**
  * Create the LDK Node storage directory if it doesn't exist
  */
 export async function createLdkNodeDirectory(nodeDir: string): Promise<string> {
+    await ensureLdkNodeBackupExclusion();
+
     const storagePath = getLdkNodeStoragePath(nodeDir);
 
     const exists = await RNFS.exists(storagePath);
@@ -381,6 +415,10 @@ export async function startLdkNodeWallet({
     skipInit?: boolean;
     onSyncStart?: () => void;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
+    // Idempotent repair for wallets created before the backup exclusion
+    // existed; never throws, so it cannot block node start
+    await ensureLdkNodeBackupExclusion();
+
     let vssError: string | undefined;
 
     if (!skipInit) {
@@ -540,7 +578,9 @@ export async function deleteLdkNodeWallet(nodeDir: string): Promise<void> {
 }
 
 export default {
+    getLdkNodeBaseDirectory,
     getLdkNodeStoragePath,
+    ensureLdkNodeBackupExclusion,
     createLdkNodeDirectory,
     getNetworkType,
     getEsploraServersForNetwork,
