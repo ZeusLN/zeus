@@ -19,6 +19,7 @@ jest.mock('react-native-fs', () => ({
 import RNFS from 'react-native-fs';
 
 import {
+    CHANNEL_EXPORT_LAUNCH_GRACE_MS,
     CHANNEL_EXPORT_STAGING_DIR,
     channelExportStagingPath,
     purgeChannelExportStaging,
@@ -77,6 +78,71 @@ describe('ChannelExportStagingUtils', () => {
             (RNFS.unlink as jest.Mock).mockRejectedValue(new Error('EPERM'));
 
             await expect(purgeChannelExportStaging()).resolves.toBeUndefined();
+        });
+
+        describe('with a minimum age (launch sweep)', () => {
+            const NOW = Date.UTC(2026, 10, 25, 12, 0, 0);
+            const STAGING = `/cache/${CHANNEL_EXPORT_STAGING_DIR}`;
+            const staged = (name: string, ageMs?: number) => ({
+                name,
+                path: `${STAGING}/${name}`,
+                mtime: ageMs === undefined ? undefined : new Date(NOW - ageMs),
+                isFile: () => true,
+                isDirectory: () => false
+            });
+
+            beforeEach(() => {
+                jest.spyOn(Date, 'now').mockReturnValue(NOW);
+                (RNFS.exists as jest.Mock).mockResolvedValue(true);
+                (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+            });
+
+            it('waits ten minutes at launch', () => {
+                expect(CHANNEL_EXPORT_LAUNCH_GRACE_MS).toBe(10 * 60 * 1000);
+            });
+
+            // The post-export restart can come seconds after the share,
+            // while a receiver may still be reading the zip
+            it('removes old zips and keeps fresh ones', async () => {
+                (RNFS.readDir as jest.Mock).mockResolvedValue([
+                    staged('old.zip', CHANNEL_EXPORT_LAUNCH_GRACE_MS),
+                    staged('fresh.zip', 5000)
+                ]);
+
+                await purgeChannelExportStaging(CHANNEL_EXPORT_LAUNCH_GRACE_MS);
+
+                expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+                expect(RNFS.unlink).toHaveBeenCalledWith(`${STAGING}/old.zip`);
+            });
+
+            it('keeps a zip whose age cannot be told', async () => {
+                (RNFS.readDir as jest.Mock).mockResolvedValue([
+                    staged('unknown.zip')
+                ]);
+
+                await purgeChannelExportStaging(CHANNEL_EXPORT_LAUNCH_GRACE_MS);
+
+                expect(RNFS.unlink).not.toHaveBeenCalled();
+            });
+
+            it('is a no-op when the staging directory is absent', async () => {
+                (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+                await purgeChannelExportStaging(CHANNEL_EXPORT_LAUNCH_GRACE_MS);
+
+                expect(RNFS.readDir).not.toHaveBeenCalled();
+                expect(RNFS.unlink).not.toHaveBeenCalled();
+            });
+
+            it('swallows a readDir failure', async () => {
+                (RNFS.readDir as jest.Mock).mockRejectedValue(
+                    new Error('ENOENT')
+                );
+
+                await expect(
+                    purgeChannelExportStaging(CHANNEL_EXPORT_LAUNCH_GRACE_MS)
+                ).resolves.toBeUndefined();
+            });
         });
     });
 

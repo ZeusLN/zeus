@@ -12,6 +12,11 @@ export const CHANNEL_EXPORT_STAGING_DIR = 'channel-export-staging';
 export const channelExportStagingPath = (): string =>
     `${RNFS.CachesDirectoryPath}/${CHANNEL_EXPORT_STAGING_DIR}`;
 
+// How old a staged zip must be before the launch sweep removes it. The
+// post-export restart can follow the share by seconds, and a receiver may
+// still be reading the zip then.
+export const CHANNEL_EXPORT_LAUNCH_GRACE_MS = 10 * 60 * 1000;
+
 // Removes the staging directory. The staged zip cannot be unlinked as soon
 // as Share.open settles: on iOS the completion handler can fire while an
 // activity extension is still loading the NSItemProvider, so an immediate
@@ -19,12 +24,28 @@ export const channelExportStagingPath = (): string =>
 // for a channel database, where a silently empty backup means channels that
 // cannot be recovered. Instead each export sweeps the previous attempt,
 // export failures sweep immediately (nothing was handed off at that point,
-// which also covers a partially written zip), app launch sweeps whatever
-// the post-export restart left behind, and clearAllData sweeps it on wipe.
-export const purgeChannelExportStaging = async (): Promise<void> => {
+// which also covers a partially written zip), app launch sweeps zips older
+// than CHANNEL_EXPORT_LAUNCH_GRACE_MS, and clearAllData sweeps it on wipe.
+//
+// With minAgeMs, only entries known to be at least that old are removed: an
+// entry without an mtime is kept, since its age cannot be told.
+export const purgeChannelExportStaging = async (
+    minAgeMs = 0
+): Promise<void> => {
     try {
         const dir = channelExportStagingPath();
-        if (await RNFS.exists(dir)) await RNFS.unlink(dir);
+        if (!(await RNFS.exists(dir))) return;
+
+        if (minAgeMs <= 0) {
+            await RNFS.unlink(dir);
+            return;
+        }
+
+        const cutoff = Date.now() - minAgeMs;
+        for (const entry of await RNFS.readDir(dir)) {
+            if (!entry.mtime || entry.mtime.getTime() > cutoff) continue;
+            await RNFS.unlink(entry.path);
+        }
     } catch (e) {
         console.warn('Error purging channel export staging:', e);
     }
@@ -32,8 +53,10 @@ export const purgeChannelExportStaging = async (): Promise<void> => {
 
 // exportChannelDb names its zip `zeus-lnd-<network>-<Date.now()>.zip`, and
 // only mainnet and testnet reach it (embedded LND has no other networks).
-// Anchored to exactly that shape so a user file that merely starts with the
-// same prefix - a renamed copy of an old export, say - is not swept up.
+// Shared by the sweeps of the legacy iOS Documents copies here and of the
+// Android Downloads copies on wipe (DataClearUtils). Anchored to exactly
+// that shape so a user file that merely starts with the same prefix - a
+// renamed copy of an old export, say - is not swept up.
 export const CHANNEL_DB_EXPORT_REGEX = /^zeus-lnd-(mainnet|testnet)-\d+\.zip$/;
 
 // Best-effort removal of channel backups older builds left in shared
