@@ -1313,17 +1313,31 @@ export default class ChannelsStore {
     };
 
     // for CLNRest nodes, because the backend does not return the node policy.
-    public getNodePolicy = (chanId: string): RoutingPolicy => {
+    // Other backends (e.g. LND) can also land here when one side of a
+    // channel has no policy in the graph yet, so bail out unless the
+    // CLNRest-shaped fields are actually present.
+    public getNodePolicy = (chanId: string): RoutingPolicy | undefined => {
+        const chanInfo = this.chanInfo[chanId];
+        if (
+            chanInfo?.delay == null ||
+            chanInfo.htlc_minimum_msat == null ||
+            chanInfo.base_fee_millisatoshi == null ||
+            chanInfo.fee_per_millionth == null ||
+            chanInfo.htlc_maximum_msat == null
+        ) {
+            return undefined;
+        }
         return {
-            time_lock_delta: this.chanInfo[chanId].delay,
-            min_htlc: this.chanInfo[chanId].htlc_minimum_msat.toString(),
-            fee_base_msat:
-                this.chanInfo[chanId].base_fee_millisatoshi.toString(),
-            fee_rate_milli_msat:
-                this.chanInfo[chanId].fee_per_millionth.toString(),
+            time_lock_delta: chanInfo.delay,
+            min_htlc: chanInfo.htlc_minimum_msat.toString(),
+            fee_base_msat: chanInfo.base_fee_millisatoshi.toString(),
+            fee_rate_milli_msat: chanInfo.fee_per_millionth.toString(),
             disabled: false,
-            max_htlc_msat: this.chanInfo[chanId].htlc_maximum_msat.toString(),
-            last_update: Number(this.chanInfo[chanId].last_update?.toString())
+            max_htlc_msat: chanInfo.htlc_maximum_msat.toString(),
+            last_update:
+                chanInfo.last_update != null
+                    ? Number(chanInfo.last_update)
+                    : undefined
         };
     };
 

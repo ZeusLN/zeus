@@ -1,5 +1,10 @@
 import DateTimeUtils from './DateTimeUtils';
 
+jest.mock('./LocaleUtils', () => ({
+    localeString: (key: string) =>
+        key === 'general.notAvailable' ? 'N/A' : key
+}));
+
 describe('listDate', () => {
     it('returns date for timestamp as number', () => {
         const date = new Date(2024, 11, 26, 21, 21);
@@ -40,6 +45,26 @@ describe('listFormattedDate', () => {
         const result = DateTimeUtils.listFormattedDate(timestamp);
 
         expect(result).toMatch(/^Thu, Dec 26 '24, 21:21/);
+    });
+
+    it('falls back to N/A if timestamp is undefined', () => {
+        const result = DateTimeUtils.listFormattedDate(undefined);
+
+        expect(result).toEqual('N/A');
+    });
+
+    it('returns the raw value if timestamp is not date-coercible', () => {
+        const result = DateTimeUtils.listFormattedDate('not-a-date');
+
+        expect(result).toEqual('not-a-date');
+    });
+
+    it('formats an empty string as the epoch rather than N/A', () => {
+        // Number('') is 0, so '' stays on the happy path as a valid date
+        const result = DateTimeUtils.listFormattedDate('');
+
+        expect(result).not.toEqual('N/A');
+        expect(result).toMatch(/'69|'70/);
     });
 });
 
