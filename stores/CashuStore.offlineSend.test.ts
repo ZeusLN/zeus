@@ -239,6 +239,34 @@ describe('CashuStore offline send safety', () => {
             ).toBeUndefined();
         });
 
+        it('clears the pending record when proof deletion rejects', async () => {
+            mockProofPool.current = [proof(16, 'a'), proof(8, 'b')];
+            const store = buildStore();
+            mockRemoveProofs.mockRejectedValueOnce(new Error('db locked'));
+
+            await expect(store.sendTokenCDK(MINT_URL, 24)).rejects.toThrow(
+                'db locked'
+            );
+
+            // The delete is transactional, so the rejection left the
+            // proofs untouched; the record must not survive either.
+            expect(mockProofPool.current).toHaveLength(2);
+            expect(getPendingRecords()).toEqual([]);
+
+            // A retry consuming an overlapping proof succeeds...
+            const result = await store.mintToken({ memo: '', value: '16' });
+            expect(result).toBeDefined();
+
+            // ...and reconciliation finds nothing to promote. Without
+            // the cleanup, the stale 24-sat record would see partial
+            // presence, burn y-b, and surface a token that was never
+            // handed out.
+            await store.reconcilePendingOfflineSends();
+            expect(store.sentTokens).toHaveLength(1);
+            expect(getSentTokens()).toHaveLength(1);
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
+        });
+
         it('fails the second concurrent send when the pool is exhausted', async () => {
             mockProofPool.current = [proof(16, 'a')];
             const store = buildStore();
