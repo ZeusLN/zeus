@@ -3,7 +3,6 @@ import { inject, observer } from 'mobx-react';
 import { FlatList, View, Text, Alert } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import RNRestart from 'react-native-restart';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -12,6 +11,7 @@ import TextInput from '../../components/TextInput';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { restartApp } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -118,7 +118,7 @@ export default class LSPS1Settings extends React.Component<
                 },
                 {
                     text: localeString('views.LSPS1.restartNow'),
-                    onPress: () => RNRestart.restart()
+                    onPress: () => restartApp()
                 }
             ]
         );
