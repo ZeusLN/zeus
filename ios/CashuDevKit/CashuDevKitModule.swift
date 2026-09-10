@@ -86,14 +86,18 @@ class CashuDevKitModule: RCTEventEmitter {
         // redemption time, so an out-of-range value here would otherwise
         // silently mint a token nobody can ever fully sign for. Main pathway
         // has `1 (pubkey) + pubkeys.count` possible signers; refund pathway
-        // has `refundKeys.count`.
+        // has `refundKeys.count`. Compared in the unsigned domain rather
+        // than via Int(numSigs), which traps at runtime when numSigs
+        // exceeds Int64.max - reachable through readPositiveUInt64's
+        // string-parsing path - turning a malformed payload into a crash
+        // instead of a rejected promise.
         let maxMainSigs = 1 + pubkeys.count
-        if let numSigs, Int(numSigs) > maxMainSigs {
+        if let numSigs, numSigs > UInt64(maxMainSigs) {
             throw makeP2PKValidationError(
                 "num_sigs (\(numSigs)) exceeds the number of available pubkeys (\(maxMainSigs))"
             )
         }
-        if let numSigsRefund, Int(numSigsRefund) > refundKeys.count {
+        if let numSigsRefund, numSigsRefund > UInt64(refundKeys.count) {
             throw makeP2PKValidationError(
                 "num_sigs_refund (\(numSigsRefund)) exceeds the number of available refund_keys (\(refundKeys.count))"
             )

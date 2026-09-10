@@ -87,12 +87,15 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         // redemption time, so an out-of-range value here would otherwise
         // silently mint a token nobody can ever fully sign for. Main pathway
         // has `1 (pubkey) + pubkeys.size` possible signers; refund pathway
-        // has `refundKeys.size`.
+        // has `refundKeys.size`. Compared in the unsigned domain rather than
+        // via toInt(), which truncates to the low 32 bits (e.g. 4294967296
+        // -> 0) and could let a huge num_sigs wrap into a small, passing
+        // value instead of being rejected.
         val maxMainSigs = 1 + pubkeys.size
-        require(numSigs == null || numSigs.toInt() <= maxMainSigs) {
+        require(numSigs == null || numSigs <= maxMainSigs.toULong()) {
             "num_sigs ($numSigs) exceeds the number of available pubkeys ($maxMainSigs)"
         }
-        require(numSigsRefund == null || numSigsRefund.toInt() <= refundKeys.size) {
+        require(numSigsRefund == null || numSigsRefund <= refundKeys.size.toULong()) {
             "num_sigs_refund ($numSigsRefund) exceeds the number of available refund_keys (${refundKeys.size})"
         }
 
