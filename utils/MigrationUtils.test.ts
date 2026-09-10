@@ -1222,6 +1222,10 @@ describe('MigrationUtils', () => {
         const StorageModule = require('../storage');
         const { Platform } = require('react-native');
 
+        // The file-level console.error spy is restored by an earlier
+        // describe's afterAll, so this describe needs its own
+        let consoleErrorSpy: jest.SpyInstance;
+
         beforeEach(() => {
             EncryptedStorage.getItem.mockReset();
             EncryptedStorage.setItem.mockReset();
@@ -1230,6 +1234,13 @@ describe('MigrationUtils', () => {
             StorageModule.setRawLocalItem.mockReset();
             StorageModule.setRawLocalItem.mockResolvedValue(true);
             Platform.OS = 'ios';
+            consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            consoleErrorSpy.mockRestore();
         });
 
         it('is a no-op off iOS', async () => {
@@ -1339,7 +1350,7 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('rethrows on verify mismatch and never sets the flag', async () => {
+        it('aborts on verify mismatch without setting the flag or throwing', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             StorageModule.getInternetPasswordServers.mockResolvedValue([
                 'zeus:zeus-settings-v2'
@@ -1354,9 +1365,26 @@ describe('MigrationUtils', () => {
                 return true;
             });
 
-            await expect(
-                MigrationUtils.keychainDesyncMigration()
-            ).rejects.toThrow('verify failed');
+            // Must resolve: a propagated error would abort getSettings
+            // before the blob read and strand the user on onboarding
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Keychain desync migration failed',
+                expect.objectContaining({
+                    message: expect.stringContaining('verify failed')
+                })
+            );
+        });
+
+        it('aborts on enumeration failure without setting the flag or throwing', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockRejectedValue(
+                new Error('SecItemCopyMatching failed: -25308')
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
 
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });

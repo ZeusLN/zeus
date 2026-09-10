@@ -1314,41 +1314,53 @@ class MigrationsUtils {
     public async keychainDesyncMigration() {
         if (Platform.OS !== 'ios') return;
 
-        const hasRun = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
-        if (hasRun === 'true') return;
+        try {
+            const hasRun = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
+            if (hasRun === 'true') return;
 
-        console.log('Attempting keychain desync migration...');
+            console.log('Attempting keychain desync migration...');
 
-        const syncServers = (await getInternetPasswordServers(true)).filter(
-            (server) => server.startsWith(KEY_PREFIX)
-        );
+            const syncServers = (await getInternetPasswordServers(true)).filter(
+                (server) => server.startsWith(KEY_PREFIX)
+            );
 
-        for (const server of syncServers) {
-            const localValue = await getRawItem(server, false);
-            if (localValue !== null) continue;
+            for (const server of syncServers) {
+                const localValue = await getRawItem(server, false);
+                if (localValue !== null) continue;
 
-            const syncValue = await getRawItem(server, true);
-            // Empty means deleted under Storage semantics; nothing to copy
-            if (!syncValue) continue;
+                const syncValue = await getRawItem(server, true);
+                // Empty means deleted under Storage semantics; nothing to copy
+                if (!syncValue) continue;
 
-            if (!settingsStore.isMigrating) settingsStore.isMigrating = true;
+                if (!settingsStore.isMigrating)
+                    settingsStore.isMigrating = true;
 
-            await setRawLocalItem(server, syncValue);
+                await setRawLocalItem(server, syncValue);
 
-            const verify = await getRawItem(server, false);
-            if (verify !== syncValue) {
-                // Rethrow so the flag stays unset and the migration retries
-                // on next boot instead of silently skipping this key forever
-                throw new Error(
-                    `Keychain desync migration verify failed for ${server}`
-                );
+                const verify = await getRawItem(server, false);
+                if (verify !== syncValue) {
+                    // Throw so the flag stays unset and the migration retries
+                    // on next boot instead of silently skipping this key
+                    // forever
+                    throw new Error(
+                        `Keychain desync migration verify failed for ${server}`
+                    );
+                }
             }
-        }
 
-        await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');
-        console.log(
-            `Keychain desync migration completed (${syncServers.length} synchronizable zeus: entries)`
-        );
+            await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');
+            console.log(
+                `Keychain desync migration completed (${syncServers.length} synchronizable zeus: entries)`
+            );
+        } catch (error) {
+            // Swallowed WITHOUT setting the flag: the migration retries on
+            // the next boot. Propagating would abort getSettings before the
+            // blob read; the in-memory defaults it falls back to render the
+            // onboarding flow, and a wallet created there would permanently
+            // shadow the real blob under copy-if-missing. getSettings'
+            // synchronizable-partition fallback covers this boot instead.
+            console.error('Keychain desync migration failed', error);
+        }
     }
 
     public async keychainCloudSyncMigration() {

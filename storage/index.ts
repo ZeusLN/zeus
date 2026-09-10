@@ -12,9 +12,14 @@ export const getInternetPasswordServers = async (
     synchronizable: boolean
 ): Promise<string[]> => {
     if (Platform.OS !== 'ios') return [];
-    return NativeModules.KeychainAudit.getInternetPasswordServers(
-        synchronizable
-    );
+    const KeychainAudit = NativeModules.KeychainAudit;
+    if (!KeychainAudit) {
+        // Must be an error, not an empty result: callers treat [] as "no
+        // entries exist" and would set one-shot migration flags on it,
+        // permanently skipping work that was never done.
+        throw new Error('KeychainAudit native module is not available');
+    }
+    return KeychainAudit.getInternetPasswordServers(synchronizable);
 };
 
 /**

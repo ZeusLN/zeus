@@ -1,4 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
+import { Platform } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -17,7 +18,7 @@ import {
     SupportedNetwork
 } from '../utils/LdkNodeUtils';
 
-import Storage from '../storage';
+import Storage, { getRawItem, KEY_PREFIX } from '../storage';
 
 // lndhub
 import LoginRequest from '../models/LoginRequest';
@@ -1952,7 +1953,26 @@ export default class SettingsStore {
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
 
-            const modernSettings: any = await Storage.getItem(STORAGE_KEY);
+            let modernSettings: any = await Storage.getItem(STORAGE_KEY);
+
+            if (!modernSettings && Platform.OS === 'ios') {
+                // An empty local partition is indistinguishable from a failed
+                // desync migration: the blob may still live only in the
+                // synchronizable partition. Read it there for this boot, but
+                // never write it back; all writes stay device-local, and the
+                // desync migration retries on the next launch.
+                try {
+                    modernSettings = await getRawItem(
+                        `${KEY_PREFIX}${STORAGE_KEY}`,
+                        true
+                    );
+                } catch (error) {
+                    console.error(
+                        'Could not read synchronizable settings fallback',
+                        error
+                    );
+                }
+            }
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
