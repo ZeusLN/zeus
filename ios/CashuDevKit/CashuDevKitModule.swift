@@ -297,6 +297,10 @@ class CashuDevKitModule: RCTEventEmitter {
             return (legacyErrorCode(protocolCode: code, message: errorMessage), errorMessage)
         case let .Internal(errorMessage):
             return (legacyErrorCode(protocolCode: nil, message: errorMessage), errorMessage)
+        // 0.18.0 NUT-18 transport failure; unreachable until the bridge
+        // exposes preparePayRequest
+        case let .PaymentRequestDeliveryFailed(_, errorMessage):
+            return ("PAYMENT_FAILED", errorMessage)
         @unknown default:
             return ("UNKNOWN_ERROR", "Unknown error occurred")
         }
@@ -414,11 +418,17 @@ class CashuDevKitModule: RCTEventEmitter {
     ]
     do {
         // Only resolve proofs through a wallet the mint is already part
-        // of; decoding a foreign token must not add its mint or contact it
-        if let repo = walletQueue.sync(execute: { isInitialized ? self.repo : nil }) {
-            if await repo.hasMint(mintUrl: MintUrl(url: normalizeMintUrl(mintUrl.url))) {
-                let wallet = try await getWallet(mintUrl.url)
-                let keysets = try await wallet.getMintKeysets(filter: .all)
+        // of; decoding a foreign token must not add its mint or contact
+        // it, so read the cached keysets straight from the database
+        // (0.18 removed Wallet.getMintKeysets)
+        let handles: (WalletRepository, WalletSqliteDatabase)? = walletQueue.sync {
+            guard isInitialized, let repo = self.repo, let db = self.db else { return nil }
+            return (repo, db)
+        }
+        if let (repo, db) = handles {
+            let normalizedUrl = MintUrl(url: normalizeMintUrl(mintUrl.url))
+            if await repo.hasMint(mintUrl: normalizedUrl) {
+                let keysets = try await db.getMintKeysets(mintUrl: normalizedUrl) ?? []
                 let proofs = try token.proofs(mintKeysets: keysets)
                 result["proofs"] = proofs.map { encodeProof($0) }
             }
@@ -684,11 +694,18 @@ class CashuDevKitModule: RCTEventEmitter {
                         resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
         guard getInitializedRepo(reject: reject) != nil else { return }
+        guard let db = walletQueue.sync(execute: { self.db }) else {
+            reject("NO_WALLET", "Wallet not initialized", nil)
+            return
+        }
 
         Task {
             do {
-                let wallet = try await getWallet(mintUrl)
-                let keysets = try await wallet.getMintKeysets(filter: .all)
+                // Cached keysets from the database; the pre-0.18
+                // Wallet.getMintKeysets(filter: .all) was also a local-store
+                // read (network refresh was a separate call)
+                let keysets = try await db.getMintKeysets(
+                    mintUrl: MintUrl(url: normalizeMintUrl(mintUrl))) ?? []
                 let encoded = keysets.map { encodeKeyset($0) }
                 resolve(encodeToJson(encoded))
             } catch let error as FfiError {
@@ -866,6 +883,10 @@ class CashuDevKitModule: RCTEventEmitter {
                         mintUrl: url,
                         amountIssued: quoteState == .issued ? amt : zeroAmount,
                         amountPaid: (quoteState == .paid || quoteState == .issued) ? amt : zeroAmount,
+                        // Insert as oldest-possible so any later saga update
+                        // (which drops stale responses by timestamp)
+                        // supersedes this externally sourced row
+                        updatedAt: 0,
                         estimatedBlocks: nil,
                         paymentMethod: .bolt11,
                         secretKey: storedSecretKey,

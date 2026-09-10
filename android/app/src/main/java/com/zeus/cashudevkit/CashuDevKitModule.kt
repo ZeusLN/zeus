@@ -222,6 +222,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 legacyErrorCode(e.code, e.errorMessage) to e.errorMessage
             is FfiException.Internal ->
                 legacyErrorCode(null, e.errorMessage) to e.errorMessage
+            // 0.18.0 NUT-18 transport failure; unreachable until the bridge
+            // exposes preparePayRequest
+            is FfiException.PaymentRequestDeliveryFailed ->
+                "PAYMENT_FAILED" to e.errorMessage
         }
     }
 
@@ -303,14 +307,17 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val mintUrl = token.mintUrl()
         val proofsArray = JSONArray()
         val currentRepo = repo
-        if (isInitialized && currentRepo != null) {
+        val currentDb = db
+        if (isInitialized && currentRepo != null && currentDb != null) {
             try {
                 // Only resolve proofs through a wallet the mint is already
                 // part of; decoding a foreign token must not add its mint or
-                // contact it
-                if (currentRepo.hasMint(MintUrl(normalizeMintUrl(mintUrl.url)))) {
-                    val wallet = getWallet(mintUrl.url)
-                    val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
+                // contact it, so read the cached keysets straight from the
+                // database (0.18 removed Wallet.getMintKeysets)
+                val normalizedUrl = MintUrl(normalizeMintUrl(mintUrl.url))
+                if (currentRepo.hasMint(normalizedUrl)) {
+                    val keysets = currentDb.getMintKeysets(normalizedUrl)
+                        ?: emptyList()
                     val proofs = token.proofs(keysets)
                     proofs.forEach { proof ->
                         proofsArray.put(encodeProof(proof))
@@ -348,7 +355,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("id", keyset.id.toString())
             put("unit", currencyUnitToString(keyset.unit))
             put("active", keyset.active)
-            put("input_fee_ppk", keyset.inputFeePpk ?: 0)
+            put("input_fee_ppk", keyset.inputFeePpk.toLong())
         }
     }
 
@@ -637,8 +644,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                val wallet = getWallet(mintUrl)
-                val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
+                // Cached keysets from the database; the pre-0.18
+                // Wallet.getMintKeysets(KeysetFilter.ALL) was also a
+                // local-store read (network refresh was a separate call)
+                val keysets =
+                    db!!.getMintKeysets(MintUrl(normalizeMintUrl(mintUrl)))
+                        ?: emptyList()
 
                 val array = JSONArray()
                 keysets.forEach { keyset ->
@@ -842,6 +853,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     expiry = expiry.toLong().toULong(),
                     amountPaid = if (quoteState == QuoteState.PAID || quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
+                    // Insert as oldest-possible so any later saga update
+                    // (which drops stale responses by timestamp) supersedes
+                    // this externally sourced row
+                    updatedAt = 0uL,
                     estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
                     secretKey = storedSecretKey,

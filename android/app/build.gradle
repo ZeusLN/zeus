@@ -166,11 +166,13 @@ android {
         pickFirst "lib/x86/libgojni.so"
         pickFirst "lib/x86_64/libgojni.so"
 
-        // CashuDevKit native libraries (Rust FFI)
-        pickFirst "lib/armeabi-v7a/libcdk_ffi.so"
-        pickFirst "lib/arm64-v8a/libcdk_ffi.so"
-        pickFirst "lib/x86/libcdk_ffi.so"
-        pickFirst "lib/x86_64/libcdk_ffi.so"
+        // CashuDevKit native libraries (Rust FFI; renamed from libcdk_ffi.so
+        // in 0.18.0, which upstream currently only ships for arm64-v8a and
+        // x86_64)
+        pickFirst "lib/armeabi-v7a/libcdk_ffi_kotlin.so"
+        pickFirst "lib/arm64-v8a/libcdk_ffi_kotlin.so"
+        pickFirst "lib/x86/libcdk_ffi_kotlin.so"
+        pickFirst "lib/x86_64/libcdk_ffi_kotlin.so"
 
         // Zeus Cashu Restore native libraries (Rust FFI)
         pickFirst "lib/armeabi-v7a/libuniffi_zeus_cashu_restore.so"
@@ -204,10 +206,9 @@ dependencies {
 
     implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
 
-    // CashuDevKit - native libs (cdk-android) + Kotlin bindings (cdk-jvm),
+    // CashuDevKit - native libs + Kotlin bindings in one aar (cdk-android),
     // vendored from Maven Central by fetch-libraries.sh
     implementation files("../cdk/cashudevkit.aar")
-    implementation files("../cdk/cdk-jvm.jar")
     // Zeus Cashu Restore - standalone NUT-13 restore for v1 legacy seeds
     implementation files("../zeus-restore/zeus-cashu-restore.aar")
     // CDK / LDK Node dependencies
