@@ -2,6 +2,7 @@ import {
     processSatsAmount,
     shouldHideMillisatoshiAmounts,
     getUnformattedAmount,
+    getRawAmountFromSats,
     getAmountFromSats,
     getFormattedAmount,
     getFeePercentage,
@@ -1052,8 +1053,10 @@ describe('AmountUtils', () => {
     // Regression: a BIP21 amount handed to Send/ClinkPay is fed into
     // AmountInput's `amount` prop, which parses it back into sats with
     // getSatAmount. getAmountFromSats returns a *display* string, so using it
-    // there rendered '12,618 sats sats' and a NaN conversion.
-    describe('AmountInput round-trip', () => {
+    // there rendered '12,618 sats sats' and a NaN conversion. Both views now
+    // go through getRawAmountFromSats, so its output must survive the round
+    // trip in every unit mode.
+    describe('AmountInput round-trip (getRawAmountFromSats)', () => {
         beforeEach(() => {
             (settingsStore as any).settings = {
                 fiat: 'USD',
@@ -1072,17 +1075,38 @@ describe('AmountUtils', () => {
             ];
         });
 
-        it('round-trips getUnformattedAmount output in sats', () => {
+        it('round-trips in sats', () => {
             (unitsStore as any).units = 'sats';
-            const { amount } = getUnformattedAmount({ sats: 12618 });
-            expect(amount).toBe('12618');
-            expect(getSatAmount(amount)).toBe(12618);
+            expect(getRawAmountFromSats(12618)).toBe('12618');
+            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12618);
+            // route params deliver satAmount as a string
+            expect(getSatAmount(getRawAmountFromSats('12618'))).toBe(12618);
         });
 
-        it('round-trips getUnformattedAmount output in BTC', () => {
+        it('round-trips in BTC', () => {
             (unitsStore as any).units = 'BTC';
-            const { amount } = getUnformattedAmount({ sats: 12618 });
-            expect(getSatAmount(amount)).toBe(12618);
+            expect(getRawAmountFromSats(12618)).toBe('0.00012618');
+            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12618);
+        });
+
+        it('round-trips in fiat when the rate divides evenly', () => {
+            (unitsStore as any).units = 'fiat';
+            // 12,000 sats at 50,000 USD/BTC is exactly $6.00
+            expect(getRawAmountFromSats(12000)).toBe('6.00');
+            expect(getSatAmount(getRawAmountFromSats(12000))).toBe(12000);
+        });
+
+        it('round-trips in fiat to cent precision otherwise', () => {
+            (unitsStore as any).units = 'fiat';
+            // 12,618 sats is $6.309, which displays as $6.31 = 12,620 sats.
+            // Lossy by design (cent rounding), but parseable - never NaN.
+            expect(getRawAmountFromSats(12618)).toBe('6.31');
+            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12620);
+        });
+
+        it('respects fixedUnits over the active unit', () => {
+            (unitsStore as any).units = 'fiat';
+            expect(getRawAmountFromSats(12618, 'sats')).toBe('12618');
         });
 
         it('getAmountFromSats output is display-only and does not round-trip', () => {
@@ -1092,9 +1116,13 @@ describe('AmountUtils', () => {
             expect(getSatAmount(getAmountFromSats(12618)!)).toBe(0);
         });
 
-        it('returns 0 rather than NaN for unparseable input', () => {
+        it('getSatAmount returns 0 rather than NaN for unparseable input', () => {
             (unitsStore as any).units = 'sats';
             expect(getSatAmount('12,618 sats')).toBe(0);
+            // AmountInput used to write the literal string 'NaN' back into
+            // Send's satAmount, slipping past every `<= 0` proceed guard
+            expect(getSatAmount('NaN')).toBe(0);
+            expect(getSatAmount('abc')).toBe(0);
             (unitsStore as any).units = 'BTC';
             expect(getSatAmount('\u20bf0.00012618')).toBe(0);
         });
