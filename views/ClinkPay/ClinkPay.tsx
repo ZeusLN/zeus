@@ -23,7 +23,7 @@ import { errorToUserFriendly } from '../../utils/ErrorUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getAmountFromSats } from '../../utils/AmountUtils';
+import { getRawAmountFromSats } from '../../utils/AmountUtils';
 
 interface ClinkPayProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -114,9 +114,7 @@ export default class ClinkPay extends React.Component<
                 nofferData.price
             ) {
                 satAmount = nofferData.price.toString();
-                amount =
-                    getAmountFromSats(nofferData.price.toString()) ||
-                    nofferData.price.toString();
+                amount = getRawAmountFromSats(satAmount);
             }
         } catch (err: any) {
             Alert.alert(

@@ -194,6 +194,22 @@ export function getUnformattedAmount({
 }
 
 /**
+ * Converts satoshis to the raw, unformatted amount string in the active unit,
+ * fit for editable inputs like AmountInput's `amount` prop. That prop is
+ * parsed back into satoshis with getSatAmount, so it must never receive a
+ * display-formatted string from getAmountFromSats (e.g. '12,618 sats').
+ * @param sats - The amount in satoshis (string or number)
+ * @param fixedUnits - Optional unit override ('sats', 'BTC', or 'fiat')
+ * @returns Raw amount string like "0.00012618", "12618", or "6.31"
+ */
+export function getRawAmountFromSats(
+    sats: string | number,
+    fixedUnits?: string
+): string {
+    return getUnformattedAmount({ sats, fixedUnits }).amount || sats.toString();
+}
+
+/**
  * Converts satoshi amounts to formatted display strings
  * @param value - The amount in satoshis (string or number)
  * @param fixedUnits - Optional unit override ('sats', 'BTC', or 'fiat')
@@ -404,5 +420,7 @@ export function getSatAmount(
             break;
     }
 
-    return satAmount;
+    // never hand back NaN - it is falsy in some checks and truthy once
+    // stringified, which lets unparseable input slip past amount guards
+    return isNaN(satAmount) ? 0 : satAmount;
 }
