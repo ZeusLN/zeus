@@ -30,11 +30,12 @@ import {
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
-    SETTINGS_VERSION,
     STORAGE_KEY,
     LEGACY_CURRENCY_CODES_KEY,
     CURRENCY_CODES_KEY
 } from '../stores/SettingsStore';
+
+import { SETTINGS_VERSION } from './SettingsVersion';
 
 import { LEGACY_NOTES_KEY, NOTES_KEY } from '../stores/NotesStore';
 import { LEGACY_CONTACTS_KEY, CONTACTS_KEY } from '../stores/ContactStore';

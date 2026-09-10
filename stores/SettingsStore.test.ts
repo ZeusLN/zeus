@@ -35,9 +35,9 @@ jest.mock('../utils/MigrationUtils', () => ({
     // getSettings adopts the return value (the queue's authoritative
     // object when consolidation routes through updateSettings), so the
     // stub must hand the settings back rather than resolve undefined
-    runSettingsMigrations: jest.fn().mockImplementation(
-        async (settings: any) => settings
-    ),
+    runSettingsMigrations: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -85,15 +85,27 @@ const seedSettings = (settings: any) => {
 const persistedSettings = () => JSON.parse(StorageMock._backing[STORAGE_KEY]);
 
 let logSpy: jest.SpyInstance;
+let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
     for (const key of Object.keys(StorageMock._backing)) {
         delete StorageMock._backing[key];
     }
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
+    // getSettings swallows load failures (console.error, then falls
+    // through with defaults), which has repeatedly let a stale
+    // MigrationUtils mock pass this suite without ever completing the
+    // load path; fail loudly instead
+    expect(
+        errorSpy.mock.calls.filter(
+            ([message]) => message === 'Could not load settings'
+        )
+    ).toEqual([]);
+    errorSpy.mockRestore();
     logSpy.mockRestore();
 });
 

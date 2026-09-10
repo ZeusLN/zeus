@@ -32,7 +32,6 @@ jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
 
 jest.mock('../stores/SettingsStore', () => ({
-    SETTINGS_VERSION: 1,
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
     DEFAULT_FIAT: 'USD',
     DEFAULT_LSP_MAINNET: 'https://flow.zeuslsp.com',
@@ -95,6 +94,9 @@ jest.mock('../storage', () => ({
 }));
 
 import MigrationUtils from './MigrationUtils';
+// the real constant, deliberately not mocked: after a version bump these
+// gating tests must run against the bumped value
+import { SETTINGS_VERSION } from './SettingsVersion';
 
 // Mock console logs to keep test output clean
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -158,7 +160,7 @@ describe('MigrationUtils', () => {
             slideToPayThreshold: 10000
         },
         requestSimpleTaproot: true,
-        settingsVersion: 1,
+        settingsVersion: SETTINGS_VERSION,
         speedloader: 'https://egs.lnze.us/'
     };
 
@@ -717,7 +719,7 @@ describe('MigrationUtils', () => {
         it('skips everything when the blob is already stamped', async () => {
             settingsStore.settingsUpdateInProgress = false;
             const settings: any = {
-                settingsVersion: 1,
+                settingsVersion: SETTINGS_VERSION,
                 lspMainnet: 'https://0conf.lnolymp.us'
             };
 
@@ -732,15 +734,13 @@ describe('MigrationUtils', () => {
         it('routes the write through the updateSettings queue when outside it', async () => {
             settingsStore.settingsUpdateInProgress = false;
             settingsStore.updateSettings.mockResolvedValue({
-                settingsVersion: 1
+                settingsVersion: SETTINGS_VERSION
             });
             const settings: any = {
                 swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
             };
 
-            const result = await MigrationUtils.runSettingsMigrations(
-                settings
-            );
+            const result = await MigrationUtils.runSettingsMigrations(settings);
 
             expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
             // the potentially stale snapshot is never written directly,
@@ -748,7 +748,7 @@ describe('MigrationUtils', () => {
             // on fresh state
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
-            expect(result).toEqual({ settingsVersion: 1 });
+            expect(result).toEqual({ settingsVersion: SETTINGS_VERSION });
         });
 
         it('does not clobber a concurrent update when called outside the queue', async () => {
@@ -788,7 +788,7 @@ describe('MigrationUtils', () => {
             expect(result.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
-            expect(result.settingsVersion).toBe(1);
+            expect(result.settingsVersion).toBe(SETTINGS_VERSION);
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
             expect(settingsStore.setSettings).toHaveBeenCalledWith(fresh);
         });
@@ -806,7 +806,7 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
-            expect(settings.settingsVersion).toBe(1);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
             // retired per-migration flags are never written again
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
@@ -842,7 +842,7 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
-            expect(settings.settingsVersion).toBe(1);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
 
@@ -900,7 +900,7 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
-            expect(settings.settingsVersion).toBe(1);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
 
             EncryptedStorage.getItem.mockImplementation((key: string) =>
@@ -929,7 +929,7 @@ describe('MigrationUtils', () => {
 
             await MigrationUtils.runSettingsMigrations(settings);
 
-            expect(settings.settingsVersion).toBe(1);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
 
             // second run: stamped — zero storage traffic

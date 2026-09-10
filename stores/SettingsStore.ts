@@ -8,6 +8,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
+import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
     DEFAULT_SCORER_URL,
@@ -26,11 +27,10 @@ const LEGACY_STORAGE_KEY = 'zeus-settings';
 export const STORAGE_KEY = 'zeus-settings-v2';
 
 // Version stamp for the CONTENT of the settings blob (the storage key's
-// -v2 suffix versions the key namespace, not the content). Blobs stamped
-// with the current version skip all one-shot settings migrations at load
-// (#4470). Bump when adding a migration — see
-// MigrationUtils.runSettingsMigrations.
-export const SETTINGS_VERSION = 1;
+// -v2 suffix versions the key namespace, not the content). Defined in a
+// dependency-free module so version-gating tests exercise the real
+// value; re-exported here for consumers of the settings schema.
+export { SETTINGS_VERSION };
 
 export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
 export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
