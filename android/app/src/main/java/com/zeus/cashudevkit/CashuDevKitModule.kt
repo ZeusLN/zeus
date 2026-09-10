@@ -81,6 +81,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         val sigFlag: UByte = if (data.optString("sig_flag") == "SigAll") 1.toUByte() else 0.toUByte()
 
+        // NUT-11: "If n_sigs or n_sigs_refund ... exceeds the total number of
+        // keys in its pathway, the P2PK secret is malformed and the Proof
+        // MUST be rejected as unspendable." The mint only enforces this at
+        // redemption time, so an out-of-range value here would otherwise
+        // silently mint a token nobody can ever fully sign for. Main pathway
+        // has `1 (pubkey) + pubkeys.size` possible signers; refund pathway
+        // has `refundKeys.size`.
+        val maxMainSigs = 1 + pubkeys.size
+        require(numSigs == null || numSigs.toInt() <= maxMainSigs) {
+            "num_sigs ($numSigs) exceeds the number of available pubkeys ($maxMainSigs)"
+        }
+        require(numSigsRefund == null || numSigsRefund.toInt() <= refundKeys.size) {
+            "num_sigs_refund ($numSigsRefund) exceeds the number of available refund_keys (${refundKeys.size})"
+        }
+
         return SpendingConditions.P2pk(
             pubkey = pubkeyHex,
             conditions = Conditions(
@@ -956,11 +971,15 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                // Parse spending conditions if provided
+                // Parse spending conditions if provided. Only tolerate a
+                // malformed JSON *blob* silently (treat as "no conditions");
+                // a validation failure inside well-formed conditions (e.g. an
+                // impossible num_sigs) must fail loudly instead of quietly
+                // minting an unlocked proof the caller never asked for.
                 val conditions = conditionsJson?.let { json ->
-                    runCatching {
-                        parseP2PKConditions(JSONObject(json))
-                    }.getOrNull()
+                    val parsed = runCatching { JSONObject(json) }.getOrNull()
+                        ?: return@let null
+                    parseP2PKConditions(parsed)
                 }
                 val wallet = getWallet(mintUrl)
                 val proofs = wallet.mint(

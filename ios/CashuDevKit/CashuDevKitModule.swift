@@ -41,7 +41,7 @@ class CashuDevKitModule: RCTEventEmitter {
     // MARK: - Helper Methods
 
     /// Parse P2PK spending conditions from JSON dictionary
-    private func parseP2PKConditions(from json: [String: Any]) -> SpendingConditions? {
+    private func parseP2PKConditions(from json: [String: Any]) throws -> SpendingConditions? {
         guard let kind = json["kind"] as? String,
               kind == "P2PK",
               let condData = json["data"] as? [String: Any],
@@ -59,21 +59,45 @@ class CashuDevKitModule: RCTEventEmitter {
         let numSigs = optionalPositiveUInt64(from: condData, key: "num_sigs")
         let numSigsRefund = optionalPositiveUInt64(from: condData, key: "num_sigs_refund")
 
+        // Parse element-wise rather than casting the whole array to
+        // `[String]`: if the bridge delivers even one non-string entry
+        // (e.g. NSNull from a malformed caller payload), a whole-array cast
+        // fails to nil and silently drops every pubkey instead of just the
+        // bad one.
         let pubkeys: [String] = {
-            if let keys = condData["pubkeys"] as? [String] {
-                return keys.filter { !$0.isEmpty }
+            if let keys = condData["pubkeys"] as? [Any] {
+                return keys.compactMap { $0 as? String }.filter { !$0.isEmpty }
             }
             return []
         }()
 
         let refundKeys: [String] = {
-            if let keys = condData["refund_keys"] as? [String] {
-                return keys.filter { !$0.isEmpty }
+            if let keys = condData["refund_keys"] as? [Any] {
+                return keys.compactMap { $0 as? String }.filter { !$0.isEmpty }
             }
             return []
         }()
 
         let sigFlag: UInt8 = (condData["sig_flag"] as? String) == "SigAll" ? 1 : 0
+
+        // NUT-11: "If n_sigs or n_sigs_refund ... exceeds the total number of
+        // keys in its pathway, the P2PK secret is malformed and the Proof
+        // MUST be rejected as unspendable." The mint only enforces this at
+        // redemption time, so an out-of-range value here would otherwise
+        // silently mint a token nobody can ever fully sign for. Main pathway
+        // has `1 (pubkey) + pubkeys.count` possible signers; refund pathway
+        // has `refundKeys.count`.
+        let maxMainSigs = 1 + pubkeys.count
+        if let numSigs, Int(numSigs) > maxMainSigs {
+            throw makeP2PKValidationError(
+                "num_sigs (\(numSigs)) exceeds the number of available pubkeys (\(maxMainSigs))"
+            )
+        }
+        if let numSigsRefund, Int(numSigsRefund) > refundKeys.count {
+            throw makeP2PKValidationError(
+                "num_sigs_refund (\(numSigsRefund)) exceeds the number of available refund_keys (\(refundKeys.count))"
+            )
+        }
 
         let conditions = Conditions(
             locktime: locktime,
@@ -85,6 +109,14 @@ class CashuDevKitModule: RCTEventEmitter {
         )
 
         return .p2pk(pubkey: pubkey, conditions: conditions)
+    }
+
+    private func makeP2PKValidationError(_ message: String) -> NSError {
+        NSError(
+            domain: "CashuDevKitModule.P2PK",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
     }
 
     /// Returns the value at `key` only when it is a positive integer, so that
@@ -958,7 +990,7 @@ class CashuDevKitModule: RCTEventEmitter {
                 if let json = conditionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                   conditions = parseP2PKConditions(from: parsed)
+                   conditions = try parseP2PKConditions(from: parsed)
                 }
 
                 let wallet = try await getWallet(mintUrl)
@@ -1128,7 +1160,7 @@ class CashuDevKitModule: RCTEventEmitter {
                         includeFee = fee
                     }
                     if let cond = parsed["conditions"] as? [String: Any] {
-                    spendingConditions = parseP2PKConditions(from: cond)
+                    spendingConditions = try parseP2PKConditions(from: cond)
                     }
                     if let kindStr = parsed["send_kind"] as? String {
                         let tolerance = (parsed["tolerance"] as? NSNumber).map { Amount(value: $0.uint64Value) } ?? Amount(value: 0)
